@@ -93,14 +93,12 @@ pub struct MemBlock
 
 impl MemBlock
 {
-    fn new()
+    pub fn new() -> Self
     {
-
+        todo!();
     }
 
-
-
-    fn append_u8(&self, val: u8)
+    pub fn append_u8(&self, val: u8)
     {
 
     }
@@ -109,16 +107,15 @@ impl MemBlock
 
     // NOTE: do we want to write at some position?
     // write vs append
-    fn write_u8(&self, val: u8)
+    pub fn write_u8(&self, val: u8)
     {
-
-
     }
 
-    fn read_u8()
+    pub fn read_u8()
     {
-
     }
+
+
 
 
 
@@ -150,9 +147,14 @@ pub struct VM
 
 impl VM
 {
-    pub fn new() -> Self
+    pub fn new(code: MemBlock) -> Self
     {
-        todo!();
+        Self {
+            code,
+            heap: MemBlock::new(),
+            stack: Vec::default(),
+            pc: 0,
+        }
     }
 
     pub fn eval()
