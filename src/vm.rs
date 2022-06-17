@@ -7,7 +7,7 @@ pub enum Op
     // Halt execution and produce an error
     halt = 0,
 
-    // End execution with an integer return code
+    // End execution normally
     exit,
 
     // No-op
@@ -177,10 +177,16 @@ impl VM
 
             match op
             {
-                Op::halt => break,
+                Op::halt => panic!("execution error, encountered halt opcode"),
+
+                Op::exit => break,
 
                 _ => panic!("unknown opcode"),
             }
+
+            // TODO: increment PC
+
+
         }
     }
 }
