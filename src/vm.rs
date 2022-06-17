@@ -1,7 +1,9 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 /// Instruction opcodes
 #[allow(non_camel_case_types)]
+#[repr(u8)]
 enum Op
 {
     // Halt execution and produce an error
@@ -21,8 +23,6 @@ enum Op
     pop,
     dup,
 
-
-
     /*
     # Load from heap at address x 4 or x8
     # If we save 24 bits for the offset, then that gives us quite a lot
@@ -32,9 +32,6 @@ enum Op
     store
     memcpy
     */
-
-
-
 
     /*
     // Bitwise operations
@@ -46,9 +43,7 @@ enum Op
 
     // Integer arithmetic
     add_i64,
-    //sub,
-
-
+    //sub_i64,
 
     /*
     # Test flag bits (logical and) with a constant
@@ -89,25 +84,73 @@ enum Op
     # we can relax this assumption later
     suspend
     */
+}
+
+struct Value(u64);
+
+
+
+
+struct MemBlock
+{
+    data: Vec<u8>
+}
+
+impl MemBlock
+{
+    fn new()
+    {
+
+    }
+
+
+
+    fn append_u8(&self, val: u8)
+    {
+
+    }
+
+
+
+    // NOTE: do we want to write at some position?
+    // write vs append
+    fn write_u8(&self, val: u8)
+    {
+
+
+    }
+
+    fn read_u8()
+    {
+
+    }
 
 
 
 }
 
-struct Value(u64);
+
+
+
+
+
+
+
 
 struct VM
 {
-    heap: Vec<u8>,
+    heap: MemBlock,
 
 
-    exec_mem: Vec<u8>,
+    code: MemBlock,
 
 
     // Value stack
     stack: Vec<Value>,
 
-    // Call stack?
+
+
+    // Call stack? Do we need one
 
 
     // Points at a byte in the executable memory
