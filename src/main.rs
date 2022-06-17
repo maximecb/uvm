@@ -4,12 +4,16 @@
 mod vm;
 mod display;
 
-use crate::vm::{VM, MemBlock};
+use crate::vm::{VM, MemBlock, Op};
 
 fn main() {
     println!("Hello, world!");
 
-    let vm = VM::new(MemBlock::new());
+    let mut code = MemBlock::new();
+
+    code.push_op(Op::halt);
+
+    let vm = VM::new(code);
 
 
 

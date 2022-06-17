@@ -95,30 +95,36 @@ impl MemBlock
 {
     pub fn new() -> Self
     {
-        todo!();
+        Self {
+            data: Vec::default()
+        }
     }
 
-    pub fn append_u8(&self, val: u8)
+    /// Get the memory block size in bytes
+    pub fn len(&self) -> usize
     {
-
+        self.data.len()
     }
 
-
-
-    // NOTE: do we want to write at some position?
-    // write vs append
-    pub fn write_u8(&self, val: u8)
+    pub fn push_op(&mut self, op: Op)
     {
+        self.data.push(op as u8);
     }
 
-    pub fn read_u8()
+    pub fn push_u8(&mut self, val: u8)
     {
+        self.data.push(val);
     }
 
+    pub fn write_u8(&mut self, pos: usize, val: u8)
+    {
+        self.data[pos] = val;
+    }
 
-
-
-
+    pub fn read_u8(&self, pos: usize) -> u8
+    {
+        self.data[pos]
+    }
 }
 
 pub struct VM
@@ -159,6 +165,15 @@ impl VM
 
     pub fn eval()
     {
+
+        loop
+        {
+
+
+
+        }
+
+
 
     }
 }
