@@ -121,6 +121,13 @@ impl MemBlock
         self.data[pos] = val;
     }
 
+    pub fn read_op(&self, pos: usize) -> Op
+    {
+        unsafe {
+            std::mem::transmute::<u8 , Op>(self.data[pos])
+        }
+    }
+
     pub fn read_u8(&self, pos: usize) -> u8
     {
         self.data[pos]
@@ -163,7 +170,7 @@ impl VM
         }
     }
 
-    pub fn eval()
+    pub fn eval(&mut self)
     {
 
         loop
