@@ -7,6 +7,9 @@ pub enum Op
     // Halt execution and produce an error
     halt = 0,
 
+    // End execution with an integer return code
+    exit,
+
     // No-op
     nop,
 
@@ -67,10 +70,6 @@ pub enum Op
     # Call into a blocking host function
     # For example, to set up a device or to allocate more memory
     syscall
-
-    # End execution with an integer return code
-    exit
-
 
     # Wait for a callback from the host or a device (go into a waiting state)
     # Ideally the stack should be fully unwound when this is called,
@@ -172,15 +171,16 @@ impl VM
 
     pub fn eval(&mut self)
     {
-
         loop
         {
+            let op = self.code.read_op(self.pc);
 
+            match op
+            {
+                Op::halt => break,
 
-
+                _ => panic!("unknown opcode"),
+            }
         }
-
-
-
     }
 }
