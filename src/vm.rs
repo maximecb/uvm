@@ -1,10 +1,8 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
 
 /// Instruction opcodes
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-enum Op
+pub enum Op
 {
     // Halt execution and produce an error
     halt = 0,
@@ -86,12 +84,9 @@ enum Op
     */
 }
 
-struct Value(u64);
+pub struct Value(u64);
 
-
-
-
-struct MemBlock
+pub struct MemBlock
 {
     data: Vec<u8>
 }
@@ -129,15 +124,7 @@ impl MemBlock
 
 }
 
-
-
-
-
-
-
-
-
-struct VM
+pub struct VM
 {
     heap: MemBlock,
 
@@ -163,12 +150,12 @@ struct VM
 
 impl VM
 {
-    fn new() -> Self
+    pub fn new() -> Self
     {
         todo!();
     }
 
-    fn eval()
+    pub fn eval()
     {
 
     }
