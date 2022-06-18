@@ -56,19 +56,26 @@ pub enum Op
     gt_i64
     ge_i64
     …
+    */
 
-    if_true
-    if_false
-    jump
+    // Jump to pc offset
+    jmp,
 
+    // Jump to pc offset if stack top is zero
+    jz,
 
+    // Jump to pc offset if stack top is not zero
+    jnz,
+
+    /*
     # Call and return using the call stack
     call
     ret
 
-    # Call into a blocking host function
-    # For example, to set up a device or to allocate more memory
-    syscall
+    // Call into a blocking host function
+    // For example, to set up a device or to allocate more memory
+    // syscall <device_id:u16> <method_id:u16>
+    syscall,
 
     # Wait for a callback from the host or a device (go into a waiting state)
     # Ideally the stack should be fully unwound when this is called,
