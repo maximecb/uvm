@@ -1,4 +1,3 @@
-
 /// Instruction opcodes
 #[allow(non_camel_case_types)]
 #[repr(u8)]
@@ -85,6 +84,14 @@ pub enum Op
 
 pub struct Value(u64);
 
+impl Value
+{
+    fn from_i8(val: i8) -> Self
+    {
+        Value((val as i64) as u64)
+    }
+}
+
 pub struct MemBlock
 {
     data: Vec<u8>
@@ -115,6 +122,11 @@ impl MemBlock
         self.data.push(val);
     }
 
+    pub fn push_i8(&mut self, val: i8)
+    {
+        self.data.push(val as u8);
+    }
+
     pub fn write_u8(&mut self, pos: usize, val: u8)
     {
         self.data[pos] = val;
@@ -131,30 +143,27 @@ impl MemBlock
     {
         self.data[pos]
     }
+
+    pub fn read_i8(&self, pos: usize) -> i8
+    {
+        self.data[pos] as i8
+    }
 }
 
 pub struct VM
 {
     heap: MemBlock,
 
-
     code: MemBlock,
-
 
     // Value stack
     stack: Vec<Value>,
 
-
-
+    // TODO
     // Call stack? Do we need one
-
 
     // Points at a byte in the executable memory
     pc: usize,
-
-
-
-
 }
 
 impl VM
@@ -174,19 +183,24 @@ impl VM
         loop
         {
             let op = self.code.read_op(self.pc);
+            self.pc += 1;
 
             match op
             {
                 Op::halt => panic!("execution error, encountered halt opcode"),
 
+                Op::nop => continue,
+
                 Op::exit => break,
+
+                Op::push_i8 => {
+                    let val = self.code.read_i8(self.pc);
+                    self.pc += 1;
+                    self.stack.push(Value::from_i8(val));
+                }
 
                 _ => panic!("unknown opcode"),
             }
-
-            // TODO: increment PC
-
-
         }
     }
 }
