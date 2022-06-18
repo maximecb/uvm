@@ -17,11 +17,18 @@ fn main() {
     code.push_op(Op::nop);
 
     code.push_op(Op::push_i8);
+    code.push_i8(1);
+
+    code.push_op(Op::push_i8);
     code.push_i8(7);
+
+    code.push_op(Op::add_i64);
 
     code.push_op(Op::exit);
 
     let mut vm = VM::new(code);
-
     vm.eval();
+
+    let ret = vm.pop();
+    println!("ret: {:?}", ret);
 }

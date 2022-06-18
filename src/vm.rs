@@ -1,4 +1,5 @@
 /// Instruction opcodes
+/// Note: commonly used upcodes should be in the [0, 127] range (one byte)
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 pub enum Op
@@ -24,8 +25,10 @@ pub enum Op
     dup,
 
     /*
-    # Load from heap at address x 4 or x8
-    # If we save 24 bits for the offset, then that gives us quite a lot
+    /// Load from heap at fixed address
+    /// This is used for reading global variables
+    /// The address is multiplied by the data size (x 4 or x8)
+    /// If we save 24 bits for the offset, then that gives us quite a lot
     load_static <address>
 
     load
@@ -67,16 +70,16 @@ pub enum Op
     // Jump to pc offset if stack top is not zero
     jnz,
 
-    /*
-    # Call and return using the call stack
-    call
-    ret
+    // Call and return using the call stack
+    //call
+    //ret
 
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
     // syscall <device_id:u16> <method_id:u16>
     syscall,
 
+    /*
     # Wait for a callback from the host or a device (go into a waiting state)
     # Ideally the stack should be fully unwound when this is called,
     # we can relax this assumption later
@@ -89,6 +92,7 @@ pub enum Op
     */
 }
 
+#[derive(Debug)]
 pub struct Value(u64);
 
 impl Value
@@ -96,6 +100,16 @@ impl Value
     fn from_i8(val: i8) -> Self
     {
         Value((val as i64) as u64)
+    }
+
+    fn from_i64(val: i64) -> Self
+    {
+        Value(val as u64)
+    }
+
+    fn as_i64(&self) -> i64 {
+        let Value(val) = *self;
+        val as i64
     }
 }
 
@@ -185,6 +199,11 @@ impl VM
         }
     }
 
+    pub fn pop(&mut self) -> Value
+    {
+        self.stack.pop().unwrap()
+    }
+
     pub fn eval(&mut self)
     {
         loop
@@ -204,6 +223,14 @@ impl VM
                     let val = self.code.read_i8(self.pc);
                     self.pc += 1;
                     self.stack.push(Value::from_i8(val));
+                }
+
+                Op::add_i64 => {
+                    let v0 = self.pop();
+                    let v1 = self.pop();
+                    self.stack.push(Value::from_i64(
+                        v0.as_i64() + v1.as_i64()
+                    ));
                 }
 
                 _ => panic!("unknown opcode"),
