@@ -81,6 +81,25 @@ impl Input
         }
     }
 
+    /// Check if the input matches a given string
+    fn match_str(&mut self, token: &str) -> bool
+    {
+        let tok_chars: Vec<char> = token.chars().collect();
+        let tok_end_idx = self.idx + tok_chars.len();
+
+        // If the token matches the input
+        if self.input[self.idx .. tok_end_idx] == tok_chars {
+            for i in 0..tok_chars.len() {
+                self.eat_ch();
+            }
+
+            return true;
+        }
+
+        false
+    }
+
+    /// Parse a decimal integer
     fn parse_int(&mut self) -> i64
     {
         todo!();
@@ -89,7 +108,7 @@ impl Input
 
     }
 
-    // Parse an identifier
+    /// Parse an identifier
     fn parse_ident(&mut self) -> String
     {
         let mut ident = "".to_string();
