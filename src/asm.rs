@@ -102,10 +102,26 @@ impl Input
     /// Parse a decimal integer
     fn parse_int(&mut self) -> i64
     {
-        todo!();
+        let mut val: i64 = 0;
 
+        loop
+        {
+            let ch = self.peek_ch();
 
+            if ch == '\0' {
+                break;
+            }
 
+            if !ch.is_numeric() {
+                break;
+            }
+
+            val = (10 * val) + (ch.to_digit(10).unwrap() as i64);
+
+            self.eat_ch();
+        }
+
+        val
     }
 
     /// Parse an identifier
