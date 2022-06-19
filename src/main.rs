@@ -7,11 +7,33 @@ mod vm;
 mod asm;
 mod display;
 
+use std::env;
 use crate::vm::{VM, MemBlock, Op};
+use crate::asm::{Assembler};
 
-fn main() {
+fn main()
+{
+    let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
 
-    // TODO: read command-line arguments
+
+    if args.len() == 2 {
+        let asm = Assembler::new();
+        let code = asm.parse_file(&args[1]);
+
+
+
+
+        return;
+    }
+
+
+
+
+
+
+
+
 
 
     let mut code = MemBlock::new();

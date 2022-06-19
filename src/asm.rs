@@ -148,3 +148,34 @@ impl Input
         ident
     }
 }
+
+pub struct Assembler
+{
+    code: MemBlock,
+}
+
+impl Assembler
+{
+    pub fn new() -> Self
+    {
+        Self {
+            code: MemBlock::new()
+        }
+    }
+
+    pub fn parse_file(self, file_name: &str) -> MemBlock
+    {
+
+
+
+
+
+
+
+        self.code
+    }
+
+
+
+
+}
