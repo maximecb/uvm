@@ -257,6 +257,17 @@ impl VM
                     self.pc = ((self.pc as isize) + offset) as usize;
                 }
 
+                Op::jnz => {
+                    let offset = self.code.read_i32(self.pc) as isize;
+                    self.pc += 4;
+
+                    let v0 = self.pop();
+
+                    if v0.as_i64() != 0 {
+                        self.pc = ((self.pc as isize) + offset) as usize;
+                    }
+                }
+
                 _ => panic!("unknown opcode"),
             }
         }
