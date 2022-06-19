@@ -1,3 +1,5 @@
+use std::mem::transmute;
+
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
 #[allow(non_camel_case_types)]
@@ -148,6 +150,13 @@ impl MemBlock
         self.data.push(val as u8);
     }
 
+    pub fn push_i32(&mut self, val: i32)
+    {
+        for byte in val.to_le_bytes() {
+            self.data.push(byte);
+        }
+    }
+
     pub fn write_u8(&mut self, pos: usize, val: u8)
     {
         self.data[pos] = val;
@@ -156,7 +165,7 @@ impl MemBlock
     pub fn read_op(&self, pos: usize) -> Op
     {
         unsafe {
-            std::mem::transmute::<u8 , Op>(self.data[pos])
+            transmute::<u8 , Op>(self.data[pos])
         }
     }
 
@@ -168,6 +177,15 @@ impl MemBlock
     pub fn read_i8(&self, pos: usize) -> i8
     {
         self.data[pos] as i8
+    }
+
+    pub fn read_i32(&self, pos: usize) -> i32
+    {
+        unsafe {
+            let buf_ptr = self.data.as_ptr();
+            let val_ptr = transmute::<*const u8 , *const i32>(buf_ptr.add(pos));
+            *val_ptr
+        }
     }
 }
 
@@ -231,6 +249,12 @@ impl VM
                     self.stack.push(Value::from_i64(
                         v0.as_i64() + v1.as_i64()
                     ));
+                }
+
+                Op::jmp => {
+                    let offset = self.code.read_i32(self.pc) as isize;
+                    self.pc += 4;
+                    self.pc = ((self.pc as isize) + offset) as usize;
                 }
 
                 _ => panic!("unknown opcode"),
