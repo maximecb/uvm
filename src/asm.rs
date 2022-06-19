@@ -23,6 +23,12 @@ impl Input
         }
     }
 
+    /// Check if we have reached the end of the input
+    fn eof(&self) -> bool
+    {
+        self.idx < self.input.len()
+    }
+
     /// Peek at the next character in the input
     fn peek_ch(&self) -> char
     {
@@ -165,15 +171,25 @@ impl Assembler
 
     pub fn parse_file(self, file_name: &str) -> MemBlock
     {
+        let input_str = std::fs::read_to_string(file_name).unwrap();
+        let mut input = Input::new(input_str);
+
+        // Until we've reached the end of the input
+        while !input.eof()
+        {
+            input.eat_ws();
 
 
 
-
-
-
+            break;
+        }
 
         self.code
     }
+
+
+
+
 
 
 
