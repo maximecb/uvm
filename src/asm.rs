@@ -89,11 +89,27 @@ impl Input
 
     }
 
+    // Parse an identifier
     fn parse_ident(&mut self) -> String
     {
-        todo!();
+        let mut ident = "".to_string();
 
+        loop
+        {
+            let ch = self.peek_ch();
 
+            if ch == '\0' {
+                break;
+            }
 
+            if !ch.is_alphanumeric() && ch != '_' {
+                break;
+            }
+
+            ident.push(ch);
+            self.eat_ch();
+        }
+
+        ident
     }
 }

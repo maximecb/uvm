@@ -217,6 +217,11 @@ impl VM
         }
     }
 
+    pub fn stack_size(&self) -> usize
+    {
+        self.stack.len()
+    }
+
     pub fn pop(&mut self) -> Value
     {
         self.stack.pop().unwrap()

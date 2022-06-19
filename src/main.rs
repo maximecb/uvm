@@ -34,6 +34,13 @@ fn main() {
     let mut vm = VM::new(code);
     vm.eval();
 
-    let ret = vm.pop();
-    println!("ret: {:?}", ret);
+    if vm.stack_size() > 0
+    {
+        let ret = vm.pop();
+        println!("ret: {:?}", ret);
+    }
+    else
+    {
+        println!("stack empty");
+    }
 }
