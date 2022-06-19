@@ -59,7 +59,7 @@ impl Input
         ch
     }
 
-    /// Consume whitespace characters
+    /// Consume whitespace characters (excluding newlines)
     fn eat_ws(&mut self)
     {
         loop
@@ -68,7 +68,6 @@ impl Input
 
             match ch {
                 '\r' |
-                '\n' |
                 '\t' |
                 ' ' => {
                     self.eat_ch();
@@ -86,7 +85,12 @@ impl Input
         {
             let ch = self.peek_ch();
 
-            if ch == '\n' || ch == '\0' {
+            if ch == '\0' {
+                break;
+            }
+
+            if ch == '\n' {
+                self.eat_ch();
                 break;
             }
 
@@ -110,6 +114,13 @@ impl Input
         }
 
         false
+    }
+
+    fn expect_str(&mut self, token: &str)
+    {
+        if !self.match_str(token) {
+            panic!("expected {}", token);
+        }
     }
 
     /// Parse a decimal integer
@@ -186,7 +197,6 @@ impl Assembler
         // Until we've reached the end of the input
         loop
         {
-            println!("eat_ws");
             input.eat_ws();
 
             if input.eof() {
@@ -204,14 +214,23 @@ impl Assembler
     {
         let ch = input.peek_ch();
 
-        println!("{}", ch as u32);
+        // If this line is empty
+        if ch == '\n' {
+            input.eat_ch();
+            return;
+        }
 
         // If this is a command
         if ch == '.' {
-
             // TODO: handle .data and .text to switch modes
+            //self.parse_command();
+            return;
+        }
 
-
+        // If this is a comment
+        if ch == '#' || ch == ';' {
+            input.eat_comment();
+            return;
         }
 
         // If this is the start of an identifier
@@ -222,9 +241,36 @@ impl Assembler
 
             println!("ident: {}", ident);
 
+            if input.match_str(":") {
+                // TODO: handle labels
+            }
+            else
+            {
+                self.parse_insn(input, ident);
+            }
 
+            return;
         }
 
         panic!("invalid input at {}:{}", input.line_no, input.col_no);
+    }
+
+    fn parse_insn(&mut self, input: &mut Input, op_name: String)
+    {
+        match op_name.as_str() {
+            "push_i8" => {
+                let val = input.parse_int();
+
+
+            }
+
+            _ => panic!("unknown op in assembler {}", op_name)
+        }
+
+        input.eat_ws();
+        input.expect_str(";");
+
+        // Whatever follows a semicolon is a comment
+        input.eat_comment();
     }
 }
