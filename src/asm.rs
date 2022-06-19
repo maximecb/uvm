@@ -26,7 +26,7 @@ impl Input
     /// Check if we have reached the end of the input
     fn eof(&self) -> bool
     {
-        self.idx < self.input.len()
+        self.idx >= self.input.len()
     }
 
     /// Peek at the next character in the input
@@ -46,6 +46,15 @@ impl Input
 
         let ch = self.input[self.idx];
         self.idx += 1;
+
+        if ch == '\n' {
+            self.line_no += 1;
+            self.col_no = 1;
+        }
+        else
+        {
+            self.col_no += 1;
+        }
 
         ch
     }
@@ -67,8 +76,6 @@ impl Input
 
                 _ => break
             }
-
-            self.eat_ch();
         }
     }
 
@@ -158,6 +165,7 @@ impl Input
 pub struct Assembler
 {
     code: MemBlock,
+    data: MemBlock,
 }
 
 impl Assembler
@@ -165,33 +173,58 @@ impl Assembler
     pub fn new() -> Self
     {
         Self {
-            code: MemBlock::new()
+            code: MemBlock::new(),
+            data: MemBlock::new(),
         }
     }
 
-    pub fn parse_file(self, file_name: &str) -> MemBlock
+    pub fn parse_file(mut self, file_name: &str) -> MemBlock
     {
         let input_str = std::fs::read_to_string(file_name).unwrap();
         let mut input = Input::new(input_str);
 
         // Until we've reached the end of the input
-        while !input.eof()
+        loop
         {
+            println!("eat_ws");
             input.eat_ws();
 
+            if input.eof() {
+                break
+            }
 
-
-            break;
+            println!("parsing line");
+            self.parse_line(&mut input);
         }
 
         self.code
     }
 
+    fn parse_line(&mut self, input: &mut Input)
+    {
+        let ch = input.peek_ch();
+
+        println!("{}", ch as u32);
+
+        // If this is a command
+        if ch == '.' {
+
+            // TODO: handle .data and .text to switch modes
 
 
+        }
+
+        // If this is the start of an identifier
+        if ch.is_alphanumeric() || ch == '_' {
+            println!("parsing ident");
+            let ident = input.parse_ident();
+            input.eat_ws();
+
+            println!("ident: {}", ident);
 
 
+        }
 
-
-
+        panic!("invalid input at {}:{}", input.line_no, input.col_no);
+    }
 }
