@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::vm::{VM, MemBlock, Op};
 
 struct Input
@@ -180,10 +181,29 @@ impl Input
     }
 }
 
+enum LabelRefKind
+{
+    Delta32,
+}
+
+struct LabelRef
+{
+    name: String,
+    pos: usize,
+    kind: LabelRefKind
+}
+
 pub struct Assembler
 {
     code: MemBlock,
+
     data: MemBlock,
+
+    // Label definitions (name, position)
+    label_defs: HashMap<String, usize>,
+
+    // References to labels (name, position)
+    label_refs: Vec<LabelRef>,
 }
 
 impl Assembler
@@ -193,9 +213,10 @@ impl Assembler
         Self {
             code: MemBlock::new(),
             data: MemBlock::new(),
+            label_defs: HashMap::default(),
+            label_refs: Vec::default(),
         }
     }
-
     pub fn parse_file(mut self, file_name: &str) -> MemBlock
     {
         let input_str = std::fs::read_to_string(file_name).unwrap();
@@ -210,8 +231,25 @@ impl Assembler
                 break
             }
 
-            println!("parsing line");
             self.parse_line(&mut input);
+        }
+
+        // Link the labels
+        for label_ref in self.label_refs {
+            let def_pos = self.label_defs.get(&label_ref.name);
+
+            if def_pos.is_none() {
+                panic!("label not found {}", label_ref.name);
+            }
+
+            let def_pos = *def_pos.unwrap();
+
+            match label_ref.kind {
+                LabelRefKind::Delta32 => {
+                    let delta32 = (def_pos as i32) - (label_ref.pos as i32 + 4);
+                    self.code.write_i32(label_ref.pos, delta32);
+                }
+            }
         }
 
         self.code
@@ -242,14 +280,17 @@ impl Assembler
 
         // If this is the start of an identifier
         if ch.is_alphanumeric() || ch == '_' {
-            println!("parsing ident");
             let ident = input.parse_ident();
             input.eat_ws();
 
             println!("ident: {}", ident);
 
             if input.match_str(":") {
-                // TODO: handle labels
+                if self.label_defs.get(&ident).is_some() {
+                    panic!("label already defined {}", ident)
+                }
+
+                self.label_defs.insert(ident, self.code.len());
             }
             else
             {
@@ -262,6 +303,7 @@ impl Assembler
         panic!("invalid input at {}:{}", input.line_no, input.col_no);
     }
 
+    /// Parse an instruction and its arguments
     fn parse_insn(&mut self, input: &mut Input, op_name: String)
     {
         match op_name.as_str() {
@@ -275,11 +317,24 @@ impl Assembler
             "sub_i64" => self.code.push_op(Op::sub_i64),
 
             "jmp" => {
-                let label_name = input.parse_ident();
                 self.code.push_op(Op::jmp);
+                let label_name = input.parse_ident();
+                self.label_refs.push(LabelRef{
+                    name: label_name,
+                    pos: self.code.len(),
+                    kind: LabelRefKind::Delta32
+                });
+                self.code.push_i32(0);
+            }
 
-                // TODO: add label ref
-
+            "jnz" => {
+                self.code.push_op(Op::jnz);
+                let label_name = input.parse_ident();
+                self.label_refs.push(LabelRef{
+                    name: label_name,
+                    pos: self.code.len(),
+                    kind: LabelRefKind::Delta32
+                });
                 self.code.push_i32(0);
             }
 

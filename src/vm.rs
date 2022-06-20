@@ -163,6 +163,15 @@ impl MemBlock
         self.data[pos] = val;
     }
 
+    pub fn write_i32(&mut self, pos: usize, val: i32)
+    {
+        unsafe {
+            let buf_ptr = self.data.as_mut_ptr();
+            let val_ptr = transmute::<*mut u8 , *mut i32>(buf_ptr.add(pos));
+            *val_ptr = val;
+        }
+    }
+
     pub fn read_op(&self, pos: usize) -> Op
     {
         unsafe {
@@ -232,6 +241,10 @@ impl VM
     {
         loop
         {
+            if self.pc >= self.code.len() {
+                panic!("pc out of bounds")
+            }
+
             let op = self.code.read_op(self.pc);
             self.pc += 1;
 
