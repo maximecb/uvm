@@ -42,7 +42,9 @@ impl Input
     /// Consume one character from the input
     fn eat_ch(&mut self) -> char
     {
-        assert!(self.idx < self.input.len());
+        if self.idx >= self.input.len() {
+            panic!("unexpected end of input");
+        }
 
         let ch = self.input[self.idx];
         self.idx += 1;
@@ -130,6 +132,15 @@ impl Input
 
         loop
         {
+            let ch = self.eat_ch();
+
+            // There must be at least one digit
+            if !ch.is_numeric() {
+                panic!("expected digit");
+            }
+
+            val = (10 * val) + (ch.to_digit(10).unwrap() as i64);
+
             let ch = self.peek_ch();
 
             if ch == '\0' {
@@ -139,10 +150,6 @@ impl Input
             if !ch.is_numeric() {
                 break;
             }
-
-            val = (10 * val) + (ch.to_digit(10).unwrap() as i64);
-
-            self.eat_ch();
         }
 
         val
@@ -266,6 +273,15 @@ impl Assembler
 
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
+
+            "jmp" => {
+                let label_name = input.parse_ident();
+                self.code.push_op(Op::jmp);
+
+                // TODO: add label ref
+
+                self.code.push_i32(0);
+            }
 
             "exit" => self.code.push_op(Op::exit),
 

@@ -7,10 +7,8 @@ use std::mem::transmute;
 pub enum Op
 {
     // Halt execution and produce an error
+    // This is opcode zero so that jumping to uninitialized memory halts
     halt = 0,
-
-    // End execution normally
-    exit,
 
     // No-op
     nop,
@@ -82,9 +80,9 @@ pub enum Op
     syscall,
 
     /*
-    # Wait for a callback from the host or a device (go into a waiting state)
-    # Ideally the stack should be fully unwound when this is called,
-    # we can relax this assumption later
+    // Wait for a callback from the host or a device (go into a waiting state)
+    // Ideally the stack should be fully unwound when this is called,
+    // we can relax this assumption later
     wait
 
     # Suspend execution, release devices, save image
@@ -92,6 +90,9 @@ pub enum Op
     # we can relax this assumption later
     suspend
     */
+
+    // End execution normally
+    exit,
 }
 
 #[derive(Debug)]
