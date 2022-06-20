@@ -260,11 +260,16 @@ impl Assembler
         match op_name.as_str() {
             "push_i8" => {
                 let val = input.parse_int();
-
-
+                self.code.push_op(Op::push_i8);
+                self.code.push_i8(val.try_into().unwrap());
             }
 
-            _ => panic!("unknown op in assembler {}", op_name)
+            "add_i64" => self.code.push_op(Op::add_i64),
+            "sub_i64" => self.code.push_op(Op::sub_i64),
+
+            "exit" => self.code.push_op(Op::exit),
+
+            _ => panic!("unknown opcode in assembler \"{}\"", op_name)
         }
 
         input.eat_ws();

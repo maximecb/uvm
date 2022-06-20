@@ -48,7 +48,7 @@ pub enum Op
 
     // Integer arithmetic
     add_i64,
-    //sub_i64,
+    sub_i64,
 
     /*
     # Test flag bits (logical and) with a constant
