@@ -217,6 +217,7 @@ impl Assembler
             label_refs: Vec::default(),
         }
     }
+
     pub fn parse_file(mut self, file_name: &str) -> MemBlock
     {
         let input_str = std::fs::read_to_string(file_name).unwrap();
@@ -308,13 +309,14 @@ impl Assembler
     {
         match op_name.as_str() {
             "push_i8" => {
-                let val = input.parse_int();
+                let val: i8 = self.parse_int_arg(input);
                 self.code.push_op(Op::push_i8);
                 self.code.push_i8(val.try_into().unwrap());
             }
 
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
+            "mul_i64" => self.code.push_op(Op::mul_i64),
 
             "jmp" => {
                 self.code.push_op(Op::jmp);
@@ -338,6 +340,14 @@ impl Assembler
                 self.code.push_i32(0);
             }
 
+            "syscall" => {
+                let device_id: u16 = self.parse_int_arg(input);
+                let method_id: u16 = self.parse_int_arg(input);
+                self.code.push_op(Op::syscall);
+                self.code.push_u16(device_id);
+                self.code.push_u16(method_id);
+            }
+
             "exit" => self.code.push_op(Op::exit),
 
             _ => panic!("unknown opcode in assembler \"{}\"", op_name)
@@ -348,5 +358,16 @@ impl Assembler
 
         // Whatever follows a semicolon is a comment
         input.eat_comment();
+    }
+
+    /// Parse an integer argument
+    fn parse_int_arg<T: std::convert::TryFrom<i64>>(&self, input: &mut Input) -> T
+    {
+        let val = input.parse_int();
+
+        match val.try_into() {
+            Ok(out_val) => return out_val,
+            Err(_) => panic!()
+        }
     }
 }

@@ -47,6 +47,7 @@ pub enum Op
     // Integer arithmetic
     add_i64,
     sub_i64,
+    mul_i64,
 
     /*
     # Test flag bits (logical and) with a constant
@@ -144,6 +145,13 @@ impl MemBlock
     pub fn push_u8(&mut self, val: u8)
     {
         self.data.push(val);
+    }
+
+    pub fn push_u16(&mut self, val: u16)
+    {
+        for byte in val.to_le_bytes() {
+            self.data.push(byte);
+        }
     }
 
     pub fn push_i8(&mut self, val: i8)
