@@ -195,16 +195,20 @@ struct LabelRef
 
 pub struct Assembler
 {
-    syscalls: HashMap<String, u16>,
+    /// Map of syscall names to indices
+    syscall_map: HashMap<String, u16>,
+
+    /// Table of syscall names, sorted by index
+    syscall_tbl: Vec<String>,
 
     code: MemBlock,
 
     data: MemBlock,
 
-    // Label definitions (name, position)
+    /// Label definitions (name, position)
     label_defs: HashMap<String, usize>,
 
-    // References to labels (name, position)
+    /// References to labels (name, position)
     label_refs: Vec<LabelRef>,
 }
 
@@ -213,7 +217,8 @@ impl Assembler
     pub fn new() -> Self
     {
         Self {
-            syscalls: HashMap::new(),
+            syscall_map: HashMap::new(),
+            syscall_tbl: Vec::new(),
             code: MemBlock::new(),
             data: MemBlock::new(),
             label_defs: HashMap::default(),
@@ -221,7 +226,7 @@ impl Assembler
         }
     }
 
-    pub fn parse_file(mut self, file_name: &str) -> MemBlock
+    pub fn parse_file(mut self, file_name: &str) -> VM
     {
         let input_str = std::fs::read_to_string(file_name).unwrap();
         let mut input = Input::new(input_str);
@@ -256,7 +261,7 @@ impl Assembler
             }
         }
 
-        self.code
+        VM::new(self.code, self.data, self.syscall_tbl)
     }
 
     fn parse_line(&mut self, input: &mut Input)
@@ -346,12 +351,13 @@ impl Assembler
             "syscall" => {
                 let syscall_name = input.parse_ident();
 
-                if self.syscalls.get(&syscall_name).is_none() {
-                    let syscall_idx = self.syscalls.len();
-                    self.syscalls.insert(syscall_name.clone(), syscall_idx.try_into().unwrap());
+                if self.syscall_map.get(&syscall_name).is_none() {
+                    let syscall_idx = self.syscall_map.len();
+                    self.syscall_map.insert(syscall_name.clone(), syscall_idx.try_into().unwrap());
+                    self.syscall_tbl.push(syscall_name.clone());
                 }
 
-                let syscall_idx = *self.syscalls.get(&syscall_name).unwrap();
+                let syscall_idx = *self.syscall_map.get(&syscall_name).unwrap();
 
                 self.code.push_op(Op::syscall);
                 self.code.push_u16(syscall_idx);

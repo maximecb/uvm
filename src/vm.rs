@@ -11,7 +11,7 @@ pub enum Op
     // This is opcode zero so that jumping to uninitialized memory halts
     halt = 0,
 
-    // No-op (useful for code patching)
+    // No-op (useful for code patching or patch points)
     nop,
 
     // push_i8 <i8_imm> (sign-extended)
@@ -220,7 +220,7 @@ impl MemBlock
 pub struct VM
 {
     /// Table of system calls the program can refer to
-    syscalls: Vec<(String, SyscallFn)>,
+    syscalls: Vec<SyscallFn>,
 
     heap: MemBlock,
 
@@ -240,21 +240,21 @@ pub struct VM
 
 impl VM
 {
-    pub fn new(code: MemBlock) -> Self
+    pub fn new(code: MemBlock, heap: MemBlock, syscalls: Vec<String>) -> Self
     {
+        let mut syscall_fns = Vec::new();
+
+        for syscall_name in syscalls {
+            syscall_fns.push(get_syscall(&syscall_name));
+        }
+
         Self {
-            syscalls: Vec::default(),
+            syscalls: syscall_fns,
             code,
-            heap: MemBlock::new(),
+            heap,
             stack: Vec::default(),
             pc: 0,
         }
-    }
-
-    pub fn reg_syscall(&mut self, name: &str)
-    {
-        let syscall_fn = get_syscall(name);
-        self.syscalls.push((name.to_string(), syscall_fn));
     }
 
     pub fn stack_size(&self) -> usize
@@ -322,7 +322,7 @@ impl VM
                     self.pc += 2;
 
                     assert!(table_idx < self.syscalls.len());
-                    let syscall_fn = self.syscalls[table_idx].1;
+                    let syscall_fn = self.syscalls[table_idx];
 
                     syscall_fn(self);
                 }
