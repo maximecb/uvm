@@ -131,16 +131,18 @@ impl Input
     {
         let mut val: i64 = 0;
 
+        let base = if self.match_str("0x") { 16 } else { 10 };
+
         loop
         {
             let ch = self.eat_ch();
 
             // There must be at least one digit
-            if !ch.is_numeric() {
+            if !ch.is_digit(base) {
                 panic!("expected digit");
             }
 
-            val = (10 * val) + (ch.to_digit(10).unwrap() as i64);
+            val = (base as i64) * val + (ch.to_digit(base).unwrap() as i64);
 
             let ch = self.peek_ch();
 
@@ -148,7 +150,7 @@ impl Input
                 break;
             }
 
-            if !ch.is_numeric() {
+            if !ch.is_digit(base) {
                 break;
             }
         }
@@ -312,6 +314,17 @@ impl Assembler
         panic!("invalid input at {}:{}", input.line_no, input.col_no);
     }
 
+    /// Parse an integer argument
+    fn parse_int_arg<T: std::convert::TryFrom<i64>>(&self, input: &mut Input) -> T
+    {
+        let val = input.parse_int();
+
+        match val.try_into() {
+            Ok(out_val) => return out_val,
+            Err(_) => panic!()
+        }
+    }
+
     /// Parse an instruction and its arguments
     fn parse_insn(&mut self, input: &mut Input, op_name: String)
     {
@@ -319,7 +332,7 @@ impl Assembler
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input);
                 self.code.push_op(Op::push_i8);
-                self.code.push_i8(val.try_into().unwrap());
+                self.code.push_i8(val);
             }
 
             "add_i64" => self.code.push_op(Op::add_i64),
@@ -373,16 +386,5 @@ impl Assembler
 
         // Whatever follows a semicolon is a comment
         input.eat_comment();
-    }
-
-    /// Parse an integer argument
-    fn parse_int_arg<T: std::convert::TryFrom<i64>>(&self, input: &mut Input) -> T
-    {
-        let val = input.parse_int();
-
-        match val.try_into() {
-            Ok(out_val) => return out_val,
-            Err(_) => panic!()
-        }
     }
 }

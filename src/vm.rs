@@ -112,6 +112,11 @@ impl Value
         Value(val as u64)
     }
 
+    fn from_u64(val: u64) -> Self
+    {
+        Value(val)
+    }
+
     fn as_i64(&self) -> i64 {
         let Value(val) = *self;
         val as i64
@@ -202,6 +207,15 @@ impl MemBlock
         }
     }
 
+    pub fn read_u64(&self, pos: usize) -> u64
+    {
+        unsafe {
+            let buf_ptr = self.data.as_ptr();
+            let val_ptr = transmute::<*const u8 , *const u64>(buf_ptr.add(pos));
+            *val_ptr
+        }
+    }
+
     pub fn read_i8(&self, pos: usize) -> i8
     {
         self.data[pos] as i8
@@ -262,6 +276,11 @@ impl VM
         self.stack.len()
     }
 
+    pub fn push(&mut self, val: Value)
+    {
+        self.stack.push(val);
+    }
+
     pub fn pop(&mut self) -> Value
     {
         self.stack.pop().unwrap()
@@ -290,6 +309,12 @@ impl VM
                     let val = self.code.read_i8(self.pc);
                     self.pc += 1;
                     self.stack.push(Value::from_i8(val));
+                }
+
+                Op::push_u64 => {
+                    let val = self.code.read_u64(self.pc);
+                    self.pc += 8;
+                    self.push(Value::from_u64(val));
                 }
 
                 Op::add_i64 => {
