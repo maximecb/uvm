@@ -195,6 +195,8 @@ struct LabelRef
 
 pub struct Assembler
 {
+    syscalls: HashMap<String, u16>,
+
     code: MemBlock,
 
     data: MemBlock,
@@ -211,6 +213,7 @@ impl Assembler
     pub fn new() -> Self
     {
         Self {
+            syscalls: HashMap::new(),
             code: MemBlock::new(),
             data: MemBlock::new(),
             label_defs: HashMap::default(),
@@ -341,11 +344,17 @@ impl Assembler
             }
 
             "syscall" => {
-                let device_id: u16 = self.parse_int_arg(input);
-                let method_id: u16 = self.parse_int_arg(input);
+                let syscall_name = input.parse_ident();
+
+                if self.syscalls.get(&syscall_name).is_none() {
+                    let syscall_idx = self.syscalls.len();
+                    self.syscalls.insert(syscall_name.clone(), syscall_idx.try_into().unwrap());
+                }
+
+                let syscall_idx = *self.syscalls.get(&syscall_name).unwrap();
+
                 self.code.push_op(Op::syscall);
-                self.code.push_u16(device_id);
-                self.code.push_u16(method_id);
+                self.code.push_u16(syscall_idx);
             }
 
             "exit" => self.code.push_op(Op::exit),

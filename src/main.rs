@@ -36,7 +36,7 @@ fn main()
         if vm.stack_size() > 0
         {
             let ret = vm.pop();
-            println!("ret: {:?}", ret);
+            println!("return value: {:?}", ret);
         }
         else
         {

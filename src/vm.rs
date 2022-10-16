@@ -251,6 +251,12 @@ impl VM
         }
     }
 
+    pub fn reg_syscall(&mut self, name: &str)
+    {
+        let syscall_fn = get_syscall(name);
+        self.syscalls.push((name.to_string(), syscall_fn));
+    }
+
     pub fn stack_size(&self) -> usize
     {
         self.stack.len()
