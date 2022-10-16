@@ -6,6 +6,7 @@
 mod vm;
 mod asm;
 mod display;
+mod audio;
 
 use std::env;
 use crate::vm::{VM, MemBlock, Op};
@@ -13,6 +14,13 @@ use crate::asm::{Assembler};
 
 fn main()
 {
+    //display::test_create_window();
+    //audio::test_play_sound();
+
+
+
+
+
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
 
