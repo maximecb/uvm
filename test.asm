@@ -1,7 +1,7 @@
 # Test comment
 
 push_i8 7; Another comment
-push_i8 0x1F;
+push_i8 77;
 
 syscall hello_world;
 

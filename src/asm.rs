@@ -1,3 +1,4 @@
+use std::convert::{TryFrom};
 use std::collections::HashMap;
 use crate::vm::{VM, MemBlock, Op};
 
@@ -127,10 +128,11 @@ impl Input
     }
 
     /// Parse a decimal integer
-    fn parse_int(&mut self) -> i64
+    fn parse_int(&mut self) -> i128
     {
-        let mut val: i64 = 0;
+        let mut val: i128 = 0;
 
+        let sign = if self.match_str("-") { -1 } else { 1 };
         let base = if self.match_str("0x") { 16 } else { 10 };
 
         loop
@@ -142,7 +144,7 @@ impl Input
                 panic!("expected digit");
             }
 
-            val = (base as i64) * val + (ch.to_digit(base).unwrap() as i64);
+            val = (base as i128) * val + (ch.to_digit(base).unwrap() as i128);
 
             let ch = self.peek_ch();
 
@@ -155,7 +157,7 @@ impl Input
             }
         }
 
-        val
+        return sign * val;
     }
 
     /// Parse an identifier
@@ -315,13 +317,13 @@ impl Assembler
     }
 
     /// Parse an integer argument
-    fn parse_int_arg<T: std::convert::TryFrom<i64>>(&self, input: &mut Input) -> T
+    fn parse_int_arg<T>(&self, input: &mut Input) -> T where T: TryFrom<i128>
     {
-        let val = input.parse_int();
+        let int_val = input.parse_int();
 
-        match val.try_into() {
+        match int_val.try_into() {
             Ok(out_val) => return out_val,
-            Err(_) => panic!()
+            Err(_) => panic!("integer literal did not fit required size")
         }
     }
 
