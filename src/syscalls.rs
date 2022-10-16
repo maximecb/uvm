@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use crate::vm::{VM};
 
 /// System call function signature
-type SyscallFn = fn(&VM);
+pub type SyscallFn = fn(&mut VM);
 
 /// Map of names to syscall functions
 static mut SYSCALLS: Option<HashMap::<String, SyscallFn>> = None;
 
-fn hello_world(vm: &VM)
+fn hello_world(vm: &mut VM)
 {
     println!("Hello World!");
 }

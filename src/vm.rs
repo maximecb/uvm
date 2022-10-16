@@ -1,4 +1,5 @@
 use std::mem::transmute;
+use crate::syscalls::{SyscallFn, get_syscall};
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
@@ -192,6 +193,15 @@ impl MemBlock
         self.data[pos]
     }
 
+    pub fn read_u16(&self, pos: usize) -> u16
+    {
+        unsafe {
+            let buf_ptr = self.data.as_ptr();
+            let val_ptr = transmute::<*const u8 , *const u16>(buf_ptr.add(pos));
+            *val_ptr
+        }
+    }
+
     pub fn read_i8(&self, pos: usize) -> i8
     {
         self.data[pos] as i8
@@ -209,6 +219,9 @@ impl MemBlock
 
 pub struct VM
 {
+    /// Table of system calls the program can refer to
+    syscalls: Vec<(String, SyscallFn)>,
+
     heap: MemBlock,
 
     code: MemBlock,
@@ -216,8 +229,10 @@ pub struct VM
     // Value stack
     stack: Vec<Value>,
 
+
     // TODO
     // Call stack? Do we need one
+    // Would prefer not to expose this so we can swap stacks
 
     // Points at a byte in the executable memory
     pc: usize,
@@ -228,6 +243,7 @@ impl VM
     pub fn new(code: MemBlock) -> Self
     {
         Self {
+            syscalls: Vec::default(),
             code,
             heap: MemBlock::new(),
             stack: Vec::default(),
@@ -293,6 +309,16 @@ impl VM
                     if v0.as_i64() != 0 {
                         self.pc = ((self.pc as isize) + offset) as usize;
                     }
+                }
+
+                Op::syscall => {
+                    let table_idx = self.code.read_u16(self.pc) as usize;
+                    self.pc += 2;
+
+                    assert!(table_idx < self.syscalls.len());
+                    let syscall_fn = self.syscalls[table_idx].1;
+
+                    syscall_fn(self);
                 }
 
                 _ => panic!("unknown opcode"),
