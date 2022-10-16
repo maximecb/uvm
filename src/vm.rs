@@ -10,7 +10,7 @@ pub enum Op
     // This is opcode zero so that jumping to uninitialized memory halts
     halt = 0,
 
-    // No-op
+    // No-op (useful for code patching)
     nop,
 
     // push_i8 <i8_imm> (sign-extended)

@@ -4,6 +4,7 @@
 #![allow(unused_imports)]
 
 mod vm;
+mod syscalls;
 mod asm;
 mod display;
 mod audio;
@@ -17,6 +18,7 @@ fn main()
     //display::test_create_window();
     //audio::test_play_sound();
 
+    syscalls::init_syscalls();
 
 
 
