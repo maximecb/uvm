@@ -179,7 +179,7 @@ impl Input
                 break;
             }
 
-            if !ch.is_alphanumeric() && ch != '_' {
+            if !ch.is_ascii_alphanumeric() && ch != '_' {
                 break;
             }
 
@@ -248,11 +248,8 @@ impl Assembler
         }
     }
 
-    pub fn parse_file(mut self, file_name: &str) -> VM
+    fn parse_input(mut self, input: &mut Input) -> VM
     {
-        let input_str = std::fs::read_to_string(file_name).unwrap();
-        let mut input = Input::new(input_str);
-
         // Until we've reached the end of the input
         loop
         {
@@ -262,7 +259,7 @@ impl Assembler
                 break
             }
 
-            self.parse_line(&mut input);
+            self.parse_line(input);
         }
 
         // Link the labels
@@ -287,6 +284,19 @@ impl Assembler
         }
 
         VM::new(self.code, self.data, self.syscall_tbl)
+    }
+
+    pub fn parse_file(mut self, file_name: &str) -> VM
+    {
+        let input_str = std::fs::read_to_string(file_name).unwrap();
+        let mut input = Input::new(input_str);
+        return self.parse_input(&mut input);
+    }
+
+    pub fn parse_str(mut self, src: &str) -> VM
+    {
+        let mut input = Input::new(src.to_string());
+        return self.parse_input(&mut input);
     }
 
     fn parse_line(&mut self, input: &mut Input)
@@ -323,7 +333,7 @@ impl Assembler
         }
 
         // If this is the start of an identifier
-        if ch.is_alphanumeric() || ch == '_' {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
             let ident = input.parse_ident();
 
             let ws_present = input.eat_ws();
@@ -468,5 +478,31 @@ impl Assembler
 
         // Whatever follows a semicolon is a comment
         input.eat_comment();
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    fn test_parses(src: &str)
+    {
+        let asm = Assembler::new();
+        asm.parse_str(src);
+    }
+
+    #[test]
+    fn test_insns()
+    {
+        //test_parses(".code");
+        //test_parses(".code .data");
+
+        test_parses(".code push_i8 55; push_i8 -1;");
+        test_parses("FOO: push_i8 55; jmp FOO;");
+        test_parses(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
+
+
+
     }
 }
