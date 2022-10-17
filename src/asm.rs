@@ -335,11 +335,22 @@ impl Assembler
     /// Parse an integer argument
     fn parse_int_arg<T>(&self, input: &mut Input) -> T where T: TryFrom<i128>
     {
+        input.eat_ws();
+
         let int_val = input.parse_int();
 
         match int_val.try_into() {
             Ok(out_val) => return out_val,
             Err(_) => panic!("integer literal did not fit required size")
+        }
+    }
+
+    /// Get the memory block for the current section
+    fn mem(&mut self) -> &mut MemBlock
+    {
+        match self.section {
+            Section::Code => &mut self.code,
+            Section::Data => &mut self.data,
         }
     }
 
@@ -352,11 +363,11 @@ impl Assembler
 
             "zero" => {
                 let num_bytes: u32 = self.parse_int_arg(input);
+                let mem = self.mem();
 
-
-
-                todo!();
-
+                for i in 0..num_bytes {
+                    mem.push_u8(0);
+                }
             }
 
             _ => panic!("unknown assembler command \"{}\"", cmd)
@@ -373,6 +384,12 @@ impl Assembler
                 let val: i8 = self.parse_int_arg(input);
                 self.code.push_op(Op::push_i8);
                 self.code.push_i8(val);
+            }
+
+            "push_u32" => {
+                let val: u32 = self.parse_int_arg(input);
+                self.code.push_op(Op::push_u32);
+                self.code.push_u32(val);
             }
 
             "push_u64" => {

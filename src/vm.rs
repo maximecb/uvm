@@ -1,8 +1,9 @@
-use std::mem::transmute;
+use std::mem::{transmute, size_of};
 use crate::syscalls::{SyscallFn, get_syscall};
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
+///       less frequently used opcodes can take multiple bytes if necessary.
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 pub enum Op
@@ -16,6 +17,9 @@ pub enum Op
 
     // push_i8 <i8_imm> (sign-extended)
     push_i8,
+
+    // push_u32 <u32_imm>
+    push_u32,
 
     // push_u64 <u64_imm>
     push_u64,
@@ -112,6 +116,11 @@ impl Value
         Value(val as u64)
     }
 
+    fn from_u32(val: u32) -> Self
+    {
+        Value(val as u64)
+    }
+
     fn from_u64(val: u64) -> Self
     {
         Value(val)
@@ -172,6 +181,13 @@ impl MemBlock
         }
     }
 
+    pub fn push_u32(&mut self, val: u32)
+    {
+        for byte in val.to_le_bytes() {
+            self.data.push(byte);
+        }
+    }
+
     pub fn push_u64(&mut self, val: u64)
     {
         for byte in val.to_le_bytes() {
@@ -210,6 +226,15 @@ impl MemBlock
         unsafe {
             let buf_ptr = self.data.as_ptr();
             let val_ptr = transmute::<*const u8 , *const u16>(buf_ptr.add(pos));
+            *val_ptr
+        }
+    }
+
+    pub fn read_u32(&self, pos: usize) -> u32
+    {
+        unsafe {
+            let buf_ptr = self.data.as_ptr();
+            let val_ptr = transmute::<*const u8 , *const u32>(buf_ptr.add(pos));
             *val_ptr
         }
     }
@@ -314,13 +339,19 @@ impl VM
 
                 Op::push_i8 => {
                     let val = self.code.read_i8(self.pc);
-                    self.pc += 1;
+                    self.pc += size_of::<i8>();
                     self.stack.push(Value::from_i8(val));
+                }
+
+                Op::push_u32 => {
+                    let val = self.code.read_u32(self.pc);
+                    self.pc += size_of::<u32>();
+                    self.push(Value::from_u32(val));
                 }
 
                 Op::push_u64 => {
                     let val = self.code.read_u64(self.pc);
-                    self.pc += 8;
+                    self.pc += size_of::<u64>();
                     self.push(Value::from_u64(val));
                 }
 
@@ -334,13 +365,13 @@ impl VM
 
                 Op::jmp => {
                     let offset = self.code.read_i32(self.pc) as isize;
-                    self.pc += 4;
+                    self.pc += size_of::<i32>();
                     self.pc = ((self.pc as isize) + offset) as usize;
                 }
 
                 Op::jnz => {
                     let offset = self.code.read_i32(self.pc) as isize;
-                    self.pc += 4;
+                    self.pc += size_of::<i32>();
 
                     let v0 = self.pop();
 
@@ -351,7 +382,7 @@ impl VM
 
                 Op::syscall => {
                     let table_idx = self.code.read_u16(self.pc) as usize;
-                    self.pc += 2;
+                    self.pc += size_of::<u16>();
 
                     assert!(table_idx < self.syscalls.len());
                     let syscall_fn = self.syscalls[table_idx];
