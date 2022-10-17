@@ -5,6 +5,7 @@ use crate::syscalls::{SyscallFn, get_syscall};
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
 ///       less frequently used opcodes can take multiple bytes if necessary.
 #[allow(non_camel_case_types)]
+#[derive(PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum Op
 {
@@ -209,55 +210,13 @@ impl MemBlock
         }
     }
 
-    pub fn read_op(&self, pos: usize) -> Op
-    {
-        unsafe {
-            transmute::<u8 , Op>(self.data[pos])
-        }
-    }
-
-    pub fn read_u8(&self, pos: usize) -> u8
-    {
-        self.data[pos]
-    }
-
-    pub fn read_u16(&self, pos: usize) -> u16
+    /// Read a value at the current PC and then increment the PC
+    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
         unsafe {
             let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const u16>(buf_ptr.add(pos));
-            *val_ptr
-        }
-    }
-
-    pub fn read_u32(&self, pos: usize) -> u32
-    {
-        unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const u32>(buf_ptr.add(pos));
-            *val_ptr
-        }
-    }
-
-    pub fn read_u64(&self, pos: usize) -> u64
-    {
-        unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const u64>(buf_ptr.add(pos));
-            *val_ptr
-        }
-    }
-
-    pub fn read_i8(&self, pos: usize) -> i8
-    {
-        self.data[pos] as i8
-    }
-
-    pub fn read_i32(&self, pos: usize) -> i32
-    {
-        unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const i32>(buf_ptr.add(pos));
+            let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
+            *pc += size_of::<T>();
             *val_ptr
         }
     }
@@ -326,8 +285,7 @@ impl VM
                 panic!("pc out of bounds")
             }
 
-            let op = self.code.read_op(self.pc);
-            self.pc += 1;
+            let op = self.code.read_pc::<Op>(&mut self.pc);
 
             match op
             {
@@ -338,20 +296,17 @@ impl VM
                 Op::exit => break,
 
                 Op::push_i8 => {
-                    let val = self.code.read_i8(self.pc);
-                    self.pc += size_of::<i8>();
+                    let val = self.code.read_pc::<i8>(&mut self.pc);
                     self.stack.push(Value::from_i8(val));
                 }
 
                 Op::push_u32 => {
-                    let val = self.code.read_u32(self.pc);
-                    self.pc += size_of::<u32>();
+                    let val = self.code.read_pc::<u32>(&mut self.pc);
                     self.push(Value::from_u32(val));
                 }
 
                 Op::push_u64 => {
-                    let val = self.code.read_u64(self.pc);
-                    self.pc += size_of::<u64>();
+                    let val = self.code.read_pc::<u64>(&mut self.pc);
                     self.push(Value::from_u64(val));
                 }
 
@@ -364,15 +319,12 @@ impl VM
                 }
 
                 Op::jmp => {
-                    let offset = self.code.read_i32(self.pc) as isize;
-                    self.pc += size_of::<i32>();
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
                     self.pc = ((self.pc as isize) + offset) as usize;
                 }
 
                 Op::jnz => {
-                    let offset = self.code.read_i32(self.pc) as isize;
-                    self.pc += size_of::<i32>();
-
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
                     let v0 = self.pop();
 
                     if v0.as_i64() != 0 {
@@ -381,8 +333,7 @@ impl VM
                 }
 
                 Op::syscall => {
-                    let table_idx = self.code.read_u16(self.pc) as usize;
-                    self.pc += size_of::<u16>();
+                    let table_idx = self.code.read_pc::<u16>(&mut self.pc) as usize;
 
                     assert!(table_idx < self.syscalls.len());
                     let syscall_fn = self.syscalls[table_idx];
