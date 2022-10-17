@@ -187,7 +187,8 @@ impl Input
 
 enum LabelRefKind
 {
-    Delta32,
+    Data32,
+    Offset32,
 }
 
 struct LabelRef
@@ -258,9 +259,12 @@ impl Assembler
             let def_pos = *def_pos.unwrap();
 
             match label_ref.kind {
-                LabelRefKind::Delta32 => {
-                    let delta32 = (def_pos as i32) - (label_ref.pos as i32 + 4);
-                    self.code.write_i32(label_ref.pos, delta32);
+                LabelRefKind::Data32 => {
+                    todo!();
+                }
+                LabelRefKind::Offset32 => {
+                    let offs32 = (def_pos as i32) - (label_ref.pos as i32 + 4);
+                    self.code.write_i32(label_ref.pos, offs32);
                 }
             }
         }
@@ -337,6 +341,12 @@ impl Assembler
                 self.code.push_i8(val);
             }
 
+            "push_u64" => {
+                let val: u64 = self.parse_int_arg(input);
+                self.code.push_op(Op::push_u64);
+                self.code.push_u64(val);
+            }
+
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
@@ -347,7 +357,7 @@ impl Assembler
                 self.label_refs.push(LabelRef{
                     name: label_name,
                     pos: self.code.len(),
-                    kind: LabelRefKind::Delta32
+                    kind: LabelRefKind::Offset32
                 });
                 self.code.push_i32(0);
             }
@@ -358,7 +368,7 @@ impl Assembler
                 self.label_refs.push(LabelRef{
                     name: label_name,
                     pos: self.code.len(),
-                    kind: LabelRefKind::Delta32
+                    kind: LabelRefKind::Offset32
                 });
                 self.code.push_i32(0);
             }

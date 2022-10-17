@@ -172,6 +172,13 @@ impl MemBlock
         }
     }
 
+    pub fn push_u64(&mut self, val: u64)
+    {
+        for byte in val.to_le_bytes() {
+            self.data.push(byte);
+        }
+    }
+
     pub fn write_u8(&mut self, pos: usize, val: u8)
     {
         self.data[pos] = val;
