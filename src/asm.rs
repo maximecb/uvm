@@ -64,22 +64,28 @@ impl Input
     }
 
     /// Consume whitespace characters (excluding newlines)
-    fn eat_ws(&mut self)
+    fn eat_ws(&mut self) -> bool
     {
+        let mut num_ws = 0;
+
         loop
         {
             let ch = self.peek_ch();
 
             match ch {
                 '\r' |
+                '\n' |
                 '\t' |
                 ' ' => {
                     self.eat_ch();
+                    num_ws += 1;
                 }
 
                 _ => break
             }
         }
+
+        return num_ws != 0
     }
 
     /// Consume characters until the end of a comment
@@ -303,6 +309,15 @@ impl Assembler
         if ch == '.' {
             input.eat_ch();
             let cmd = input.parse_ident();
+
+            if cmd == "" {
+                panic!("expected assembler command");
+            }
+
+            if !input.eat_ws() {
+                panic!("expected whitespace after .{} command", cmd);
+            }
+
             self.parse_cmd(input, cmd);
             return;
         }
@@ -310,9 +325,15 @@ impl Assembler
         // If this is the start of an identifier
         if ch.is_alphanumeric() || ch == '_' {
             let ident = input.parse_ident();
-            input.eat_ws();
 
-            println!("ident: {}", ident);
+            let ws_present = input.eat_ws();
+            let ch = input.peek_ch();
+
+            // We can't have an identifier directly followed by an integer
+            // or another unexpected token with no separation
+            if !ws_present && ch != ';' && ch != ':' {
+                panic!("unexpected token");
+            }
 
             if input.match_str(":") {
                 if self.label_defs.get(&ident).is_some() {
@@ -372,8 +393,6 @@ impl Assembler
 
             _ => panic!("unknown assembler command \"{}\"", cmd)
         }
-
-        input.eat_ws();
     }
 
     /// Parse an instruction and its arguments
