@@ -198,6 +198,13 @@ struct LabelRef
     kind: LabelRefKind
 }
 
+#[derive(PartialEq)]
+enum Section
+{
+    Code,
+    Data,
+}
+
 pub struct Assembler
 {
     /// Map of syscall names to indices
@@ -215,6 +222,9 @@ pub struct Assembler
 
     /// References to labels (name, position)
     label_refs: Vec<LabelRef>,
+
+    /// Current section
+    section: Section,
 }
 
 impl Assembler
@@ -228,6 +238,7 @@ impl Assembler
             data: MemBlock::new(),
             label_defs: HashMap::default(),
             label_refs: Vec::default(),
+            section: Section::Code,
         }
     }
 
@@ -295,6 +306,14 @@ impl Assembler
             return;
         }
 
+        // If this is an assembler command
+        if ch == '.' {
+            input.eat_ch();
+            let cmd = input.parse_ident();
+            self.parse_cmd(input, cmd);
+            return;
+        }
+
         // If this is the start of an identifier
         if ch.is_alphanumeric() || ch == '_' {
             let ident = input.parse_ident();
@@ -309,7 +328,7 @@ impl Assembler
 
                 self.label_defs.insert(ident, self.code.len());
             }
-            else
+            else if self.section == Section::Code
             {
                 self.parse_insn(input, ident);
             }
@@ -329,6 +348,22 @@ impl Assembler
             Ok(out_val) => return out_val,
             Err(_) => panic!("integer literal did not fit required size")
         }
+    }
+
+    /// Parse an assembler command
+    fn parse_cmd(&mut self, input: &mut Input, cmd: String)
+    {
+        match cmd.as_str() {
+            "code" => self.section = Section::Code,
+            "data" => self.section = Section::Data,
+
+
+
+
+            _ => panic!("unknown assembler command \"{}\"", cmd)
+        }
+
+        input.eat_ws();
     }
 
     /// Parse an instruction and its arguments
@@ -390,7 +425,7 @@ impl Assembler
 
             "exit" => self.code.push_op(Op::exit),
 
-            _ => panic!("unknown opcode in assembler \"{}\"", op_name)
+            _ => panic!("unknown instruction opcode \"{}\"", op_name)
         }
 
         input.eat_ws();
