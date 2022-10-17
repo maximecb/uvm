@@ -1,4 +1,12 @@
-# Test comment
+# Data section
+.data
+
+
+
+
+
+# Code section
+.code
 
 push_i8 7; Another comment
 push_i8 77;

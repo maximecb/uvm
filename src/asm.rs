@@ -293,13 +293,6 @@ impl Assembler
             return;
         }
 
-        // If this is a command
-        if ch == '.' {
-            // TODO: handle .data and .text to switch modes
-            //self.parse_command();
-            return;
-        }
-
         // If this is a comment
         if ch == '#' || ch == ';' {
             input.eat_comment();
@@ -357,8 +350,14 @@ impl Assembler
             "code" => self.section = Section::Code,
             "data" => self.section = Section::Data,
 
+            "zero" => {
+                let num_bytes: u32 = self.parse_int_arg(input);
 
 
+
+                todo!();
+
+            }
 
             _ => panic!("unknown assembler command \"{}\"", cmd)
         }
