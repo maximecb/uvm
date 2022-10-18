@@ -28,7 +28,7 @@ fn main()
 
     if args.len() == 2 {
         let asm = Assembler::new();
-        let mut vm = asm.parse_file(&args[1]);
+        let mut vm = asm.parse_file(&args[1]).unwrap();
 
         vm.eval();
 

@@ -308,7 +308,7 @@ impl Assembler
         }
     }
 
-    fn parse_input(mut self, input: &mut Input) -> VM
+    fn parse_input(mut self, input: &mut Input) -> Result<VM, ParseError>
     {
         // Until we've reached the end of the input
         loop
@@ -343,17 +343,17 @@ impl Assembler
             }
         }
 
-        VM::new(self.code, self.data, self.syscall_tbl)
+        Ok(VM::new(self.code, self.data, self.syscall_tbl))
     }
 
-    pub fn parse_file(mut self, file_name: &str) -> VM
+    pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
     {
         let input_str = std::fs::read_to_string(file_name).unwrap();
         let mut input = Input::new(input_str);
         return self.parse_input(&mut input);
     }
 
-    pub fn parse_str(mut self, src: &str) -> VM
+    pub fn parse_str(mut self, src: &str) -> Result<VM, ParseError>
     {
         let mut input = Input::new(src.to_string());
         return self.parse_input(&mut input);
@@ -571,7 +571,7 @@ mod tests
     fn test_parses(src: &str)
     {
         let asm = Assembler::new();
-        asm.parse_str(src);
+        asm.parse_str(src).unwrap();
     }
 
     #[test]
