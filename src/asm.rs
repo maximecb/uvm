@@ -455,9 +455,20 @@ impl Assembler
             "zero" => {
                 let num_bytes: u32 = self.parse_int_arg(input);
                 let mem = self.mem();
-
                 for i in 0..num_bytes {
                     mem.push_u8(0);
+                }
+            }
+
+            "fill" => {
+                let num_bytes: u32 = self.parse_int_arg(input);
+                input.eat_ws();
+                input.expect_str(",");
+                input.eat_ws();
+                let val: u8 = self.parse_int_arg(input);
+                let mem = self.mem();
+                for i in 0..num_bytes {
+                    mem.push_u8(val);
                 }
             }
 
@@ -573,6 +584,8 @@ mod tests
         test_parses(".code push_i8 55; push_i8 -1;");
         test_parses("FOO: push_i8 55; push_i8 55; jne FOO;");
         test_parses(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
+        test_parses(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
+
 
 
 
