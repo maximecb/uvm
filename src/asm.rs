@@ -1,6 +1,34 @@
+use std::fmt;
 use std::convert::{TryFrom};
 use std::collections::HashMap;
 use crate::vm::{VM, MemBlock, Op};
+
+#[derive(Debug)]
+pub struct ParseError
+{
+    msg: String,
+    line_no: usize,
+    col_no: usize,
+}
+
+impl ParseError
+{
+    fn new(input: &Input, msg: &str) -> Self
+    {
+        ParseError {
+            msg: msg.to_string(),
+            line_no: input.line_no,
+            col_no: input.col_no
+        }
+    }
+}
+
+impl fmt::Display for ParseError
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "parse error")
+    }
+}
 
 struct Input
 {
@@ -23,6 +51,12 @@ impl Input
             line_no: 1,
             col_no: 1,
         }
+    }
+
+    /// Shortcut for yielding a parse error wrapped in a result type
+    fn parse_error<T>(&self, msg: &str) -> Result<T, ParseError>
+    {
+        Err(ParseError::new(self, msg))
     }
 
     /// Check if we have reached the end of the input
@@ -88,6 +122,26 @@ impl Input
         return num_ws != 0
     }
 
+    /// Check that a separator is present
+    fn sep_present(&mut self) -> Result<(), ParseError>
+    {
+        match self.peek_ch() {
+            '\r' |
+            '\n' |
+            '\t' |
+            ' ' |
+            '\0' |
+            '#' |
+            ';' => {
+                Ok(())
+            }
+
+            _ => {
+                self.parse_error(&format!("expected separator after token"))
+            }
+        }
+    }
+
     /// Consume characters until the end of a comment
     fn eat_comment(&mut self)
     {
@@ -134,7 +188,7 @@ impl Input
     }
 
     /// Parse a decimal integer
-    fn parse_int(&mut self) -> i128
+    fn parse_int(&mut self) -> Result<i128, ParseError>
     {
         let mut val: i128 = 0;
 
@@ -154,6 +208,12 @@ impl Input
 
             let ch = self.peek_ch();
 
+            // Allow underscores as separators
+            if ch == '_' {
+                self.eat_ch();
+                continue;
+            }
+
             if ch == '\0' {
                 break;
             }
@@ -163,7 +223,7 @@ impl Input
             }
         }
 
-        return sign * val;
+        return Ok(sign * val);
     }
 
     /// Parse an identifier
@@ -368,7 +428,7 @@ impl Assembler
     {
         input.eat_ws();
 
-        let int_val = input.parse_int();
+        let int_val = input.parse_int().unwrap();
 
         match int_val.try_into() {
             Ok(out_val) => return out_val,
@@ -453,6 +513,17 @@ impl Assembler
                 self.code.push_i32(0);
             }
 
+            "jne" => {
+                self.code.push_op(Op::jne);
+                let label_name = input.parse_ident();
+                self.label_refs.push(LabelRef{
+                    name: label_name,
+                    pos: self.code.len(),
+                    kind: LabelRefKind::Offset32
+                });
+                self.code.push_i32(0);
+            }
+
             "syscall" => {
                 let syscall_name = input.parse_ident();
 
@@ -498,8 +569,9 @@ mod tests
         //test_parses(".code");
         //test_parses(".code .data");
 
+        test_parses(".code push_u32 1_000_000;");
         test_parses(".code push_i8 55; push_i8 -1;");
-        test_parses("FOO: push_i8 55; jmp FOO;");
+        test_parses("FOO: push_i8 55; push_i8 55; jne FOO;");
         test_parses(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
 
 

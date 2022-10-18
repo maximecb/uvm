@@ -77,6 +77,9 @@ pub enum Op
     // Jump to pc offset if stack top is not zero
     jnz,
 
+    // Jump to pc offset if top values equal
+    jne,
+
     // Call and return using the call stack
     //call
     //ret
@@ -328,6 +331,16 @@ impl VM
                     let v0 = self.pop();
 
                     if v0.as_i64() != 0 {
+                        self.pc = ((self.pc as isize) + offset) as usize;
+                    }
+                }
+
+                Op::jne => {
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+                    let v0 = self.pop();
+                    let v1 = self.pop();
+
+                    if v0.as_i64() != v1.as_i64() {
                         self.pc = ((self.pc as isize) + offset) as usize;
                     }
                 }
