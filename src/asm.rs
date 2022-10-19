@@ -389,7 +389,8 @@ impl Assembler
                 panic!("expected whitespace after .{} command", cmd);
             }
 
-            self.parse_cmd(input, cmd);
+            self.parse_cmd(input, cmd)?;
+
             return Ok(());
         }
 
@@ -415,7 +416,7 @@ impl Assembler
             }
             else if self.section == Section::Code
             {
-                self.parse_insn(input, ident);
+                self.parse_insn(input, ident)?;
             }
 
             return Ok(());
@@ -447,7 +448,7 @@ impl Assembler
     }
 
     /// Parse an assembler command
-    fn parse_cmd(&mut self, input: &mut Input, cmd: String)
+    fn parse_cmd(&mut self, input: &mut Input, cmd: String) -> Result<(), ParseError>
     {
         match cmd.as_str() {
             "code" => self.section = Section::Code,
@@ -473,12 +474,16 @@ impl Assembler
                 }
             }
 
-            _ => panic!("unknown assembler command \"{}\"", cmd)
+            _ => {
+                return input.parse_error(&format!("unknown assembler command \"{}\"", cmd))
+            }
         }
+
+        Ok(())
     }
 
     /// Parse an instruction and its arguments
-    fn parse_insn(&mut self, input: &mut Input, op_name: String)
+    fn parse_insn(&mut self, input: &mut Input, op_name: String) -> Result<(), ParseError>
     {
         match op_name.as_str() {
             "push_i8" => {
@@ -553,7 +558,9 @@ impl Assembler
 
             "exit" => self.code.push_op(Op::exit),
 
-            _ => panic!("unknown instruction opcode \"{}\"", op_name)
+            _ => {
+                return input.parse_error(&format!("unknown instruction opcode \"{}\"", op_name))
+            }
         }
 
         input.eat_ws();
@@ -561,6 +568,8 @@ impl Assembler
 
         // Whatever follows a semicolon is a comment
         input.eat_comment();
+
+        Ok(())
     }
 }
 
