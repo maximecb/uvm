@@ -98,10 +98,8 @@ impl Input
     }
 
     /// Consume whitespace characters (excluding newlines)
-    fn eat_ws(&mut self) -> bool
+    fn eat_ws(&mut self)
     {
-        let mut num_ws = 0;
-
         loop
         {
             let ch = self.peek_ch();
@@ -112,18 +110,15 @@ impl Input
                 '\t' |
                 ' ' => {
                     self.eat_ch();
-                    num_ws += 1;
                 }
 
                 _ => break
             }
         }
-
-        return num_ws != 0
     }
 
     /// Check that a separator is present
-    fn sep_present(&mut self) -> Result<(), ParseError>
+    fn expect_sep(&mut self) -> Result<(), ParseError>
     {
         match self.peek_ch() {
             '\r' |
@@ -132,7 +127,8 @@ impl Input
             ' ' |
             '\0' |
             '#' |
-            ';' => {
+            ';' |
+            ':' => {
                 Ok(())
             }
 
@@ -385,9 +381,7 @@ impl Assembler
                 panic!("expected assembler command");
             }
 
-            if !input.eat_ws() {
-                panic!("expected whitespace after .{} command", cmd);
-            }
+            input.expect_sep()?;
 
             self.parse_cmd(input, cmd)?;
 
@@ -398,14 +392,8 @@ impl Assembler
         if ch.is_ascii_alphabetic() || ch == '_' {
             let ident = input.parse_ident();
 
-            let ws_present = input.eat_ws();
+            input.expect_sep()?;
             let ch = input.peek_ch();
-
-            // We can't have an identifier directly followed by an integer
-            // or another unexpected token with no separation
-            if !ws_present && ch != ';' && ch != ':' {
-                panic!("unexpected token");
-            }
 
             if input.match_str(":") {
                 if self.label_defs.get(&ident).is_some() {
@@ -580,12 +568,14 @@ mod tests
 
     fn parse_ok(src: &str)
     {
+        dbg!(src);
         let asm = Assembler::new();
         asm.parse_str(src).unwrap();
     }
 
     fn parse_fails(src: &str)
     {
+        dbg!(src);
         let asm = Assembler::new();
         assert!(asm.parse_str(src).is_err());
     }
@@ -606,10 +596,7 @@ mod tests
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
 
         parse_fails("1");
-        //parse_fails(".code.zero 512");
-
-
-
-
+        parse_fails(".code.zero 512");
+        parse_fails("push_i855;");
     }
 }
