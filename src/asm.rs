@@ -319,7 +319,7 @@ impl Assembler
                 break
             }
 
-            self.parse_line(input);
+            self.parse_line(input)?;
         }
 
         // Link the labels
@@ -327,6 +327,7 @@ impl Assembler
             let def_pos = self.label_defs.get(&label_ref.name);
 
             if def_pos.is_none() {
+                // TODO: use ParseError, but need src position of reference
                 panic!("label not found {}", label_ref.name);
             }
 
@@ -359,20 +360,20 @@ impl Assembler
         return self.parse_input(&mut input);
     }
 
-    fn parse_line(&mut self, input: &mut Input)
+    fn parse_line(&mut self, input: &mut Input) -> Result<(), ParseError>
     {
         let ch = input.peek_ch();
 
         // If this line is empty
         if ch == '\n' {
             input.eat_ch();
-            return;
+            return Ok(());
         }
 
         // If this is a comment
         if ch == '#' || ch == ';' {
             input.eat_comment();
-            return;
+            return Ok(());
         }
 
         // If this is an assembler command
@@ -389,11 +390,11 @@ impl Assembler
             }
 
             self.parse_cmd(input, cmd);
-            return;
+            return Ok(());
         }
 
         // If this is the start of an identifier
-        if ch.is_ascii_alphanumeric() || ch == '_' {
+        if ch.is_ascii_alphabetic() || ch == '_' {
             let ident = input.parse_ident();
 
             let ws_present = input.eat_ws();
@@ -417,10 +418,10 @@ impl Assembler
                 self.parse_insn(input, ident);
             }
 
-            return;
+            return Ok(());
         }
 
-        panic!("invalid input at {}:{}", input.line_no, input.col_no);
+        input.parse_error("invalid input")
     }
 
     /// Parse an integer argument
@@ -568,10 +569,16 @@ mod tests
 {
     use super::*;
 
-    fn test_parses(src: &str)
+    fn parse_ok(src: &str)
     {
         let asm = Assembler::new();
         asm.parse_str(src).unwrap();
+    }
+
+    fn parse_fails(src: &str)
+    {
+        let asm = Assembler::new();
+        assert!(asm.parse_str(src).is_err());
     }
 
     #[test]
@@ -580,11 +587,17 @@ mod tests
         //test_parses(".code");
         //test_parses(".code .data");
 
-        test_parses(".code push_u32 1_000_000;");
-        test_parses(".code push_i8 55; push_i8 -1;");
-        test_parses("FOO: push_i8 55; push_i8 55; jne FOO;");
-        test_parses(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
-        test_parses(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
+        parse_ok("");
+        parse_ok("# comment");
+        parse_ok(".code\npush_u32 0xFFFFFFFF;");
+        parse_ok(".code push_u32 1_000_000;");
+        parse_ok(".code push_i8 55; push_i8 -1;");
+        parse_ok("FOO: push_i8 55; push_i8 55; jne FOO;");
+        parse_ok(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
+        parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
+
+        parse_fails("1");
+        //parse_fails(".code.zero 512");
 
 
 
