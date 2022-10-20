@@ -5,7 +5,7 @@ use crate::syscalls::{SyscallFn, get_syscall};
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
 ///       less frequently used opcodes can take multiple bytes if necessary.
 #[allow(non_camel_case_types)]
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum Op
 {
@@ -297,6 +297,10 @@ impl VM
                 Op::nop => continue,
 
                 Op::exit => break,
+
+                Op::pop => {
+                    self.pop();
+                }
 
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);

@@ -484,6 +484,12 @@ impl Assembler
     fn parse_insn(&mut self, input: &mut Input, op_name: String) -> Result<(), ParseError>
     {
         match op_name.as_str() {
+            "nop" => self.code.push_op(Op::nop),
+
+            "swap" => self.code.push_op(Op::swap),
+            "pop" => self.code.push_op(Op::pop),
+            "dup" => self.code.push_op(Op::dup),
+
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input);
                 self.code.push_op(Op::push_i8);
