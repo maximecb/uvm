@@ -249,17 +249,20 @@ impl Input
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 enum Section
 {
     Code,
     Data,
 }
 
+#[derive(Copy, Clone)]
 struct LabelDef
 {
     section: Section,
     pos: usize,
+    line_no: usize,
+    col_no: usize,
 }
 
 enum LabelRefKind
@@ -288,7 +291,7 @@ pub struct Assembler
     data: MemBlock,
 
     /// Label definitions (name, position)
-    label_defs: HashMap<String, usize>,
+    label_defs: HashMap<String, LabelDef>,
 
     /// References to labels (name, position)
     label_refs: Vec<LabelRef>,
@@ -328,21 +331,23 @@ impl Assembler
 
         // Link the labels
         for label_ref in self.label_refs {
-            let def_pos = self.label_defs.get(&label_ref.name);
+            let def = self.label_defs.get(&label_ref.name);
 
-            if def_pos.is_none() {
+            if def.is_none() {
                 // TODO: use ParseError, but need src position of reference
                 panic!("label not found {}", label_ref.name);
             }
 
-            let def_pos = *def_pos.unwrap();
+            let def = *def.unwrap();
 
             match label_ref.kind {
                 LabelRefKind::Data32 => {
                     todo!();
                 }
                 LabelRefKind::Offset32 => {
-                    let offs32 = (def_pos as i32) - (label_ref.pos as i32 + 4);
+                    // TODO: convert to parse error
+                    assert!(def.section == Section::Code);
+                    let offs32 = (def.pos as i32) - (label_ref.pos as i32 + 4);
                     self.code.write_i32(label_ref.pos, offs32);
                 }
             }
@@ -432,7 +437,16 @@ impl Assembler
                     return input.parse_error(&format!("label already defined {}", ident));
                 }
 
-                self.label_defs.insert(ident, self.code.len());
+                let label_pos = self.mem().len();
+                self.label_defs.insert(
+                    ident,
+                    LabelDef {
+                        section: self.section,
+                        pos: label_pos,
+                        line_no: input.line_no,
+                        col_no: input.col_no,
+                    }
+                );
             }
             else if self.section == Section::Code
             {
@@ -612,6 +626,7 @@ mod tests
         // Data section
         parse_ok(".code");
         parse_ok(".code .data");
+        parse_ok(".data DATA_LABEL: .zero 256");
         parse_ok(" .data   .fill 256   ,   0xFF    #comment");
         parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
