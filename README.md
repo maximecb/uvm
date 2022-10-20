@@ -6,15 +6,21 @@ UVM Virtual Machine
 
 Dependencies:
 - The Rust toolchain
+- The SDL2 libraries
 
-Install SDL2:
+To install SDL2 on MacOS:
 ```
 brew install sdl2
 ```
 
-Add this to `~/.zprofile`:
+On MacOS, add this to `~/.zprofile`:
 ```
 export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
+```
+
+To install SDL2 on Debian/Ubuntu
+```
+sudo apt-get install libsdl2-dev
 ```
 
 Install the rust toolchain:
@@ -28,3 +34,6 @@ cargo build
 ```
 
 To run the compiled binary:
+```
+cargo run <input_file>
+```
