@@ -199,7 +199,7 @@ impl Input
 
             // There must be at least one digit
             if !ch.is_digit(base) {
-                panic!("expected digit");
+                return self.parse_error("expected digit");
             }
 
             val = (base as i128) * val + (ch.to_digit(base).unwrap() as i128);
@@ -365,15 +365,15 @@ impl Assembler
     }
 
     /// Parse an integer argument
-    fn parse_int_arg<T>(&self, input: &mut Input) -> T where T: TryFrom<i128>
+    fn parse_int_arg<T>(&self, input: &mut Input) -> Result<T, ParseError> where T: TryFrom<i128>
     {
         input.eat_ws();
 
         let int_val = input.parse_int().unwrap();
 
         match int_val.try_into() {
-            Ok(out_val) => return out_val,
-            Err(_) => panic!("integer literal did not fit required size")
+            Ok(out_val) => Ok(out_val),
+            Err(_) => input.parse_error("integer literal did not fit required size")
         }
     }
 
@@ -409,7 +409,7 @@ impl Assembler
             let cmd = input.parse_ident();
 
             if cmd == "" {
-                panic!("expected assembler command");
+                return input.parse_error("expected assembler command");
             }
 
             input.expect_sep()?;
@@ -429,7 +429,7 @@ impl Assembler
 
             if input.match_str(":") {
                 if self.label_defs.get(&ident).is_some() {
-                    panic!("label already defined {}", ident)
+                    return input.parse_error(&format!("label already defined {}", ident));
                 }
 
                 self.label_defs.insert(ident, self.code.len());
@@ -453,7 +453,7 @@ impl Assembler
             "data" => self.section = Section::Data,
 
             "zero" => {
-                let num_bytes: u32 = self.parse_int_arg(input);
+                let num_bytes: u32 = self.parse_int_arg(input)?;
                 let mem = self.mem();
                 for i in 0..num_bytes {
                     mem.push_u8(0);
@@ -461,11 +461,11 @@ impl Assembler
             }
 
             "fill" => {
-                let num_bytes: u32 = self.parse_int_arg(input);
+                let num_bytes: u32 = self.parse_int_arg(input)?;
                 input.eat_ws();
                 input.expect_str(",")?;
                 input.eat_ws();
-                let val: u8 = self.parse_int_arg(input);
+                let val: u8 = self.parse_int_arg(input)?;
                 let mem = self.mem();
                 for i in 0..num_bytes {
                     mem.push_u8(val);
@@ -491,19 +491,19 @@ impl Assembler
             "dup" => self.code.push_op(Op::dup),
 
             "push_i8" => {
-                let val: i8 = self.parse_int_arg(input);
+                let val: i8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_i8);
                 self.code.push_i8(val);
             }
 
             "push_u32" => {
-                let val: u32 = self.parse_int_arg(input);
+                let val: u32 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_u32);
                 self.code.push_u32(val);
             }
 
             "push_u64" => {
-                let val: u64 = self.parse_int_arg(input);
+                let val: u64 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_u64);
                 self.code.push_u64(val);
             }
@@ -619,6 +619,9 @@ mod tests
         // Failing parses
         parse_fails("1");
         parse_fails(".code.zero 512");
+        parse_fails(". code");
+        parse_fails("FOO: FOO: jmp FOO;");
+        parse_fails("push_i8 555");
         parse_fails("push_i855;");
         parse_fails("push_i8 55; comment without hash");
     }
