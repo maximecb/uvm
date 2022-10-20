@@ -176,11 +176,13 @@ impl Input
         false
     }
 
-    fn expect_str(&mut self, token: &str)
+    fn expect_str(&mut self, token: &str) -> Result<(), ParseError>
     {
         if !self.match_str(token) {
-            panic!("expected {}", token);
+            return self.parse_error(&format!("expected {}", token));
         }
+
+        Ok(())
     }
 
     /// Parse a decimal integer
@@ -247,6 +249,19 @@ impl Input
     }
 }
 
+#[derive(PartialEq)]
+enum Section
+{
+    Code,
+    Data,
+}
+
+struct LabelDef
+{
+    section: Section,
+    pos: usize,
+}
+
 enum LabelRefKind
 {
     Data32,
@@ -258,13 +273,6 @@ struct LabelRef
     name: String,
     pos: usize,
     kind: LabelRefKind
-}
-
-#[derive(PartialEq)]
-enum Section
-{
-    Code,
-    Data,
 }
 
 pub struct Assembler
@@ -356,6 +364,29 @@ impl Assembler
         return self.parse_input(&mut input);
     }
 
+    /// Parse an integer argument
+    fn parse_int_arg<T>(&self, input: &mut Input) -> T where T: TryFrom<i128>
+    {
+        input.eat_ws();
+
+        let int_val = input.parse_int().unwrap();
+
+        match int_val.try_into() {
+            Ok(out_val) => return out_val,
+            Err(_) => panic!("integer literal did not fit required size")
+        }
+    }
+
+    /// Get the memory block for the current section
+    fn mem(&mut self) -> &mut MemBlock
+    {
+        match self.section {
+            Section::Code => &mut self.code,
+            Section::Data => &mut self.data,
+        }
+    }
+
+    /// Parse the current line of the input
     fn parse_line(&mut self, input: &mut Input) -> Result<(), ParseError>
     {
         let ch = input.peek_ch();
@@ -367,7 +398,7 @@ impl Assembler
         }
 
         // If this is a comment
-        if ch == '#' || ch == ';' {
+        if ch == '#' {
             input.eat_comment();
             return Ok(());
         }
@@ -393,6 +424,7 @@ impl Assembler
             let ident = input.parse_ident();
 
             input.expect_sep()?;
+            input.eat_ws();
             let ch = input.peek_ch();
 
             if input.match_str(":") {
@@ -413,28 +445,6 @@ impl Assembler
         input.parse_error("invalid input")
     }
 
-    /// Parse an integer argument
-    fn parse_int_arg<T>(&self, input: &mut Input) -> T where T: TryFrom<i128>
-    {
-        input.eat_ws();
-
-        let int_val = input.parse_int().unwrap();
-
-        match int_val.try_into() {
-            Ok(out_val) => return out_val,
-            Err(_) => panic!("integer literal did not fit required size")
-        }
-    }
-
-    /// Get the memory block for the current section
-    fn mem(&mut self) -> &mut MemBlock
-    {
-        match self.section {
-            Section::Code => &mut self.code,
-            Section::Data => &mut self.data,
-        }
-    }
-
     /// Parse an assembler command
     fn parse_cmd(&mut self, input: &mut Input, cmd: String) -> Result<(), ParseError>
     {
@@ -453,7 +463,7 @@ impl Assembler
             "fill" => {
                 let num_bytes: u32 = self.parse_int_arg(input);
                 input.eat_ws();
-                input.expect_str(",");
+                input.expect_str(",")?;
                 input.eat_ws();
                 let val: u8 = self.parse_int_arg(input);
                 let mem = self.mem();
@@ -552,10 +562,7 @@ impl Assembler
         }
 
         input.eat_ws();
-        input.expect_str(";");
-
-        // Whatever follows a semicolon is a comment
-        input.eat_comment();
+        input.expect_str(";")?;
 
         Ok(())
     }
@@ -583,20 +590,30 @@ mod tests
     #[test]
     fn test_insns()
     {
-        //test_parses(".code");
-        //test_parses(".code .data");
-
+        // Basics
         parse_ok("");
         parse_ok("# comment");
+        parse_ok("push_i8  0 ; # comment");
         parse_ok(".code\npush_u32 0xFFFFFFFF;");
         parse_ok(".code push_u32 1_000_000;");
         parse_ok(".code push_i8 55; push_i8 -1;");
+
+        // Labels
         parse_ok("FOO: push_i8 55; push_i8 55; jne FOO;");
-        parse_ok(".data .zero 512 .code push_u32 0xFFFF; .push_i8 7; .add_i64;");
+        parse_ok("FOO: push_i8 55; push_i8 55; jne FOO;");
+        parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
+
+        // Data section
+        parse_ok(".code");
+        parse_ok(".code .data");
+        parse_ok(" .data   .fill 256   ,   0xFF    #comment");
+        parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
 
+        // Failing parses
         parse_fails("1");
         parse_fails(".code.zero 512");
         parse_fails("push_i855;");
+        parse_fails("push_i8 55; comment without hash");
     }
 }
