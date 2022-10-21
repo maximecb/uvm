@@ -280,6 +280,8 @@ struct LabelRef
 {
     name: String,
     pos: usize,
+    line_no: usize,
+    col_no: usize,
     kind: LabelRefKind
 }
 
@@ -339,8 +341,11 @@ impl Assembler
             let def = self.label_defs.get(&label_ref.name);
 
             if def.is_none() {
-                // TODO: use ParseError, but need src position of reference
-                panic!("label not found {}", label_ref.name);
+                return Err(ParseError {
+                    msg: format!("label not found {}", label_ref.name),
+                    line_no: label_ref.line_no,
+                    col_no: label_ref.col_no,
+                });
             }
 
             let def = *def.unwrap();
@@ -405,6 +410,8 @@ impl Assembler
             LabelRef{
                 name: name,
                 pos: self.code.len(),
+                line_no: input.line_no,
+                col_no: input.line_no,
                 kind: kind
             }
         );
@@ -641,6 +648,7 @@ mod tests
         parse_fails(".code.zero 512");
         parse_fails(". code");
         parse_fails("FOO: FOO: jmp FOO;");
+        parse_fails("FOO: jmp BAR;");
         parse_fails("push_i8 555");
         parse_fails("push_i855;");
         parse_fails("push_i8 55; comment without hash");
