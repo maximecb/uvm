@@ -225,7 +225,7 @@ impl Input
     }
 
     /// Parse an identifier
-    fn parse_ident(&mut self) -> String
+    fn parse_ident(&mut self) -> Result<String, ParseError>
     {
         let mut ident = "".to_string();
 
@@ -245,7 +245,11 @@ impl Input
             self.eat_ch();
         }
 
-        ident
+        if ident.len() == 0 {
+            return self.parse_error("expected identifier");
+        }
+
+        Ok(ident)
     }
 }
 
@@ -265,6 +269,7 @@ struct LabelDef
     col_no: usize,
 }
 
+#[derive(Copy, Clone)]
 enum LabelRefKind
 {
     Data32,
@@ -391,6 +396,25 @@ impl Assembler
         }
     }
 
+    /// Add a new label reference at the current position
+    fn add_label_ref(&mut self, input: &Input, name: String, kind: LabelRefKind)
+    {
+        assert!(self.section == Section::Code);
+
+        self.label_refs.push(
+            LabelRef{
+                name: name,
+                pos: self.code.len(),
+                kind: kind
+            }
+        );
+
+        match kind {
+            LabelRefKind::Data32 => self.code.push_u32(0),
+            LabelRefKind::Offset32 => self.code.push_u32(0),
+        }
+    }
+
     /// Parse the current line of the input
     fn parse_line(&mut self, input: &mut Input) -> Result<(), ParseError>
     {
@@ -411,11 +435,7 @@ impl Assembler
         // If this is an assembler command
         if ch == '.' {
             input.eat_ch();
-            let cmd = input.parse_ident();
-
-            if cmd == "" {
-                return input.parse_error("expected assembler command");
-            }
+            let cmd = input.parse_ident()?;
 
             input.expect_sep()?;
 
@@ -426,7 +446,7 @@ impl Assembler
 
         // If this is the start of an identifier
         if ch.is_ascii_alphabetic() || ch == '_' {
-            let ident = input.parse_ident();
+            let ident = input.parse_ident()?;
 
             input.expect_sep()?;
             input.eat_ws();
@@ -528,46 +548,31 @@ impl Assembler
 
             "jmp" => {
                 self.code.push_op(Op::jmp);
-                let label_name = input.parse_ident();
-                self.label_refs.push(LabelRef{
-                    name: label_name,
-                    pos: self.code.len(),
-                    kind: LabelRefKind::Offset32
-                });
-                self.code.push_i32(0);
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
             "jnz" => {
                 self.code.push_op(Op::jnz);
-                let label_name = input.parse_ident();
-                self.label_refs.push(LabelRef{
-                    name: label_name,
-                    pos: self.code.len(),
-                    kind: LabelRefKind::Offset32
-                });
-                self.code.push_i32(0);
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
             "jne" => {
                 self.code.push_op(Op::jne);
-                let label_name = input.parse_ident();
-                self.label_refs.push(LabelRef{
-                    name: label_name,
-                    pos: self.code.len(),
-                    kind: LabelRefKind::Offset32
-                });
-                self.code.push_i32(0);
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
             "syscall" => {
-                let syscall_name = input.parse_ident();
+                let syscall_name = input.parse_ident()?;
 
+                // Get the index for this syscall method name
                 if self.syscall_map.get(&syscall_name).is_none() {
                     let syscall_idx = self.syscall_map.len();
                     self.syscall_map.insert(syscall_name.clone(), syscall_idx.try_into().unwrap());
                     self.syscall_tbl.push(syscall_name.clone());
                 }
-
                 let syscall_idx = *self.syscall_map.get(&syscall_name).unwrap();
 
                 self.code.push_op(Op::syscall);
