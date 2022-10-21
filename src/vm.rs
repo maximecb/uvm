@@ -105,7 +105,7 @@ pub enum Op
     exit,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Value(u64);
 
 impl Value
@@ -233,7 +233,6 @@ pub struct VM
     // Value stack
     stack: Vec<Value>,
 
-
     // TODO
     // Call stack? Do we need one
     // Would prefer not to expose this so we can swap stacks
@@ -357,5 +356,43 @@ impl VM
                 _ => panic!("unknown opcode"),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use crate::asm::*;
+
+    fn eval_src(src: &str) -> Value
+    {
+        dbg!(src);
+        let asm = Assembler::new();
+        let mut vm = asm.parse_str(src).unwrap();
+        vm.eval();
+        vm.pop()
+    }
+
+    fn eval_eq(src: &str, expected: Value)
+    {
+        let result = eval_src(src);
+        assert_eq!(result, expected);
+    }
+
+    /*
+    fn eval_file(file_name: & str) -> Value
+    {
+        dbg!(file_name);
+        let mut vm = VM::new();
+        let unit_fn = parse_file(&mut vm, file_name).unwrap();
+        return vm.eval(&unit_fn);
+    }
+    */
+
+    #[test]
+    fn test_basics()
+    {
+        assert_eq!(eval_src("push_i8 1; exit;"), Value::from_i8(1));
     }
 }
