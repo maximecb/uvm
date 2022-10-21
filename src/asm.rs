@@ -272,7 +272,7 @@ struct LabelDef
 #[derive(Copy, Clone)]
 enum LabelRefKind
 {
-    Data32,
+    Address32,
     Offset32,
 }
 
@@ -351,14 +351,24 @@ impl Assembler
             let def = *def.unwrap();
 
             match label_ref.kind {
-                LabelRefKind::Data32 => {
-                    todo!();
+                LabelRefKind::Address32 => {
+                    let ptr32 = u32::try_from(def.pos);
+
+                    if ptr32.is_err() {
+                        return Err(ParseError {
+                            msg: format!("address doesn't fit in u32 {}", label_ref.name),
+                            line_no: label_ref.line_no,
+                            col_no: label_ref.col_no,
+                        });
+                    }
+
+                    self.code.write(label_ref.pos, ptr32.unwrap());
                 }
+
                 LabelRefKind::Offset32 => {
-                    // TODO: convert to parse error
                     assert!(def.section == Section::Code);
                     let offs32 = (def.pos as i32) - (label_ref.pos as i32 + 4);
-                    self.code.write_i32(label_ref.pos, offs32);
+                    self.code.write(label_ref.pos, offs32);
                 }
             }
         }
@@ -384,12 +394,19 @@ impl Assembler
     {
         input.eat_ws();
 
-        let int_val = input.parse_int().unwrap();
+        let ch = input.peek_ch();
 
-        match int_val.try_into() {
-            Ok(out_val) => Ok(out_val),
-            Err(_) => input.parse_error("integer literal did not fit required size")
+        // If this is an integer literal
+        if ch.is_digit(10) || ch == '-' {
+            let int_val = input.parse_int()?;
+
+            return match int_val.try_into() {
+                Ok(out_val) => Ok(out_val),
+                Err(_) => input.parse_error("integer literal did not fit required size")
+            }
         }
+
+        input.parse_error("expected integer argument")
     }
 
     /// Get the memory block for the current section
@@ -417,7 +434,7 @@ impl Assembler
         );
 
         match kind {
-            LabelRefKind::Data32 => self.code.push_u32(0),
+            LabelRefKind::Address32 => self.code.push_u32(0),
             LabelRefKind::Offset32 => self.code.push_u32(0),
         }
     }
@@ -549,6 +566,12 @@ impl Assembler
                 self.code.push_u64(val);
             }
 
+            "push_ptr32" => {
+                let label_name = input.parse_ident()?;
+                self.code.push_op(Op::push_u32);
+                self.add_label_ref(input, label_name, LabelRefKind::Address32);
+            }
+
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
@@ -642,6 +665,7 @@ mod tests
         parse_ok(" .data   .fill 256   ,   0xFF    #comment");
         parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
+        parse_ok(".data DATA_LABEL: .fill 256, 0xFF .code push_ptr32 DATA_LABEL;");
 
         // Failing parses
         parse_fails("1");

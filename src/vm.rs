@@ -199,16 +199,12 @@ impl MemBlock
         }
     }
 
-    pub fn write_u8(&mut self, pos: usize, val: u8)
-    {
-        self.data[pos] = val;
-    }
-
-    pub fn write_i32(&mut self, pos: usize, val: i32)
+    /// Read a value at the current PC and then increment the PC
+    pub fn write<T>(&mut self, pos: usize, val: T) where T: Copy
     {
         unsafe {
             let buf_ptr = self.data.as_mut_ptr();
-            let val_ptr = transmute::<*mut u8 , *mut i32>(buf_ptr.add(pos));
+            let val_ptr = transmute::<*mut u8 , *mut T>(buf_ptr.add(pos));
             *val_ptr = val;
         }
     }
