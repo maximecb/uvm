@@ -297,6 +297,12 @@ impl VM
                     self.pop();
                 }
 
+                Op::dup => {
+                    let val = self.pop();
+                    self.push(val);
+                    self.push(val);
+                }
+
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
                     self.stack.push(Value::from_i8(val));
@@ -313,10 +319,18 @@ impl VM
                 }
 
                 Op::add_i64 => {
-                    let v0 = self.pop();
                     let v1 = self.pop();
+                    let v0 = self.pop();
                     self.stack.push(Value::from_i64(
                         v0.as_i64() + v1.as_i64()
+                    ));
+                }
+
+                Op::sub_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.stack.push(Value::from_i64(
+                        v0.as_i64() - v1.as_i64()
                     ));
                 }
 
@@ -394,5 +408,8 @@ mod tests
     fn test_basics()
     {
         assert_eq!(eval_src("push_i8 1; exit;"), Value::from_i8(1));
+        assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));
+        assert_eq!(eval_src("push_i8 10; push_i8 2; sub_i64; exit;"), Value::from_i8(8));
+        assert_eq!(eval_src("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;"), Value::from_i8(10));
     }
 }

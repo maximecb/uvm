@@ -23,7 +23,7 @@ To install SDL2 on Debian/Ubuntu
 sudo apt-get install libsdl2-dev
 ```
 
-Install the rust toolchain:
+Install the Rust toolchain:
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
