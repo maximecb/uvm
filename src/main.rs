@@ -6,7 +6,7 @@
 mod vm;
 mod syscalls;
 mod asm;
-mod display;
+mod window;
 mod audio;
 
 use std::env;
