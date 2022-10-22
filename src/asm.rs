@@ -569,9 +569,16 @@ impl Assembler
 
             // Null-terminated UTF-8 string
             "stringz" => {
+                input.eat_ws();
+                let val = input.parse_str()?;
 
+                let mem = self.mem();
+                for byte in val.bytes() {
+                    mem.push_u8(byte);
+                }
 
-                todo!();
+                // Write a null terminator byte
+                mem.push_u8(0);
             }
 
             _ => {
@@ -710,6 +717,7 @@ mod tests
         parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
         parse_ok(".data DATA_LABEL: .fill 256, 0xFF .code push_ptr32 DATA_LABEL;");
+        parse_ok(".data STR_LABEL: .stringz \"hi!\" .code push_ptr32 STR_LABEL;");
 
         // Failing parses
         parse_fails("1");
