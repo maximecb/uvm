@@ -224,6 +224,43 @@ impl Input
         return Ok(sign * val);
     }
 
+    /// Parse a string literal
+    fn parse_str(&mut self) -> Result<String, ParseError>
+    {
+        let open_ch = self.eat_ch();
+        assert!(open_ch == '"');
+
+        let mut out = String::new();
+
+        loop
+        {
+            if self.eof() {
+                return self.parse_error("unexpected end of input while parsing string literal");
+            }
+
+            let ch = self.eat_ch();
+
+            if ch == open_ch {
+                break;
+            }
+
+            if ch == '\\' {
+                match self.eat_ch() {
+                    '\\' => out.push('\\'),
+                    't' => out.push('\t'),
+                    'n' => out.push('\n'),
+                    _ => return self.parse_error("unknown escape sequence")
+                }
+
+                continue;
+            }
+
+            out.push(ch);
+        }
+
+        return Ok(out);
+    }
+
     /// Parse an identifier
     fn parse_ident(&mut self) -> Result<String, ParseError>
     {
@@ -528,6 +565,13 @@ impl Assembler
                 for i in 0..num_bytes {
                     mem.push_u8(val);
                 }
+            }
+
+            // Null-terminated UTF-8 string
+            "stringz" => {
+
+
+                todo!();
             }
 
             _ => {
