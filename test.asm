@@ -1,30 +1,24 @@
 # Data section
 .data
 
-.zero 32
-
-
+# 800 * 600 * 3
+PIXEL_BUFFER:
+.zero 1_440_000
 
 # Code section
 .code
 
-push_i8 3;
-push_i8 7; # Another comment
-push_i8 77;
-push_u64 0xFFFF;
-push_u32 0xFFFFFFFF;
 
-syscall hello_world;
-
-jmp PAST_ADD;
-add_i64;
-PAST_ADD:
-
-push_i8 1;
-pop;
 
 
 syscall window_create;
+
+
+
+
+# TODO:
+#syscall window_copy_pixels
+
 
 
 

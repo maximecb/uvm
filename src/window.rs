@@ -15,27 +15,74 @@ use crate::vm::{VM, Value};
 
 
 
-struct Window
+
+
+/*
+let mut event_pump = sdl_context.event_pump().unwrap();
+
+let mut event_pump = sdl_context.event_pump().unwrap();
+let mut i = 0;
+'running: loop {
+    i = (i + 1) % 255;
+    canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
+    canvas.clear();
+    for event in event_pump.poll_iter() {
+        match event {
+            Event::Quit {..} |
+            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                break 'running
+            },
+            _ => {}
+        }
+    }
+
+    // The rest of the game loop goes here...
+
+    canvas.present();
+
+    //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+}
+*/
+
+
+
+
+
+
+
+struct Window<'a>
 {
+    width: u32,
+    height: u32,
+
+
+
     // window id
     //window_id
 
-    width: usize,
-    height: usize,
 
-    //canvas
+    canvas: sdl2::render::Canvas<sdl2::video::Window>,
 
-    //texture_creator
+    texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
 
-
-
-    //texture
-
-
+    texture: Option<Texture<'a>>,
 }
+
+
+
+
 
 // TODO: eventually we want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
+
+
+
+
+
+
+
+
+
 
 pub fn window_create(vm: &mut VM)
 {
@@ -46,7 +93,7 @@ pub fn window_create(vm: &mut VM)
 
     // TODO: move the event loop setup into main
     let sdl_context = sdl2::init().unwrap();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+
 
 
 
@@ -71,45 +118,42 @@ pub fn window_create(vm: &mut VM)
 
     let texture_creator = canvas.texture_creator();
 
-    let texture = texture_creator.create_texture(
-        PixelFormatEnum::RGB24,
-        TextureAccess::Target,
+
+
+
+    let window = Window {
         width,
-        height
-    ).unwrap();
+        height,
+        canvas,
+        texture_creator,
+        texture: None,
+    };
 
-
-
-    /*
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut i = 0;
-    'running: loop {
-        i = (i + 1) % 255;
-        canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
-        canvas.clear();
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit {..} |
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    break 'running
-                },
-                _ => {}
-            }
-        }
-
-
-        // The rest of the game loop goes here...
-
-        canvas.present();
-
-
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    unsafe {
+        WINDOW = Some(window)
     }
-    */
+
+
+    unsafe {
+
+        let window = WINDOW.as_mut().unwrap();
+
+        window.texture = Some( window.texture_creator.create_texture(
+            PixelFormatEnum::RGB24,
+            TextureAccess::Streaming,
+            width,
+            height
+        ).unwrap() );
+
+    }
+
 
 
 
 }
+
+
+
 
 pub fn window_copy_pixels(vm: &mut VM)
 {
