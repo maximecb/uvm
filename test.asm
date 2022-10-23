@@ -24,7 +24,7 @@ push_i8 1;
 pop;
 
 
-#syscall create_window;
+syscall window_create;
 
 
 
