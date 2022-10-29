@@ -1,5 +1,5 @@
 use std::mem::{transmute, size_of};
-use crate::syscalls::{SyscallFn, get_syscall};
+use crate::syscalls::*;
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
@@ -224,7 +224,7 @@ impl MemBlock
 pub struct VM
 {
     /// Table of system calls the program can refer to
-    syscalls: Vec<SyscallFn>,
+    syscalls: Vec<SysCallFn>,
 
     heap: MemBlock,
 

@@ -8,13 +8,8 @@ PIXEL_BUFFER:
 # Code section
 .code
 
-
-
-
+# TODO: need to specify window width and height
 syscall window_create;
-
-
-
 
 # TODO:
 push_ptr32 PIXEL_BUFFER;
