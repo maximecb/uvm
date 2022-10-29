@@ -10,8 +10,8 @@ use crate::syscalls::{SyscallFn, get_syscall};
 pub enum Op
 {
     // Halt execution and produce an error
-    // This is opcode zero so that jumping to uninitialized memory halts
-    halt = 0,
+    // Panic is zero so that jumping to uninitialized memory causes panic
+    panic = 0,
 
     // No-op (useful for code patching or patch points)
     nop,
@@ -275,6 +275,7 @@ impl VM
         self.stack.pop().unwrap()
     }
 
+    /// Execute instructions until halt/exit/pause
     pub fn eval(&mut self)
     {
         loop
@@ -287,7 +288,7 @@ impl VM
 
             match op
             {
-                Op::halt => panic!("execution error, encountered halt opcode"),
+                Op::panic => panic!("execution error, encountered panic opcode"),
 
                 Op::nop => continue,
 

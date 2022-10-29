@@ -157,6 +157,9 @@ pub fn window_create(vm: &mut VM)
 
 pub fn window_copy_pixels(vm: &mut VM)
 {
+    // TODO: get the address
+
+
     /*
     fn update<R>(
         &mut self,

@@ -17,7 +17,8 @@ syscall window_create;
 
 
 # TODO:
-#syscall window_copy_pixels
+push_ptr32 PIXEL_BUFFER;
+#syscall window_copy_pixels;
 
 
 
