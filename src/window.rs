@@ -157,49 +157,61 @@ pub fn window_create(vm: &mut VM)
 
 pub fn window_copy_pixels(vm: &mut VM)
 {
-    // TODO: get the address
 
 
-    /*
-    fn update<R>(
-        &mut self,
-        rect: R,
-        pixel_data: &[u8],
-        pitch: usize
-    ) -> Result<(), UpdateTextureError>
-    where
-        R: Into<Option<Rect>>,
-    [−]
-    Updates the given texture rectangle with new pixel data.
+    // Get the address to copy pixel data from
+    let src_addr = vm.pop();
+    let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
 
-    pitch is the number of bytes in a row of pixel data, including padding between lines
 
-    If rect is None, the entire texture is updated.
-    */
+
+    unsafe {
+        let mut window = WINDOW.as_mut().unwrap();
 
 
 
 
-    /*
-    pub fn copy<R1, R2>(
-        &mut self,
-        texture: &Texture<'_>,
-        src: R1,
-        dst: R2
-    ) -> Result<(), String>
-    where
-        R1: Into<Option<Rect>>,
-        R2: Into<Option<Rect>>,
-    Copies a portion of the texture to the current rendering target.
 
-    If src is None, the entire texture is copied.
-    If dst is None, the texture will be stretched to fill the given rectangle.
-    */
+        /*
+        fn update<R>(
+            &mut self,
+            rect: R,
+            pixel_data: &[u8],
+            pitch: usize
+        ) -> Result<(), UpdateTextureError>
+        where
+            R: Into<Option<Rect>>,
+        [−]
+        Updates the given texture rectangle with new pixel data.
 
+        pitch is the number of bytes in a row of pixel data, including padding between lines
 
-    // Update the screen with any rendering performed since the previous call
-    //canvas.present();
+        If rect is None, the entire texture is updated.
+        */
 
 
 
+        /*
+        window.texture.update(
+            None,
+            pixel_data,
+            3 * window.width
+        ).unwrap();
+        */
+
+
+
+
+
+
+        // Copy the texture into the canvas
+        window.canvas.copy(
+            &window.texture.as_ref().unwrap(),
+            None,
+            None
+        ).unwrap();
+
+        // Update the screen with any rendering performed since the previous call
+        window.canvas.present();
+    }
 }

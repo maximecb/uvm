@@ -110,29 +110,34 @@ pub struct Value(u64);
 
 impl Value
 {
-    fn from_i8(val: i8) -> Self
+    pub fn from_i8(val: i8) -> Self
     {
         Value((val as i64) as u64)
     }
 
-    fn from_i64(val: i64) -> Self
+    pub fn from_i64(val: i64) -> Self
     {
         Value(val as u64)
     }
 
-    fn from_u32(val: u32) -> Self
+    pub fn from_u32(val: u32) -> Self
     {
         Value(val as u64)
     }
 
-    fn from_u64(val: u64) -> Self
+    pub fn from_u64(val: u64) -> Self
     {
         Value(val)
     }
 
-    fn as_i64(&self) -> i64 {
+    pub fn as_i64(&self) -> i64 {
         let Value(val) = *self;
         val as i64
+    }
+
+    pub fn as_usize(&self) -> usize {
+        let Value(val) = *self;
+        val as usize
     }
 }
 
@@ -273,6 +278,12 @@ impl VM
     pub fn pop(&mut self) -> Value
     {
         self.stack.pop().unwrap()
+    }
+
+    /// Get a pointer to an address/offset in the heap
+    pub fn get_heap_ptr(&mut self, addr: usize) -> *mut u8
+    {
+        unsafe { self.heap.data.as_mut_ptr().add(addr) }
     }
 
     /// Execute instructions until halt/exit/pause
