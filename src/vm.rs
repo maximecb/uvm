@@ -36,11 +36,14 @@ pub enum Op
     /// The address is multiplied by the data size (x 4 or x8)
     /// If we save 24 bits for the offset, then that gives us quite a lot
     load_static <address>
-
     load
     store
     memcpy
     */
+
+    // Store a value at a given adress
+    // store (addr) (value)
+    store_u8,
 
     /*
     // Bitwise operations
@@ -128,6 +131,11 @@ impl Value
     pub fn from_u64(val: u64) -> Self
     {
         Value(val)
+    }
+
+    pub fn as_u8(&self) -> u8 {
+        let Value(val) = *self;
+        val as u8
     }
 
     pub fn as_i64(&self) -> i64 {
@@ -315,6 +323,13 @@ impl VM
                     self.push(val);
                 }
 
+                Op::store_u8 => {
+                    let val = self.pop().as_u8();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    unsafe { *heap_ptr = val; }
+                }
+
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
                     self.stack.push(Value::from_i8(val));
@@ -406,15 +421,14 @@ mod tests
         assert_eq!(result, expected);
     }
 
-    /*
-    fn eval_file(file_name: & str) -> Value
+    fn eval_file(file_name: & str)
     {
         dbg!(file_name);
-        let mut vm = VM::new();
-        let unit_fn = parse_file(&mut vm, file_name).unwrap();
-        return vm.eval(&unit_fn);
+        let asm = Assembler::new();
+        let mut vm = asm.parse_file(file_name).unwrap();
+        vm.eval();
+        vm.pop();
     }
-    */
 
     #[test]
     fn test_basics()
