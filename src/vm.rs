@@ -421,15 +421,6 @@ mod tests
         assert_eq!(result, expected);
     }
 
-    fn eval_file(file_name: & str)
-    {
-        dbg!(file_name);
-        let asm = Assembler::new();
-        let mut vm = asm.parse_file(file_name).unwrap();
-        vm.eval();
-        vm.pop();
-    }
-
     #[test]
     fn test_basics()
     {

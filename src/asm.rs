@@ -693,6 +693,13 @@ mod tests
         assert!(asm.parse_str(src).is_err());
     }
 
+    fn parse_file(file_name: &str)
+    {
+        dbg!(file_name);
+        let asm = Assembler::new();
+        assert!(asm.parse_file(file_name).is_ok());
+    }
+
     #[test]
     fn test_insns()
     {
@@ -728,5 +735,12 @@ mod tests
         parse_fails("push_i8 555");
         parse_fails("push_i855;");
         parse_fails("push_i8 55; comment without hash");
+    }
+
+    #[test]
+    fn parse_files()
+    {
+        crate::syscalls::init_syscalls();
+        parse_file("test.asm");
     }
 }
