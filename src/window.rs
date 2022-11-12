@@ -68,21 +68,8 @@ struct Window<'a>
     texture: Option<Texture<'a>>,
 }
 
-
-
-
-
 // TODO: eventually we want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
-
-
-
-
-
-
-
-
-
 
 pub fn window_create(vm: &mut VM)
 {
@@ -93,9 +80,6 @@ pub fn window_create(vm: &mut VM)
 
     // TODO: move the event loop setup into main
     let sdl_context = sdl2::init().unwrap();
-
-
-
 
 
 
@@ -113,13 +97,7 @@ pub fn window_create(vm: &mut VM)
     canvas.clear();
     canvas.present();
 
-
-
-
     let texture_creator = canvas.texture_creator();
-
-
-
 
     let window = Window {
         width,
@@ -133,7 +111,6 @@ pub fn window_create(vm: &mut VM)
         WINDOW = Some(window)
     }
 
-
     unsafe {
 
         let window = WINDOW.as_mut().unwrap();
@@ -143,66 +120,25 @@ pub fn window_create(vm: &mut VM)
             TextureAccess::Streaming,
             width,
             height
-        ).unwrap() );
+        ).unwrap());
 
     }
-
-
-
-
 }
-
-
-
 
 pub fn window_copy_pixels(vm: &mut VM)
 {
-
-
     // Get the address to copy pixel data from
     let src_addr = vm.pop();
     let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
 
-
-
     unsafe {
         let mut window = WINDOW.as_mut().unwrap();
 
-
-
-
-
-        /*
-        fn update<R>(
-            &mut self,
-            rect: R,
-            pixel_data: &[u8],
-            pitch: usize
-        ) -> Result<(), UpdateTextureError>
-        where
-            R: Into<Option<Rect>>,
-        [−]
-        Updates the given texture rectangle with new pixel data.
-
-        pitch is the number of bytes in a row of pixel data, including padding between lines
-
-        If rect is None, the entire texture is updated.
-        */
-
-
-
-        /*
-        window.texture.update(
-            None,
-            pixel_data,
-            3 * window.width
-        ).unwrap();
-        */
-
-
-
-
-
+        // Update the texture
+        let pitch = 3 * window.width as usize;
+        let data_len = (3 * window.width * window.height) as usize;
+        let pixel_slice = std::slice::from_raw_parts(data_ptr, data_len);
+        window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
 
         // Copy the texture into the canvas
         window.canvas.copy(
