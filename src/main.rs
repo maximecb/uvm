@@ -9,6 +9,8 @@ mod asm;
 mod window;
 mod audio;
 
+extern crate sdl2;
+
 use std::env;
 use crate::vm::{VM, MemBlock, Op};
 use crate::asm::{Assembler};
@@ -16,12 +18,12 @@ use crate::asm::{Assembler};
 fn main()
 {
     //display::test_create_window();
-    //audio::test_play_sound();
+
+
+
+
 
     syscalls::init_syscalls();
-
-
-
 
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
@@ -44,9 +46,6 @@ fn main()
 
         return;
     }
-
-
-
 
 
 

@@ -76,14 +76,7 @@ pub fn window_create(vm: &mut VM)
     let width = 800;
     let height = 600;
 
-
-
-    // TODO: move the event loop setup into main
     let sdl_context = sdl2::init().unwrap();
-
-
-
-
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem.window("rust-sdl2 demo", width, height)
@@ -112,7 +105,6 @@ pub fn window_create(vm: &mut VM)
     }
 
     unsafe {
-
         let window = WINDOW.as_mut().unwrap();
 
         window.texture = Some( window.texture_creator.create_texture(
@@ -121,7 +113,19 @@ pub fn window_create(vm: &mut VM)
             width,
             height
         ).unwrap());
+    }
+}
 
+pub fn window_show(vm: &mut VM)
+{
+    //println!("show the window");
+
+    unsafe {
+        let mut window = WINDOW.as_mut().unwrap();
+        window.canvas.window_mut().show();
+
+        let (width, height) = window.canvas.window().size();
+        println!("width={}, height={}", width, height);
     }
 }
 

@@ -42,10 +42,8 @@ pub fn init_syscalls()
     reg_syscall(&mut syscalls, "hello_world", hello_world);
 
     reg_syscall(&mut syscalls, "window_create", window_create);
+    reg_syscall(&mut syscalls, "window_show", window_show);
     reg_syscall(&mut syscalls, "window_copy_pixels", window_copy_pixels);
-
-
-
 
     unsafe {
         SYSCALLS = Some(syscalls)
