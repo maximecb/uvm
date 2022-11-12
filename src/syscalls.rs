@@ -23,9 +23,11 @@ struct SysCall
 /// Map of names to syscall functions
 static mut SYSCALLS: Option<HashMap::<String, SysCallFn>> = None;
 
-fn hello_world(vm: &mut VM)
+
+fn print_i64(vm: &mut VM)
 {
-    println!("Hello World!");
+    let v = vm.pop().as_i64();
+    println!("{}", v);
 }
 
 fn reg_syscall(syscalls: &mut HashMap::<String, SysCallFn>, name: &str, fun: SysCallFn)
@@ -39,7 +41,7 @@ pub fn init_syscalls()
 
     let mut syscalls = HashMap::<String, SysCallFn>::new();
 
-    reg_syscall(&mut syscalls, "hello_world", hello_world);
+    reg_syscall(&mut syscalls, "print_i64", print_i64);
 
     reg_syscall(&mut syscalls, "window_create", window_create);
     reg_syscall(&mut syscalls, "window_show", window_show);

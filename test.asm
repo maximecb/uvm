@@ -8,6 +8,9 @@ PIXEL_BUFFER:
 # Code section
 .code
 
+push_i8 77;
+syscall print_i64;
+
 # TODO: need to specify window width and height
 syscall window_create;
 
