@@ -58,18 +58,15 @@ pub enum Op
     sub_i64,
     mul_i64,
 
-    /*
-    # Test flag bits (logical and) with a constant
-    # This can be used for tag bit tests
-    test_u8 <u8_flags>
+    // Test flag bits (logical and) with a constant
+    // This can be used for tag bit tests
+    // test_u8 <u8_flags>
 
-    # Comparisons
-    eq_i64
-    lt_i64
-    gt_i64
-    ge_i64
-    …
-    */
+    // Comparisons
+    //eq_i64
+    lt_i64,
+    //gt_i64
+    //ge_i64
 
     // Jump to pc offset
     jmp,
@@ -368,6 +365,14 @@ impl VM
                     ));
                 }
 
+                Op::lt_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.stack.push(Value::from_i64(
+                        if v0.as_i64() < v1.as_i64() { 1 } else { 0 }
+                    ));
+                }
+
                 Op::jmp => {
                     let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
                     self.pc = ((self.pc as isize) + offset) as usize;
@@ -445,6 +450,10 @@ mod tests
         // Integer arithmetic
         assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));
         assert_eq!(eval_src("push_i8 10; push_i8 2; sub_i64; exit;"), Value::from_i8(8));
+
+        // Comparisons
+        assert_eq!(eval_src("push_i8 1; push_i8 10; lt_i64; exit;"), Value::from_i8(1));
+        assert_eq!(eval_src("push_i8 11; push_i8 1; lt_i64; exit;"), Value::from_i8(0));
 
         // Simple loop
         assert_eq!(eval_src("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;"), Value::from_i8(10));

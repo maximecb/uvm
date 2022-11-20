@@ -632,6 +632,8 @@ impl Assembler
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
 
+            "lt_i64" => self.code.push_op(Op::lt_i64),
+
             "jmp" => {
                 self.code.push_op(Op::jmp);
                 let label_name = input.parse_ident()?;
