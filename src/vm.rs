@@ -26,9 +26,9 @@ pub enum Op
     push_u64,
 
     // Stack manipulation
-    swap,
     pop,
     dup,
+    swap,
 
     /*
     /// Load from heap at fixed address
@@ -323,6 +323,13 @@ impl VM
                     self.push(val);
                 }
 
+                Op::swap => {
+                    let a = self.pop();
+                    let b = self.pop();
+                    self.push(a);
+                    self.push(b);
+                }
+
                 Op::store_u8 => {
                     let val = self.pop().as_u8();
                     let addr = self.pop().as_usize();
@@ -430,6 +437,10 @@ mod tests
         assert_eq!(eval_src("push_u64 1_333_444; exit;"), Value::from_u64(1_333_444));
         assert_eq!(eval_src("push_u64 0xFF; exit;"), Value::from_u64(0xFF));
         assert_eq!(eval_src("push_u64 0b1101; exit;"), Value::from_u64(0b1101));
+
+        // Stack manipulation
+        assert_eq!(eval_src("push_i8 7; push_i8 3; swap; exit;"), Value::from_i8(7));
+        assert_eq!(eval_src("push_i8 7; push_i8 3; swap; swap; pop; exit;"), Value::from_i8(7));
 
         // Integer arithmetic
         assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));

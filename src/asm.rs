@@ -598,9 +598,9 @@ impl Assembler
         match op_name.as_str() {
             "nop" => self.code.push_op(Op::nop),
 
-            "swap" => self.code.push_op(Op::swap),
             "pop" => self.code.push_op(Op::pop),
             "dup" => self.code.push_op(Op::dup),
+            "swap" => self.code.push_op(Op::swap),
 
             "store_u8" => self.code.push_op(Op::store_u8),
 
