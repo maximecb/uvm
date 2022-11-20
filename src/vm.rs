@@ -424,9 +424,18 @@ mod tests
     #[test]
     fn test_basics()
     {
+        // Integer literals
         assert_eq!(eval_src("push_i8 1; exit;"), Value::from_i8(1));
+        assert_eq!(eval_src("push_i8 -3; exit;"), Value::from_i8(-3));
+        assert_eq!(eval_src("push_u64 1_333_444; exit;"), Value::from_u64(1_333_444));
+        assert_eq!(eval_src("push_u64 0xFF; exit;"), Value::from_u64(0xFF));
+        assert_eq!(eval_src("push_u64 0b1101; exit;"), Value::from_u64(0b1101));
+
+        // Integer arithmetic
         assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));
         assert_eq!(eval_src("push_i8 10; push_i8 2; sub_i64; exit;"), Value::from_i8(8));
+
+        // Simple loop
         assert_eq!(eval_src("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;"), Value::from_i8(10));
     }
 }

@@ -191,7 +191,10 @@ impl Input
         let mut val: i128 = 0;
 
         let sign = if self.match_str("-") { -1 } else { 1 };
-        let base = if self.match_str("0x") { 16 } else { 10 };
+
+        let mut base = 10;
+        if self.match_str("0x") { base = 16 };
+        if self.match_str("0b") { base = 2 };
 
         loop
         {
@@ -598,6 +601,8 @@ impl Assembler
             "swap" => self.code.push_op(Op::swap),
             "pop" => self.code.push_op(Op::pop),
             "dup" => self.code.push_op(Op::dup),
+
+            "store_u8" => self.code.push_op(Op::store_u8),
 
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input)?;

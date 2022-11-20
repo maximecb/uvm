@@ -10,20 +10,34 @@ mod window;
 mod audio;
 
 extern crate sdl2;
-
 use std::env;
 use crate::vm::{VM, MemBlock, Op};
 use crate::asm::{Assembler};
 
+
+
+/// SDL context
+static mut SDL: Option<sdl2::Sdl> = None;
+
+
+
+
+
+
+
 fn main()
 {
-    //display::test_create_window();
-
-
-
-
-
     syscalls::init_syscalls();
+
+
+
+
+
+
+
+
+
+
 
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
