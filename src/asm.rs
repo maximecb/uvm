@@ -676,11 +676,15 @@ impl Assembler
             "call" => {
                 self.code.push_op(Op::call);
 
-                let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
-
                 let argc: u8 = self.parse_int_arg(input)?;
                 self.code.push_u8(argc);
+
+                input.eat_ws();
+                input.expect_str(",")?;
+                input.eat_ws();
+
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
             "ret" => self.code.push_op(Op::ret),

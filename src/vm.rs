@@ -85,7 +85,7 @@ pub enum Op
     jne,
 
     // Call a function using the call stack
-    // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
+    // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
     call,
 
     // Return to caller function
@@ -437,14 +437,14 @@ impl VM
                     syscall_fn(self);
                 }
 
-                // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
+                // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
                 Op::call => {
-                    // Offset of the function to call
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
-
                     // Argument count
                     let num_args = self.code.read_pc::<u8>(&mut self.pc) as usize;
-                    assert!(num_args < self.stack.len() - self.bp);
+                    assert!(num_args <= self.stack.len() - self.bp);
+
+                    // Offset of the function to call
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
 
                     self.frames.push(StackFrame {
                         prev_bp: self.bp,
@@ -525,5 +525,16 @@ mod tests
 
         // Store instruction
         assert_eq!(eval_src(".data .zero 255 .code push_i8 0; push_i8 77; store_u8; push_i8 11; exit;"), Value::from_i8(11));
+    }
+
+    #[test]
+    fn test_call_ret()
+    {
+        assert_eq!(eval_src("call 0, FN; exit; FN: push_i8 33; ret;"), Value::from_i8(33));
+
+        //assert_eq!(eval_src("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;"), Value::from_i8(4));
+
+
+
     }
 }
