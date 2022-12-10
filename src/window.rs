@@ -11,55 +11,16 @@ use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
 
 use crate::vm::{VM, Value};
-
-
-
-
-
-
-/*
-let mut event_pump = sdl_context.event_pump().unwrap();
-
-let mut event_pump = sdl_context.event_pump().unwrap();
-let mut i = 0;
-'running: loop {
-    i = (i + 1) % 255;
-    canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
-    canvas.clear();
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::Quit {..} |
-            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                break 'running
-            },
-            _ => {}
-        }
-    }
-
-    // The rest of the game loop goes here...
-
-    canvas.present();
-
-    //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-}
-*/
-
-
-
-
-
-
+use crate::{SDL};
 
 struct Window<'a>
 {
     width: u32,
     height: u32,
 
-
-
+    // TODO: to support multiple windows
     // window id
     //window_id
-
 
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
 
@@ -68,7 +29,7 @@ struct Window<'a>
     texture: Option<Texture<'a>>,
 }
 
-// TODO: eventually we want to allow multiple windows
+// TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
 pub fn window_create(vm: &mut VM)
@@ -76,8 +37,9 @@ pub fn window_create(vm: &mut VM)
     let width = 800;
     let height = 600;
 
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+    let video_subsystem = unsafe {
+        SDL.as_mut().unwrap().video().unwrap()
+    };
 
     let window = video_subsystem.window("rust-sdl2 demo", width, height)
         .position_centered()

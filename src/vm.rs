@@ -80,9 +80,11 @@ pub enum Op
     // Jump to pc offset if top values equal
     jne,
 
-    // Call and return using the call stack
-    //call
-    //ret
+    // Call a function using the call stack
+    call,
+
+    // Return to caller function
+    ret,
 
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
@@ -93,6 +95,7 @@ pub enum Op
     // Wait for a callback from the host or a device (go into a waiting state)
     // Ideally the stack should be fully unwound when this is called,
     // we can relax this assumption later
+    // NOTE: should this op be called yield instead?
     wait
 
     # Suspend execution, release devices, save image

@@ -20,7 +20,7 @@ syscall window_create;
 
 # Draw a little white line
 
-push_i8 0; # Start address
+push_u64 24_000; # Start address, 800 * 3 * 10
 
 LOOP:
 
@@ -35,7 +35,7 @@ store_u8;
 
 # Loop until done writing pixels
 dup;
-push_u64 765;
+push_u64 24_765;
 lt_i64;
 jnz LOOP;
 
