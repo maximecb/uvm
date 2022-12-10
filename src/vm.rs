@@ -463,11 +463,15 @@ impl VM
                     self.pc = top_frame.ret_addr;
                     self.bp = top_frame.prev_bp;
 
+                    let ret_val = self.pop();
+
                     // Pop the arguments
                     // We do this in the callee so we can support tail calls
                     for _ in 0..top_frame.argc {
                         self.stack.pop();
                     }
+
+                    self.push(ret_val);
                 }
 
                 _ => panic!("unknown opcode"),
@@ -531,8 +535,7 @@ mod tests
     fn test_call_ret()
     {
         assert_eq!(eval_src("call 0, FN; exit; FN: push_i8 33; ret;"), Value::from_i8(33));
-
-        //assert_eq!(eval_src("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;"), Value::from_i8(4));
+        assert_eq!(eval_src("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;"), Value::from_i8(4));
 
 
 
