@@ -602,6 +602,12 @@ impl Assembler
             "dup" => self.code.push_op(Op::dup),
             "swap" => self.code.push_op(Op::swap),
 
+            "popn" => {
+                let n: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::popn);
+                self.code.push_u8(n);
+            }
+
             "store_u8" => self.code.push_op(Op::store_u8),
 
             "push_i8" => {

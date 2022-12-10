@@ -30,6 +30,10 @@ pub enum Op
     dup,
     swap,
 
+    // Pop N values off the stack
+    // popn <n:u8>
+    popn,
+
     /*
     /// Load from heap at fixed address
     /// This is used for reading global variables
@@ -81,6 +85,7 @@ pub enum Op
     jne,
 
     // Call a function using the call stack
+    // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
     call,
 
     // Return to caller function
@@ -92,11 +97,11 @@ pub enum Op
     syscall,
 
     /*
-    // Wait for a callback from the host or a device (go into a waiting state)
+    // Yield control to the event loop and wait for a callback
+    // from the host or a device (go into a waiting state)
     // Ideally the stack should be fully unwound when this is called,
     // we can relax this assumption later
-    // NOTE: should this op be called yield instead?
-    wait
+    yield,
 
     # Suspend execution, release devices, save image
     # Ideally the stack should be unwound when this is called,
@@ -317,6 +322,13 @@ impl VM
                     self.pop();
                 }
 
+                Op::popn => {
+                    let n = self.code.read_pc::<u8>(&mut self.pc);
+                    for _ in 0..n {
+                        self.pop();
+                    }
+                }
+
                 Op::dup => {
                     let val = self.pop();
                     self.push(val);
@@ -449,6 +461,7 @@ mod tests
         // Stack manipulation
         assert_eq!(eval_src("push_i8 7; push_i8 3; swap; exit;"), Value::from_i8(7));
         assert_eq!(eval_src("push_i8 7; push_i8 3; swap; swap; pop; exit;"), Value::from_i8(7));
+        assert_eq!(eval_src("push_i8 3; push_i8 2; push_i8 1; popn 2; exit;"), Value::from_i8(3));
 
         // Integer arithmetic
         assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));
