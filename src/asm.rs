@@ -673,6 +673,18 @@ impl Assembler
                 self.code.push_u16(syscall_idx);
             }
 
+            "call" => {
+                self.code.push_op(Op::call);
+
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+
+                let argc: u8 = self.parse_int_arg(input)?;
+                self.code.push_u8(argc);
+            }
+
+            "ret" => self.code.push_op(Op::ret),
+
             "exit" => self.code.push_op(Op::exit),
 
             _ => {

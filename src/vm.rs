@@ -96,18 +96,16 @@ pub enum Op
     // syscall <device_id:u16> <method_id:u16>
     syscall,
 
-    /*
     // Yield control to the event loop and wait for a callback
     // from the host or a device (go into a waiting state)
     // Ideally the stack should be fully unwound when this is called,
     // we can relax this assumption later
-    yield,
+    //yield,
 
-    # Suspend execution, release devices, save image
-    # Ideally the stack should be unwound when this is called,
-    # we can relax this assumption later
-    suspend
-    */
+    // Suspend execution, release devices, save image
+    // Ideally the stack should be unwound when this is called,
+    // we can relax this assumption later
+    //suspend,
 
     // End execution normally
     exit,
