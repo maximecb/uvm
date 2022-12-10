@@ -237,21 +237,37 @@ impl MemBlock
     }
 }
 
+struct StackFrame
+{
+    // Previous base pointer at the time of call
+    prev_bp: usize,
+
+    // Return address
+    ret_addr: usize,
+
+    // Argument count
+    argc: usize,
+}
+
 pub struct VM
 {
     /// Table of system calls the program can refer to
     syscalls: Vec<SysCallFn>,
 
+    // Heap memory space
     heap: MemBlock,
 
+    // Code memory space
     code: MemBlock,
 
     // Value stack
     stack: Vec<Value>,
 
-    // TODO
-    // Call stack? Do we need one
-    // Would prefer not to expose this so we can swap stacks
+    // List of stack frames (activation records)
+    frames: Vec<StackFrame>,
+
+    // Base pointer for the current stack frame
+    bp: usize,
 
     // Points at a byte in the executable memory
     pc: usize,
@@ -272,6 +288,8 @@ impl VM
             code,
             heap,
             stack: Vec::default(),
+            frames: Vec::default(),
+            bp: 0,
             pc: 0,
         }
     }
@@ -417,6 +435,39 @@ impl VM
                     let syscall_fn = self.syscalls[table_idx];
 
                     syscall_fn(self);
+                }
+
+                // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
+                Op::call => {
+                    // Offset of the function to call
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+
+                    // Argument count
+                    let num_args = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    assert!(num_args < self.stack.len() - self.bp);
+
+                    self.frames.push(StackFrame {
+                        prev_bp: self.bp,
+                        ret_addr: self.pc,
+                        argc: num_args,
+                    });
+
+                    self.bp = self.stack.len();
+                    self.pc = ((self.pc as isize) + offset) as usize;
+                }
+
+                Op::ret => {
+                    assert!(self.frames.len() > 0);
+
+                    let top_frame = self.frames.pop().unwrap();
+                    self.pc = top_frame.ret_addr;
+                    self.bp = top_frame.prev_bp;
+
+                    // Pop the arguments
+                    // We do this in the callee so we can support tail calls
+                    for _ in 0..top_frame.argc {
+                        self.stack.pop();
+                    }
                 }
 
                 _ => panic!("unknown opcode"),
