@@ -54,4 +54,7 @@ syscall window_copy_pixels;
 
 syscall window_show;
 
+# Wait for an event
+wait;
+
 exit;

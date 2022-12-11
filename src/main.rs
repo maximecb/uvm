@@ -11,7 +11,7 @@ mod audio;
 
 extern crate sdl2;
 use std::env;
-use crate::vm::{VM, MemBlock, Op};
+use crate::vm::{VM, MemBlock, ExitReason};
 use crate::asm::{Assembler};
 
 /// SDL context
@@ -34,41 +34,58 @@ fn main()
         let asm = Assembler::new();
         let mut vm = asm.parse_file(&args[1]).unwrap();
 
-        vm.eval();
-
-        if vm.stack_size() > 0
-        {
-            let ret = vm.pop();
-            println!("return value: {:?}", ret);
-        }
-    }
 
 
+        let mut event_pump = unsafe {
+            SDL.as_mut().unwrap().event_pump().unwrap()
+        };
 
+        use sdl2::event::Event;
+        use sdl2::keyboard::Keycode;
 
+        let mut i = 0;
+        'main_loop: loop {
 
-    let mut event_pump = unsafe {
-        SDL.as_mut().unwrap().event_pump().unwrap()
-    };
+            let exit_reason = vm.eval();
 
-    use sdl2::event::Event;
-    use sdl2::keyboard::Keycode;
+            match exit_reason
+            {
+                ExitReason::Exit => {
+                    if vm.stack_size() > 0
+                    {
+                        let ret = vm.pop();
+                        println!("return value: {:?}", ret);
+                    }
 
-    let mut i = 0;
-    'main_loop: loop {
+                    return;
+                }
 
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit {..} |
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    break 'main_loop
-                },
-                _ => {}
+                ExitReason::Wait => {
+                    // Keep processig events
+                }
             }
+
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit {..} |
+                    Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                        break 'main_loop
+                    },
+                    _ => {}
+                }
+            }
+
+            //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
 
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+
+
     }
+
+
+
+
 
 
 

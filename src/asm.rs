@@ -692,6 +692,7 @@ impl Assembler
 
             "ret" => self.code.push_op(Op::ret),
 
+            "wait" => self.code.push_op(Op::wait),
             "exit" => self.code.push_op(Op::exit),
 
             _ => {

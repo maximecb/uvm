@@ -264,6 +264,13 @@ struct StackFrame
     argc: usize,
 }
 
+pub enum ExitReason
+{
+    //Panic,
+    Wait,
+    Exit,
+}
+
 pub struct VM
 {
     /// Table of system calls the program can refer to
@@ -337,7 +344,7 @@ impl VM
     }
 
     /// Execute instructions until halt/exit/pause
-    pub fn eval(&mut self)
+    pub fn eval(&mut self) -> ExitReason
     {
         loop
         {
@@ -353,7 +360,9 @@ impl VM
 
                 Op::nop => continue,
 
-                Op::exit => break,
+                Op::exit => return ExitReason::Exit,
+
+                Op::wait => return ExitReason::Wait,
 
                 Op::pop => {
                     self.pop();
@@ -534,7 +543,7 @@ impl VM
                     }
                 }
 
-                _ => panic!("unknown opcode"),
+                //_ => panic!("unknown opcode"),
             }
         }
     }
