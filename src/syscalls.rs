@@ -10,6 +10,7 @@ use crate::audio::*;
 pub enum SysCallFn
 {
     Fn0_0(fn(&mut VM)),
+    Fn0_1(fn(&mut VM) -> Value),
     Fn1_0(fn(&mut VM, a0: Value)),
 }
 
@@ -20,6 +21,17 @@ fn print_i64(vm: &mut VM, v: Value)
 {
     let v = v.as_i64();
     println!("{}", v);
+}
+
+fn read_i64(vm: &mut VM) -> Value
+{
+    let mut line_buf = String::new();
+    std::io::stdin()
+        .read_line(&mut line_buf)
+        .expect("failed to read input line");
+    let val: i64 = line_buf.trim().parse().expect("expected i64 input");
+
+    return Value::from(val);
 }
 
 fn reg_syscall(syscalls: &mut HashMap::<String, SysCallFn>, name: &str, fun: SysCallFn)
@@ -35,6 +47,7 @@ pub fn init_syscalls()
     //vm_resize_heap(new_size)
 
     reg_syscall(&mut syscalls, "print_i64", SysCallFn::Fn1_0(print_i64));
+    reg_syscall(&mut syscalls, "read_i64", SysCallFn::Fn0_1(read_i64));
 
     reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn0_0(window_create));
     reg_syscall(&mut syscalls, "window_show", SysCallFn::Fn0_0(window_show));

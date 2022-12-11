@@ -469,25 +469,6 @@ impl VM
                     }
                 }
 
-                Op::syscall => {
-                    let table_idx = self.code.read_pc::<u16>(&mut self.pc) as usize;
-
-                    assert!(table_idx < self.syscalls.len());
-                    let syscall_fn = self.syscalls[table_idx];
-
-                    match syscall_fn
-                    {
-                        SysCallFn::Fn0_0(fun) => {
-                            fun(self)
-                        }
-
-                        SysCallFn::Fn1_0(fun) => {
-                            let a0 = self.pop();
-                            fun(self, a0)
-                        }
-                    }
-                }
-
                 // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
                 Op::call => {
                     // Argument count
@@ -523,6 +504,30 @@ impl VM
                     }
 
                     self.push(ret_val);
+                }
+
+                Op::syscall => {
+                    let table_idx = self.code.read_pc::<u16>(&mut self.pc) as usize;
+
+                    assert!(table_idx < self.syscalls.len());
+                    let syscall_fn = self.syscalls[table_idx];
+
+                    match syscall_fn
+                    {
+                        SysCallFn::Fn0_0(fun) => {
+                            fun(self)
+                        }
+
+                        SysCallFn::Fn0_1(fun) => {
+                            let v = fun(self);
+                            self.push(v);
+                        }
+
+                        SysCallFn::Fn1_0(fun) => {
+                            let a0 = self.pop();
+                            fun(self, a0)
+                        }
+                    }
                 }
 
                 _ => panic!("unknown opcode"),
