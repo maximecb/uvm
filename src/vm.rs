@@ -413,6 +413,14 @@ impl VM
                     ));
                 }
 
+                Op::mul_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.stack.push(Value::from(
+                        v0.as_i64() * v1.as_i64()
+                    ));
+                }
+
                 Op::eq_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -448,6 +456,15 @@ impl VM
                 Op::jmp => {
                     let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
                     self.pc = ((self.pc as isize) + offset) as usize;
+                }
+
+                Op::jz => {
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+                    let v0 = self.pop();
+
+                    if v0.as_i64() == 0 {
+                        self.pc = ((self.pc as isize) + offset) as usize;
+                    }
                 }
 
                 Op::jnz => {

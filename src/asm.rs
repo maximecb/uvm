@@ -649,6 +649,12 @@ impl Assembler
                 self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
+            "jz" => {
+                self.code.push_op(Op::jz);
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+            }
+
             "jnz" => {
                 self.code.push_op(Op::jnz);
                 let label_name = input.parse_ident()?;
@@ -773,6 +779,7 @@ mod tests
     fn parse_files()
     {
         crate::syscalls::init_syscalls();
-        parse_file("test.asm");
+        parse_file("examples/line.asm");
+        parse_file("examples/factorial.asm");
     }
 }
