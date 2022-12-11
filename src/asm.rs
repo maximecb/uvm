@@ -661,12 +661,6 @@ impl Assembler
                 self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
 
-            "jne" => {
-                self.code.push_op(Op::jne);
-                let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
-            }
-
             "syscall" => {
                 let syscall_name = input.parse_ident()?;
 
@@ -750,8 +744,8 @@ mod tests
         parse_ok(".code push_i8 55; push_i8 -1;");
 
         // Labels
-        parse_ok("FOO: push_i8 55; push_i8 55; jne FOO;");
-        parse_ok("FOO: push_i8 55; push_i8 55; jne FOO;");
+        parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jnz FOO;");
+        parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jz FOO;");
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
 
         // Data section

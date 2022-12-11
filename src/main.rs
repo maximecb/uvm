@@ -41,10 +41,6 @@ fn main()
             let ret = vm.pop();
             println!("return value: {:?}", ret);
         }
-        else
-        {
-            println!("vm stack empty");
-        }
     }
 
 

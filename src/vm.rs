@@ -75,9 +75,6 @@ pub enum Op
     // Jump to pc offset if stack top is not zero
     jnz,
 
-    // Jump to pc offset if top values equal
-    jne,
-
     // Call a function using the call stack
     // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
     call,
@@ -476,16 +473,6 @@ impl VM
                     }
                 }
 
-                Op::jne => {
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
-                    let v0 = self.pop();
-                    let v1 = self.pop();
-
-                    if v0.as_i64() != v1.as_i64() {
-                        self.pc = ((self.pc as isize) + offset) as usize;
-                    }
-                }
-
                 // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
                 Op::call => {
                     // Argument count
@@ -605,7 +592,7 @@ mod tests
         eval_i64("push_i8 11; push_i8 1; lt_i64; exit;", 0);
 
         // Simple loop
-        eval_i64("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;", 10);
+        eval_i64("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; eq_i64; jz LOOP; exit;", 10);
     }
 
     #[test]
