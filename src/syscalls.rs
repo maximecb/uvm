@@ -39,6 +39,9 @@ fn reg_syscall(
     num_outs: usize
 )
 {
+    assert!(num_ins <= 1);
+    assert!(num_outs <= 1);
+
     syscalls.insert(name.to_string(), fun);
 }
 
