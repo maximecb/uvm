@@ -34,6 +34,10 @@ pub enum Op
     // popn <n:u8>
     popn,
 
+    // Get the function argument at a given index
+    // get_arg <idx:u8>
+    get_arg,
+
     /*
     // Bitwise operations
     and
@@ -388,6 +392,19 @@ impl VM
                     self.push(b);
                 }
 
+                Op::get_arg => {
+                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+
+                    let argc = self.frames[self.frames.len() - 1].argc;
+                    if idx >= argc {
+                        panic!("invalid index in get_arg");
+                    }
+
+                    assert!(self.bp - (idx + 1) <= self.stack.len());
+                    let stack_idx = self.bp - (idx + 1);
+                    self.stack.push(self.stack[stack_idx]);
+                }
+
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
                     self.stack.push(val.into());
@@ -615,6 +632,6 @@ mod tests
     fn test_call_ret()
     {
         eval_i64("call 0, FN; exit; FN: push_i8 33; ret;", 33);
-        eval_i64("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;", 4);
+        eval_i64("push_i8 3; call 1, FN; exit; FN: get_arg 0; push_i8 1; add_i64; ret;", 4);
     }
 }

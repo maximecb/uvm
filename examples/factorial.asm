@@ -20,25 +20,24 @@ exit;
 #### fact(n) ####
 FACT:
 
-dup;
-
 # Check if n <= 1
-dup;
+get_arg 0;
 push_i8 1;
 le_i64;
 jz RECURSE;
+get_arg 0;
 ret;
 
 RECURSE:
 
-dup;
-
 # Compute fact(n-1)
+get_arg 0;
 push_i8 1;
 sub_i64;
 call 1, FACT;
 
 # n * fact(n-1)
+get_arg 0;
 mul_i64;
 
 ret;
