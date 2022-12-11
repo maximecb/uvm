@@ -471,7 +471,17 @@ impl VM
                     assert!(table_idx < self.syscalls.len());
                     let syscall_fn = self.syscalls[table_idx];
 
-                    syscall_fn(self);
+                    match syscall_fn
+                    {
+                        SysCallFn::Fn0_0(fun) => {
+                            fun(self)
+                        }
+
+                        SysCallFn::Fn1_0(fun) => {
+                            let a0 = self.pop();
+                            fun(self, a0)
+                        }
+                    }
                 }
 
                 // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)

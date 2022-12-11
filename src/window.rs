@@ -91,10 +91,9 @@ pub fn window_show(vm: &mut VM)
     }
 }
 
-pub fn window_copy_pixels(vm: &mut VM)
+pub fn window_copy_pixels(vm: &mut VM, src_addr: Value)
 {
     // Get the address to copy pixel data from
-    let src_addr = vm.pop();
     let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
 
     unsafe {

@@ -4,58 +4,41 @@ use crate::window::*;
 use crate::audio::*;
 
 /// System call function signature
-pub type SysCallFn = fn(&mut VM);
-pub type SysCallFn0_0 = fn(&mut VM);
-pub type SysCallFn1_0 = fn(&mut VM, a0: Value);
-
-/// System call descriptor
 /// Note: the in/out arg count should be fixed so
 ///       that we can JIT syscalls effectively
-struct SysCall
+#[derive(Copy, Clone)]
+pub enum SysCallFn
 {
-    host_fn: SysCallFn,
-
-    // Number of input parameters
-    num_ins: usize,
-
-    // Number of outputs produced (currently has to be 0 or 1)
-    num_outs: usize,
+    Fn0_0(fn(&mut VM)),
+    Fn1_0(fn(&mut VM, a0: Value)),
 }
 
 /// Map of names to syscall functions
 static mut SYSCALLS: Option<HashMap::<String, SysCallFn>> = None;
 
-fn print_i64(vm: &mut VM)
+fn print_i64(vm: &mut VM, v: Value)
 {
-    let v = vm.pop().as_i64();
+    let v = v.as_i64();
     println!("{}", v);
 }
 
-fn reg_syscall(
-    syscalls: &mut HashMap::<String, SysCallFn>,
-    name: &str,
-    fun: SysCallFn,
-    num_ins: usize,
-    num_outs: usize
-)
+fn reg_syscall(syscalls: &mut HashMap::<String, SysCallFn>, name: &str, fun: SysCallFn)
 {
-    assert!(num_ins <= 1);
-    assert!(num_outs <= 1);
-
     syscalls.insert(name.to_string(), fun);
 }
 
 pub fn init_syscalls()
 {
-    // TODO: for now just set them here by hand
-
     let mut syscalls = HashMap::<String, SysCallFn>::new();
 
-    reg_syscall(&mut syscalls, "print_i64", print_i64, 1, 0);
+    //TODO:
+    //vm_resize_heap(new_size)
 
-    reg_syscall(&mut syscalls, "window_create", window_create, 0, 0);
-    reg_syscall(&mut syscalls, "window_show", window_show, 0, 0);
-    reg_syscall(&mut syscalls, "window_copy_pixels", window_copy_pixels, 1, 0);
+    reg_syscall(&mut syscalls, "print_i64", SysCallFn::Fn1_0(print_i64));
+
+    reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn0_0(window_create));
+    reg_syscall(&mut syscalls, "window_show", SysCallFn::Fn0_0(window_show));
+    reg_syscall(&mut syscalls, "window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
 
     unsafe {
         SYSCALLS = Some(syscalls)
