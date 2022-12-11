@@ -105,7 +105,7 @@ pub enum Op
     // from the host or a device (go into a waiting state)
     // Ideally the stack should be fully unwound when this is called,
     // we can relax this assumption later
-    yld,
+    wait,
 
     // Suspend execution, release devices, save image
     // Ideally the stack should be unwound when this is called,
@@ -124,31 +124,6 @@ pub struct Value(u64);
 
 impl Value
 {
-    pub fn from_i8(val: i8) -> Self
-    {
-        Value((val as i64) as u64)
-    }
-
-    pub fn from_i64(val: i64) -> Self
-    {
-        Value(val as u64)
-    }
-
-    pub fn from_u8(val: u8) -> Self
-    {
-        Value(val as u64)
-    }
-
-    pub fn from_u32(val: u32) -> Self
-    {
-        Value(val as u64)
-    }
-
-    pub fn from_u64(val: u64) -> Self
-    {
-        Value(val)
-    }
-
     pub fn as_u8(&self) -> u8 {
         let Value(val) = *self;
         val as u8
@@ -162,6 +137,36 @@ impl Value
     pub fn as_usize(&self) -> usize {
         let Value(val) = *self;
         val as usize
+    }
+}
+
+impl From<i8> for Value {
+    fn from(val: i8) -> Self {
+        Value((val as i64) as u64)
+    }
+}
+
+impl From<i64> for Value {
+    fn from(val: i64) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<u8> for Value {
+    fn from(val: u8) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<u32> for Value {
+    fn from(val: u32) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<u64> for Value {
+    fn from(val: u64) -> Self {
+        Value(val as u64)
     }
 }
 
@@ -319,9 +324,8 @@ impl VM
 
     pub fn push_bool(&mut self, val: bool)
     {
-        self.stack.push(Value::from_i64(
-            if val { 1 } else { 0 }
-        ));
+        let int_val: i64 = if val { 1 } else { 0 };
+        self.stack.push(int_val.into());
     }
 
     pub fn pop(&mut self) -> Value
@@ -380,23 +384,23 @@ impl VM
 
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
-                    self.stack.push(Value::from_i8(val));
+                    self.stack.push(val.into());
                 }
 
                 Op::push_u32 => {
                     let val = self.code.read_pc::<u32>(&mut self.pc);
-                    self.push(Value::from_u32(val));
+                    self.push(Value::from(val));
                 }
 
                 Op::push_u64 => {
                     let val = self.code.read_pc::<u64>(&mut self.pc);
-                    self.push(Value::from_u64(val));
+                    self.push(Value::from(val));
                 }
 
                 Op::add_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from_i64(
+                    self.stack.push(Value::from(
                         v0.as_i64() + v1.as_i64()
                     ));
                 }
@@ -404,7 +408,7 @@ impl VM
                 Op::sub_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from_i64(
+                    self.stack.push(Value::from(
                         v0.as_i64() - v1.as_i64()
                     ));
                 }
@@ -430,8 +434,8 @@ impl VM
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    let val = unsafe { *heap_ptr };
-                    self.push(Value::from_u8(val));
+                    let val: u8 = unsafe { *heap_ptr };
+                    self.push(Value::from(val));
                 }
 
                 Op::store_u8 => {
@@ -542,10 +546,10 @@ mod tests
         vm.pop()
     }
 
-    fn eval_eq(src: &str, expected: Value)
+    fn eval_i64(src: &str, expected: i64)
     {
         let result = eval_src(src);
-        assert_eq!(result, expected);
+        assert_eq!(result, expected.into());
     }
 
     #[test]
@@ -559,40 +563,40 @@ mod tests
     fn test_basics()
     {
         // Integer literals
-        assert_eq!(eval_src("push_i8 1; exit;"), Value::from_i8(1));
-        assert_eq!(eval_src("push_i8 -3; exit;"), Value::from_i8(-3));
-        assert_eq!(eval_src("push_u64 1_333_444; exit;"), Value::from_u64(1_333_444));
-        assert_eq!(eval_src("push_u64 0xFF; exit;"), Value::from_u64(0xFF));
-        assert_eq!(eval_src("push_u64 0b1101; exit;"), Value::from_u64(0b1101));
+        eval_i64("push_i8 1; exit;", 1);
+        eval_i64("push_i8 -3; exit;", -3);
+        eval_i64("push_u64 1_333_444; exit;", 1_333_444);
+        eval_i64("push_u64 0xFF; exit;", 0xFF);
+        eval_i64("push_u64 0b1101; exit;", 0b1101);
 
         // Stack manipulation
-        assert_eq!(eval_src("push_i8 7; push_i8 3; swap; exit;"), Value::from_i8(7));
-        assert_eq!(eval_src("push_i8 7; push_i8 3; swap; swap; pop; exit;"), Value::from_i8(7));
-        assert_eq!(eval_src("push_i8 3; push_i8 2; push_i8 1; popn 2; exit;"), Value::from_i8(3));
+        eval_i64("push_i8 7; push_i8 3; swap; exit;", 7);
+        eval_i64("push_i8 7; push_i8 3; swap; swap; pop; exit;", 7);
+        eval_i64("push_i8 3; push_i8 2; push_i8 1; popn 2; exit;", 3);
 
         // Integer arithmetic
-        assert_eq!(eval_src("push_i8 1; push_i8 10; add_i64; exit;"), Value::from_i8(11));
-        assert_eq!(eval_src("push_i8 10; push_i8 2; sub_i64; exit;"), Value::from_i8(8));
+        eval_i64("push_i8 1; push_i8 10; add_i64; exit;", 11);
+        eval_i64("push_i8 10; push_i8 2; sub_i64; exit;", 8);
 
         // Comparisons
-        assert_eq!(eval_src("push_i8 1; push_i8 10; lt_i64; exit;"), Value::from_i8(1));
-        assert_eq!(eval_src("push_i8 11; push_i8 1; lt_i64; exit;"), Value::from_i8(0));
+        eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
+        eval_i64("push_i8 11; push_i8 1; lt_i64; exit;", 0);
 
         // Simple loop
-        assert_eq!(eval_src("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;"), Value::from_i8(10));
+        eval_i64("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;", 10);
     }
 
     #[test]
     fn test_load_store()
     {
         // Store instruction
-        assert_eq!(eval_src(".data .zero 255 .code push_i8 0; push_i8 77; store_u8; push_i8 11; exit;"), Value::from_i8(11));
+        eval_i64(".data .zero 255 .code push_i8 0; push_i8 77; store_u8; push_i8 11; exit;", 11);
     }
 
     #[test]
     fn test_call_ret()
     {
-        assert_eq!(eval_src("call 0, FN; exit; FN: push_i8 33; ret;"), Value::from_i8(33));
-        assert_eq!(eval_src("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;"), Value::from_i8(4));
+        eval_i64("call 0, FN; exit; FN: push_i8 33; ret;", 33);
+        eval_i64("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;", 4);
     }
 }
