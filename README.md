@@ -9,7 +9,7 @@ UVM is designed with the following goals in mind.
 
 **Minimalism**: to minimize the risk of breakage, keep the VM as small as possible. UVM tries to implement as few instructions as possible,
 and uses an untyped design. UVM does not implement a garbage collector or type checking. The APIs it provides are low-level and have as
-little surface area as possible.
+little surface area as possible. Each bytecode instruction should have as little dynamic behavior as possible.
 
 **Portability**: the minimalistic design of UVM makes portability easier to achieve.
 
