@@ -1,6 +1,7 @@
 # UVM
 
-A minimalistic virtual machine designed to run self-contained applications.
+A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
+programs that will not break and to combat code rot.
 
 ## Design Goals
 
