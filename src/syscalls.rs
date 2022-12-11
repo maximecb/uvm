@@ -23,6 +23,17 @@ fn print_i64(vm: &mut VM, v: Value)
     println!("{}", v);
 }
 
+/// Print a null-terminated UTF-8 string to stdout
+fn print_str(vm: &mut VM, str_ptr: Value)
+{
+    use std::ffi::CStr;
+    let char_ptr = vm.get_heap_ptr(str_ptr.as_usize());
+    let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
+    let rust_str = c_str.to_str().unwrap();
+
+    println!("{}", rust_str);
+}
+
 fn read_i64(vm: &mut VM) -> Value
 {
     let mut line_buf = String::new();
@@ -47,6 +58,7 @@ pub fn init_syscalls()
     //vm_resize_heap(new_size)
 
     reg_syscall(&mut syscalls, "print_i64", SysCallFn::Fn1_0(print_i64));
+    reg_syscall(&mut syscalls, "print_str", SysCallFn::Fn1_0(print_str));
     reg_syscall(&mut syscalls, "read_i64", SysCallFn::Fn0_1(read_i64));
 
     reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn0_0(window_create));

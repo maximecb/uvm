@@ -1,3 +1,11 @@
+.data
+PROMPT_STR: .stringz "Input an integer:"
+
+.code
+
+push_ptr32 PROMPT_STR;
+syscall print_str;
+
 # Read input number
 syscall read_i64;
 
