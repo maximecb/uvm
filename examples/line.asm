@@ -8,41 +8,19 @@ PIXEL_BUFFER:
 # Code section
 .code
 
-push_i8 77;
-syscall print_i64;
-
 # TODO: need to specify window width and height
 syscall window_create;
 
 
+push_i8 20;
+push_i8 20;
+push_i8 10;
+call 3, DRAW_HLINE;
 
-
-
-# Draw a little white line
-
-push_u64 24_000; # Start address, 800 * 3 * 10
-
-LOOP:
-
-# Move one pixel to the right
-push_i8 3;
-add_i64;
-
-# Write one component value
-dup;
-push_u64 255;
-store_u8;
-
-# Loop until done writing pixels
-dup;
-push_u64 24_765;
-lt_i64;
-jnz LOOP;
-
-
-
-
-
+push_i8 20;
+push_i8 20;
+push_i8 10;
+call 3, DRAW_VLINE;
 
 
 
@@ -58,3 +36,92 @@ syscall window_show;
 wait;
 
 exit;
+
+
+
+
+###########################################################
+
+# DRAW_HLINE(x, y, w)
+DRAW_HLINE:
+
+# Compute the start address
+# 800 * 3 * y + 3 * x
+push_u32 2400;
+get_arg 1;
+mul_i64;
+get_arg 0;
+push_i8 3;
+mul_i64;
+add_i64;
+
+# Compute the end address
+dup;
+get_arg 2;
+push_i8 3;
+mul_i64;
+add_i64;
+
+LOOP_H:
+
+# Write one component value
+get_local 0;
+push_u64 255;
+store_u8;
+
+# Move one pixel to the right
+get_local 0;
+push_i8 3;
+add_i64;
+set_local 0;
+
+# Loop until done writing pixels
+get_local 0;
+get_local 1;
+lt_i64;
+jnz LOOP_H;
+
+ret;
+
+###########################################################
+
+# DRAW_VLINE(x, y, w)
+DRAW_VLINE:
+
+# Compute the start address
+# 800 * 3 * y + 3 * x
+push_u32 2400;
+get_arg 1;
+mul_i64;
+get_arg 0;
+push_i8 3;
+mul_i64;
+add_i64;
+
+# Compute the end address
+get_local 0;
+get_arg 2;
+push_u64 2400;
+mul_i64;
+add_i64;
+
+LOOP_V:
+
+# Write one component value
+get_local 0;
+push_u64 255;
+store_u8;
+
+# Move one pixel down
+get_local 0;
+push_u64 2400;
+add_i64;
+set_local 0;
+
+# Loop until done writing pixels
+get_local 0;
+get_local 1;
+lt_i64;
+jnz LOOP_V;
+
+ret;

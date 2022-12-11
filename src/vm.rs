@@ -38,6 +38,14 @@ pub enum Op
     // get_arg <idx:u8>
     get_arg,
 
+    // Get the local variable at a given index
+    // get_local <idx:u8>
+    get_local,
+
+    // Set the local variable at a given index
+    // set_local <idx:u8> (value)
+    set_local,
+
     /*
     // Bitwise operations
     and
@@ -403,6 +411,27 @@ impl VM
                     assert!(self.bp - (idx + 1) <= self.stack.len());
                     let stack_idx = self.bp - (idx + 1);
                     self.stack.push(self.stack[stack_idx]);
+                }
+
+                Op::get_local => {
+                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+
+                    if self.bp + idx >= self.stack.len() {
+                        panic!("invalid index in get_local");
+                    }
+
+                    self.stack.push(self.stack[self.bp + idx]);
+                }
+
+                Op::set_local => {
+                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let val = self.pop();
+
+                    if self.bp + idx >= self.stack.len() {
+                        panic!("invalid index in set_local");
+                    }
+
+                    self.stack[self.bp + idx] = val;
                 }
 
                 Op::push_i8 => {

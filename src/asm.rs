@@ -614,6 +614,18 @@ impl Assembler
                 self.code.push_u8(idx);
             }
 
+            "get_local" => {
+                let idx: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::get_local);
+                self.code.push_u8(idx);
+            }
+
+            "set_local" => {
+                let idx: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::set_local);
+                self.code.push_u8(idx);
+            }
+
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_i8);
