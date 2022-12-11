@@ -1,10 +1,12 @@
 use std::collections::HashMap;
-use crate::vm::{VM};
+use crate::vm::{Value, VM};
 use crate::window::*;
 use crate::audio::*;
 
 /// System call function signature
 pub type SysCallFn = fn(&mut VM);
+pub type SysCallFn0_0 = fn(&mut VM);
+pub type SysCallFn1_0 = fn(&mut VM, a0: Value);
 
 /// System call descriptor
 /// Note: the in/out arg count should be fixed so
@@ -16,13 +18,12 @@ struct SysCall
     // Number of input parameters
     num_ins: usize,
 
-    // Number of outputs produced (currently has to be zero or one)
+    // Number of outputs produced (currently has to be 0 or 1)
     num_outs: usize,
 }
 
 /// Map of names to syscall functions
 static mut SYSCALLS: Option<HashMap::<String, SysCallFn>> = None;
-
 
 fn print_i64(vm: &mut VM)
 {
@@ -30,7 +31,13 @@ fn print_i64(vm: &mut VM)
     println!("{}", v);
 }
 
-fn reg_syscall(syscalls: &mut HashMap::<String, SysCallFn>, name: &str, fun: SysCallFn)
+fn reg_syscall(
+    syscalls: &mut HashMap::<String, SysCallFn>,
+    name: &str,
+    fun: SysCallFn,
+    num_ins: usize,
+    num_outs: usize
+)
 {
     syscalls.insert(name.to_string(), fun);
 }
@@ -41,11 +48,11 @@ pub fn init_syscalls()
 
     let mut syscalls = HashMap::<String, SysCallFn>::new();
 
-    reg_syscall(&mut syscalls, "print_i64", print_i64);
+    reg_syscall(&mut syscalls, "print_i64", print_i64, 1, 0);
 
-    reg_syscall(&mut syscalls, "window_create", window_create);
-    reg_syscall(&mut syscalls, "window_show", window_show);
-    reg_syscall(&mut syscalls, "window_copy_pixels", window_copy_pixels);
+    reg_syscall(&mut syscalls, "window_create", window_create, 0, 0);
+    reg_syscall(&mut syscalls, "window_show", window_show, 0, 0);
+    reg_syscall(&mut syscalls, "window_copy_pixels", window_copy_pixels, 1, 0);
 
     unsafe {
         SYSCALLS = Some(syscalls)
