@@ -52,8 +52,9 @@ pub enum Op
     // test_u8 <u8_flags>
 
     // Comparisons
-    //eq_i64
+    eq_i64,
     lt_i64,
+    le_i64,
     //gt_i64
     //ge_i64
 
@@ -113,6 +114,9 @@ pub enum Op
 
     // End execution normally
     exit,
+
+    // NOTE: last opcode must have value <= 127
+    // so that we can use 128 as an opcode extension bit
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -313,6 +317,13 @@ impl VM
         self.stack.push(val);
     }
 
+    pub fn push_bool(&mut self, val: bool)
+    {
+        self.stack.push(Value::from_i64(
+            if val { 1 } else { 0 }
+        ));
+    }
+
     pub fn pop(&mut self) -> Value
     {
         self.stack.pop().unwrap()
@@ -398,12 +409,22 @@ impl VM
                     ));
                 }
 
+                Op::eq_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_i64() == v1.as_i64());
+                }
+
                 Op::lt_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from_i64(
-                        if v0.as_i64() < v1.as_i64() { 1 } else { 0 }
-                    ));
+                    self.push_bool(v0.as_i64() < v1.as_i64());
+                }
+
+                Op::le_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_i64() <= v1.as_i64());
                 }
 
                 Op::load_u8 => {
@@ -515,6 +536,13 @@ mod tests
     {
         let result = eval_src(src);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_opcodes()
+    {
+        dbg!(Op::exit as usize);
+        assert!(Op::exit as usize <= 127);
     }
 
     #[test]

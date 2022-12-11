@@ -636,7 +636,9 @@ impl Assembler
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
 
+            "eq_i64" => self.code.push_op(Op::eq_i64),
             "lt_i64" => self.code.push_op(Op::lt_i64),
+            "le_i64" => self.code.push_op(Op::le_i64),
 
             "load_u8" => self.code.push_op(Op::load_u8),
             "store_u8" => self.code.push_op(Op::store_u8),
