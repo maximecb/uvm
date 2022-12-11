@@ -608,8 +608,6 @@ impl Assembler
                 self.code.push_u8(n);
             }
 
-            "store_u8" => self.code.push_op(Op::store_u8),
-
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_i8);
@@ -639,6 +637,9 @@ impl Assembler
             "mul_i64" => self.code.push_op(Op::mul_i64),
 
             "lt_i64" => self.code.push_op(Op::lt_i64),
+
+            "load_u8" => self.code.push_op(Op::load_u8),
+            "store_u8" => self.code.push_op(Op::store_u8),
 
             "jmp" => {
                 self.code.push_op(Op::jmp);

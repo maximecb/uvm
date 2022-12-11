@@ -35,21 +35,6 @@ pub enum Op
     popn,
 
     /*
-    /// Load from heap at fixed address
-    /// This is used for reading global variables
-    /// The address is multiplied by the data size (x 4 or x8)
-    /// If we save 24 bits for the offset, then that gives us quite a lot
-    load_static <address>
-    load
-    store
-    memcpy
-    */
-
-    // Store a value at a given adress
-    // store (addr) (value)
-    store_u8,
-
-    /*
     // Bitwise operations
     and
     or
@@ -72,6 +57,14 @@ pub enum Op
     //gt_i64
     //ge_i64
 
+    // Load a value at a given adress
+    // store (addr)
+    load_u8,
+
+    // Store a value at a given adress
+    // store (addr) (value)
+    store_u8,
+
     // Jump to pc offset
     jmp,
 
@@ -91,6 +84,17 @@ pub enum Op
     // Return to caller function
     ret,
 
+    /*
+    /// Load from heap at fixed address
+    /// This is used for reading global variables
+    /// The address is multiplied by the data size (x 4 or x8)
+    /// If we save 24 bits for the offset, then that gives us quite a lot
+    load_static <address>
+    load
+    store
+    memcpy
+    */
+
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
     // syscall <device_id:u16> <method_id:u16>
@@ -100,7 +104,7 @@ pub enum Op
     // from the host or a device (go into a waiting state)
     // Ideally the stack should be fully unwound when this is called,
     // we can relax this assumption later
-    //yield,
+    yld,
 
     // Suspend execution, release devices, save image
     // Ideally the stack should be unwound when this is called,
@@ -122,6 +126,11 @@ impl Value
     }
 
     pub fn from_i64(val: i64) -> Self
+    {
+        Value(val as u64)
+    }
+
+    pub fn from_u8(val: u8) -> Self
     {
         Value(val as u64)
     }
@@ -358,13 +367,6 @@ impl VM
                     self.push(b);
                 }
 
-                Op::store_u8 => {
-                    let val = self.pop().as_u8();
-                    let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
-                    unsafe { *heap_ptr = val; }
-                }
-
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
                     self.stack.push(Value::from_i8(val));
@@ -402,6 +404,20 @@ impl VM
                     self.stack.push(Value::from_i64(
                         if v0.as_i64() < v1.as_i64() { 1 } else { 0 }
                     ));
+                }
+
+                Op::load_u8 => {
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    let val = unsafe { *heap_ptr };
+                    self.push(Value::from_u8(val));
+                }
+
+                Op::store_u8 => {
+                    let val = self.pop().as_u8();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    unsafe { *heap_ptr = val; }
                 }
 
                 Op::jmp => {
@@ -526,7 +542,11 @@ mod tests
 
         // Simple loop
         assert_eq!(eval_src("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; jne LOOP; exit;"), Value::from_i8(10));
+    }
 
+    #[test]
+    fn test_load_store()
+    {
         // Store instruction
         assert_eq!(eval_src(".data .zero 255 .code push_i8 0; push_i8 77; store_u8; push_i8 11; exit;"), Value::from_i8(11));
     }
@@ -536,8 +556,5 @@ mod tests
     {
         assert_eq!(eval_src("call 0, FN; exit; FN: push_i8 33; ret;"), Value::from_i8(33));
         assert_eq!(eval_src("push_i8 3; call 1, FN; exit; FN: dup; push_i8 1; add_i64; ret;"), Value::from_i8(4));
-
-
-
     }
 }
