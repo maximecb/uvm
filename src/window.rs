@@ -32,10 +32,10 @@ struct Window<'a>
 // TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
-pub fn window_create(vm: &mut VM)
+pub fn window_create(vm: &mut VM, width: Value, height: Value)
 {
-    let width = 800;
-    let height = 600;
+    let width: u32 = width.as_usize().try_into().unwrap();
+    let height: u32 = height.as_usize().try_into().unwrap();
 
     let video_subsystem = unsafe {
         SDL.as_mut().unwrap().video().unwrap()

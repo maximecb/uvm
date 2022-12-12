@@ -768,6 +768,9 @@ mod tests
         parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jz FOO;");
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
 
+        // Callback label
+        parse_ok("CB: ret; push_ptr32 CB; exit;");
+
         // Data section
         parse_ok(".code");
         parse_ok(".code .data");

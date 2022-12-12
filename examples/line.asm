@@ -9,6 +9,8 @@ PIXEL_BUFFER:
 .code
 
 # TODO: need to specify window width and height
+push_u32 600;
+push_u32 800;
 syscall window_create;
 
 
@@ -56,7 +58,7 @@ mul_i64;
 add_i64;
 
 # Compute the end address
-dup;
+get_local 0;
 get_arg 2;
 push_i8 3;
 mul_i64;

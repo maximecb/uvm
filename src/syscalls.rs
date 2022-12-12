@@ -12,6 +12,7 @@ pub enum SysCallFn
     Fn0_0(fn(&mut VM)),
     Fn0_1(fn(&mut VM) -> Value),
     Fn1_0(fn(&mut VM, a0: Value)),
+    Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
 }
 
 /// Map of names to syscall functions
@@ -61,7 +62,7 @@ pub fn init_syscalls()
     reg_syscall(&mut syscalls, "print_str", SysCallFn::Fn1_0(print_str));
     reg_syscall(&mut syscalls, "read_i64", SysCallFn::Fn0_1(read_i64));
 
-    reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn0_0(window_create));
+    reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn2_0(window_create));
     reg_syscall(&mut syscalls, "window_show", SysCallFn::Fn0_0(window_show));
     reg_syscall(&mut syscalls, "window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
 
