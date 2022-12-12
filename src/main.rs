@@ -32,6 +32,14 @@ fn run_program(vm: &mut VM)
         SDL.as_mut().unwrap().event_pump().unwrap()
     };
 
+    let mut timer_module = unsafe {
+        SDL.as_mut().unwrap().timer().unwrap()
+    };
+
+
+
+
+
     let exit_reason = vm.eval();
 
     match exit_reason
@@ -56,6 +64,7 @@ fn run_program(vm: &mut VM)
 
         // TODO: call back into the VM but only if we have a callback to run
 
+        // Process all pending events
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
@@ -66,7 +75,16 @@ fn run_program(vm: &mut VM)
             }
         }
 
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+
+        let time_ms = timer_module.ticks();
+        //println!("{}", time_ms);
+
+
+        std::thread::sleep( std::time::Duration::from_millis(10) );
+
+
+
     }
 }
 
