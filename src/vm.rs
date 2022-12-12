@@ -58,6 +58,7 @@ pub enum Op
     add_i64,
     sub_i64,
     mul_i64,
+    mod_i64,
 
     // Test flag bits (logical and) with a constant
     // This can be used for tag bit tests
@@ -470,6 +471,14 @@ impl VM
                     let v0 = self.pop();
                     self.stack.push(Value::from(
                         v0.as_i64() * v1.as_i64()
+                    ));
+                }
+
+                Op::mod_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.stack.push(Value::from(
+                        v0.as_i64() % v1.as_i64()
                     ));
                 }
 
