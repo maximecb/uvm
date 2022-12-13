@@ -74,10 +74,12 @@ pub enum Op
     // Load a value at a given adress
     // store (addr)
     load_u8,
+    load_u64,
 
     // Store a value at a given adress
     // store (addr) (value)
     store_u8,
+    store_u64,
 
     // Jump to pc offset
     jmp,
@@ -142,6 +144,11 @@ impl Value
     pub fn as_i64(&self) -> i64 {
         let Value(val) = *self;
         val as i64
+    }
+
+    pub fn as_u64(&self) -> u64 {
+        let Value(val) = *self;
+        val as u64
     }
 
     pub fn as_usize(&self) -> usize {
@@ -503,7 +510,19 @@ impl VM
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    let val: u8 = unsafe { *heap_ptr };
+                    let val: u8 = unsafe {
+                        *heap_ptr
+                    };
+                    self.push(Value::from(val));
+                }
+
+                Op::load_u64 => {
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    let val: u64 = unsafe {
+                        let heap_ptr = transmute::<*mut u8 , *mut u64>(heap_ptr);
+                        *heap_ptr
+                    };
                     self.push(Value::from(val));
                 }
 
@@ -512,6 +531,16 @@ impl VM
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     unsafe { *heap_ptr = val; }
+                }
+
+                Op::store_u64 => {
+                    let val = self.pop().as_u64();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    unsafe {
+                        let heap_ptr = transmute::<*mut u8 , *mut u64>(heap_ptr);
+                        *heap_ptr = val;
+                    }
                 }
 
                 Op::jmp => {
