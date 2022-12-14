@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::vm::{Value, VM};
 use crate::window::*;
 use crate::audio::*;
+use crate::time::*;
 
 /// System call function signature
 /// Note: the in/out arg count should be fixed so
@@ -61,6 +62,8 @@ pub fn init_syscalls()
     reg_syscall(&mut syscalls, "print_i64", SysCallFn::Fn1_0(print_i64));
     reg_syscall(&mut syscalls, "print_str", SysCallFn::Fn1_0(print_str));
     reg_syscall(&mut syscalls, "read_i64", SysCallFn::Fn0_1(read_i64));
+
+    reg_syscall(&mut syscalls, "time_current_ms", SysCallFn::Fn0_1(time_current_ms));
 
     reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn2_0(window_create));
     reg_syscall(&mut syscalls, "window_show", SysCallFn::Fn0_0(window_show));

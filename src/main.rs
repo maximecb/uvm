@@ -8,6 +8,7 @@ mod syscalls;
 mod asm;
 mod window;
 mod audio;
+mod time;
 
 extern crate sdl2;
 use std::env;
@@ -31,14 +32,6 @@ fn run_program(vm: &mut VM)
     let mut event_pump = unsafe {
         SDL.as_mut().unwrap().event_pump().unwrap()
     };
-
-    let mut timer_module = unsafe {
-        SDL.as_mut().unwrap().timer().unwrap()
-    };
-
-
-
-
 
     let exit_reason = vm.eval();
 
@@ -77,8 +70,6 @@ fn run_program(vm: &mut VM)
 
 
 
-        let time_ms = timer_module.ticks();
-        //println!("{}", time_ms);
 
 
         std::thread::sleep( std::time::Duration::from_millis(10) );
