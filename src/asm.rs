@@ -653,6 +653,7 @@ impl Assembler
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
+            "div_i64" => self.code.push_op(Op::div_i64),
             "mod_i64" => self.code.push_op(Op::mod_i64),
 
             "eq_i64" => self.code.push_op(Op::eq_i64),
@@ -800,5 +801,6 @@ mod tests
         crate::syscalls::init_syscalls();
         parse_file("examples/line.asm");
         parse_file("examples/factorial.asm");
+        parse_file("examples/loop.asm");
     }
 }
