@@ -294,6 +294,9 @@ pub enum ExitReason
 
 pub struct VM
 {
+    // Host system state
+    pub sys_state: SysState,
+
     /// Table of system calls the program can refer to
     syscalls: Vec<SysCallFn>,
 
@@ -320,13 +323,17 @@ impl VM
 {
     pub fn new(code: MemBlock, heap: MemBlock, syscalls: Vec<String>) -> Self
     {
+        // Initialize the system state
+        let sys_state = SysState::new();
+
         let mut syscall_fns = Vec::new();
 
         for syscall_name in syscalls {
-            syscall_fns.push(get_syscall(&syscall_name));
+            syscall_fns.push(sys_state.get_syscall(&syscall_name));
         }
 
         Self {
+            sys_state,
             syscalls: syscall_fns,
             code,
             heap,

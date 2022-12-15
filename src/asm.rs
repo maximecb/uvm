@@ -798,7 +798,6 @@ mod tests
     #[test]
     fn parse_files()
     {
-        crate::syscalls::init_syscalls();
         parse_file("examples/line.asm");
         parse_file("examples/factorial.asm");
         parse_file("examples/loop.asm");

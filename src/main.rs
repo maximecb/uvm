@@ -15,23 +15,18 @@ use std::env;
 use crate::vm::{VM, MemBlock, ExitReason};
 use crate::asm::{Assembler};
 
-/// SDL context
-pub static mut SDL: Option<sdl2::Sdl> = None;
-
 fn run_program(vm: &mut VM)
 {
     use sdl2::event::Event;
     use sdl2::keyboard::Keycode;
 
-    // Initialize the SDL context
-    unsafe {
-        let sdl_context = sdl2::init().unwrap();
-        SDL = Some(sdl_context);
-    }
 
+
+    /*
     let mut event_pump = unsafe {
         SDL.as_mut().unwrap().event_pump().unwrap()
     };
+    */
 
     let exit_reason = vm.eval();
 
@@ -52,6 +47,7 @@ fn run_program(vm: &mut VM)
         }
     }
 
+    /*
     let mut i = 0;
     'main_loop: loop {
 
@@ -70,19 +66,17 @@ fn run_program(vm: &mut VM)
 
 
 
-
-
         std::thread::sleep( std::time::Duration::from_millis(10) );
-
-
-
     }
+    */
+
+
+
+
 }
 
 fn main()
 {
-    syscalls::init_syscalls();
-
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
 

@@ -1,3 +1,4 @@
+extern crate sdl2;
 use std::collections::HashMap;
 use crate::vm::{Value, VM};
 use crate::window::*;
@@ -16,8 +17,70 @@ pub enum SysCallFn
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
 }
 
-/// Map of names to syscall functions
-static mut SYSCALLS: Option<HashMap::<String, SysCallFn>> = None;
+pub struct SysState
+{
+    /// Map of names to syscall functions
+    syscalls: HashMap::<String, SysCallFn>,
+
+    /// SDL context (used for UI and audio)
+    sdl: Option<sdl2::Sdl>,
+
+    /// Window syscall state
+    pub window_state: Option<WindowState>,
+}
+
+impl SysState
+{
+    pub fn new() -> Self
+    {
+        let mut sys_state = Self {
+            syscalls: HashMap::default(),
+            sdl: None,
+            window_state: None,
+        };
+
+        sys_state.init_syscalls();
+
+        sys_state
+    }
+
+    pub fn get_sdl_context(&mut self) -> &mut sdl2::Sdl
+    {
+        if self.sdl.is_none() {
+            self.sdl = Some(sdl2::init().unwrap());
+        }
+
+        self.sdl.as_mut().unwrap()
+    }
+
+    pub fn reg_syscall(&mut self, name: &str, fun: SysCallFn)
+    {
+        self.syscalls.insert(name.to_string(), fun);
+    }
+
+    pub fn get_syscall(&self, name: &str) -> SysCallFn
+    {
+        *self.syscalls.get(name).unwrap()
+    }
+
+    fn init_syscalls(&mut self)
+    {
+        let mut syscalls = HashMap::<String, SysCallFn>::new();
+
+        //TODO:
+        //vm_resize_heap(new_size)
+
+        self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
+        self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));
+        self.reg_syscall("read_i64", SysCallFn::Fn0_1(read_i64));
+
+        self.reg_syscall("time_current_ms", SysCallFn::Fn0_1(time_current_ms));
+
+        self.reg_syscall("window_create", SysCallFn::Fn2_0(window_create));
+        self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
+        self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
+    }
+}
 
 fn print_i64(vm: &mut VM, v: Value)
 {
@@ -45,38 +108,4 @@ fn read_i64(vm: &mut VM) -> Value
     let val: i64 = line_buf.trim().parse().expect("expected i64 input");
 
     return Value::from(val);
-}
-
-fn reg_syscall(syscalls: &mut HashMap::<String, SysCallFn>, name: &str, fun: SysCallFn)
-{
-    syscalls.insert(name.to_string(), fun);
-}
-
-pub fn init_syscalls()
-{
-    let mut syscalls = HashMap::<String, SysCallFn>::new();
-
-    //TODO:
-    //vm_resize_heap(new_size)
-
-    reg_syscall(&mut syscalls, "print_i64", SysCallFn::Fn1_0(print_i64));
-    reg_syscall(&mut syscalls, "print_str", SysCallFn::Fn1_0(print_str));
-    reg_syscall(&mut syscalls, "read_i64", SysCallFn::Fn0_1(read_i64));
-
-    reg_syscall(&mut syscalls, "time_current_ms", SysCallFn::Fn0_1(time_current_ms));
-
-    reg_syscall(&mut syscalls, "window_create", SysCallFn::Fn2_0(window_create));
-    reg_syscall(&mut syscalls, "window_show", SysCallFn::Fn0_0(window_show));
-    reg_syscall(&mut syscalls, "window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
-
-    unsafe {
-        SYSCALLS = Some(syscalls)
-    }
-}
-
-pub fn get_syscall(name: &str) -> SysCallFn
-{
-    unsafe {
-        *SYSCALLS.as_ref().unwrap().get(name).unwrap()
-    }
 }

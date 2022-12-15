@@ -31,7 +31,7 @@ pub fn test_play_sound()
     let desired_spec = AudioSpecDesired {
         freq: Some(44100),
         channels: Some(1),  // mono
-        samples: None       // default sample size
+        samples: Some(10)   // buffer size 2^10 = 1024 samples
     };
 
     let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {

@@ -10,8 +10,8 @@ use sdl2::render::TextureAccess;
 use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
 
+use crate::syscalls::{SysState};
 use crate::vm::{VM, Value};
-use crate::{SDL};
 
 struct Window<'a>
 {
@@ -19,7 +19,6 @@ struct Window<'a>
     height: u32,
 
     // TODO: to support multiple windows
-    // window id
     //window_id
 
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -29,6 +28,33 @@ struct Window<'a>
     texture: Option<Texture<'a>>,
 }
 
+/// Mutable state for the window syscalls
+pub struct WindowState
+{
+    // SDL video subsystem
+    sdl_video: sdl2::VideoSubsystem,
+}
+
+impl SysState
+{
+    /// Lazily initialize the window state
+    fn get_window_state(&mut self) -> &mut WindowState
+    {
+        if self.window_state.is_none() {
+
+            let video_subsystem = self.get_sdl_context().video().unwrap();
+
+            self.window_state = Some(WindowState {
+                sdl_video: video_subsystem
+            })
+        }
+
+        self.window_state.as_mut().unwrap()
+    }
+}
+
+// Note: we're leaving this global to avoid the Window lifetime
+// bubbling up everywhere.
 // TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
@@ -37,9 +63,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value)
     let width: u32 = width.as_usize().try_into().unwrap();
     let height: u32 = height.as_usize().try_into().unwrap();
 
-    let video_subsystem = unsafe {
-        SDL.as_mut().unwrap().video().unwrap()
-    };
+    let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
 
     let window = video_subsystem.window("rust-sdl2 demo", width, height)
         .position_centered()
