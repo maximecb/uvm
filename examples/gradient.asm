@@ -103,10 +103,10 @@ get_local 4;
 sub_i64;
 
 syscall print_i64;
-push_ptr32 MS_STR;
+push_p32 MS_STR;
 syscall print_str;
 
-push_ptr32 PIXEL_BUFFER;
+push_p32 PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 # Wait for an event

@@ -51,7 +51,7 @@ mul_i64; # Insns / second
 push_u64 1_000_000;
 div_i64; # MIPS (M insns / second)
 syscall print_i64;
-push_ptr32 MIPS_STR;
+push_p32 MIPS_STR;
 syscall print_str;
 syscall print_endl;
 

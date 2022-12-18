@@ -645,7 +645,7 @@ impl Assembler
             }
 
             // Push a pointer to a label
-            "push_ptr32" => {
+            "push_p32" => {
                 let label_name = input.parse_ident()?;
                 self.code.push_op(Op::push_u32);
                 self.add_label_ref(input, label_name, LabelRefKind::Address32);
@@ -773,7 +773,7 @@ mod tests
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
 
         // Callback label
-        parse_ok("CB: ret; push_ptr32 CB; exit;");
+        parse_ok("CB: ret; push_p32 CB; exit;");
 
         // Data section
         parse_ok(".code");
@@ -782,8 +782,8 @@ mod tests
         parse_ok(" .data   .fill 256   ,   0xFF    #comment");
         parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
         parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
-        parse_ok(".data DATA_LABEL: .fill 256, 0xFF .code push_ptr32 DATA_LABEL;");
-        parse_ok(".data STR_LABEL: .stringz \"hi!\" .code push_ptr32 STR_LABEL;");
+        parse_ok(".data DATA_LABEL: .fill 256, 0xFF .code push_p32 DATA_LABEL;");
+        parse_ok(".data STR_LABEL: .stringz \"hi!\" .code push_p32 STR_LABEL;");
 
         // Failing parses
         parse_fails("1");

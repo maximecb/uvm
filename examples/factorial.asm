@@ -3,7 +3,7 @@ PROMPT_STR: .stringz "Input an integer:\n"
 
 .code
 
-push_ptr32 PROMPT_STR;
+push_p32 PROMPT_STR;
 syscall print_str;
 
 # Read input number

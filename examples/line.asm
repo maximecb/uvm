@@ -28,7 +28,7 @@ call 3, DRAW_VLINE;
 
 
 
-push_ptr32 PIXEL_BUFFER;
+push_p32 PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 syscall window_show;
