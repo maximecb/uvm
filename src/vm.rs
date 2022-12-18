@@ -69,8 +69,6 @@ pub enum Op
     eq_i64,
     lt_i64,
     le_i64,
-    //gt_i64
-    //ge_i64
 
     // Load a value at a given adress
     // store (addr)
@@ -92,7 +90,7 @@ pub enum Op
     jnz,
 
     // Call a function using the call stack
-    // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
+    // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
     call,
 
     // Return to caller function
@@ -589,12 +587,12 @@ impl VM
 
                 // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
                 Op::call => {
+                    // Offset of the function to call
+                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+
                     // Argument count
                     let num_args = self.code.read_pc::<u8>(&mut self.pc) as usize;
                     assert!(num_args <= self.stack.len() - self.bp);
-
-                    // Offset of the function to call
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
 
                     self.frames.push(StackFrame {
                         prev_bp: self.bp,
@@ -725,7 +723,7 @@ mod tests
     #[test]
     fn test_call_ret()
     {
-        eval_i64("call 0, FN; exit; FN: push_i8 33; ret;", 33);
-        eval_i64("push_i8 3; call 1, FN; exit; FN: get_arg 0; push_i8 1; add_i64; ret;", 4);
+        eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
+        eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_i64; ret;", 4);
     }
 }

@@ -316,7 +316,7 @@ struct LabelDef
 enum LabelRefKind
 {
     Address32,
-    Offset32,
+    Offset32(usize),
 }
 
 struct LabelRef
@@ -408,9 +408,9 @@ impl Assembler
                     self.code.write(label_ref.pos, ptr32.unwrap());
                 }
 
-                LabelRefKind::Offset32 => {
+                LabelRefKind::Offset32(end_offset) => {
                     assert!(def.section == Section::Code);
-                    let offs32 = (def.pos as i32) - (label_ref.pos as i32 + 4);
+                    let offs32 = (def.pos as i32) - ((label_ref.pos + end_offset) as i32 + 4);
                     self.code.write(label_ref.pos, offs32);
                 }
             }
@@ -479,7 +479,7 @@ impl Assembler
 
         match kind {
             LabelRefKind::Address32 => self.code.push_u32(0),
-            LabelRefKind::Offset32 => self.code.push_u32(0),
+            LabelRefKind::Offset32(_) => self.code.push_u32(0),
         }
     }
 
@@ -680,19 +680,19 @@ impl Assembler
             "jmp" => {
                 self.code.push_op(Op::jmp);
                 let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32(0));
             }
 
             "jz" => {
                 self.code.push_op(Op::jz);
                 let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32(0));
             }
 
             "jnz" => {
                 self.code.push_op(Op::jnz);
                 let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32(0));
             }
 
             "syscall" => {
@@ -711,16 +711,13 @@ impl Assembler
             }
 
             "call" => {
-                self.code.push_op(Op::call);
-
-                let argc: u8 = self.parse_int_arg(input)?;
-                self.code.push_u8(argc);
-
-                input.expect_token(",")?;
-
-                input.eat_ws();
                 let label_name = input.parse_ident()?;
-                self.add_label_ref(input, label_name, LabelRefKind::Offset32);
+                input.expect_token(",")?;
+                let argc: u8 = self.parse_int_arg(input)?;
+
+                self.code.push_op(Op::call);
+                self.add_label_ref(input, label_name, LabelRefKind::Offset32(1));
+                self.code.push_u8(argc);
             }
 
             "ret" => self.code.push_op(Op::ret),

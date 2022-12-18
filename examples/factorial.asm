@@ -11,7 +11,7 @@ syscall print_str;
 syscall read_i64;
 
 # Fall FACT with 1 argument
-call 1, FACT;
+call FACT, 1;
 
 # Print the result
 syscall print_i64;
@@ -36,7 +36,7 @@ RECURSE:
 get_arg 0;
 push_i8 1;
 sub_i64;
-call 1, FACT;
+call FACT, 1;
 
 # n * fact(n-1)
 get_arg 0;

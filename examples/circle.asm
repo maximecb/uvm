@@ -22,13 +22,6 @@ syscall window_create;
 # Show the window
 syscall window_show;
 
-# Draw the circle
-#push_u32 400;
-#push_u32 300;
-#push_i8 20;
-#call 3, DRAW_CIRCLE;
-#pop;
-
 
 
 push_u32 100;
@@ -89,7 +82,7 @@ set_local 0;
 get_local 0;
 push_u32 300;
 push_i8 20;
-call 3, DRAW_CIRCLE;
+call DRAW_CIRCLE, 3;
 pop;
 
 push_p32 PIXEL_BUFFER;
@@ -178,7 +171,7 @@ LOOP_Y:
 
     get_local 4;
     get_local 5;
-    call 2, SET_PIXEL;
+    call SET_PIXEL, 2;
     pop;
 
     OUTSIDE_CIRCLE:
