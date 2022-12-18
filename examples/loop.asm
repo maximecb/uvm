@@ -1,7 +1,7 @@
-.data
-MIPS_STR: .stringz " MIPS (million insns/second)"
+.data;
+MIPS_STR: .stringz " MIPS (million insns/second)";
 
-.code
+.code;
 
 # Counter, local 0
 push_i8 0;

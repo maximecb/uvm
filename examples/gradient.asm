@@ -1,15 +1,15 @@
 # Data section
-.data
+.data;
 
 # 800 * 600 * 3
 PIXEL_BUFFER:
-.zero 1_440_000
+.zero 1_440_000;
 
 MS_STR:
-.stringz " milliseconds to render\n"
+.stringz " milliseconds to render\n";
 
 # Code section
-.code
+.code;
 
 # Local 0, 1, width and height
 push_u32 800;

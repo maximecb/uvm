@@ -1,18 +1,18 @@
 # Data section
-.data
+.data;
 
 # 800 * 600 * 3
 PIXEL_BUFFER:
-.zero 1_440_000
+.zero 1_440_000;
 
 # Global x coordinate variable
 X_COORD:
-.u64 0
+.u64 0;
 
 ###########################################################
 
 # Code section
-.code
+.code;
 
 # Create a window
 push_u32 800;

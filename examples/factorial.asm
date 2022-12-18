@@ -1,7 +1,8 @@
-.data
-PROMPT_STR: .stringz "Input an integer:\n"
+.data;
+PROMPT_STR: .stringz "Input an integer:\n";
 
-.code
+# Code section
+.code;
 
 push_p32 PROMPT_STR;
 syscall print_str;

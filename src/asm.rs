@@ -176,8 +176,11 @@ impl Input
         false
     }
 
-    fn expect_str(&mut self, token: &str) -> Result<(), ParseError>
+    /// Expect a token to be present, which can be preceded by whitespace
+    fn expect_token(&mut self, token: &str) -> Result<(), ParseError>
     {
+        self.eat_ws();
+
         if !self.match_str(token) {
             return self.parse_error(&format!("expected {}", token));
         }
@@ -423,6 +426,7 @@ impl Assembler
         return self.parse_input(&mut input);
     }
 
+    /// Parse a string of source code
     pub fn parse_str(mut self, src: &str) -> Result<VM, ParseError>
     {
         let mut input = Input::new(src.to_string());
@@ -560,9 +564,9 @@ impl Assembler
 
             "fill" => {
                 let num_bytes: u32 = self.parse_int_arg(input)?;
-                input.eat_ws();
-                input.expect_str(",")?;
-                input.eat_ws();
+
+                input.expect_token(",")?;
+
                 let val: u8 = self.parse_int_arg(input)?;
                 let mem = self.mem();
                 for i in 0..num_bytes {
@@ -593,6 +597,8 @@ impl Assembler
                 return input.parse_error(&format!("unknown assembler command \"{}\"", cmd))
             }
         }
+
+        input.expect_token(";")?;
 
         Ok(())
     }
@@ -710,10 +716,9 @@ impl Assembler
                 let argc: u8 = self.parse_int_arg(input)?;
                 self.code.push_u8(argc);
 
-                input.eat_ws();
-                input.expect_str(",")?;
-                input.eat_ws();
+                input.expect_token(",")?;
 
+                input.eat_ws();
                 let label_name = input.parse_ident()?;
                 self.add_label_ref(input, label_name, LabelRefKind::Offset32);
             }
@@ -728,8 +733,7 @@ impl Assembler
             }
         }
 
-        input.eat_ws();
-        input.expect_str(";")?;
+        input.expect_token(";")?;
 
         Ok(())
     }
@@ -762,16 +766,20 @@ mod tests
     }
 
     #[test]
-    fn test_insns()
+    fn test_basics()
     {
         // Basics
         parse_ok("");
         parse_ok("# comment");
         parse_ok("push_i8  0 ; # comment");
-        parse_ok(".code\npush_u32 0xFFFFFFFF;");
-        parse_ok(".code push_u32 1_000_000;");
-        parse_ok(".code push_i8 55; push_i8 -1;");
+        parse_ok(".code;\npush_u32 0xFFFFFFFF;");
+        parse_ok(".code; push_u32 1_000_000;");
+        parse_ok(".code; push_i8 55; push_i8 -1;");
+    }
 
+    #[test]
+    fn test_labels()
+    {
         // Labels
         parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jnz FOO;");
         parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jz FOO;");
@@ -779,20 +787,31 @@ mod tests
 
         // Callback label
         parse_ok("CB: ret; push_p32 CB; exit;");
+    }
 
+    #[test]
+    fn test_data()
+    {
         // Data section
-        parse_ok(".code");
-        parse_ok(".code .data");
-        parse_ok(".data .u64 7777");
-        parse_ok(".data DATA_LABEL: .zero 256");
-        parse_ok(" .data   .fill 256   ,   0xFF    #comment");
-        parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
-        parse_ok(" .data #comment .fill 256, 0xFF .code push_u64 777; #comment");
-        parse_ok(".data DATA_LABEL: .fill 256, 0xFF .code push_p32 DATA_LABEL;");
-        parse_ok(".data STR_LABEL: .stringz \"hi!\" .code push_p32 STR_LABEL;");
+        parse_ok(".code;");
+        parse_ok(".code; .data;");
+        parse_ok(".data; .u64 7777;");
+        parse_ok(".data; DATA_LABEL: .zero 256;");
+        parse_ok(" .data;   .fill 256   ,   0xFF ;   #comment");
+        parse_ok(" .data; .fill 256,0xFF;");
+        parse_ok(".data; .zero 512; .code; push_u32 0xFFFF; push_i8 7; add_i64;");
+        parse_ok(" .data; #comment .fill 256, 0xFF; .code; push_u64 777; #comment");
+        parse_ok(".data; DATA_LABEL: .fill 256, 0xFF; .code; push_p32 DATA_LABEL;");
+        parse_ok(".data; STR_LABEL: .stringz \"hi!\"; .code; push_p32 STR_LABEL;");
+    }
 
+    #[test]
+    fn test_invalid()
+    {
         // Failing parses
         parse_fails("1");
+        parse_fails(";");
+        parse_fails(".fill 256 ,, 0xFF;");
         parse_fails(".code.zero 512");
         parse_fails(".data .u640");
         parse_fails(". code");

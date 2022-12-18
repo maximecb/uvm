@@ -719,7 +719,7 @@ mod tests
     fn test_load_store()
     {
         // Store instruction
-        eval_i64(".data .zero 255 .code push_i8 0; push_i8 77; store_u8; push_i8 11; exit;", 11);
+        eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; exit;", 11);
     }
 
     #[test]
