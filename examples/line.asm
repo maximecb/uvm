@@ -8,19 +8,20 @@ PIXEL_BUFFER:
 # Code section
 .code
 
-push_u32 600;
 push_u32 800;
+push_u32 600;
 syscall window_create;
 
 
-push_i8 20;
-push_i8 20;
+
 push_i8 10;
+push_i8 20;
+push_i8 20;
 call 3, DRAW_HLINE;
 
-push_i8 20;
-push_i8 20;
 push_i8 10;
+push_i8 20;
+push_i8 20;
 call 3, DRAW_VLINE;
 
 

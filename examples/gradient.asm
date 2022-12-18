@@ -16,8 +16,8 @@ push_u32 800;
 push_u32 600;
 
 # Create the window
-get_local 1;
 get_local 0;
+get_local 1;
 syscall window_create;
 syscall window_show;
 

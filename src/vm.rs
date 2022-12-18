@@ -424,8 +424,8 @@ impl VM
                         panic!("invalid index in get_arg");
                     }
 
-                    assert!(self.bp - (idx + 1) <= self.stack.len());
-                    let stack_idx = self.bp - (idx + 1);
+                    // Last argument is at bp - 1 (if there are arguments)
+                    let stack_idx = (self.bp - argc) + idx;
                     self.stack.push(self.stack[stack_idx]);
                 }
 
@@ -642,8 +642,8 @@ impl VM
                         }
 
                         SysCallFn::Fn2_0(fun) => {
-                            let a0 = self.pop();
                             let a1 = self.pop();
+                            let a0 = self.pop();
                             fun(self, a0, a1)
                         }
                     }
