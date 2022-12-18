@@ -8,7 +8,21 @@ struct DelayCb
     pc: u64,
 }
 
-static mut DELAY_CBS: Option<Vec<DelayCb>> = None;
+pub struct TimeState
+{
+    // List of delay callbacks
+    delay_cbs: Vec<DelayCb>,
+}
+
+impl TimeState
+{
+    pub fn new() -> Self
+    {
+        Self {
+            delay_cbs: Vec::default(),
+        }
+    }
+}
 
 /// Get the current time stamp in milliseconds
 pub fn get_time_ms() -> u64
@@ -35,23 +49,16 @@ pub fn time_delay_cb(vm: &mut VM, delay_ms: Value, callback_pc: Value)
         pc: callback_pc
     };
 
-    unsafe {
-        if DELAY_CBS.is_none() {
-            DELAY_CBS = Some(Vec::default());
-        }
-
-        DELAY_CBS.as_mut().unwrap().push(cb_entry);
 
 
+    // TODO
+    //delay_cbs.push(cb_entry);
 
-        // TODO: sort the callbacks
+    // TODO: sort the callbacks
 
 
 
 
 
 
-
-
-    }
 }

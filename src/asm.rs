@@ -644,6 +644,7 @@ impl Assembler
                 self.code.push_u64(val);
             }
 
+            // Push a pointer to a label
             "push_ptr32" => {
                 let label_name = input.parse_ident()?;
                 self.code.push_op(Op::push_u32);

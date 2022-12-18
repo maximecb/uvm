@@ -27,8 +27,11 @@ pub struct SysState
     /// SDL context (used for UI and audio)
     sdl: Option<sdl2::Sdl>,
 
-    /// Window syscall state
+    /// Window module state
     pub window_state: Option<WindowState>,
+
+    // Time module state
+    pub time_state: TimeState,
 }
 
 impl SysState
@@ -39,6 +42,7 @@ impl SysState
             syscalls: HashMap::default(),
             sdl: None,
             window_state: None,
+            time_state: TimeState::new(),
         };
 
         sys_state.init_syscalls();
@@ -48,6 +52,7 @@ impl SysState
 
     pub fn get_sdl_context(&mut self) -> &mut sdl2::Sdl
     {
+        // Lazily initialize the SDL context
         if self.sdl.is_none() {
             self.sdl = Some(sdl2::init().unwrap());
         }
@@ -60,6 +65,7 @@ impl SysState
         self.syscalls.insert(name.to_string(), fun);
     }
 
+    /// Get the syscall with a given name string
     pub fn get_syscall(&self, name: &str) -> SysCallFn
     {
         *self.syscalls.get(name).unwrap()
