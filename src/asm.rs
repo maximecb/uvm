@@ -117,7 +117,7 @@ impl Input
         }
     }
 
-    /// Check that a separator is present
+    /// Check that a separator character is present
     fn expect_sep(&mut self) -> Result<(), ParseError>
     {
         match self.peek_ch() {
@@ -570,6 +570,13 @@ impl Assembler
                 }
             }
 
+            // Unsigned 64-bit integer constant
+            "u64" => {
+                input.eat_ws();
+                let val: u64 = self.parse_int_arg(input)?;
+                self.mem().push_u64(val);
+            }
+
             // Null-terminated UTF-8 string
             "stringz" => {
                 input.eat_ws();
@@ -778,6 +785,7 @@ mod tests
         // Data section
         parse_ok(".code");
         parse_ok(".code .data");
+        parse_ok(".data .u64 7777");
         parse_ok(".data DATA_LABEL: .zero 256");
         parse_ok(" .data   .fill 256   ,   0xFF    #comment");
         parse_ok(".data .zero 512 .code push_u32 0xFFFF; push_i8 7; add_i64;");
@@ -788,6 +796,7 @@ mod tests
         // Failing parses
         parse_fails("1");
         parse_fails(".code.zero 512");
+        parse_fails(".data .u640");
         parse_fails(". code");
         parse_fails("FOO: FOO: jmp FOO;");
         parse_fails("FOO: jmp BAR;");

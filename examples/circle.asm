@@ -7,7 +7,7 @@ PIXEL_BUFFER:
 
 # Global x coordinate variable
 X_COORD:
-.zero 8
+.u64 0
 
 ###########################################################
 
