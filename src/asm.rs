@@ -502,6 +502,7 @@ impl Assembler
             let cmd = input.parse_ident()?;
 
             input.expect_sep()?;
+            input.eat_ws();
 
             self.parse_cmd(input, cmd)?;
 
@@ -514,7 +515,6 @@ impl Assembler
 
             input.expect_sep()?;
             input.eat_ws();
-            let ch = input.peek_ch();
 
             if input.match_str(":") {
                 if self.label_defs.get(&ident).is_some() {
@@ -572,14 +572,12 @@ impl Assembler
 
             // Unsigned 64-bit integer constant
             "u64" => {
-                input.eat_ws();
                 let val: u64 = self.parse_int_arg(input)?;
                 self.mem().push_u64(val);
             }
 
             // Null-terminated UTF-8 string
             "stringz" => {
-                input.eat_ws();
                 let val = input.parse_str()?;
 
                 let mem = self.mem();
