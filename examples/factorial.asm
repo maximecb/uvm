@@ -1,5 +1,5 @@
 .data
-PROMPT_STR: .stringz "Input an integer:"
+PROMPT_STR: .stringz "Input an integer:\n"
 
 .code
 
@@ -14,6 +14,7 @@ call 1, FACT;
 
 # Print the result
 syscall print_i64;
+syscall print_endl;
 
 exit;
 

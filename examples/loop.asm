@@ -46,5 +46,6 @@ div_i64;
 push_u64 1000;
 mul_i64;
 syscall print_i64;
+syscall print_endl;
 
 exit;
