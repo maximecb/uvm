@@ -84,6 +84,7 @@ impl SysState
         self.reg_syscall("read_i64", SysCallFn::Fn0_1(read_i64));
 
         self.reg_syscall("time_current_ms", SysCallFn::Fn0_1(time_current_ms));
+        self.reg_syscall("time_delay_cb", SysCallFn::Fn2_0(time_delay_cb));
 
         self.reg_syscall("window_create", SysCallFn::Fn2_0(window_create));
         self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));

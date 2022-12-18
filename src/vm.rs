@@ -344,6 +344,11 @@ impl VM
         }
     }
 
+    pub fn set_pc(&mut self, pc: u64)
+    {
+        self.pc = pc as usize;
+    }
+
     pub fn stack_size(&self) -> usize
     {
         self.stack.len()
@@ -433,7 +438,7 @@ impl VM
                     let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
 
                     if self.bp + idx >= self.stack.len() {
-                        panic!("invalid index in get_local");
+                        panic!("invalid index {} in get_local", idx);
                     }
 
                     self.stack.push(self.stack[self.bp + idx]);

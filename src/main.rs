@@ -20,29 +20,22 @@ fn run_program(vm: &mut VM)
     use sdl2::event::Event;
     use sdl2::keyboard::Keycode;
 
-
-
-
-    let exit_reason = vm.eval();
-
-    match exit_reason
+    match vm.eval()
     {
         ExitReason::Exit => {
-            return;
-        }
+            dbg!(vm.stack_size());
+            return
+        },
 
-        ExitReason::Wait => {
-            // Keep processig events
-        }
+        // Keep processig events
+        ExitReason::Wait => {}
     }
 
     let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
 
     let mut i = 0;
-    'main_loop: loop {
-
-        // TODO: call back into the VM but only if we have a callback to run
-
+    'main_loop: loop
+    {
         // Process all pending events
         for event in event_pump.poll_iter() {
             match event {
@@ -54,9 +47,29 @@ fn run_program(vm: &mut VM)
             }
         }
 
+        let next_cb_time = time::time_until_next_cb(&vm);
 
+        if let Some(delay_ms) = next_cb_time {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+        else
+        {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
 
-        std::thread::sleep( std::time::Duration::from_millis(10) );
+        // For each callback to run
+        for pc in time::get_cbs_to_run(vm)
+        {
+            vm.set_pc(pc);
+
+            match vm.eval()
+            {
+                ExitReason::Exit => { return },
+                ExitReason::Wait => {}
+            }
+
+            dbg!(vm.stack_size());
+        }
     }
 }
 
