@@ -33,12 +33,6 @@ fn run_program(vm: &mut VM)
     match exit_reason
     {
         ExitReason::Exit => {
-            if vm.stack_size() > 0
-            {
-                let ret = vm.pop();
-                println!("return value: {:?}", ret);
-            }
-
             return;
         }
 

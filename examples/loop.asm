@@ -1,3 +1,6 @@
+.data
+MIPS_STR: .stringz " MIPS (million insns/second)"
+
 .code
 
 # Counter, local 0
@@ -38,14 +41,18 @@ get_local 2;
 sub_i64;
 
 # Compute instructions/second
-get_local 1;
+get_local 1; # Total iteration count
 push_i8 9; # 9 instructions per cycle
-mul_i64;
+mul_i64; # Iterations * insns = total insn executed
 swap;
-div_i64;
+div_i64; # Insns / time taken in milliseconds
 push_u64 1000;
-mul_i64;
+mul_i64; # Insns / second
+push_u64 1_000_000;
+div_i64; # MIPS (M insns / second)
 syscall print_i64;
+push_ptr32 MIPS_STR;
+syscall print_str;
 syscall print_endl;
 
 exit;
