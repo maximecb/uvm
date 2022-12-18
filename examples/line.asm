@@ -8,7 +8,6 @@ PIXEL_BUFFER:
 # Code section
 .code
 
-# TODO: need to specify window width and height
 push_u32 600;
 push_u32 800;
 syscall window_create;

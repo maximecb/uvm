@@ -801,5 +801,6 @@ mod tests
         parse_file("examples/line.asm");
         parse_file("examples/factorial.asm");
         parse_file("examples/loop.asm");
+        parse_file("examples/gradient.asm");
     }
 }

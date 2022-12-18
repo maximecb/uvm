@@ -22,11 +22,6 @@ fn run_program(vm: &mut VM)
 
 
 
-    /*
-    let mut event_pump = unsafe {
-        SDL.as_mut().unwrap().event_pump().unwrap()
-    };
-    */
 
     let exit_reason = vm.eval();
 
@@ -41,7 +36,8 @@ fn run_program(vm: &mut VM)
         }
     }
 
-    /*
+    let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
+
     let mut i = 0;
     'main_loop: loop {
 
@@ -62,11 +58,6 @@ fn run_program(vm: &mut VM)
 
         std::thread::sleep( std::time::Duration::from_millis(10) );
     }
-    */
-
-
-
-
 }
 
 fn main()
