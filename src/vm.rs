@@ -46,13 +46,11 @@ pub enum Op
     // set_local <idx:u8> (value)
     set_local,
 
-    /*
     // Bitwise operations
-    and_i64
-    or_i64
-    not_i64
-    lshift
-    */
+    and_i64,
+    or_i64,
+    //not_i64,
+    //lshift_i64,
 
     // Integer arithmetic
     add_i64,
@@ -466,6 +464,22 @@ impl VM
                 Op::push_u64 => {
                     let val = self.code.read_pc::<u64>(&mut self.pc);
                     self.push(Value::from(val));
+                }
+
+                Op::and_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_i64() & v1.as_i64()
+                    ));
+                }
+
+                Op::or_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_i64() | v1.as_i64()
+                    ));
                 }
 
                 Op::add_i64 => {

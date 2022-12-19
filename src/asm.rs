@@ -662,6 +662,9 @@ impl Assembler
                 self.add_label_ref(input, label_name, LabelRefKind::Address32);
             }
 
+            "and_i64" => self.code.push_op(Op::and_i64),
+            "or_i64" => self.code.push_op(Op::or_i64),
+
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
             "mul_i64" => self.code.push_op(Op::mul_i64),
