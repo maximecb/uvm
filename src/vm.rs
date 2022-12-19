@@ -49,8 +49,11 @@ pub enum Op
     // Bitwise operations
     and_i64,
     or_i64,
+    xor_i64,
     //not_i64,
     //lshift_i64,
+    //rshift_i64,
+    //urshift_i64,
 
     // Integer arithmetic
     add_i64,
@@ -59,6 +62,9 @@ pub enum Op
     div_i64,
     mod_i64,
 
+    // NOTE: may want to wait for this because it's not RISC,
+    //       but it could help reduce code flag
+    // NOTE: should this insn have a jump offset built in?
     // Test flag bits (logical and) with a constant
     // This can be used for tag bit tests
     // test_u8 <u8_flags>
@@ -126,6 +132,7 @@ pub enum Op
 
     // NOTE: last opcode must have value <= 127
     // so that we can use 128 as an opcode extension bit
+    // Infrequent opcodes can use a longer encoding.
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -479,6 +486,14 @@ impl VM
                     let v0 = self.pop();
                     self.push(Value::from(
                         v0.as_i64() | v1.as_i64()
+                    ));
+                }
+
+                Op::xor_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_i64() ^ v1.as_i64()
                     ));
                 }
 
