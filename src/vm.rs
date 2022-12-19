@@ -48,9 +48,9 @@ pub enum Op
 
     /*
     // Bitwise operations
-    and
-    or
-    not
+    and_i64
+    or_i64
+    not_i64
     lshift
     */
 
@@ -429,7 +429,7 @@ impl VM
 
                     // Last argument is at bp - 1 (if there are arguments)
                     let stack_idx = (self.bp - argc) + idx;
-                    self.stack.push(self.stack[stack_idx]);
+                    self.push(self.stack[stack_idx]);
                 }
 
                 Op::get_local => {
@@ -439,7 +439,7 @@ impl VM
                         panic!("invalid index {} in get_local", idx);
                     }
 
-                    self.stack.push(self.stack[self.bp + idx]);
+                    self.push(self.stack[self.bp + idx]);
                 }
 
                 Op::set_local => {
@@ -455,7 +455,7 @@ impl VM
 
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut self.pc);
-                    self.stack.push(val.into());
+                    self.push(val.into());
                 }
 
                 Op::push_u32 => {
@@ -471,7 +471,7 @@ impl VM
                 Op::add_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from(
+                    self.push(Value::from(
                         v0.as_i64() + v1.as_i64()
                     ));
                 }
@@ -479,7 +479,7 @@ impl VM
                 Op::sub_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from(
+                    self.push(Value::from(
                         v0.as_i64() - v1.as_i64()
                     ));
                 }
@@ -487,7 +487,7 @@ impl VM
                 Op::mul_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from(
+                    self.push(Value::from(
                         v0.as_i64() * v1.as_i64()
                     ));
                 }
@@ -495,7 +495,7 @@ impl VM
                 Op::div_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from(
+                    self.push(Value::from(
                         v0.as_i64() / v1.as_i64()
                     ));
                 }
@@ -503,7 +503,7 @@ impl VM
                 Op::mod_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.stack.push(Value::from(
+                    self.push(Value::from(
                         v0.as_i64() % v1.as_i64()
                     ));
                 }
@@ -600,6 +600,7 @@ impl VM
                         argc: num_args,
                     });
 
+                    // The base pointer will point at the first local
                     self.bp = self.stack.len();
                     self.pc = ((self.pc as isize) + offset) as usize;
                 }
@@ -610,6 +611,10 @@ impl VM
                     let top_frame = self.frames.pop().unwrap();
                     self.pc = top_frame.ret_addr;
                     self.bp = top_frame.prev_bp;
+
+                    if self.stack.len() <= self.bp {
+                        panic!("ret with no return value on stack");
+                    }
 
                     let ret_val = self.pop();
 
@@ -725,5 +730,12 @@ mod tests
     {
         eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
         eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_i64; ret;", 4);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_ret_none()
+    {
+        eval_src("call FN, 0; exit; FN: ret;");
     }
 }
