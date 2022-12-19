@@ -574,6 +574,12 @@ impl Assembler
                 }
             }
 
+            // Unsigned 8-bit integer constant
+            "u8" => {
+                let val: u8 = self.parse_int_arg(input)?;
+                self.mem().push_u8(val);
+            }
+
             // Unsigned 64-bit integer constant
             "u64" => {
                 let val: u64 = self.parse_int_arg(input)?;
@@ -795,6 +801,7 @@ mod tests
         // Data section
         parse_ok(".code;");
         parse_ok(".code; .data;");
+        parse_ok(".data; .u8 255;");
         parse_ok(".data; .u64 7777;");
         parse_ok(".data; DATA_LABEL: .zero 256;");
         parse_ok(" .data;   .fill 256   ,   0xFF ;   #comment");
