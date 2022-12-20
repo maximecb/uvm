@@ -643,6 +643,10 @@ impl Assembler
                 self.code.push_u8(idx);
             }
 
+            "push_0" => {
+                self.code.push_op(Op::push_0);
+            }
+
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_i8);

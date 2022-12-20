@@ -16,6 +16,9 @@ pub enum Op
     // No-op (useful for code patching or patch points)
     nop,
 
+    // Push the value zero
+    push_0,
+
     // push_i8 <i8_imm> (sign-extended)
     push_i8,
 
@@ -456,6 +459,10 @@ impl VM
                     }
 
                     self.stack[self.bp + idx] = val;
+                }
+
+                Op::push_0 => {
+                    self.push(Value::from(0 as u64));
                 }
 
                 Op::push_i8 => {

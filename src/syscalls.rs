@@ -77,6 +77,7 @@ impl SysState
 
         //TODO:
         //vm_resize_heap(new_size)
+        //vm_memcpy(dst, src, num_bytes)
 
         self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
         self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));
