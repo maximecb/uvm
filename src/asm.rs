@@ -98,7 +98,7 @@ impl Input
     }
 
     /// Consume whitespace characters (excluding newlines)
-    fn eat_ws(&mut self)
+    fn eat_ws(&mut self) -> Result<(), ParseError>
     {
         loop
         {
@@ -112,9 +112,25 @@ impl Input
                     self.eat_ch();
                 }
 
+                // Single-line comment
+                '#' => {
+                    self.eat_line_comment();
+                }
+
+                '/' => {
+                    if self.match_str("//") {
+                        self.eat_line_comment();
+                    }
+                    else if self.match_str("/*") {
+                        self.eat_multi_comment()?;
+                    }
+                }
+
                 _ => break
             }
         }
+
+        Ok(())
     }
 
     /// Check that a separator character is present
@@ -138,8 +154,8 @@ impl Input
         }
     }
 
-    /// Consume characters until the end of a comment
-    fn eat_comment(&mut self)
+    /// Consume characters until the end of a single-line comment
+    fn eat_line_comment(&mut self)
     {
         loop
         {
@@ -156,6 +172,35 @@ impl Input
 
             self.eat_ch();
         }
+    }
+
+    /// Consume characters until the end of a multi-line comment
+    fn eat_multi_comment(&mut self) -> Result<(), ParseError>
+    {
+        let mut depth = 1;
+
+        loop
+        {
+            if self.eof() {
+                return self.parse_error(&format!("unexpected end of input inside multi-line comment"));
+            }
+            else if self.match_str("/*") {
+                depth += 1;
+            }
+            else if self.match_str("*/") {
+                depth -= 1;
+
+                if depth == 0 {
+                    break
+                }
+            }
+            else
+            {
+                self.eat_ch();
+            }
+        }
+
+        Ok(())
     }
 
     /// Check if the input matches a given string
@@ -179,7 +224,7 @@ impl Input
     /// Expect a token to be present, which can be preceded by whitespace
     fn expect_token(&mut self, token: &str) -> Result<(), ParseError>
     {
-        self.eat_ws();
+        self.eat_ws()?;
 
         if !self.match_str(token) {
             return self.parse_error(&format!("expected {}", token));
@@ -370,7 +415,7 @@ impl Assembler
         // Until we've reached the end of the input
         loop
         {
-            input.eat_ws();
+            input.eat_ws()?;
 
             if input.eof() {
                 break
@@ -436,7 +481,7 @@ impl Assembler
     /// Parse an integer argument
     fn parse_int_arg<T>(&self, input: &mut Input) -> Result<T, ParseError> where T: TryFrom<i128>
     {
-        input.eat_ws();
+        input.eat_ws()?;
 
         let ch = input.peek_ch();
 
@@ -494,19 +539,13 @@ impl Assembler
             return Ok(());
         }
 
-        // If this is a comment
-        if ch == '#' {
-            input.eat_comment();
-            return Ok(());
-        }
-
         // If this is an assembler command
         if ch == '.' {
             input.eat_ch();
             let cmd = input.parse_ident()?;
 
             input.expect_sep()?;
-            input.eat_ws();
+            input.eat_ws()?;
 
             self.parse_cmd(input, cmd)?;
 
@@ -518,7 +557,7 @@ impl Assembler
             let ident = input.parse_ident()?;
 
             input.expect_sep()?;
-            input.eat_ws();
+            input.eat_ws()?;
 
             if input.match_str(":") {
                 if self.label_defs.get(&ident).is_some() {
@@ -781,8 +820,13 @@ mod tests
     {
         // Basics
         parse_ok("");
+        parse_ok("#!/usr/bin/uvm\nret;");
         parse_ok("# comment");
+        parse_ok("// comment");
+        parse_ok("/* comment */");
+        parse_ok("/* nested /* little */ comment */");
         parse_ok("push_i8  0 ; # comment");
+        parse_ok("push_i8 /*comment!*/ 0; // comment");
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
@@ -792,6 +836,10 @@ mod tests
     fn test_labels()
     {
         // Labels
+        parse_ok("FOO:");
+        parse_ok("_FOO_:");
+        parse_ok("FOO: BAR:");
+        parse_ok("FOO: #Label\n BAR:");
         parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jnz FOO;");
         parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jz FOO;");
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
@@ -821,8 +869,10 @@ mod tests
     fn test_invalid()
     {
         // Failing parses
+        parse_fails("/*");
         parse_fails("1");
         parse_fails(";");
+        parse_fails("_?:");
         parse_fails(".fill 256 ,, 0xFF;");
         parse_fails(".code.zero 512");
         parse_fails(".data .u640");

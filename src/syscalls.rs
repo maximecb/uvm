@@ -17,6 +17,7 @@ pub enum SysCallFn
     Fn0_1(fn(&mut VM) -> Value),
     Fn1_0(fn(&mut VM, a0: Value)),
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
+    Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
 }
 
 pub struct SysState
@@ -76,8 +77,9 @@ impl SysState
         let mut syscalls = HashMap::<String, SysCallFn>::new();
 
         //TODO:
+        //memcpy(dst, src, num_bytes)
+        //memset(ptr, val, num_bytes)
         //vm_resize_heap(new_size)
-        //vm_memcpy(dst, src, num_bytes)
 
         self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
         self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));

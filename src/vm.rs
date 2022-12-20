@@ -690,6 +690,13 @@ impl VM
                             let a0 = self.pop();
                             fun(self, a0, a1)
                         }
+
+                        SysCallFn::Fn3_0(fun) => {
+                            let a2 = self.pop();
+                            let a1 = self.pop();
+                            let a0 = self.pop();
+                            fun(self, a0, a1, a2)
+                        }
                     }
                 }
 

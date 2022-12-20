@@ -1,3 +1,7 @@
+/*
+* A little program to recursively compute factorials
+*/
+
 .data;
 PROMPT_STR: .stringz "Input an integer:\n";
 

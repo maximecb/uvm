@@ -1,3 +1,9 @@
+#
+# This is a microbenchmark with a loop and some timing functions to
+# try and calculate how many millions of instructions per second (MIPS)
+# we can run.
+#
+
 .data;
 MIPS_STR: .stringz " MIPS (million insns/second)";
 
