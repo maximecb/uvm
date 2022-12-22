@@ -1,0 +1,14 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "ncc"
+version = "0.1.0"
+authors = ["Maxime Chevalier-Boisvert <maximechevalierb@gmail.com>"]
+edition = "2021" # Rust language edition
+repository = "https://github.com/maximecb/uvm/"
+
+[dependencies]
+
+[[bin]]
+name = "ncc"
+path = "main.rs"
