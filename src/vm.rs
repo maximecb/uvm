@@ -643,33 +643,24 @@ impl VM
                     self.push_bool(v0.as_i64() <= v1.as_i64());
                 }
 
-                // FIXME: need to panic if outside of heap bounds
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    let val: u8 = unsafe {
-                        *heap_ptr
-                    };
+                    let val: u8 = unsafe { *heap_ptr };
                     self.push(Value::from(val));
                 }
 
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    let val: u32 = unsafe {
-                        let heap_ptr = transmute::<*mut u8 , *mut u32>(heap_ptr);
-                        *heap_ptr
-                    };
+                    let val: u32 = unsafe { *heap_ptr };
                     self.push(Value::from(val));
                 }
 
                 Op::load_u64 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    let val: u64 = unsafe {
-                        let heap_ptr = transmute::<*mut u8 , *mut u64>(heap_ptr);
-                        *heap_ptr
-                    };
+                    let val: u64 = unsafe { *heap_ptr };
                     self.push(Value::from(val));
                 }
 
@@ -684,20 +675,14 @@ impl VM
                     let val = self.pop().as_u32();
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    unsafe {
-                        let heap_ptr = transmute::<*mut u8 , *mut u32>(heap_ptr);
-                        *heap_ptr = val;
-                    }
+                    unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u64 => {
                     let val = self.pop().as_u64();
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
-                    unsafe {
-                        let heap_ptr = transmute::<*mut u8 , *mut u64>(heap_ptr);
-                        *heap_ptr = val;
-                    }
+                    unsafe { *heap_ptr = val; }
                 }
 
                 Op::jmp => {
