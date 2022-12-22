@@ -720,6 +720,7 @@ impl Assembler
             "or_i64" => self.code.push_op(Op::or_i64),
             "xor_i64" => self.code.push_op(Op::xor_i64),
             "lshift_i64" => self.code.push_op(Op::lshift_i64),
+            "urshift_i64" => self.code.push_op(Op::urshift_i64),
 
             "add_i64" => self.code.push_op(Op::add_i64),
             "sub_i64" => self.code.push_op(Op::sub_i64),
@@ -943,6 +944,7 @@ mod tests
         parse_file("examples/factorial.asm");
         parse_file("examples/loop.asm");
         parse_file("examples/gradient.asm");
+        parse_file("examples/colors.asm");
         parse_file("examples/circle.asm");
     }
 }

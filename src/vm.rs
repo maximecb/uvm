@@ -57,7 +57,7 @@ pub enum Op
     //not_i64,
     lshift_i64,
     //rshift_i64,
-    //urshift_i64,
+    urshift_i64,
 
     // Integer arithmetic
     add_i64,
@@ -533,6 +533,14 @@ impl VM
                     let v0 = self.pop();
                     self.push(Value::from(
                         v0.as_i64() << v1.as_i64()
+                    ));
+                }
+
+                Op::urshift_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_u64() >> v1.as_u64()
                     ));
                 }
 
