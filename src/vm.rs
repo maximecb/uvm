@@ -456,6 +456,7 @@ impl VM
             }
 
             let op = self.code.read_pc::<Op>(&mut self.pc);
+            //dbg!(op);
 
             match op
             {
@@ -889,9 +890,22 @@ mod tests
     }
 
     #[test]
+    fn test_syscalls()
+    {
+        eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; exit;");
+    }
+
+    #[test]
     #[should_panic]
     fn test_ret_none()
     {
         eval_src("call FN, 0; exit; FN: ret;");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_memset_oob()
+    {
+        eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 256; syscall memset; push 0; exit;");
     }
 }
