@@ -58,7 +58,7 @@ pub enum Op
     and_u64,
     or_u64,
     xor_u64,
-    //not_u64,
+    not_u64,
     lshift_u64,
     rshift_u64,
     //rshift_i64,
@@ -566,6 +566,13 @@ impl VM
                     let v0 = self.pop();
                     self.push(Value::from(
                         v0.as_u64() ^ v1.as_u64()
+                    ));
+                }
+
+                Op::not_u64 => {
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        !v0.as_u64()
                     ));
                 }
 

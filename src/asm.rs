@@ -719,6 +719,7 @@ impl Assembler
             "and_u64" => self.code.push_op(Op::and_u64),
             "or_u64" => self.code.push_op(Op::or_u64),
             "xor_u64" => self.code.push_op(Op::xor_u64),
+            "not_u64" => self.code.push_op(Op::not_u64),
             "lshift_u64" => self.code.push_op(Op::lshift_u64),
             "rshift_u64" => self.code.push_op(Op::rshift_u64),
 
