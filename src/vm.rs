@@ -143,6 +143,11 @@ pub struct Value(u64);
 
 impl Value
 {
+    pub fn is_null(&self) -> bool {
+        let Value(val) = *self;
+        val == 0
+    }
+
     pub fn as_u8(&self) -> u8 {
         let Value(val) = *self;
         val as u8
@@ -380,6 +385,23 @@ impl VM
     pub fn get_heap_ptr(&mut self, addr: usize) -> *mut u8
     {
         unsafe { self.heap.data.as_mut_ptr().add(addr) }
+    }
+
+    /// Copy a string at a given address in the heap
+    pub fn get_heap_str(&mut self, str_ptr: usize) -> &str
+    {
+        // TODO: assert that null terminator exists within heap bounds
+
+        use std::ffi::CStr;
+
+        if str_ptr == 0 {
+            return "";
+        }
+
+        let char_ptr = self.get_heap_ptr(str_ptr);
+        let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
+        let rust_str = c_str.to_str().unwrap();
+        rust_str
     }
 
     /// Execute instructions until halt/exit/pause

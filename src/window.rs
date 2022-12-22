@@ -58,14 +58,15 @@ impl SysState
 // TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
-pub fn window_create(vm: &mut VM, width: Value, height: Value)
+pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value)
 {
     let width: u32 = width.as_usize().try_into().unwrap();
     let height: u32 = height.as_usize().try_into().unwrap();
+    let title_str = vm.get_heap_str(title.as_usize()).to_owned();
 
     let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
 
-    let window = video_subsystem.window("rust-sdl2 demo", width, height)
+    let window = video_subsystem.window(&title_str, width, height)
         .position_centered()
         .build()
         .unwrap();
@@ -93,7 +94,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value)
     unsafe {
         let window = WINDOW.as_mut().unwrap();
 
-        window.texture = Some( window.texture_creator.create_texture(
+        window.texture = Some(window.texture_creator.create_texture(
             PixelFormatEnum::RGB24,
             TextureAccess::Streaming,
             width,

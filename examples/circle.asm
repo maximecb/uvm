@@ -5,6 +5,9 @@
 PIXEL_BUFFER:
 .zero 1_440_000;
 
+WINDOW_TITLE:
+.stringz "UVM Circle Animation Example";
+
 # Global x coordinate variable
 X_COORD:
 .u64 0;
@@ -17,6 +20,7 @@ X_COORD:
 # Create a window
 push_u32 800;
 push_u32 600;
+push_p32 WINDOW_TITLE;
 syscall window_create;
 
 # Show the window

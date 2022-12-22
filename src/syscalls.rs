@@ -89,7 +89,7 @@ impl SysState
         self.reg_syscall("time_current_ms", SysCallFn::Fn0_1(time_current_ms));
         self.reg_syscall("time_delay_cb", SysCallFn::Fn2_0(time_delay_cb));
 
-        self.reg_syscall("window_create", SysCallFn::Fn2_0(window_create));
+        self.reg_syscall("window_create", SysCallFn::Fn3_0(window_create));
         self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
         self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
     }
@@ -105,11 +105,7 @@ fn print_i64(vm: &mut VM, v: Value)
 /// Print a null-terminated UTF-8 string to stdout
 fn print_str(vm: &mut VM, str_ptr: Value)
 {
-    use std::ffi::CStr;
-    let char_ptr = vm.get_heap_ptr(str_ptr.as_usize());
-    let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
-    let rust_str = c_str.to_str().unwrap();
-
+    let rust_str = vm.get_heap_str(str_ptr.as_usize());
     print!("{}", rust_str);
     stdout().flush().unwrap();
 }

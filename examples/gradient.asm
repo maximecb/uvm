@@ -5,6 +5,9 @@
 PIXEL_BUFFER:
 .zero 1_440_000;
 
+WINDOW_TITLE:
+.stringz "UVM Gradient Example";
+
 MS_STR:
 .stringz " milliseconds to render\n";
 
@@ -18,6 +21,7 @@ push_u32 600;
 # Create the window
 get_local 0;
 get_local 1;
+push_p32 WINDOW_TITLE;
 syscall window_create;
 syscall window_show;
 
