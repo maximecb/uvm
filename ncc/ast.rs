@@ -2,6 +2,7 @@ pub enum Type
 {
     Void,
     UInt64,
+    UInt8,
 }
 
 /// Unary operator

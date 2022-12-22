@@ -790,6 +790,14 @@ pub fn parse_type(input: &mut Input) -> Result<Type, ParseError>
         return Ok(Type::Void);
     }
 
+    if input.match_keyword("u8") {
+        return Ok(Type::UInt8);
+    }
+
+    if input.match_keyword("char") {
+        return Ok(Type::UInt8);
+    }
+
     if input.match_keyword("u64") {
         return Ok(Type::UInt64);
     }
@@ -861,52 +869,16 @@ mod tests
 {
     use super::*;
 
-    /*
     fn parse_ok(src: &str)
     {
-        let mut vm = VM::new();
         let mut input = Input::new(&src, "src");
-        assert!(parse_unit(&mut vm, &mut input).is_ok());
+        assert!(parse_unit(&mut input).is_ok());
     }
 
     fn parse_fails(src: &str)
     {
-        let mut vm = VM::new();
         let mut input = Input::new(&src, "src");
-        assert!(parse_unit(&mut vm, &mut input).is_err());
-    }
-
-    #[test]
-    fn int_token_int()
-    {
-        let mut input = Input::new("1 + 2", "input");
-        input.eat_ws();
-        assert_eq!(input.parse_int().unwrap(), 1);
-        assert!(input.match_token("+"));
-        input.eat_ws();
-        assert_eq!(input.parse_int().unwrap(), 2);
-        assert!(input.eof());
-    }
-
-    #[test]
-    fn simple_str()
-    {
-        let mut input = Input::new(" \"foobar\"", "input");
-        input.eat_ws();
-        assert!(input.peek_ch() == '\"');
-        assert_eq!(input.parse_str().unwrap(), "foobar");
-        input.eat_ws();
-        assert!(input.eof());
-    }
-
-    #[test]
-    fn single_line_comment()
-    {
-        let mut input = Input::new("1 // test\n  2", "input");
-        assert_eq!(input.parse_int().unwrap(), 1);
-        input.eat_ws();
-        assert_eq!(input.parse_int().unwrap(), 2);
-        assert!(input.eof());
+        assert!(parse_unit(&mut input).is_err());
     }
 
     #[test]
@@ -914,13 +886,10 @@ mod tests
     {
         parse_ok("");
         parse_ok(" ");
-        parse_ok("1;");
-        parse_ok("1; ");
-        parse_ok(" \"foobar\";");
-        parse_ok("'foo\tbar\nbif';");
-        parse_ok("1_000_000;");
+        parse_ok("// Hi!\n ");
     }
 
+    /*
     #[test]
     fn infix_exprs()
     {
