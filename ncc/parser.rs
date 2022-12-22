@@ -547,7 +547,6 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
         let new_op = new_op.unwrap();
 
-        todo!();
 
         /*
         while op_stack.len() > 0 {
@@ -562,12 +561,15 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
                 break;
             }
         }
+        */
 
         op_stack.push(new_op);
 
+
+
+
         // There must be another expression following
-        parse_atom(vm, input, fun, scope)?;
-        */
+        //parse_atom(vm, input, fun, scope)?;
     }
 
 
@@ -586,6 +588,31 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
 
     Ok(top_expr)
+}
+
+/// Parse a block statement
+fn parse_block_stmt(input: &mut Input) -> Result<Stmt, ParseError>
+{
+    input.expect_token("{")?;
+
+    let mut stmts = Vec::default();
+
+    loop
+    {
+        input.eat_ws();
+
+        if input.eof() {
+            return input.parse_error("unexpected end of input in block statement");
+        }
+
+        if input.match_token("}") {
+            break;
+        }
+
+        stmts.push(parse_stmt(input)?);
+    }
+
+    return Ok(Stmt::Block(stmts));
 }
 
 /// Parse a statement
@@ -711,25 +738,8 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     */
 
     // Block statement
-    if input.match_token("{") {
-        let mut stmts = Vec::default();
-
-        loop
-        {
-            input.eat_ws();
-
-            if input.eof() {
-                return input.parse_error("unexpected end of input in block statement");
-            }
-
-            if input.match_token("}") {
-                break;
-            }
-
-            stmts.push(parse_stmt(input)?);
-        }
-
-        return Ok(Stmt::Block(stmts));
+    if input.peek_ch() == '{' {
+        return parse_block_stmt(input);
     }
 
     // Try to parse this as an expression statement
@@ -770,12 +780,11 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
 
 
 
+
+
     input.expect_token(")")?;
 
-
-
-
-    let body = parse_stmt(input)?;
+    let body = parse_block_stmt(input)?;
 
     Ok(Function
     {
@@ -861,6 +870,7 @@ mod tests
     fn fun_decl()
     {
         parse_ok("void foo() {}");
+        //parse_ok("void foo() { /* hello! */}");
         parse_ok("u64 foo() {}");
         parse_ok("u64 foo() { {} }");
         parse_ok("void main() { return 0; }");
@@ -869,6 +879,9 @@ mod tests
         parse_ok("u64 foo() { return !1; }");
         parse_ok("u64 foo() { \"foo\"; return 77; }");
         parse_ok("u64 foo() { 333; return 77; }");
+
+        parse_fails("u64 foo();");
+        parse_fails("u64 foo() return 0;");
     }
 
     /*
