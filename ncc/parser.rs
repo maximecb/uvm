@@ -329,83 +329,6 @@ impl Input
 
 
 /*
-struct Scope
-{
-    /// Map of variables to local indices
-    vars: HashMap<String, usize>,
-
-    /// Function this scope resides in
-    fun: *mut Function,
-
-    /// Parent scope
-    parent: Option<*mut Scope>,
-
-    /// Next local idx to assign
-    next_idx: usize,
-}
-
-impl Scope
-{
-    fn new(fun: &mut Function) -> Scope
-    {
-        Scope {
-            vars: HashMap::default(),
-            fun: fun as *mut Function,
-            parent: None,
-            next_idx: 0,
-        }
-    }
-
-    /// Create a new nested scope
-    fn new_nested(parent: &mut Scope) -> Scope
-    {
-        Scope {
-            vars: HashMap::default(),
-            fun: parent.fun,
-            parent: Some(parent as *mut Scope),
-            next_idx: parent.next_idx,
-        }
-    }
-
-    /// Declare a new variable
-    fn decl_var(&mut self, ident: &str) -> Option<usize>
-    {
-        // Can't declare a variable twice in the same scope
-        if let Some(local_idx) = self.vars.get(ident) {
-            return None;
-        }
-
-        let local_idx = self.next_idx;
-        self.next_idx += 1;
-
-        self.vars.insert(ident.to_string(), local_idx);
-
-        let mut fun = unsafe { &mut *self.fun };
-        fun.num_locals = max(fun.num_locals, local_idx + 1);
-
-        return Some(local_idx);
-    }
-
-    /// Look up a variable by name
-    fn lookup(&self, ident: &str) -> Option<usize>
-    {
-        if let Some(idx) = self.vars.get(ident) {
-            return Some(*idx);
-        }
-        else
-        {
-            if let Some(parent_ptr) = self.parent {
-                let parent = unsafe { &*parent_ptr };
-                return parent.lookup(ident);
-            }
-            else
-            {
-                return None;
-            }
-        }
-    }
-}
-
 /// Parse an atomic expression
 fn parse_atom(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
 {
@@ -565,6 +488,10 @@ fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &m
 
     Ok(())
 }
+*/
+
+
+
 
 struct OpInfo
 {
@@ -597,6 +524,12 @@ fn match_bin_op(input: &mut Input) -> Option<OpInfo>
     None
 }
 
+
+
+
+
+
+/*
 fn emit_op(op: &str, fun: &mut Function)
 {
     match op {
