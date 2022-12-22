@@ -62,7 +62,7 @@ syscall print_endl;
 # x = x + dx
 get_local 0;
 push 50;
-add_i64;
+add_u64;
 set_local 0;
 
 # x % 600
@@ -79,7 +79,7 @@ store_u64;
 # x += 100
 get_local 0;
 push 100;
-add_i64;
+add_u64;
 set_local 0;
 
 # Clear the screen
@@ -116,25 +116,25 @@ DRAW_CIRCLE:
 # xmin = x - r
 get_arg 0;
 get_arg 2;
-sub_i64;
+sub_u64;
 
 # Local 1
 # xmax = x + r
 get_arg 0;
 get_arg 2;
-add_i64;
+add_u64;
 
 # Local 2
 # ymin = y - r
 get_arg 1;
 get_arg 2;
-sub_i64;
+sub_u64;
 
 # Local 3
 # ymax = y + r
 get_arg 1;
 get_arg 2;
-add_i64;
+add_u64;
 
 # Local 4: x
 # x = 0
@@ -156,24 +156,24 @@ LOOP_Y:
     # (x - xin)^2
     get_local 4;
     get_arg 0;
-    sub_i64;
+    sub_u64;
     dup;
-    mul_i64;
+    mul_u64;
 
     # (y - yin)^2
     get_local 5;
     get_arg 1;
-    sub_i64;
+    sub_u64;
     dup;
-    mul_i64;
+    mul_u64;
 
     # dx^2 + dy^2
-    add_i64;
+    add_u64;
 
     # r^2
     get_arg 2;
     dup;
-    mul_i64;
+    mul_u64;
 
     # dx^2 + dy^2 < r^2
     lt_i64;
@@ -189,7 +189,7 @@ LOOP_Y:
     # x = x + 2
     get_local 4;
     push 1;
-    add_i64;
+    add_u64;
     set_local 4;
 
     # while (x < xmax)
@@ -201,7 +201,7 @@ LOOP_Y:
 # y = y + 1
 get_local 5;
 push 1;
-add_i64;
+add_u64;
 set_local 5;
 
 # while (y < ymax)
@@ -223,11 +223,11 @@ SET_PIXEL:
 # 800 * 3 * y + 3 * x
 push 2400;
 get_arg 1;
-mul_i64;
+mul_u64;
 get_arg 0;
 push 3;
-mul_i64;
-add_i64;
+mul_u64;
+add_u64;
 
 push 255;
 store_u8;

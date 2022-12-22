@@ -55,18 +55,18 @@ pub enum Op
     set_local,
 
     // Bitwise operations
-    and_i64,
-    or_i64,
-    xor_i64,
-    //not_i64,
-    lshift_i64,
+    and_u64,
+    or_u64,
+    xor_u64,
+    //not_u64,
+    lshift_u64,
+    rshift_u64,
     //rshift_i64,
-    urshift_i64,
 
     // Integer arithmetic
-    add_i64,
-    sub_i64,
-    mul_i64,
+    add_u64,
+    sub_u64,
+    mul_u64,
     div_i64,
     mod_i64,
 
@@ -78,7 +78,7 @@ pub enum Op
     // test_u8 <u8_flags>
 
     // Comparisons
-    eq_i64,
+    eq_u64,
     lt_i64,
     le_i64,
 
@@ -545,39 +545,39 @@ impl VM
                     self.push(Value::from(val));
                 }
 
-                Op::and_i64 => {
+                Op::and_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() & v1.as_i64()
+                        v0.as_u64() & v1.as_u64()
                     ));
                 }
 
-                Op::or_i64 => {
+                Op::or_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() | v1.as_i64()
+                        v0.as_u64() | v1.as_u64()
                     ));
                 }
 
-                Op::xor_i64 => {
+                Op::xor_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() ^ v1.as_i64()
+                        v0.as_u64() ^ v1.as_u64()
                     ));
                 }
 
-                Op::lshift_i64 => {
+                Op::lshift_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() << v1.as_i64()
+                        v0.as_u64() << v1.as_u64()
                     ));
                 }
 
-                Op::urshift_i64 => {
+                Op::rshift_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
@@ -585,27 +585,27 @@ impl VM
                     ));
                 }
 
-                Op::add_i64 => {
+                Op::add_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() + v1.as_i64()
+                        v0.as_u64().wrapping_add(v1.as_u64())
                     ));
                 }
 
-                Op::sub_i64 => {
+                Op::sub_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() - v1.as_i64()
+                        v0.as_u64().wrapping_sub(v1.as_u64())
                     ));
                 }
 
-                Op::mul_i64 => {
+                Op::mul_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_i64() * v1.as_i64()
+                        v0.as_u64().wrapping_mul(v1.as_u64())
                     ));
                 }
 
@@ -625,10 +625,10 @@ impl VM
                     ));
                 }
 
-                Op::eq_i64 => {
+                Op::eq_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_i64() == v1.as_i64());
+                    self.push_bool(v0.as_u64() == v1.as_u64());
                 }
 
                 Op::lt_i64 => {
@@ -844,9 +844,11 @@ mod tests
         eval_i64("push_i8 3; push_i8 2; push_i8 1; popn 2; exit;", 3);
 
         // Integer arithmetic
-        eval_i64("push_i8 1; push_i8 10; add_i64; exit;", 11);
-        eval_i64("push_i8 10; push_i8 2; sub_i64; exit;", 8);
-        eval_i64("push 1; push 2; lshift_i64; exit;", 4);
+        eval_i64("push_i8 1; push_i8 10; add_u64; exit;", 11);
+        eval_i64("push_i8 5; push_i8 10; sub_u64; exit;", -5);
+        eval_i64("push_i8 10; push_i8 2; sub_u64; exit;", 8);
+        eval_i64("push 5; push_i8 -6; mul_u64; exit;", -30);
+        eval_i64("push 1; push 2; lshift_u64; exit;", 4);
 
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
@@ -857,7 +859,7 @@ mod tests
     fn test_loop()
     {
         // Simple loop
-        eval_i64("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; eq_i64; jz LOOP; exit;", 10);
+        eval_i64("push_i8 0; LOOP: push_i8 1; add_u64; dup; push_i8 10; eq_u64; jz LOOP; exit;", 10);
     }
 
     #[test]
@@ -871,7 +873,7 @@ mod tests
     fn test_call_ret()
     {
         eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
-        eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_i64; ret;", 4);
+        eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_u64; ret;", 4);
     }
 
     #[test]

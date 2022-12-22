@@ -716,19 +716,19 @@ impl Assembler
                 self.gen_push(input)?;
             }
 
-            "and_i64" => self.code.push_op(Op::and_i64),
-            "or_i64" => self.code.push_op(Op::or_i64),
-            "xor_i64" => self.code.push_op(Op::xor_i64),
-            "lshift_i64" => self.code.push_op(Op::lshift_i64),
-            "urshift_i64" => self.code.push_op(Op::urshift_i64),
+            "and_u64" => self.code.push_op(Op::and_u64),
+            "or_u64" => self.code.push_op(Op::or_u64),
+            "xor_u64" => self.code.push_op(Op::xor_u64),
+            "lshift_u64" => self.code.push_op(Op::lshift_u64),
+            "rshift_u64" => self.code.push_op(Op::rshift_u64),
 
-            "add_i64" => self.code.push_op(Op::add_i64),
-            "sub_i64" => self.code.push_op(Op::sub_i64),
-            "mul_i64" => self.code.push_op(Op::mul_i64),
+            "add_u64" => self.code.push_op(Op::add_u64),
+            "sub_u64" => self.code.push_op(Op::sub_u64),
+            "mul_u64" => self.code.push_op(Op::mul_u64),
             "div_i64" => self.code.push_op(Op::div_i64),
             "mod_i64" => self.code.push_op(Op::mod_i64),
 
-            "eq_i64" => self.code.push_op(Op::eq_i64),
+            "eq_u64" => self.code.push_op(Op::eq_u64),
             "lt_i64" => self.code.push_op(Op::lt_i64),
             "le_i64" => self.code.push_op(Op::le_i64),
 
@@ -894,8 +894,8 @@ mod tests
         parse_ok("_FOO_:");
         parse_ok("FOO: BAR:");
         parse_ok("FOO: #Label\n BAR:");
-        parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jnz FOO;");
-        parse_ok("FOO: push_i8 55; push_i8 55; eq_i64; jz FOO;");
+        parse_ok("FOO: push_i8 55; push_i8 55; eq_u64; jnz FOO;");
+        parse_ok("FOO: push_i8 55; push_i8 55; eq_u64; jz FOO;");
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
 
         // Callback label
@@ -913,7 +913,7 @@ mod tests
         parse_ok(".data; DATA_LABEL: .zero 256;");
         parse_ok(" .data;   .fill 256   ,   0xFF ;   #comment");
         parse_ok(" .data; .fill 256,0xFF;");
-        parse_ok(".data; .zero 512; .code; push_u32 0xFFFF; push_i8 7; add_i64;");
+        parse_ok(".data; .zero 512; .code; push_u32 0xFFFF; push_i8 7; add_u64;");
         parse_ok(" .data; #comment .fill 256, 0xFF; .code; push_u64 777; #comment");
         parse_ok(".data; DATA_LABEL: .fill 256, 0xFF; .code; push_p32 DATA_LABEL;");
         parse_ok(".data; STR_LABEL: .stringz \"hi!\"; .code; push_p32 STR_LABEL;");

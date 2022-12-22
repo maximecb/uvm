@@ -48,29 +48,29 @@ LOOP_Y:
     # Pixel address
     get_local 2; # Y
     push_u64 800;
-    mul_i64;
+    mul_u64;
     get_local 3;
-    add_i64; # Y * 800 + X
+    add_u64; # Y * 800 + X
     push_u64 3;
-    mul_i64; # (Y * 800 + X) * 3
+    mul_u64; # (Y * 800 + X) * 3
     dup;
 
     # Y * 256 / 600
     get_local 2;
     push_u64 256;
-    mul_i64;
+    mul_u64;
     push_u64 600;
     div_i64;
     store_u8;
 
     # Blue coordinate address
     push_i8 2;
-    add_i64;
+    add_u64;
 
     # X * 256 / 800
     get_local 3;
     push_u64 256;
-    mul_i64;
+    mul_u64;
     push_u64 800;
     div_i64;
     store_u8;
@@ -78,7 +78,7 @@ LOOP_Y:
     # X = X + 1
     get_local 3;
     push_i8 1;
-    add_i64;
+    add_u64;
     set_local 3;
 
     # Loop until done writing pixels
@@ -90,7 +90,7 @@ LOOP_Y:
 # Y = Y + 1
 get_local 2;
 push_i8 1;
-add_i64;
+add_u64;
 set_local 2;
 
 # Loop for each row
@@ -104,7 +104,7 @@ syscall time_current_ms;
 
 # Compute render time in ms
 get_local 4;
-sub_i64;
+sub_u64;
 
 syscall print_i64;
 push MS_STR;

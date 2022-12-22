@@ -39,11 +39,11 @@ RECURSE:
 # Compute fact(n-1)
 get_arg 0;
 push 1;
-sub_i64;
+sub_u64;
 call FACT, 1;
 
 # n * fact(n-1)
 get_arg 0;
-mul_i64;
+mul_u64;
 
 ret;
