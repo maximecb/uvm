@@ -33,6 +33,18 @@ run, as well as some network services. Those who want to squeeze absolute peak p
 may be disappointed. However, we believe that trying to implement every feature and satisfy every possible use case would only make the design
 more fragile and detract from our design goals.
 
+## Features
+
+- Stack-machine interpreter
+  - Eventually to include a JIT compiler
+- Untyped design, manipulates 64-bit words
+- Variable-length instructions for compactness
+- Linear address spaces for data and code
+- Separate address spaces for code and data
+  - For security and to facilitate JIT compilation
+- Built-in, easy to use assembler
+- Provides an easily accessible frame buffer to draw RGB graphics
+
 ## Build instructions
 
 Dependencies:
