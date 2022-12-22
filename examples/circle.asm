@@ -18,9 +18,9 @@ X_COORD:
 .code;
 
 # Create a window
-push_u32 800;
-push_u32 600;
-push_p32 WINDOW_TITLE;
+push 800;
+push 600;
+push WINDOW_TITLE;
 syscall window_create;
 
 # Show the window
@@ -28,15 +28,15 @@ syscall window_show;
 
 
 
-push_u32 100;
-push_p32 ANIM_CALLBACK;
+push 100;
+push ANIM_CALLBACK;
 syscall time_delay_cb;
 
 
 
 
 
-push_p32 PIXEL_BUFFER;
+push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 
@@ -51,7 +51,7 @@ wait;
 ANIM_CALLBACK:
 
 # x: local 0
-push_p32 X_COORD;
+push X_COORD;
 load_u64;
 
 get_local 0;
@@ -61,40 +61,40 @@ syscall print_endl;
 
 # x = x + dx
 get_local 0;
-push_i8 50;
+push 50;
 add_i64;
 set_local 0;
 
 # x % 600
 get_local 0;
-push_u32 600;
+push 600;
 mod_i64;
 set_local 0;
 
 # update global x variable
-push_p32 X_COORD;
+push X_COORD;
 get_local 0;
 store_u64;
 
 # x += 100
 get_local 0;
-push_u32 100;
+push 100;
 add_i64;
 set_local 0;
 
 # Draw the circle
 get_local 0;
-push_u32 300;
-push_i8 20;
+push 300;
+push 20;
 call DRAW_CIRCLE, 3;
 pop;
 
-push_p32 PIXEL_BUFFER;
+push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 # Schedule the animation callback again
-push_u32 100;
-push_p32 ANIM_CALLBACK;
+push 100;
+push ANIM_CALLBACK;
 syscall time_delay_cb;
 
 pop;
@@ -132,7 +132,7 @@ add_i64;
 
 # Local 4: x
 # x = 0
-push_i8 0;
+push 0;
 
 # Local 5: y
 # y = ymin
@@ -182,7 +182,7 @@ LOOP_Y:
 
     # x = x + 2
     get_local 4;
-    push_i8 1;
+    push 1;
     add_i64;
     set_local 4;
 
@@ -194,7 +194,7 @@ LOOP_Y:
 
 # y = y + 1
 get_local 5;
-push_i8 1;
+push 1;
 add_i64;
 set_local 5;
 
@@ -204,7 +204,7 @@ get_local 3;
 lt_i64;
 jnz LOOP_Y;
 
-push_i8 0;
+push 0;
 ret;
 
 ###########################################################
@@ -215,16 +215,16 @@ SET_PIXEL:
 
 # Compute the pixel's address
 # 800 * 3 * y + 3 * x
-push_u32 2400;
+push 2400;
 get_arg 1;
 mul_i64;
 get_arg 0;
-push_i8 3;
+push 3;
 mul_i64;
 add_i64;
 
-push_u32 255;
+push 255;
 store_u8;
 
-push_i8 0;
+push 0;
 ret;

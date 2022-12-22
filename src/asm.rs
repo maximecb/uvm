@@ -711,6 +711,11 @@ impl Assembler
                 self.add_label_ref(input, label_name, LabelRefKind::Address32);
             }
 
+            // Variable-size push
+            "push" => {
+                self.gen_push(input)?;
+            }
+
             "and_i64" => self.code.push_op(Op::and_i64),
             "or_i64" => self.code.push_op(Op::or_i64),
             "xor_i64" => self.code.push_op(Op::xor_i64),
@@ -726,8 +731,10 @@ impl Assembler
             "le_i64" => self.code.push_op(Op::le_i64),
 
             "load_u8" => self.code.push_op(Op::load_u8),
+            "load_u32" => self.code.push_op(Op::load_u32),
             "load_u64" => self.code.push_op(Op::load_u64),
             "store_u8" => self.code.push_op(Op::store_u8),
+            "store_u32" => self.code.push_op(Op::store_u32),
             "store_u64" => self.code.push_op(Op::store_u64),
 
             "jmp" => {
@@ -784,6 +791,51 @@ impl Assembler
         }
 
         input.expect_token(";")?;
+
+        Ok(())
+    }
+
+    // Convenient push mnemonic that automatically infers
+    // the right push instruction to use based on the operand
+    fn gen_push(&mut self, input: &mut Input) -> Result<(), ParseError>
+    {
+        let ch = input.peek_ch();
+
+        // If this is a decimal integer
+        if ch.is_digit(10) || ch == '-' {
+            let int_val = input.parse_int()?;
+
+            if int_val == 0 {
+                self.code.push_op(Op::push_0);
+            }
+            else if let Ok(val) = i8::try_from(int_val) {
+                self.code.push_op(Op::push_i8);
+                self.code.push_i8(val);
+            }
+            else if let Ok(val) = u32::try_from(int_val) {
+                self.code.push_op(Op::push_u32);
+                self.code.push_u32(val);
+            }
+            else if let Ok(val) = u64::try_from(int_val) {
+                self.code.push_op(Op::push_u64);
+                self.code.push_u64(val);
+            }
+            else if let Ok(val) = i64::try_from(int_val) {
+                self.code.push_op(Op::push_u64);
+                self.code.push_u64(val as u64);
+            }
+            else
+            {
+                return input.parse_error("integer literal did not fit required size");
+            }
+
+            return Ok(());
+        }
+
+        // Assume that this must be a label reference
+        let label_name = input.parse_ident()?;
+        self.code.push_op(Op::push_u32);
+        self.add_label_ref(input, label_name, LabelRefKind::Address32);
 
         Ok(())
     }

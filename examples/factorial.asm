@@ -8,7 +8,7 @@ PROMPT_STR: .stringz "Input an integer:\n";
 # Code section
 .code;
 
-push_p32 PROMPT_STR;
+push PROMPT_STR;
 syscall print_str;
 
 # Read input number
@@ -28,7 +28,7 @@ FACT:
 
 # Check if n <= 1
 get_arg 0;
-push_i8 1;
+push 1;
 le_i64;
 jz RECURSE;
 get_arg 0;
@@ -38,7 +38,7 @@ RECURSE:
 
 # Compute fact(n-1)
 get_arg 0;
-push_i8 1;
+push 1;
 sub_i64;
 call FACT, 1;
 

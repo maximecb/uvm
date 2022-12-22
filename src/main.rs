@@ -23,7 +23,7 @@ fn run_program(vm: &mut VM)
     match vm.eval()
     {
         ExitReason::Exit => {
-            dbg!(vm.stack_size());
+            //dbg!(vm.stack_size());
             return
         },
 
@@ -76,7 +76,7 @@ fn run_program(vm: &mut VM)
 fn main()
 {
     let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
+    //println!("{:?}", args);
 
     if args.len() == 2 {
         let asm = Assembler::new();

@@ -1,4 +1,5 @@
 use std::mem::{transmute, size_of};
+use std::ffi::CStr;
 use crate::syscalls::*;
 
 /// Instruction opcodes
@@ -80,11 +81,13 @@ pub enum Op
     // Load a value at a given adress
     // store (addr)
     load_u8,
+    load_u32,
     load_u64,
 
     // Store a value at a given adress
     // store (addr) (value)
     store_u8,
+    store_u32,
     store_u64,
 
     // Jump to pc offset
@@ -156,6 +159,11 @@ impl Value
     pub fn as_i64(&self) -> i64 {
         let Value(val) = *self;
         val as i64
+    }
+
+    pub fn as_u32(&self) -> u32 {
+        let Value(val) = *self;
+        val as u32
     }
 
     pub fn as_u64(&self) -> u64 {
@@ -392,12 +400,6 @@ impl VM
     {
         // TODO: assert that null terminator exists within heap bounds
 
-        use std::ffi::CStr;
-
-        if str_ptr == 0 {
-            return "";
-        }
-
         let char_ptr = self.get_heap_ptr(str_ptr);
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
@@ -584,10 +586,21 @@ impl VM
                     self.push_bool(v0.as_i64() <= v1.as_i64());
                 }
 
+                // FIXME: need to panic if outside of heap bounds
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     let val: u8 = unsafe {
+                        *heap_ptr
+                    };
+                    self.push(Value::from(val));
+                }
+
+                Op::load_u32 => {
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    let val: u32 = unsafe {
+                        let heap_ptr = transmute::<*mut u8 , *mut u32>(heap_ptr);
                         *heap_ptr
                     };
                     self.push(Value::from(val));
@@ -608,6 +621,16 @@ impl VM
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     unsafe { *heap_ptr = val; }
+                }
+
+                Op::store_u32 => {
+                    let val = self.pop().as_u32();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    unsafe {
+                        let heap_ptr = transmute::<*mut u8 , *mut u32>(heap_ptr);
+                        *heap_ptr = val;
+                    }
                 }
 
                 Op::store_u64 => {
@@ -766,6 +789,13 @@ mod tests
         eval_i64("push_u64 0xFF; exit;", 0xFF);
         eval_i64("push_u64 0b1101; exit;", 0b1101);
 
+        // Push mnemonic
+        eval_i64("push 0; exit;", 0);
+        eval_i64("push 1; exit;", 1);
+        eval_i64("push -1; exit;", -1);
+        eval_i64("push 0xFFFF; exit;", 0xFFFF);
+        eval_i64(".data; LABEL: .u64 0; .code; push LABEL; exit;", 0);
+
         // Stack manipulation
         eval_i64("push_i8 7; push_i8 3; swap; exit;", 7);
         eval_i64("push_i8 7; push_i8 3; swap; swap; pop; exit;", 7);
@@ -778,7 +808,11 @@ mod tests
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
         eval_i64("push_i8 11; push_i8 1; lt_i64; exit;", 0);
+    }
 
+    #[test]
+    fn test_loop()
+    {
         // Simple loop
         eval_i64("push_i8 0; LOOP: push_i8 1; add_i64; dup; push_i8 10; eq_i64; jz LOOP; exit;", 10);
     }

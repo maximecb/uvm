@@ -15,21 +15,21 @@ MS_STR:
 .code;
 
 # Local 0, 1, width and height
-push_u32 800;
-push_u32 600;
+push 800;
+push 600;
 
 # Create the window
 get_local 0;
 get_local 1;
-push_p32 WINDOW_TITLE;
+push WINDOW_TITLE;
 syscall window_create;
 syscall window_show;
 
 # Local 2: Y=0
-push_u32 0;
+push 0;
 
 # Local 3: X=0
-push_u32 0;
+push 0;
 
 # Start time in ms, local 4
 syscall time_current_ms;
@@ -107,10 +107,10 @@ get_local 4;
 sub_i64;
 
 syscall print_i64;
-push_p32 MS_STR;
+push MS_STR;
 syscall print_str;
 
-push_p32 PIXEL_BUFFER;
+push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 # Wait for an event
