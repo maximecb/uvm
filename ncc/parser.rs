@@ -321,15 +321,6 @@ impl Input
     }
 }
 
-
-
-
-
-
-
-
-
-
 /// Parse an atomic expression
 fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 {
@@ -342,23 +333,19 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
-    /*
     // String literal
-    if ch == '\"' || ch == '\'' {
+    if ch == '\"' {
         let str_val = input.parse_str()?;
-        let gc_val = vm.into_gc_heap(str_val);
-        fun.insns.push(Insn::Push { val: gc_val });
-        return Ok(());
+        return Ok(Expr::String(str_val));
     }
 
     // Parenthesized expression
     if ch == '(' {
         input.eat_ch();
-        parse_expr(vm, input, fun, scope)?;
+        let expr = parse_expr(input)?;
         input.expect_token(")")?;
-        return Ok(());
+        return Ok(expr);
     }
-    */
 
     // Unary logical not expression
     if ch == '!' {
@@ -383,43 +370,6 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     }
 
     /*
-    // Function expression
-    if input.match_keyword("fun") {
-        let mut new_fun = Function::new(&input.src_name);
-        let mut scope = Scope::new(&mut new_fun);
-
-        input.expect_token("(")?;
-
-        loop {
-            if input.eof() {
-                return input.parse_error("end of file in function parameter list");
-            }
-
-            if input.match_token(")") {
-                break;
-            }
-
-            let param_name = input.parse_ident()?;
-            scope.decl_var(&param_name);
-            new_fun.params.push(param_name);
-
-            if input.match_token(")") {
-                break;
-            }
-
-            input.expect_token(",")?;
-        }
-
-        // Parse the function body
-        parse_stmt(vm, input, &mut new_fun, &mut scope)?;
-
-        // TODO: need to GC allocate fun
-        // TODO: need to push stmt on stack, Insn::Push
-        fun.insns.push(Insn::Push{ val: Value::Nil });
-
-        return Ok(());
-    }
-
     // Identifier (variable reference)
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
@@ -459,6 +409,8 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 
     input.parse_error("unknown atomic expression")
 }
+
+
 
 
 
@@ -503,6 +455,8 @@ fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &m
     Ok(())
 }
 */
+
+
 
 
 
@@ -567,27 +521,22 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
     // Operator stack
     let mut op_stack: Vec<OpInfo> = Vec::default();
 
-
-
-    todo!();
-
-
-
     // Parse the first atomic expression
-    //parse_atom(vm, input, fun, scope)?;
+    let mut top_expr = parse_atom(input)?;
 
-    /*
     loop
     {
         if input.eof() {
             break;
         }
 
+        /*
         // If this is a function call
         if input.match_token("(") {
             parse_call_expr(vm, input, fun, scope)?;
             continue;
         }
+        */
 
         let new_op = match_bin_op(input);
 
@@ -598,6 +547,9 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
         let new_op = new_op.unwrap();
 
+        todo!();
+
+        /*
         while op_stack.len() > 0 {
             // Get the operator at the top of the stack
             let top_op = &op_stack[op_stack.len() - 1];
@@ -615,17 +567,25 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
         // There must be another expression following
         parse_atom(vm, input, fun, scope)?;
+        */
     }
+
+
+
 
     // Emit all operators remaining on the operator stack
     while op_stack.len() > 0 {
-        let top_op = &op_stack[op_stack.len() - 1];
-        emit_op(top_op.op, fun);
-        op_stack.pop();
+        todo!();
+
+        //let top_op = &op_stack[op_stack.len() - 1];
+        //emit_op(top_op.op, fun);
+        //op_stack.pop();
     }
 
-    Ok(())
-    */
+
+
+
+    Ok(top_expr)
 }
 
 /// Parse a statement
@@ -638,8 +598,6 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         input.expect_token(";")?;
         return Ok(Stmt::Return(Box::new(expr)));
     }
-
-    todo!();
 
     /*
     // Variable declaration
@@ -750,11 +708,11 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
         return Ok(());
     }
+    */
 
     // Block statement
     if input.match_token("{") {
-        // Create a nested scope for the block
-        let mut scope = Scope::new_nested(scope);
+        let mut stmts = Vec::default();
 
         loop
         {
@@ -768,21 +726,20 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
                 break;
             }
 
-            parse_stmt(vm, input, fun, &mut scope)?;
+            stmts.push(parse_stmt(input)?);
         }
 
-        return Ok(());
+        return Ok(Stmt::Block(stmts));
     }
 
     // Try to parse this as an expression statement
-    parse_expr(vm, input, fun, scope)?;
-    fun.insns.push(Insn::Pop);
-    input.expect_token(";")
-    */
+    let expr = parse_expr(input)?;
+    input.expect_token(";")?;
+    Ok(Stmt::Expr(expr))
 }
 
 /// Parse a type name
-pub fn parse_type(input: &mut Input) -> Result<Type, ParseError>
+fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 {
     input.eat_ws();
 
@@ -806,17 +763,26 @@ pub fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 }
 
 /// Parse a function declaration
-pub fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
+fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
 {
-
-
-    todo!();
-
+    let params = Vec::default();
 
 
 
 
+    input.expect_token(")")?;
 
+
+
+
+    let body = parse_stmt(input)?;
+
+    Ok(Function
+    {
+        name,
+        params,
+        body,
+    })
 }
 
 /// Parse a single unit of source code (e.g. one source file)
@@ -887,6 +853,22 @@ mod tests
         parse_ok("");
         parse_ok(" ");
         parse_ok("// Hi!\n ");
+        parse_fails("x");
+        parse_fails("x;");
+    }
+
+    #[test]
+    fn fun_decl()
+    {
+        parse_ok("void foo() {}");
+        parse_ok("u64 foo() {}");
+        parse_ok("u64 foo() { {} }");
+        parse_ok("void main() { return 0; }");
+        parse_ok("u64 foo() { return (0); }");
+        parse_ok("u64 foo() { return -2; }");
+        parse_ok("u64 foo() { return !1; }");
+        parse_ok("u64 foo() { \"foo\"; return 77; }");
+        parse_ok("u64 foo() { 333; return 77; }");
     }
 
     /*

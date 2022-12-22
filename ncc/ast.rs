@@ -15,6 +15,10 @@ pub enum UnOp
 /// Binary operator
 pub enum BinOp
 {
+    And,
+    Or,
+    Xor,
+
     Add,
     Sub,
     Mul,
@@ -26,6 +30,7 @@ pub enum BinOp
 pub enum Expr
 {
     Int(i128),
+    String(String),
 
     Unary {
         op: UnOp,
@@ -44,8 +49,13 @@ pub enum Expr
 /// Statement
 pub enum Stmt
 {
-    //ExprStmt(Expr),
+    Expr(Expr),
+
     Return(Box<Expr>),
+
+    Block(Vec<Stmt>),
+
+    Loop(Box<Stmt>),
 }
 
 /// Function
