@@ -99,12 +99,11 @@ impl SysState
 
 fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)
 {
-    // FIXME: need a vm.get_heap_slice() for safety?
-    let dst_ptr = vm.get_heap_ptr(dst_ptr.as_usize());
+    let dst_ptr = dst_ptr.as_usize();
     let val = val.as_u8();
     let num_bytes = num_bytes.as_usize();
 
-    let mem_slice = unsafe { std::slice::from_raw_parts_mut(dst_ptr, num_bytes) };
+    let mem_slice: &mut [u8] = vm.get_heap_slice(dst_ptr, num_bytes);
     mem_slice.fill(val);
 }
 

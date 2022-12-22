@@ -17,6 +17,10 @@ pub enum Op
     // No-op (useful for code patching or patch points)
     nop,
 
+    // Debugger breakpoint.
+    // This instruction must be one byte so it can be patched anywhere.
+    //breakpoint,
+
     // Push the value zero
     push_0,
 
@@ -90,6 +94,14 @@ pub enum Op
     store_u32,
     store_u64,
 
+    /*
+    /// Load from heap at fixed address
+    /// This is used for reading global variables
+    /// The address is multiplied by the data size (x 4 or x8)
+    /// If we save 24 bits for the offset, then that gives us quite a lot
+    load_static_u64 <address>
+    */
+
     // Jump to pc offset
     jmp,
 
@@ -106,20 +118,9 @@ pub enum Op
     // Return to caller function
     ret,
 
-    /*
-    /// Load from heap at fixed address
-    /// This is used for reading global variables
-    /// The address is multiplied by the data size (x 4 or x8)
-    /// If we save 24 bits for the offset, then that gives us quite a lot
-    load_static <address>
-    load
-    store
-    memcpy
-    */
-
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
-    // syscall <device_id:u16> <method_id:u16>
+    // syscall <syscall_idx:u16>
     syscall,
 
     // Yield control to the event loop and wait for a callback
@@ -390,16 +391,55 @@ impl VM
     }
 
     /// Get a pointer to an address/offset in the heap
-    pub fn get_heap_ptr(&mut self, addr: usize) -> *mut u8
+    pub fn get_heap_ptr<T>(&mut self, addr: usize) -> *mut T
     {
-        unsafe { self.heap.data.as_mut_ptr().add(addr) }
+        if addr + std::mem::size_of::<T>() > self.heap.len() {
+            panic!("attempting to access data past end of heap");
+        }
+
+        unsafe {
+            let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
+            transmute::<*mut u8 , *mut T>(heap_ptr)
+        }
     }
 
-    /// Copy a string at a given address in the heap
+    /// Get a mutable slice to access a memory region in the heap
+    pub fn get_heap_slice<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
+    {
+        if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
+            panic!("attempting to access memory slice past end of heap");
+        }
+
+        unsafe {
+            let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
+
+            let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
+
+            std::slice::from_raw_parts_mut(start_ptr, num_elems)
+        }
+    }
+
+    /// Copy an UTF-8 string at a given address in the heap
     pub fn get_heap_str(&mut self, str_ptr: usize) -> &str
     {
-        // TODO: assert that null terminator exists within heap bounds
+        // Verify that there is a null-terminator for this string
+        // within the bounds of the heap
+        let mut str_len = 0;
+        loop
+        {
+            let char_idx = str_ptr + str_len;
+            if char_idx >= self.heap.len() {
+                panic!("string is not properly null-terminated");
+            }
 
+            if self.heap.data[char_idx] == 0 {
+                break;
+            }
+
+            str_len += 1;
+        }
+
+        // Convert the string to a Rust string
         let char_ptr = self.get_heap_ptr(str_ptr);
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
