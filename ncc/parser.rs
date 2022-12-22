@@ -628,21 +628,20 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
     */
 }
 
-
-
-/*
 /// Parse a statement
-fn parse_stmt(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
+fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 {
     input.eat_ws();
 
     if input.match_keyword("return") {
-        parse_expr(vm, input, fun, scope)?;
-        fun.insns.push(Insn::Return);
+        let expr = parse_expr(input)?;
         input.expect_token(";")?;
-        return Ok(());
+        return Ok(Stmt::Return(Box::new(expr)));
     }
 
+    todo!();
+
+    /*
     // Variable declaration
     if input.match_keyword("let") {
         input.eat_ws();
@@ -779,13 +778,43 @@ fn parse_stmt(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Sc
     parse_expr(vm, input, fun, scope)?;
     fun.insns.push(Insn::Pop);
     input.expect_token(";")
+    */
+}
+
+/// Parse a type name
+pub fn parse_type(input: &mut Input) -> Result<Type, ParseError>
+{
+    input.eat_ws();
+
+    if input.match_keyword("void") {
+        return Ok(Type::Void);
+    }
+
+    if input.match_keyword("u64") {
+        return Ok(Type::UInt64);
+    }
+
+    return input.parse_error("unknown type");
+}
+
+/// Parse a function declaration
+pub fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
+{
+
+
+    todo!();
+
+
+
+
+
+
 }
 
 /// Parse a single unit of source code (e.g. one source file)
-pub fn parse_unit(vm: &mut VM, input: &mut Input) -> Result<Function, ParseError>
+pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 {
-    let mut unit_fun = Function::new(&input.src_name);
-    let mut scope = Scope::new(&mut unit_fun);
+    let mut unit = Unit::default();
 
     loop
     {
@@ -795,42 +824,37 @@ pub fn parse_unit(vm: &mut VM, input: &mut Input) -> Result<Function, ParseError
             break;
         }
 
-        parse_stmt(vm, input, &mut unit_fun, &mut scope)?;
+        let decl_type = parse_type(input)?;
+        // TODO: parse_type().is_ok()
 
-        // TODO: detect function keyword
+        input.eat_ws();
+        let name = input.parse_ident()?;
+
+        // If this is the beginning of a function declaration
+        if input.match_token("(") {
+            let fun = parse_function(input, name, decl_type)?;
+            unit.fun_decls.push(fun);
+        }
     }
 
-    // Return nil
-    unit_fun.insns.push(Insn::Push { val: Value::Nil });
-    unit_fun.insns.push(Insn::Return);
-
-    //dbg!(unit_fun.num_locals);
-    //dbg!(&unit_fun.insns);
-
-    Ok(unit_fun)
+    Ok(unit)
 }
 
-pub fn parse_str(vm: &mut VM, src: &str) -> Result<Function, ParseError>
+pub fn parse_str(src: &str) -> Result<Unit, ParseError>
 {
     let mut input = Input::new(&src, "src");
-    parse_unit(vm, &mut input)
+    parse_unit(&mut input)
 }
 
-pub fn parse_file(vm: &mut VM, file_name: &str) -> Result<Function, ParseError>
+pub fn parse_file(file_name: &str) -> Result<Unit, ParseError>
 {
     let data = fs::read_to_string(file_name)
         .expect(&format!("could not read input file {}", file_name));
 
     let mut input = Input::new(&data, file_name);
 
-    parse_unit(vm, &mut input)
+    parse_unit(&mut input)
 }
-*/
-
-
-
-
-
 
 #[cfg(test)]
 mod tests

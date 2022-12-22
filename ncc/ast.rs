@@ -37,15 +37,14 @@ pub enum Expr
         rhs: Box<Expr>,
     },
 
-    Return(Box<Expr>),
-
     //Call
 }
 
 /// Statement
 pub enum Stmt
 {
-    ExprStmt(Expr),
+    //ExprStmt(Expr),
+    Return(Box<Expr>),
 }
 
 /// Function
@@ -65,7 +64,8 @@ pub struct Function
 }
 
 /// Top-level unit (e.g. source file)
+#[derive(Default)]
 pub struct Unit
 {
-    fun_decls: Vec<Function>,
+    pub fun_decls: Vec<Function>,
 }
