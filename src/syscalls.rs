@@ -81,6 +81,8 @@ impl SysState
         //memset(ptr, val, num_bytes)
         //vm_resize_heap(new_size)
 
+        self.reg_syscall("memset", SysCallFn::Fn3_0(memset));
+
         self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
         self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));
         self.reg_syscall("print_endl", SysCallFn::Fn0_0(print_endl));
@@ -93,6 +95,17 @@ impl SysState
         self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
         self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
     }
+}
+
+fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)
+{
+    // FIXME: need a vm.get_heap_slice() for safety?
+    let dst_ptr = vm.get_heap_ptr(dst_ptr.as_usize());
+    let val = val.as_u8();
+    let num_bytes = num_bytes.as_usize();
+
+    let mem_slice = unsafe { std::slice::from_raw_parts_mut(dst_ptr, num_bytes) };
+    mem_slice.fill(val);
 }
 
 fn print_i64(vm: &mut VM, v: Value)

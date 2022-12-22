@@ -82,6 +82,12 @@ push 100;
 add_i64;
 set_local 0;
 
+# Clear the screen
+push PIXEL_BUFFER;
+push 0;
+push 1_440_000;
+syscall memset;
+
 # Draw the circle
 get_local 0;
 push 300;

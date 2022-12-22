@@ -55,7 +55,7 @@ pub enum Op
     or_i64,
     xor_i64,
     //not_i64,
-    //lshift_i64,
+    lshift_i64,
     //rshift_i64,
     //urshift_i64,
 
@@ -528,6 +528,14 @@ impl VM
                     ));
                 }
 
+                Op::lshift_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_i64() << v1.as_i64()
+                    ));
+                }
+
                 Op::add_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -804,6 +812,7 @@ mod tests
         // Integer arithmetic
         eval_i64("push_i8 1; push_i8 10; add_i64; exit;", 11);
         eval_i64("push_i8 10; push_i8 2; sub_i64; exit;", 8);
+        eval_i64("push 1; push 2; lshift_i64; exit;", 4);
 
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
