@@ -9,6 +9,9 @@ use std::env;
 mod parser;
 use parser::*;
 
+mod ast;
+use ast::*;
+
 fn main()
 {
     let args: Vec<String> = env::args().collect();

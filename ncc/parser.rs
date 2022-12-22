@@ -4,6 +4,7 @@ use std::io;
 use std::io::Read;
 use std::fmt;
 use std::cmp::max;
+use crate::ast::*;
 
 #[derive(Debug)]
 pub struct ParseError
@@ -219,9 +220,9 @@ impl Input
     }
 
     /// Parse a decimal integer value
-    pub fn parse_int(&mut self) -> Result<i64, ParseError>
+    pub fn parse_int(&mut self) -> Result<i128, ParseError>
     {
-        let mut int_val = 0_i64;
+        let mut int_val: i128 = 0;
 
         if self.eof() || self.peek_ch().to_digit(10).is_none() {
             return self.parse_error("expected digit");
@@ -247,7 +248,7 @@ impl Input
                 break
             }
 
-            int_val = 10 * int_val + digit.unwrap() as i64;
+            int_val = 10 * int_val + digit.unwrap() as i128;
             self.eat_ch();
         }
 
@@ -328,20 +329,20 @@ impl Input
 
 
 
-/*
+
 /// Parse an atomic expression
-fn parse_atom(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
+fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 {
     input.eat_ws();
     let ch = input.peek_ch();
 
     // Decimal integer literal
     if ch.is_digit(10) {
-        let int_val = input.parse_int()?;
-        fun.insns.push(Insn::Push { val: Value::Int64(int_val) });
-        return Ok(());
+        let val = input.parse_int()?;
+        return Ok(Expr::Int(val));
     }
 
+    /*
     // String literal
     if ch == '\"' || ch == '\'' {
         let str_val = input.parse_str()?;
@@ -357,23 +358,31 @@ fn parse_atom(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Sc
         input.expect_token(")")?;
         return Ok(());
     }
+    */
 
     // Unary logical not expression
     if ch == '!' {
         input.eat_ch();
-        parse_atom(vm, input, fun, scope)?;
-        fun.insns.push(Insn::Not);
-        return Ok(());
+        let sub_expr = parse_atom(input)?;
+
+        return Ok(Expr::Unary{
+            op: UnOp::Not,
+            child: Box::new(sub_expr)
+        });
     }
 
     // Unary negation expression
     if ch == '-' {
         input.eat_ch();
-        parse_atom(vm, input, fun, scope)?;
-        fun.insns.push(Insn::Neg);
-        return Ok(());
+        let sub_expr = parse_atom(input)?;
+
+        return Ok(Expr::Unary{
+            op: UnOp::Minus,
+            child: Box::new(sub_expr)
+        });
     }
 
+    /*
     // Function expression
     if input.match_keyword("fun") {
         let mut new_fun = Function::new(&input.src_name);
@@ -446,10 +455,15 @@ fn parse_atom(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Sc
 
         return Ok(());
     }
+    */
 
     input.parse_error("unknown atomic expression")
 }
 
+
+
+
+/*
 /// Parse a function call expression
 fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
 {
@@ -524,11 +538,6 @@ fn match_bin_op(input: &mut Input) -> Option<OpInfo>
     None
 }
 
-
-
-
-
-
 /*
 fn emit_op(op: &str, fun: &mut Function)
 {
@@ -544,18 +553,30 @@ fn emit_op(op: &str, fun: &mut Function)
         _ => panic!()
     }
 }
+*/
+
+
+
+
 
 /// Parse a complex expression
 /// This uses the shunting yard algorithm to parse infix expressions:
 /// https://en.wikipedia.org/wiki/Shunting_yard_algorithm
-fn parse_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
+fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 {
     // Operator stack
     let mut op_stack: Vec<OpInfo> = Vec::default();
 
-    // Parse the first atomic expression
-    parse_atom(vm, input, fun, scope)?;
 
+
+    todo!();
+
+
+
+    // Parse the first atomic expression
+    //parse_atom(vm, input, fun, scope)?;
+
+    /*
     loop
     {
         if input.eof() {
@@ -604,8 +625,12 @@ fn parse_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Sc
     }
 
     Ok(())
+    */
 }
 
+
+
+/*
 /// Parse a statement
 fn parse_stmt(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
 {
@@ -800,12 +825,19 @@ pub fn parse_file(vm: &mut VM, file_name: &str) -> Result<Function, ParseError>
 
     parse_unit(vm, &mut input)
 }
+*/
+
+
+
+
+
 
 #[cfg(test)]
 mod tests
 {
     use super::*;
 
+    /*
     fn parse_ok(src: &str)
     {
         let mut vm = VM::new();
@@ -929,5 +961,5 @@ mod tests
         parse_ok("let f = fun(x,y) { return 1; };");
         parse_fails("let f = fun(x,y,1) {};");
     }
+    */
 }
-*/
