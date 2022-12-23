@@ -43,7 +43,10 @@ pub enum Expr
         rhs: Box<Expr>,
     },
 
-    //Call
+    Call {
+        callee: Box<Expr>,
+        args: Vec<Expr>,
+    }
 }
 
 /// Statement

@@ -410,19 +410,10 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     input.parse_error("unknown atomic expression")
 }
 
-
-
-
-
-
-/*
 /// Parse a function call expression
-fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &mut Scope) -> Result<(), ParseError>
+fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
 {
-    // Note that the callee expression has already been parsed
-    // when parse_call_expr is called
-
-    let mut argc = 0;
+    let mut arg_exprs = Vec::default();
 
     loop {
         input.eat_ws();
@@ -436,10 +427,7 @@ fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &m
         }
 
         // Parse one argument
-        parse_expr(vm, input, fun, scope)?;
-
-        // Increment the argument count
-        argc += 1;
+        arg_exprs.push(parse_expr(input)?);
 
         if input.match_token(")") {
             break;
@@ -450,11 +438,12 @@ fn parse_call_expr(vm: &mut VM, input: &mut Input, fun: &mut Function, scope: &m
         input.expect_token(",")?;
     }
 
-    fun.insns.push(Insn::Call { argc });
-
-    Ok(())
+    Ok(Expr::Call {
+        callee: Box::new(callee),
+        args: arg_exprs
+    })
 }
-*/
+
 
 
 
