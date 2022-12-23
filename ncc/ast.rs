@@ -5,6 +5,10 @@ pub enum Type
     UInt64,
     UInt8,
     Pointer(Box<Type>),
+    Array {
+        elem_type: Box<Type>,
+        size_expr: Box<Expr>,
+    }
 }
 
 /// Unary operator
@@ -36,6 +40,7 @@ pub enum BinOp
 }
 
 /// Expression
+#[derive(Clone, Debug)]
 pub enum Expr
 {
     Int(i128),

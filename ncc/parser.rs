@@ -868,7 +868,7 @@ mod tests
     fn parse_ok(src: &str)
     {
         let mut input = Input::new(&src, "src");
-        assert!(parse_unit(&mut input).is_ok());
+        parse_unit(&mut input).unwrap();
     }
 
     fn parse_fails(src: &str)
