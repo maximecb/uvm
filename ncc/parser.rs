@@ -571,9 +571,17 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     input.eat_ws();
 
     if input.match_keyword("return") {
-        let expr = parse_expr(input)?;
-        input.expect_token(";")?;
-        return Ok(Stmt::Return(Box::new(expr)));
+        if input.match_token(";") {
+            return Ok(Stmt::Return);
+        }
+        else
+        {
+            let expr = parse_expr(input)?;
+            input.expect_token(";")?;
+            return Ok(
+                Stmt::ReturnExpr(Box::new(expr))
+            );
+        }
     }
 
     /*
@@ -711,11 +719,15 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         return Ok(Type::UInt8);
     }
 
+    if input.match_keyword("u64") {
+        return Ok(Type::UInt64);
+    }
+
     if input.match_keyword("char") {
         return Ok(Type::UInt8);
     }
 
-    if input.match_keyword("u64") {
+    if input.match_keyword("size_t") {
         return Ok(Type::UInt64);
     }
 
@@ -785,6 +797,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
         ret_type,
         params,
         body,
+        num_locals: 0,
     })
 }
 
@@ -863,14 +876,18 @@ mod tests
     #[test]
     fn fun_decl()
     {
+        parse_ok("void main() {}");
+        parse_ok("void main() { return; }");
+        parse_ok("u64 main() { return 0; }");
+        parse_ok("u64 main(u64 argc, char** argv) { return 0; }");
+        parse_ok("void main(u64 argc, char** argv) {}");
+
         parse_ok("void foo() {}");
         //parse_ok("void foo() { /* hello! */}");
         parse_ok("u64 foo() {}");
         parse_ok("u64 foo() { {} }");
-        parse_ok("u64 main() { return 0; }");
-        parse_ok("void main() {}");
-        parse_ok("u64 main(u64 argc, char** argv) {}");
         parse_ok("u64 foo() { return (0); }");
+        parse_ok("size_t foo() { return 0; }");
         parse_ok("u64 foo() { return -2; }");
         parse_ok("u64 foo() { return !1; }");
         parse_ok("u64 foo() { \"foo\"; return 77; }");
@@ -885,25 +902,13 @@ mod tests
         parse_fails("void* f foo();");
     }
 
-    /*
-    #[test]
-    fn fun_expr()
-    {
-        parse_ok("let f = fun() {};");
-        parse_ok("let f = fun(x) {};");
-        parse_ok("let f = fun(x,) {};");
-        parse_ok("let f = fun(x,y) {};");
-        parse_ok("let f = fun(x,y) { return 1; };");
-        parse_fails("let f = fun(x,y,1) {};");
-    }
-    */
-
     #[test]
     fn infix_exprs()
     {
         // Should parse
         parse_ok("u64 foo() { return 1 + 2; }");
         parse_ok("u64 foo() { return a + 1; }");
+        parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
         parse_ok("u64 foo() { return 1 + 2 * 3; }");
         parse_ok("u64 foo() { return 1 + 2 + 3; }");
         parse_ok("u64 foo() { return 1 + 2 + 3 + 4; }");

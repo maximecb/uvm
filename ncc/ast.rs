@@ -67,7 +67,8 @@ pub enum Stmt
 {
     Expr(Expr),
 
-    Return(Box<Expr>),
+    ReturnExpr(Box<Expr>),
+    Return,
 
     Block(Vec<Stmt>),
 
@@ -98,11 +99,11 @@ pub struct Function
     /// Parameter list
     pub params: Vec<(Type, String)>,
 
-    /// Number of local variables
-    //pub num_locals: usize,
-
     /// Body of the function
     pub body: Stmt,
+
+    /// Number of local variables
+    pub num_locals: usize,
 }
 
 /// Top-level unit (e.g. source file)
