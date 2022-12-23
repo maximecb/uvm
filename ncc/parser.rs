@@ -369,27 +369,11 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
-    /*
     // Identifier (variable reference)
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
 
-        // Check if there is a runtime function with this name
-        let runtime_fn = get_runtime_fn(&ident);
-
-        if runtime_fn.is_some() {
-            let host_fn = Value::HostFn(runtime_fn.unwrap());
-            fun.insns.push(Insn::Push { val: host_fn });
-            return Ok(());
-        }
-
-        let local_idx = scope.lookup(&ident);
-
-        // If the variable is not found
-        if local_idx.is_none() {
-            return input.parse_error(&format!("undeclared variable {}", ident));
-        }
-
+        /*
         // If this is actually an assignment
         if input.match_token("=") {
             // Parse the expression to assign
@@ -398,14 +382,12 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
             fun.insns.push(Insn::Dup);
             fun.insns.push(Insn::SetLocal{ idx: local_idx.unwrap() });
         }
-        else
-        {
-            fun.insns.push(Insn::GetLocal{ idx: local_idx.unwrap() });
-        }
+        */
 
-        return Ok(());
+        return Ok(Expr::Ident {
+            name: ident
+        });
     }
-    */
 
     input.parse_error("unknown atomic expression")
 }
@@ -444,12 +426,6 @@ fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
     })
 }
 
-
-
-
-
-
-
 struct OpInfo
 {
     op_str: &'static str,
@@ -482,11 +458,6 @@ fn match_bin_op(input: &mut Input) -> Option<OpInfo>
     None
 }
 
-
-
-
-
-
 /// Parse a complex expression
 /// This uses the shunting yard algorithm to parse infix expressions:
 /// https://en.wikipedia.org/wiki/Shunting_yard_algorithm
@@ -507,13 +478,13 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
             break;
         }
 
-        /*
         // If this is a function call
         if input.match_token("(") {
-            parse_call_expr(vm, input, fun, scope)?;
+            let callee = expr_stack.pop().unwrap();
+            let call_expr = parse_call_expr(input, callee)?;
+            expr_stack.push(call_expr);
             continue;
         }
-        */
 
         let new_op = match_bin_op(input);
 
@@ -863,11 +834,25 @@ mod tests
         parse_fails("u64 foo() return 0;");
     }
 
+    /*
+    #[test]
+    fn fun_expr()
+    {
+        parse_ok("let f = fun() {};");
+        parse_ok("let f = fun(x) {};");
+        parse_ok("let f = fun(x,) {};");
+        parse_ok("let f = fun(x,y) {};");
+        parse_ok("let f = fun(x,y) { return 1; };");
+        parse_fails("let f = fun(x,y,1) {};");
+    }
+    */
+
     #[test]
     fn infix_exprs()
     {
         // Should parse
         parse_ok("u64 foo() { return 1 + 2; }");
+        parse_ok("u64 foo() { return a + 1; }");
         parse_ok("u64 foo() { return 1 + 2 * 3; }");
         parse_ok("u64 foo() { return 1 + 2 + 3; }");
         parse_ok("u64 foo() { return 1 + 2 + 3 + 4; }");
@@ -875,6 +860,18 @@ mod tests
 
         // Should not parse
         parse_fails("u64 foo() { return 1 + 2 +; }");
+    }
+
+    #[test]
+    fn call_expr()
+    {
+        parse_ok("void main() { foo(); }");
+        parse_ok("void main() { foo(0); }");
+        parse_ok("void main() { foo(0,); }");
+        parse_ok("void main() { foo(0,1); }");
+        parse_ok("void main() { foo( 0 , 1 , 2 , ); }");
+        parse_ok("void main() { foo(0,1,2) + 3; }");
+        parse_ok("void main() { foo(0,1,2) + bar(); }");
     }
 
     /*
@@ -894,41 +891,6 @@ mod tests
         parse_fails("assert1;");
 
         parse_ok("let x = 3; if (!x) x = 1;");
-    }
-    */
-
-    /*
-    #[test]
-    fn call_expr()
-    {
-        parse_ok("1();");
-        parse_ok("1(0);");
-        parse_ok("1(0,);");
-        parse_ok("1(0,1);");
-        parse_ok("1( 0 , 1 , 2 );");
-        parse_ok("0 + 1(0,1,2) + 3;");
-        parse_ok("let x = 1(0,1,2);");
-    }
-
-    #[test]
-    fn runtime_fn()
-    {
-        parse_fails("let println = 3;");
-        parse_fails("println = 3;");
-
-        parse_ok("println(1);");
-        parse_ok("println(1, 2);");
-    }
-
-    #[test]
-    fn fun_expr()
-    {
-        parse_ok("let f = fun() {};");
-        parse_ok("let f = fun(x) {};");
-        parse_ok("let f = fun(x,) {};");
-        parse_ok("let f = fun(x,y) {};");
-        parse_ok("let f = fun(x,y) { return 1; };");
-        parse_fails("let f = fun(x,y,1) {};");
     }
     */
 }

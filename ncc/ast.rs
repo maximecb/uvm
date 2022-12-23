@@ -38,6 +38,10 @@ pub enum Expr
     Int(i128),
     String(String),
 
+    Ident {
+        name: String
+    },
+
     Unary {
         op: UnOp,
         child: Box<Expr>,
