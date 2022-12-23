@@ -92,8 +92,11 @@ pub struct Function
     /// Name of the function
     pub name: String,
 
+    // Return type
+    pub ret_type: Type,
+
     /// Parameter list
-    pub params: Vec<String>,
+    pub params: Vec<(Type, String)>,
 
     /// Number of local variables
     //pub num_locals: usize,

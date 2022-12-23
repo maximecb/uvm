@@ -748,20 +748,41 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 /// Parse a function declaration
 fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
 {
-    let params = Vec::default();
+    let mut params = Vec::default();
 
+    loop
+    {
+        input.eat_ws();
 
+        if input.eof() {
+            return input.parse_error("unexpected end of input inside function parameter list");
+        }
 
+        if input.match_token(")") {
+            break;
+        }
 
+        // Parse one parameter and its type
+        let param_type = parse_type(input)?;
+        let param_name = input.parse_ident()?;
+        params.push((param_type, param_name));
 
+        if input.match_token(")") {
+            break;
+        }
 
-    input.expect_token(")")?;
+        // If this isn't the last argument, there
+        // has to be a comma separator
+        input.expect_token(",")?;
+    }
 
+    // Parse the function body (must be a block statement)
     let body = parse_block_stmt(input)?;
 
     Ok(Function
     {
         name,
+        ret_type,
         params,
         body,
     })
@@ -846,7 +867,9 @@ mod tests
         //parse_ok("void foo() { /* hello! */}");
         parse_ok("u64 foo() {}");
         parse_ok("u64 foo() { {} }");
-        parse_ok("void main() { return 0; }");
+        parse_ok("u64 main() { return 0; }");
+        parse_ok("void main() {}");
+        parse_ok("u64 main(u64 argc, char** argv) {}");
         parse_ok("u64 foo() { return (0); }");
         parse_ok("u64 foo() { return -2; }");
         parse_ok("u64 foo() { return !1; }");
@@ -854,8 +877,9 @@ mod tests
         parse_ok("u64 foo() { 333; return 77; }");
         parse_ok("char* foo() { return NULL; }");
         parse_ok("char** foo() { return NULL; }");
+        parse_ok("u64 foo( u64 a , u64 b ) { return 77; }");
 
-        // Failing parses
+        // Should fail to parse
         parse_fails("u64 foo();");
         parse_fails("u64 foo() return 0;");
         parse_fails("void* f foo();");
