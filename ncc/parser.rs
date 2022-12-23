@@ -698,8 +698,8 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     Ok(Stmt::Expr(expr))
 }
 
-/// Parse a type name
-fn parse_type(input: &mut Input) -> Result<Type, ParseError>
+/// Parse an atomic type expression
+fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 {
     input.eat_ws();
 
@@ -720,6 +720,22 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
     }
 
     return input.parse_error("unknown type");
+}
+
+/// Parse a type name
+fn parse_type(input: &mut Input) -> Result<Type, ParseError>
+{
+    input.eat_ws();
+
+    let atom = parse_type_atom(input)?;
+
+    if input.match_token("*") {
+        return Ok(Type::Pointer(
+            Box::new(atom)
+        ));
+    }
+
+    Ok(atom)
 }
 
 /// Parse a function declaration
@@ -829,9 +845,13 @@ mod tests
         parse_ok("u64 foo() { return !1; }");
         parse_ok("u64 foo() { \"foo\"; return 77; }");
         parse_ok("u64 foo() { 333; return 77; }");
+        parse_ok("char* foo() { return NULL; }");
+        //parse_ok("char** foo() { return NULL; }");
 
+        // Failing parses
         parse_fails("u64 foo();");
         parse_fails("u64 foo() return 0;");
+        parse_fails("void* f foo();");
     }
 
     /*

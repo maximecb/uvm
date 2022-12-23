@@ -1,11 +1,14 @@
+#[derive(Clone, Debug)]
 pub enum Type
 {
     Void,
     UInt64,
     UInt8,
+    Pointer(Box<Type>),
 }
 
 /// Unary operator
+#[derive(Copy, Clone, Debug)]
 pub enum UnOp
 {
     Minus,
