@@ -727,15 +727,22 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 {
     input.eat_ws();
 
-    let atom = parse_type_atom(input)?;
+    let mut cur_type = parse_type_atom(input)?;
 
-    if input.match_token("*") {
-        return Ok(Type::Pointer(
-            Box::new(atom)
-        ));
+    loop
+    {
+        if input.match_token("*") {
+            cur_type = Type::Pointer(
+                Box::new(cur_type)
+            );
+
+            continue;
+        }
+
+        break;
     }
 
-    Ok(atom)
+    Ok(cur_type)
 }
 
 /// Parse a function declaration
@@ -846,7 +853,7 @@ mod tests
         parse_ok("u64 foo() { \"foo\"; return 77; }");
         parse_ok("u64 foo() { 333; return 77; }");
         parse_ok("char* foo() { return NULL; }");
-        //parse_ok("char** foo() { return NULL; }");
+        parse_ok("char** foo() { return NULL; }");
 
         // Failing parses
         parse_fails("u64 foo();");
