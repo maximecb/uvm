@@ -58,7 +58,16 @@ pub enum Stmt
 
     Block(Vec<Stmt>),
 
-    Loop(Box<Stmt>),
+    If {
+        test: Expr,
+        then_stmt: Box<Stmt>,
+        else_stmt: Box<Stmt>,
+    },
+
+    While {
+        test: Expr,
+        body: Box<Stmt>,
+    },
 }
 
 /// Function
