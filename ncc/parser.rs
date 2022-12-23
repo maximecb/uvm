@@ -452,28 +452,29 @@ fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
 
 struct OpInfo
 {
-    op: &'static str,
+    op_str: &'static str,
     prec: usize,
+    op: BinOp
 }
 
 /// Binary operators and their precedence level
 /// https://en.cppreference.com/w/c/language/operator_precedence
 const BIN_OPS: [OpInfo; 8] = [
-    OpInfo { op: "*", prec: 2 },
-    OpInfo { op: "%", prec: 2 },
-    OpInfo { op: "+", prec: 1 },
-    OpInfo { op: "-", prec: 1 },
-    OpInfo { op: "==", prec: 0 },
-    OpInfo { op: "!=", prec: 0 },
-    OpInfo { op: "<", prec: 0 },
-    OpInfo { op: ">", prec: 0 },
+    OpInfo { op_str: "*", prec: 2, op: BinOp::Mul },
+    OpInfo { op_str: "%", prec: 2, op: BinOp::Mod },
+    OpInfo { op_str: "+", prec: 1, op: BinOp::Add },
+    OpInfo { op_str: "-", prec: 1, op: BinOp::Sub },
+    OpInfo { op_str: "==", prec: 0, op: BinOp::Eq },
+    OpInfo { op_str: "!=", prec: 0, op: BinOp::Ne },
+    OpInfo { op_str: "<", prec: 0, op: BinOp::Lt },
+    OpInfo { op_str: ">", prec: 0, op: BinOp::Gt },
 ];
 
 /// Try to match a binary operator in the input
 fn match_bin_op(input: &mut Input) -> Option<OpInfo>
 {
     for op_info in BIN_OPS {
-        if input.match_token(op_info.op) {
+        if input.match_token(op_info.op_str) {
             return Some(op_info);
         }
     }
@@ -481,22 +482,6 @@ fn match_bin_op(input: &mut Input) -> Option<OpInfo>
     None
 }
 
-/*
-fn emit_op(op: &str, fun: &mut Function)
-{
-    match op {
-        "*" => fun.insns.push(Insn::Mul),
-        "%" => fun.insns.push(Insn::Mod),
-        "+" => fun.insns.push(Insn::Add),
-        "-" => fun.insns.push(Insn::Sub),
-        "==" => fun.insns.push(Insn::Eq),
-        "!=" => fun.insns.push(Insn::Ne),
-        "<" => fun.insns.push(Insn::Lt),
-        ">" => fun.insns.push(Insn::Gt),
-        _ => panic!()
-    }
-}
-*/
 
 
 
@@ -510,8 +495,11 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
     // Operator stack
     let mut op_stack: Vec<OpInfo> = Vec::default();
 
+    // Expression stack
+    let mut expr_stack: Vec<Expr> = Vec::default();
+
     // Parse the first atomic expression
-    let mut top_expr = parse_atom(input)?;
+    expr_stack.push(parse_atom(input)?);
 
     loop
     {
@@ -536,47 +524,49 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
         let new_op = new_op.unwrap();
 
-
-        /*
         while op_stack.len() > 0 {
             // Get the operator at the top of the stack
             let top_op = &op_stack[op_stack.len() - 1];
 
             if top_op.prec > new_op.prec {
-                emit_op(top_op.op, fun);
-                op_stack.pop();
+                assert!(expr_stack.len() >= 2);
+                let rhs = expr_stack.pop().unwrap();
+                let lhs = expr_stack.pop().unwrap();
+                let top_op = op_stack.pop().unwrap();
+
+                expr_stack.push(Expr::Binary {
+                    op: top_op.op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs)
+                });
             }
             else {
                 break;
             }
         }
-        */
 
         op_stack.push(new_op);
 
-
-
-
         // There must be another expression following
-        //parse_atom(vm, input, fun, scope)?;
+        expr_stack.push(parse_atom(input)?);
     }
-
-
-
 
     // Emit all operators remaining on the operator stack
     while op_stack.len() > 0 {
-        todo!();
+        assert!(expr_stack.len() >= 2);
+        let rhs = expr_stack.pop().unwrap();
+        let lhs = expr_stack.pop().unwrap();
+        let top_op = op_stack.pop().unwrap();
 
-        //let top_op = &op_stack[op_stack.len() - 1];
-        //emit_op(top_op.op, fun);
-        //op_stack.pop();
+        expr_stack.push(Expr::Binary {
+            op: top_op.op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs)
+        });
     }
 
-
-
-
-    Ok(top_expr)
+    assert!(expr_stack.len() == 1);
+    Ok(expr_stack.pop().unwrap())
 }
 
 /// Parse a block statement
@@ -873,21 +863,21 @@ mod tests
         parse_fails("u64 foo() return 0;");
     }
 
-    /*
     #[test]
     fn infix_exprs()
     {
         // Should parse
-        parse_ok("1 + 2;");
-        parse_ok("1 + 2 * 3;");
-        parse_ok("1 + 2 + 3;");
-        parse_ok("1 + 2 + 3 + 4;");
-        parse_ok("(1) + 2 + 3 * 4;");
+        parse_ok("u64 foo() { return 1 + 2; }");
+        parse_ok("u64 foo() { return 1 + 2 * 3; }");
+        parse_ok("u64 foo() { return 1 + 2 + 3; }");
+        parse_ok("u64 foo() { return 1 + 2 + 3 + 4; }");
+        parse_ok("u64 foo() { return (1) + 2 + 3 * 4; }");
 
         // Should not parse
-        parse_fails("1 + 2 +;");
+        parse_fails("u64 foo() { return 1 + 2 +; }");
     }
 
+    /*
     #[test]
     fn stmts()
     {
@@ -905,7 +895,9 @@ mod tests
 
         parse_ok("let x = 3; if (!x) x = 1;");
     }
+    */
 
+    /*
     #[test]
     fn call_expr()
     {

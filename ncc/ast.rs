@@ -13,6 +13,7 @@ pub enum UnOp
 }
 
 /// Binary operator
+#[derive(Copy, Clone, Debug)]
 pub enum BinOp
 {
     And,
@@ -24,6 +25,11 @@ pub enum BinOp
     Mul,
     Div,
     Mod,
+
+    Eq,
+    Ne,
+    Lt,
+    Gt,
 }
 
 /// Expression
@@ -68,6 +74,9 @@ pub enum Stmt
         test: Expr,
         body: Box<Stmt>,
     },
+
+    DeclStmt {
+    }
 }
 
 /// Function
