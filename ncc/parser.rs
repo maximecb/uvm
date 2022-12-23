@@ -333,6 +333,11 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
+    // Unary negation expression
+    if input.match_keyword("NULL") {
+        return Ok(Expr::Int(0));
+    }
+
     // String literal
     if ch == '\"' {
         let str_val = input.parse_str()?;
@@ -824,7 +829,16 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
         if input.match_token("(") {
             let fun = parse_function(input, name, decl_type)?;
             unit.fun_decls.push(fun);
+            continue;
         }
+
+        // This must be a global variable declaration
+        input.expect_token(";")?;
+
+        unit.global_vars.push(Global {
+            name,
+            var_type: decl_type,
+        });
     }
 
     Ok(unit)
@@ -900,6 +914,15 @@ mod tests
         parse_fails("u64 foo();");
         parse_fails("u64 foo() return 0;");
         parse_fails("void* f foo();");
+    }
+
+    #[test]
+    fn globals()
+    {
+        parse_ok("size_t x;");
+        parse_ok("size_t x; void main() {}");
+        parse_ok("size_t x; u64 y; void main() {}");
+        parse_ok("u8* pixel_buffer; u64 x; u64 y; void main() {}");
     }
 
     #[test]

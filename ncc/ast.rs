@@ -106,9 +106,21 @@ pub struct Function
     pub num_locals: usize,
 }
 
+/// Global variable declaration
+pub struct Global
+{
+    /// Name of the variable
+    pub name: String,
+
+    // Return type
+    pub var_type: Type,
+}
+
 /// Top-level unit (e.g. source file)
 #[derive(Default)]
 pub struct Unit
 {
+    pub global_vars: Vec<Global>,
+
     pub fun_decls: Vec<Function>,
 }
