@@ -86,7 +86,7 @@ pub enum Stmt
     If {
         test_expr: Expr,
         then_stmt: Box<Stmt>,
-        else_stmt: Box<Stmt>,
+        else_stmt: Option<Box<Stmt>>,
     },
 
     While {

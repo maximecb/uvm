@@ -639,52 +639,36 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         }
     }
 
-    /*
     // If-else statement
     if input.match_keyword("if") {
         // Parse the test expression
         input.expect_token("(")?;
-        parse_expr(vm, input, fun, scope)?;
+        let test_expr = parse_expr(input)?;
         input.expect_token(")")?;
 
-        // If the test evaluates to false, jump past the true statement
-        let if_idx = fun.insns.len() as isize;
-        fun.insns.push(Insn::IfFalse { offset: 0 });
-
-        // Parse the true statement
-        parse_stmt(vm, input, fun, scope)?;
+        // Parse the then statement
+        let then_stmt = parse_stmt(input)?;
 
         // If there is an else statement
         if input.match_keyword("else") {
-            // After the true statement is done, jump over the else
-            let true_jmp_idx = fun.insns.len() as isize;
-            fun.insns.push(Insn::Jump { offset: 0 });
+            // Parse the else statement
+            let else_stmt = parse_stmt(input)?;
 
-            // If the test evaluates to false, jump to the else statement
-            let false_jmp_idx = fun.insns.len() as isize;
-            let if_offset = false_jmp_idx - (if_idx + 1);
-            fun.insns[if_idx as usize] = Insn::IfFalse { offset: if_offset };
-
-            // Parse the false statement
-            let false_stmt_idx = fun.insns.len();
-            parse_stmt(vm, input, fun, scope)?;
-
-            // Patch the true jump
-            let end_idx = fun.insns.len() as isize;
-            let true_jmp_offset = end_idx - (true_jmp_idx + 1);
-            fun.insns[true_jmp_idx as usize] = Insn::Jump { offset: true_jmp_offset };
+            return Ok(Stmt::If {
+                test_expr,
+                then_stmt: Box::new(then_stmt),
+                else_stmt: Some(Box::new(else_stmt)),
+            });
         }
         else
         {
-            // If the test evaluates to false, jump after the true statement
-            let false_jmp_idx = fun.insns.len() as isize;
-            let if_offset = false_jmp_idx - (if_idx + 1);
-            fun.insns[if_idx as usize] = Insn::IfFalse { offset: if_offset };
+            return Ok(Stmt::If {
+                test_expr,
+                then_stmt: Box::new(then_stmt),
+                else_stmt: None
+            });
         }
-
-        return Ok(());
     }
-    */
 
     // While loop
     if input.match_keyword("while") {
@@ -1058,5 +1042,12 @@ mod tests
     {
         parse_ok("void main() { while (1) { foo(); } }");
         parse_ok("void foo(u64 n) { u64 i = 0; while (i < n) { foo(); i = i + 1; } }");
+    }
+
+    #[test]
+    fn if_stmt()
+    {
+        parse_ok("void main() { if (1) { foo(); } }");
+        parse_ok("void main() { if (1) { foo(); } else { bar(); } }");
     }
 }
