@@ -378,16 +378,18 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
 
-        /*
+        // FIXME: this needs to be handled differently for member assignment
         // If this is actually an assignment
         if input.match_token("=") {
             // Parse the expression to assign
-            parse_expr(vm, input, fun, scope)?;
+            let rhs_expr = parse_expr(input)?;
 
-            fun.insns.push(Insn::Dup);
-            fun.insns.push(Insn::SetLocal{ idx: local_idx.unwrap() });
+            return Ok(Expr::Binary{
+                op: BinOp::Assign,
+                lhs: Box::new(Expr::Ident { name: ident }),
+                rhs: Box::new(rhs_expr),
+            });
         }
-        */
 
         return Ok(Expr::Ident {
             name: ident
@@ -1043,7 +1045,7 @@ mod tests
     #[test]
     fn assign_stmt()
     {
-        //parse_ok("void main() { u64 x = 0; x = x + 1; return; }");
+        parse_ok("void main() { u64 x = 0; x = x + 1; return; }");
     }
 
     /*

@@ -23,6 +23,9 @@ pub enum UnOp
 #[derive(Copy, Clone, Debug)]
 pub enum BinOp
 {
+    // Assignment
+    Assign,
+
     And,
     Or,
     Xor,
