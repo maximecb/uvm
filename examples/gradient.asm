@@ -43,8 +43,6 @@ LOOP_Y:
     set_local 3;
     LOOP_X:
 
-
-
     # Pixel address
     get_local 2; # Y
     push_u64 800;

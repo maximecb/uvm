@@ -762,6 +762,37 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
     Ok(cur_type)
 }
 
+
+
+
+
+/// Parse an array type
+fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseError>
+{
+    input.eat_ws();
+
+    let mut cur_type = parse_type_atom(input)?;
+
+    loop
+    {
+        if input.match_token("*") {
+            cur_type = Type::Pointer(
+                Box::new(cur_type)
+            );
+
+            continue;
+        }
+
+        break;
+    }
+
+    Ok(cur_type)
+}
+
+
+
+
+
 /// Parse a function declaration
 fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
 {
@@ -923,6 +954,9 @@ mod tests
         parse_ok("size_t x; void main() {}");
         parse_ok("size_t x; u64 y; void main() {}");
         parse_ok("u8* pixel_buffer; u64 x; u64 y; void main() {}");
+
+        // Should fail
+        parse_fails("u64x;");
     }
 
     #[test]
