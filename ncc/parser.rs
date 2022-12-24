@@ -334,7 +334,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     }
 
     // Unary negation expression
-    if input.match_keyword("NULL") {
+    if input.match_keyword("NULL") || input.match_keyword("null") {
         return Ok(Expr::Int(0));
     }
 
@@ -374,22 +374,31 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
+    // Pointer dereference
+    if ch == '*' {
+        input.eat_ch();
+        let sub_expr = parse_atom(input)?;
+
+        return Ok(Expr::Unary{
+            op: UnOp::Deref,
+            child: Box::new(sub_expr)
+        });
+    }
+
+    // Address of operator
+    if ch == '&' {
+        input.eat_ch();
+        let sub_expr = parse_atom(input)?;
+
+        return Ok(Expr::Unary{
+            op: UnOp::AddressOf,
+            child: Box::new(sub_expr)
+        });
+    }
+
     // Identifier (variable reference)
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
-
-        // FIXME: this needs to be handled differently for member assignment
-        // If this is actually an assignment
-        if input.match_token("=") {
-            // Parse the expression to assign
-            let rhs_expr = parse_expr(input)?;
-
-            return Ok(Expr::Binary{
-                op: BinOp::Assign,
-                lhs: Box::new(Expr::Ident { name: ident }),
-                rhs: Box::new(rhs_expr),
-            });
-        }
 
         return Ok(Expr::Ident {
             name: ident
@@ -437,20 +446,26 @@ struct OpInfo
 {
     op_str: &'static str,
     prec: usize,
-    op: BinOp
+    op: BinOp,
+    rtl: bool,
 }
 
 /// Binary operators and their precedence level
+/// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 8] = [
-    OpInfo { op_str: "*", prec: 2, op: BinOp::Mul },
-    OpInfo { op_str: "%", prec: 2, op: BinOp::Mod },
-    OpInfo { op_str: "+", prec: 1, op: BinOp::Add },
-    OpInfo { op_str: "-", prec: 1, op: BinOp::Sub },
-    OpInfo { op_str: "==", prec: 0, op: BinOp::Eq },
-    OpInfo { op_str: "!=", prec: 0, op: BinOp::Ne },
-    OpInfo { op_str: "<", prec: 0, op: BinOp::Lt },
-    OpInfo { op_str: ">", prec: 0, op: BinOp::Gt },
+const BIN_OPS: [OpInfo; 9] = [
+    OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
+    OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },
+    OpInfo { op_str: "+", prec: 4, op: BinOp::Add, rtl: false },
+    OpInfo { op_str: "-", prec: 4, op: BinOp::Sub, rtl: false },
+
+    OpInfo { op_str: "<", prec: 6, op: BinOp::Lt, rtl: false },
+    OpInfo { op_str: ">", prec: 6, op: BinOp::Gt, rtl: false },
+    OpInfo { op_str: "==", prec: 7, op: BinOp::Eq, rtl: false },
+    OpInfo { op_str: "!=", prec: 7, op: BinOp::Ne, rtl: false },
+
+    // Assignment operator, evaluates right to left
+    OpInfo { op_str: "=", prec: 14, op: BinOp::Ne, rtl: true },
 ];
 
 /// Try to match a binary operator in the input
@@ -497,16 +512,34 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
 
         // If no operator could be matched, stop
         if new_op.is_none() {
-            break
+            break;
         }
 
         let new_op = new_op.unwrap();
+
+        // If this operator evaluates right-to-left,
+        // e.g. an assignment operator
+        if new_op.rtl == true {
+            // Recursively parse the rhs expression,
+            // forcing it to be evaluated before the lhs
+            let rhs = parse_expr(input)?;
+
+            let lhs = expr_stack.pop().unwrap();
+
+            expr_stack.push(Expr::Binary {
+                op: new_op.op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs)
+            });
+
+            break;
+        }
 
         while op_stack.len() > 0 {
             // Get the operator at the top of the stack
             let top_op = &op_stack[op_stack.len() - 1];
 
-            if top_op.prec > new_op.prec {
+            if top_op.prec < new_op.prec {
                 assert!(expr_stack.len() >= 2);
                 let rhs = expr_stack.pop().unwrap();
                 let lhs = expr_stack.pop().unwrap();
@@ -1040,12 +1073,16 @@ mod tests
         //parse_ok("void main() { u8 x[100] = 0; return; }");
         parse_ok("void main() { u64 x = 0; u64 y = x + 1; return; }");
         parse_ok("void main() { u64 x = 0; foo(x); return; }");
+        parse_ok("u8 global; void main() { u8* p = &global; return; }");
+        parse_ok("u8* global; void main() { u8 p = *global; return; }");
     }
 
     #[test]
     fn assign_stmt()
     {
         parse_ok("void main() { u64 x = 0; x = x + 1; return; }");
+        parse_ok("void main() { u64 x = 0; u64 y = 0; x = y = 1; return; }");
+        parse_ok("char* global; void main() { *global = 0; return; }");
     }
 
     /*

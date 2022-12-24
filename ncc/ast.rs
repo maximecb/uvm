@@ -17,6 +17,9 @@ pub enum UnOp
 {
     Minus,
     Not,
+
+    Deref,
+    AddressOf,
 }
 
 /// Binary operator
