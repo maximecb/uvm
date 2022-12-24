@@ -55,7 +55,7 @@ pub struct Input
     line_no: u32,
 
     // Current column number
-    col_no : u32,
+    col_no: u32,
 }
 
 impl Input
@@ -570,6 +570,21 @@ fn parse_block_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     return Ok(Stmt::Block(stmts));
 }
 
+/// Try to parse a variable declaration
+fn parse_decl(input: &mut Input) -> Result<(Type, String, Expr), ParseError>
+{
+    let var_type = parse_type(input)?;
+    let var_name = input.parse_ident()?;
+
+    // For now, no support for local array variables
+    // This would need alloca() to work
+    //let var_type = parse_array_type(input, var_type)?;
+
+    input.expect_token("=")?;
+    let init_expr = parse_expr(input)?;
+    Ok((var_type, var_name, init_expr))
+}
+
 /// Parse a statement
 fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 {
@@ -705,6 +720,31 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         return parse_block_stmt(input);
     }
 
+    // Save the current position for backtracking
+    // TODO: make this into a convenient tuple?
+    let pos = input.pos;
+    let line_no = input.line_no;
+    let col_no = input.col_no;
+
+    // Try to parse this as a variable declaration
+    if let Ok((var_type, var_name, init_expr)) = parse_decl(input) {
+        input.expect_token(";")?;
+        println!("success");
+
+        return Ok(Stmt::VarDecl {
+            var_type,
+            var_name,
+            init_expr,
+        });
+    }
+
+    println!("backtracking");
+
+    // Backtrack
+    input.pos = pos;
+    input.line_no = line_no;
+    input.col_no = col_no;
+
     // Try to parse this as an expression statement
     let expr = parse_expr(input)?;
     input.expect_token(";")?;
@@ -762,23 +802,23 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
     Ok(cur_type)
 }
 
-
-
-
-
 /// Parse an array type
 fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseError>
 {
     input.eat_ws();
 
-    let mut cur_type = parse_type_atom(input)?;
+    let mut cur_type = elem_type;
 
     loop
     {
-        if input.match_token("*") {
-            cur_type = Type::Pointer(
-                Box::new(cur_type)
-            );
+        if input.match_token("[") {
+            let size_expr = parse_atom(input)?;
+            input.expect_token("]")?;
+
+            cur_type = Type::Array {
+                elem_type: Box::new(cur_type),
+                size_expr: Box::new(size_expr),
+            };
 
             continue;
         }
@@ -788,10 +828,6 @@ fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseErr
 
     Ok(cur_type)
 }
-
-
-
-
 
 /// Parse a function declaration
 fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
@@ -813,6 +849,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
         // Parse one parameter and its type
         let param_type = parse_type(input)?;
         let param_name = input.parse_ident()?;
+        let param_type = parse_array_type(input, param_type)?;
         params.push((param_type, param_name));
 
         if input.match_token(")") {
@@ -863,6 +900,8 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
             continue;
         }
 
+        let decl_type = parse_array_type(input, decl_type)?;
+
         // This must be a global variable declaration
         input.expect_token(";")?;
 
@@ -898,6 +937,7 @@ mod tests
 
     fn parse_ok(src: &str)
     {
+        dbg!(src);
         let mut input = Input::new(&src, "src");
         parse_unit(&mut input).unwrap();
     }
@@ -953,7 +993,11 @@ mod tests
         parse_ok("size_t x;");
         parse_ok("size_t x; void main() {}");
         parse_ok("size_t x; u64 y; void main() {}");
+
         parse_ok("u8* pixel_buffer; u64 x; u64 y; void main() {}");
+        parse_ok("u8 pixel_buffer[100]; void main() {}");
+        parse_ok("u8 pixel_buffer[800][600]; void main() {}");
+        parse_ok("u8 pixel_buffer[WIDTH][HEIGHT]; void main() {}");
 
         // Should fail
         parse_fails("u64x;");
@@ -985,6 +1029,21 @@ mod tests
         parse_ok("void main() { foo( 0 , 1 , 2 , ); }");
         parse_ok("void main() { foo(0,1,2) + 3; }");
         parse_ok("void main() { foo(0,1,2) + bar(); }");
+    }
+
+    #[test]
+    fn local_vars()
+    {
+        parse_ok("void main() { u64 x = 0; return; }");
+        //parse_ok("void main() { u8 x[100] = 0; return; }");
+        parse_ok("void main() { u64 x = 0; u64 y = x + 1; return; }");
+        parse_ok("void main() { u64 x = 0; foo(x); return; }");
+    }
+
+    #[test]
+    fn assign_stmt()
+    {
+        //parse_ok("void main() { u64 x = 0; x = x + 1; return; }");
     }
 
     /*

@@ -88,7 +88,11 @@ pub enum Stmt
         body: Box<Stmt>,
     },
 
-    DeclStmt {
+    /// Local variable declaration
+    VarDecl {
+        var_type: Type,
+        var_name: String,
+        init_expr: Expr,
     }
 }
 
