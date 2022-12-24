@@ -1,7 +1,8 @@
 # UVM
 
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
-programs that will not break and to combat code rot.
+programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
+with and approachable to newcomers.
 
 **NOTE: this project is very much WIP and not ready for production, but I am looking for contributors who share
 the vision :)**
@@ -28,7 +29,7 @@ statically linked. This makes software easier to distribute and less likely to b
 **Performance**: although untyped, UVM is designed so that its bytecode can be easily JIT-compiled using dynamic binary translation techniques
 so that it can provide a good performance level that will be adequate for most applications.
 
-**Realism**: because of its minimalistic design, UVM will not be suitable for every possible use case. Its main target is software that end users
+**Pragmatism**: because of its minimalistic design, UVM will not be suitable for every possible use case. Its main target is software that end users
 run, as well as some network services. Those who want to squeeze absolute peak performance out of an application or rely on the latest libraries
 may be disappointed. However, we believe that trying to implement every feature and satisfy every possible use case would only make the design
 more fragile and detract from our design goals.
