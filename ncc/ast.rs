@@ -84,14 +84,14 @@ pub enum Stmt
     Block(Vec<Stmt>),
 
     If {
-        test: Expr,
+        test_expr: Expr,
         then_stmt: Box<Stmt>,
         else_stmt: Box<Stmt>,
     },
 
     While {
-        test: Expr,
-        body: Box<Stmt>,
+        test_expr: Expr,
+        body_stmt: Box<Stmt>,
     },
 
     /// Local variable declaration

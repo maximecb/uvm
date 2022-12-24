@@ -640,33 +640,6 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     }
 
     /*
-    // Variable declaration
-    if input.match_keyword("let") {
-        input.eat_ws();
-        let ident = input.parse_ident()?;
-        input.expect_token("=")?;
-        parse_expr(vm, input, fun, scope)?;
-        input.expect_token(";")?;
-
-        // Check if there is a runtime function with this name
-        let runtime_fn = get_runtime_fn(&ident);
-
-        if runtime_fn.is_some() {
-            let host_fn = Value::HostFn(runtime_fn.unwrap());
-            fun.insns.push(Insn::Push { val: host_fn });
-            return input.parse_error(&format!("there is already a runtime function named {}", ident));
-        }
-
-        if let Some(local_idx) = scope.decl_var(&ident) {
-            fun.insns.push(Insn::SetLocal{ idx: local_idx });
-            return Ok(());
-        }
-        else
-        {
-            return input.parse_error(&format!("variable {} already declared", ident));
-        }
-    }
-
     // If-else statement
     if input.match_keyword("if") {
         // Parse the test expression
@@ -711,32 +684,25 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
         return Ok(());
     }
+    */
 
     // While loop
     if input.match_keyword("while") {
         // Parse the test expression
         input.expect_token("(")?;
-        let test_idx = fun.insns.len() as isize;
-        parse_expr(vm, input, fun, scope)?;
+        let test_expr = parse_expr(input)?;
         input.expect_token(")")?;
 
-        // If the test evaluates to false, jump past the loop body
-        let if_idx = fun.insns.len() as isize;
-        fun.insns.push(Insn::IfFalse { offset: 0 });
-
         // Parse the loop body
-        parse_stmt(vm, input, fun, scope)?;
+        let body_stmt = parse_stmt(input)?;
 
-        // Jump back to the loop test
-        let jump_idx = fun.insns.len() as isize;
-        fun.insns.push(Insn::Jump { offset: test_idx - (jump_idx + 1) });
-
-        // Patch the loop test jump offset
-        fun.insns[if_idx as usize] = Insn::IfFalse { offset: (jump_idx + 1) - (if_idx + 1) };
-
-        return Ok(());
+        return Ok(Stmt::While {
+            test_expr,
+            body_stmt: Box::new(body_stmt),
+        });
     }
 
+    /*
     // Assert statement
     if input.match_keyword("assert") {
         parse_expr(vm, input, fun, scope)?;
@@ -1020,6 +986,8 @@ mod tests
         parse_fails("u64 foo();");
         parse_fails("u64 foo() return 0;");
         parse_fails("void* f foo();");
+        parse_fails("voidfoo() {}");
+        parse_fails("void foo(u64 a, u64 b) { a = a b; }");
     }
 
     #[test]
@@ -1085,23 +1053,10 @@ mod tests
         parse_ok("char* global; void main() { *global = 0; return; }");
     }
 
-    /*
     #[test]
-    fn stmts()
+    fn while_stmt()
     {
-        parse_ok("let x = 3;");
-        parse_ok("let str = 'foo';");
-        parse_ok("let x = 3; let y = 5;");
-        parse_ok("{ let x = 3; x; } let y = 4;");
-
-        parse_ok("assert 1;");
-        parse_ok("let x = 3;");
-        parse_ok("let x = 3; return x;");
-        parse_fails("letx=3;");
-        parse_fails("let x = 3; returnx;");
-        parse_fails("assert1;");
-
-        parse_ok("let x = 3; if (!x) x = 1;");
+        parse_ok("void main() { while (1) { foo(); } }");
+        parse_ok("void foo(u64 n) { u64 i = 0; while (i < n) { foo(); i = i + 1; } }");
     }
-    */
 }
