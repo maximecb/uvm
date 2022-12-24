@@ -943,6 +943,7 @@ mod tests
     fn parse_files()
     {
         parse_file("examples/factorial.asm");
+        parse_file("examples/fizzbuzz.asm");
         parse_file("examples/loop.asm");
         parse_file("examples/gradient.asm");
         parse_file("examples/colors.asm");
