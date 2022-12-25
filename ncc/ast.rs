@@ -12,7 +12,7 @@ pub enum Type
     }
 }
 
-/// Declaration
+/// Variable/function Declaration
 #[derive(Clone, Debug)]
 pub enum Decl
 {
@@ -23,11 +23,6 @@ pub enum Decl
     // TODO: we probably need a function signature type
     Fun { name: String },
 }
-
-
-
-
-
 
 /// Unary operator
 #[derive(Copy, Clone, Debug)]
@@ -74,6 +69,9 @@ pub enum Expr
         name: String
     },
 
+    // Reference to a variable/function declaration
+    Ref(Decl),
+
     Unary {
         op: UnOp,
         child: Box<Expr>,
@@ -109,6 +107,13 @@ pub enum Stmt
 
     While {
         test_expr: Expr,
+        body_stmt: Box<Stmt>,
+    },
+
+    For {
+        init_stmt: Option<Box<Stmt>>,
+        test_expr: Expr,
+        incr_expr: Expr,
         body_stmt: Box<Stmt>,
     },
 

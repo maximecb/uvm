@@ -686,6 +686,49 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         });
     }
 
+    // For loop
+    if input.match_keyword("for") {
+        input.expect_token("(")?;
+
+        let init_stmt = if input.match_token(";") {
+            None
+        }
+        else
+        {
+            Some(Box::new(parse_stmt(input)?))
+        };
+
+        let test_expr = if input.match_token(";") {
+            Expr::Int(1)
+        }
+        else
+        {
+            let test_expr = parse_expr(input)?;
+            input.expect_token(";")?;
+            test_expr
+        };
+
+        let incr_expr = if input.match_token(")") {
+            Expr::Int(1)
+        }
+        else
+        {
+            let incr_expr = parse_expr(input)?;
+            input.expect_token(")")?;
+            incr_expr
+        };
+
+        // Parse the loop body
+        let body_stmt = parse_stmt(input)?;
+
+        return Ok(Stmt::For {
+            init_stmt,
+            test_expr,
+            incr_expr,
+            body_stmt: Box::new(body_stmt),
+        });
+    }
+
     /*
     // Assert statement
     if input.match_keyword("assert") {
@@ -1042,6 +1085,15 @@ mod tests
     {
         parse_ok("void main() { while (1) { foo(); } }");
         parse_ok("void foo(u64 n) { u64 i = 0; while (i < n) { foo(); i = i + 1; } }");
+    }
+
+    #[test]
+    fn for_stmt()
+    {
+        parse_ok("void main() { for (;;) {} }");
+        parse_ok("void main() { for (size_t i = 0;;) {} }");
+        parse_ok("void main() { for (size_t i = 0; i < 10;) {} }");
+        parse_ok("void main() { for (size_t i = 0; i < 10; i = i + 1) {} }");
     }
 
     #[test]
