@@ -1,3 +1,4 @@
+// TODO: we may want a const type
 #[derive(Clone, Debug)]
 pub enum Type
 {
@@ -10,6 +11,23 @@ pub enum Type
         size_expr: Box<Expr>,
     }
 }
+
+/// Declaration
+#[derive(Clone, Debug)]
+pub enum Decl
+{
+    Global { name: String, t: Type },
+    Arg { idx: usize, t: Type },
+    Local { idx: usize, t: Type },
+
+    // TODO: we probably need a function signature type
+    Fun { name: String },
+}
+
+
+
+
+
 
 /// Unary operator
 #[derive(Copy, Clone, Debug)]

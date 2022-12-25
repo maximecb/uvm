@@ -12,6 +12,8 @@ use parser::*;
 mod ast;
 use ast::*;
 
+mod symbols;
+
 fn main()
 {
     let args: Vec<String> = env::args().collect();
