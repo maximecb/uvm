@@ -976,6 +976,12 @@ mod tests
         assert!(parse_unit(&mut input).is_err());
     }
 
+    fn parse_file(file_name: &str)
+    {
+        dbg!(file_name);
+        super::parse_file(file_name).unwrap();
+    }
+
     #[test]
     fn simple_unit()
     {
@@ -1101,5 +1107,11 @@ mod tests
     {
         parse_ok("void main() { if (1) { foo(); } }");
         parse_ok("void main() { if (1) { foo(); } else { bar(); } }");
+    }
+
+    #[test]
+    fn parse_files()
+    {
+        parse_file("examples/fill_rect.c");
     }
 }
