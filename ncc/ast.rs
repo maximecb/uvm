@@ -65,9 +65,7 @@ pub enum Expr
     Int(i128),
     String(String),
 
-    Ident {
-        name: String
-    },
+    Ident(String),
 
     // Reference to a variable/function declaration
     Ref(Decl),

@@ -400,9 +400,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
 
-        return Ok(Expr::Ident {
-            name: ident
-        });
+        return Ok(Expr::Ident(ident));
     }
 
     input.parse_error("unknown atomic expression")
