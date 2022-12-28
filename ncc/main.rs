@@ -13,6 +13,7 @@ mod ast;
 use ast::*;
 
 mod symbols;
+mod types;
 
 fn main()
 {
