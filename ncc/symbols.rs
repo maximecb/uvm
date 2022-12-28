@@ -141,18 +141,19 @@ impl Stmt
                 expr.resolve_syms(env)?;
             }
 
-            /*
-            If {
-                test_expr: Expr,
-                then_stmt: Box<Stmt>,
-                else_stmt: Option<Box<Stmt>>,
-            },
+            Stmt::If { test_expr, then_stmt, else_stmt } => {
+                test_expr.resolve_syms(env)?;
+                then_stmt.resolve_syms(env)?;
 
-            While {
-                test_expr: Expr,
-                body_stmt: Box<Stmt>,
-            },
-            */
+                if else_stmt.is_some() {
+                    else_stmt.as_mut().unwrap().resolve_syms(env)?;
+                }
+            }
+
+            Stmt::While { test_expr, body_stmt } => {
+                test_expr.resolve_syms(env)?;
+                body_stmt.resolve_syms(env)?;
+            }
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 env.push_scope();
@@ -184,8 +185,6 @@ impl Stmt
 
                 env.pop_scope();
             }
-
-            _ => todo!()
         }
 
         Ok(())
@@ -232,13 +231,20 @@ impl Expr
 mod tests
 {
     use super::*;
-    use crate::parser::{Input, parse_unit};
 
     fn parse_ok(src: &str)
     {
+        use crate::parser::{Input, parse_unit};
         dbg!(src);
         let mut input = Input::new(&src, "src");
         let mut unit = parse_unit(&mut input).unwrap();
+        unit.resolve_syms().unwrap();
+    }
+
+    fn parse_file(file_name: &str)
+    {
+        dbg!(file_name);
+        let mut unit = crate::parser::parse_file(file_name).unwrap();
         unit.resolve_syms().unwrap();
     }
 
@@ -257,8 +263,12 @@ mod tests
         // Local variables
         parse_ok("void main() { u64 a = 0; }");
         parse_ok("void main(u64 a) { u64 a = 0; }");
+
+        // Infix expressions
+        parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
     }
 
+    #[test]
     fn for_loop()
     {
         parse_ok("void main() { for (;;) {} }");
@@ -268,10 +278,9 @@ mod tests
         parse_ok("void foo(u64 i) { for (u64 i = 0; i < 10 ; i = i + 1) {} }");
     }
 
-
-
-
-
-
-
+    #[test]
+    fn parse_files()
+    {
+        parse_file("examples/fill_rect.c");
+    }
 }
