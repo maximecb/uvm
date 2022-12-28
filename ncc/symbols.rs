@@ -152,14 +152,22 @@ impl Stmt
                 test_expr: Expr,
                 body_stmt: Box<Stmt>,
             },
-
-            For {
-                init_stmt: Option<Box<Stmt>>,
-                test_expr: Expr,
-                incr_expr: Expr,
-                body_stmt: Box<Stmt>,
-            },
             */
+
+            Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
+                env.push_scope();
+
+                if init_stmt.is_some() {
+                    init_stmt.as_mut().unwrap().resolve_syms(env)?;
+                }
+
+                test_expr.resolve_syms(env)?;
+                incr_expr.resolve_syms(env)?;
+
+                body_stmt.resolve_syms(env)?;
+
+                env.pop_scope();
+            }
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
@@ -249,6 +257,15 @@ mod tests
         // Local variables
         parse_ok("void main() { u64 a = 0; }");
         parse_ok("void main(u64 a) { u64 a = 0; }");
+    }
+
+    fn for_loop()
+    {
+        parse_ok("void main() { for (;;) {} }");
+        parse_ok("void main() { for (u64 i = 0;;) {} }");
+        parse_ok("void main() { for (u64 i = 0; i < 10 ;) {} }");
+        parse_ok("void main() { for (u64 i = 0; i < 10 ; i = i + 1) {} }");
+        parse_ok("void foo(u64 i) { for (u64 i = 0; i < 10 ; i = i + 1) {} }");
     }
 
 
