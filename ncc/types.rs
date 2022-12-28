@@ -131,13 +131,31 @@ impl Expr
             },
 
             Expr::Binary { op, lhs, rhs } => {
+                use BinOp::*;
+
                 let lhs_type = lhs.as_mut().eval_type()?;
                 let rhs_type = rhs.as_mut().eval_type()?;
 
+                match op {
+                    Assign => {
+                        if !lhs_type.eq(&rhs_type) {
+                            panic!("types not assignable")
+                        }
 
+                        Ok(lhs_type)
+                    }
 
+                    And | Or | Xor |
+                    Add | Sub | Mul | Div | Mod => {
+                        Ok(Type::UInt64)
+                    }
 
-                todo!();
+                    Eq | Ne | Lt | Gt => {
+                        Ok(Type::UInt64)
+                    }
+
+                    //_ => todo!(),
+                }
             }
 
             /*
@@ -173,9 +191,8 @@ mod tests
 
         dbg!(file_name);
         let mut unit = crate::parser::parse_file(file_name).unwrap();
-        //unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
     }
-
 
 
 

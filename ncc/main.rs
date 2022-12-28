@@ -14,6 +14,7 @@ use ast::*;
 
 mod symbols;
 mod types;
+mod codegen;
 
 fn main()
 {

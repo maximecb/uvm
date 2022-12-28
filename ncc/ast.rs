@@ -12,6 +12,24 @@ pub enum Type
     }
 }
 
+impl Type
+{
+    pub fn eq(&self, other: &Type) -> bool
+    {
+        use Type::*;
+
+        match (self, other) {
+            (Void, Void) => true,
+            (UInt64, UInt64) => true,
+            (UInt8, UInt8) => true,
+
+            (Pointer(ta), Pointer(tb)) => ta.eq(tb),
+
+            _ => false
+        }
+    }
+}
+
 /// Variable/function Declaration
 #[derive(Clone, Debug)]
 pub enum Decl
