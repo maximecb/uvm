@@ -97,15 +97,58 @@ impl Expr
 {
     pub fn eval_type(&mut self) -> Result<Type, ParseError>
     {
+        match self {
+            Expr::Int(_) => {
+                Ok(Type::UInt64)
+            }
+
+            Expr::String(_) => {
+                // TODO: this should be const char
+                Ok(Type::Pointer(Box::new(Type::UInt64)))
+            }
+
+
+            Expr::Ref(decl) => {
+                Ok(decl.get_type())
+            }
+
+            Expr::Unary { op, child } => {
+                let child_type = child.as_mut().eval_type()?;
+
+                match op {
+                    UnOp::Minus => Ok(child_type),
+                    UnOp::Not => Ok(child_type),
+
+                    UnOp::Deref => {
+                        match child_type {
+                            Type::Pointer(sub_type) => Ok(*sub_type.clone()),
+                            _ => panic!()
+                        }
+                    }
+
+                    _ => todo!()
+                }
+            },
+
+            Expr::Binary { op, lhs, rhs } => {
+                let lhs_type = lhs.as_mut().eval_type()?;
+                let rhs_type = rhs.as_mut().eval_type()?;
 
 
 
 
+                todo!();
+            }
 
+            /*
+            Expr::Call {
+                callee: Box<Expr>,
+                args: Vec<Expr>,
+            }
+            */
 
-
-
-        todo!();
+            _ => todo!()
+        }
     }
 }
 

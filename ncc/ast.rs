@@ -24,6 +24,20 @@ pub enum Decl
     Fun { name: String },
 }
 
+impl Decl
+{
+    pub fn get_type(&self) -> Type
+    {
+        match self {
+            Decl::Global { name, t } => t.clone(),
+            Decl::Arg { idx, t } => t.clone(),
+            Decl::Local { idx, t } => t.clone(),
+
+            Decl::Fun { name } => todo!(),
+        }
+    }
+}
+
 /// Unary operator
 #[derive(Copy, Clone, Debug)]
 pub enum UnOp
