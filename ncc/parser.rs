@@ -755,7 +755,6 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     // Try to parse this as a variable declaration
     if let Ok((var_type, var_name, init_expr)) = parse_decl(input) {
         input.expect_token(";")?;
-        println!("success");
 
         return Ok(Stmt::VarDecl {
             var_type,
@@ -763,8 +762,6 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
             init_expr,
         });
     }
-
-    println!("backtracking");
 
     // Backtrack
     input.pos = pos;

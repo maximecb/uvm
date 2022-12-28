@@ -73,13 +73,9 @@ impl Stmt
             Stmt::VarDecl { var_type, var_name, init_expr } => {
                 let expr_type = init_expr.eval_type()?;
 
-
-
-                // TODO: check that var type matches
-                todo!();
-
-
-
+                if !expr_type.eq(var_type) {
+                    panic!();
+                }
             }
 
             Stmt::Block(stmts) => {
@@ -107,6 +103,7 @@ impl Expr
                 Ok(Type::Pointer(Box::new(Type::UInt64)))
             }
 
+            Expr::Ident(_) => panic!("IdentExpr made it past symbol resolution"),
 
             Expr::Ref(decl) => {
                 Ok(decl.get_type())
@@ -158,12 +155,7 @@ impl Expr
                 }
             }
 
-            /*
-            Expr::Call {
-                callee: Box<Expr>,
-                args: Vec<Expr>,
-            }
-            */
+            Expr::Call { callee, args } => todo!(),
 
             _ => todo!()
         }
@@ -182,7 +174,8 @@ mod tests
         dbg!(src);
         let mut input = Input::new(&src, "src");
         let mut unit = parse_unit(&mut input).unwrap();
-        //unit.resolve_syms().unwrap();
+        unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
     }
 
     fn parse_file(file_name: &str)
@@ -191,9 +184,13 @@ mod tests
 
         dbg!(file_name);
         let mut unit = crate::parser::parse_file(file_name).unwrap();
+        unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
     }
 
-
-
+    #[test]
+    fn parse_files()
+    {
+        parse_file("examples/fill_rect.c");
+    }
 }
