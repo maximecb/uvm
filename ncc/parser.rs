@@ -26,13 +26,13 @@ impl ParseError
     }
 
     /// Parse error with just an error message, no location
-    pub fn msg_only(msg: &str) -> Self
+    pub fn msg_only<T>(msg: &str) -> Result<T, ParseError>
     {
-        ParseError {
+        Err(ParseError {
             msg: msg.to_string(),
             line_no: 0,
             col_no: 0,
-        }
+        })
     }
 }
 

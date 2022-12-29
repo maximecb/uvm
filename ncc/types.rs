@@ -1,5 +1,7 @@
 use crate::ast::*;
 use crate::parser::{ParseError};
+use std::cmp::{max};
+use Type::*;
 
 impl Unit
 {
@@ -95,12 +97,13 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {
-                Ok(Type::UInt(64))
+                // TODO: we should probably get the smallest valid UInt type here
+                Ok(UInt(64))
             }
 
             Expr::String(_) => {
                 // TODO: this should be const char
-                Ok(Type::Pointer(Box::new(Type::UInt(8))))
+                Ok(Pointer(Box::new(UInt(8))))
             }
 
             Expr::Ident(_) => panic!("IdentExpr made it past symbol resolution"),
@@ -118,7 +121,7 @@ impl Expr
 
                     UnOp::Deref => {
                         match child_type {
-                            Type::Pointer(sub_type) => Ok(*sub_type.clone()),
+                            Pointer(sub_type) => Ok(*sub_type.clone()),
                             _ => panic!()
                         }
                     }
@@ -136,19 +139,31 @@ impl Expr
                 match op {
                     Assign => {
                         if !lhs_type.eq(&rhs_type) {
-                            panic!("types not assignable")
+                            return ParseError::msg_only("rhs not assignable to lhs")
                         }
 
                         Ok(lhs_type)
                     }
 
+                    Add | Sub => {
+                        match (lhs_type, rhs_type) {
+                            (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
+                            (Pointer(b), UInt(n)) => Ok(Pointer(b)),
+                            (UInt(n), Pointer(b)) => Ok(Pointer(b)),
+                            _ => ParseError::msg_only("incompatible types in add/sub")
+                        }
+                    }
+
                     And | Or | Xor |
-                    Add | Sub | Mul | Div | Mod => {
-                        Ok(Type::UInt(64))
+                    Mul | Div | Mod => {
+                        match (lhs_type, rhs_type) {
+                            (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
+                            _ => ParseError::msg_only("incompatible types in arithmetic op")
+                        }
                     }
 
                     Eq | Ne | Lt | Gt => {
-                        Ok(Type::UInt(64))
+                        Ok(UInt(8))
                     }
 
                     //_ => todo!(),
