@@ -647,6 +647,16 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         }
     }
 
+    if input.match_keyword("break") {
+        input.expect_token("?")?;
+        return Ok(Stmt::Break);
+    }
+
+    if input.match_keyword("continue") {
+        input.expect_token("?")?;
+        return Ok(Stmt::Continue);
+    }
+
     // If-else statement
     if input.match_keyword("if") {
         // Parse the test expression

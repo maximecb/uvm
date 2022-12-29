@@ -1,3 +1,4 @@
+// Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
     u8* f_buffer,
     size_t f_width,

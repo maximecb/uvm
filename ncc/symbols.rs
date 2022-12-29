@@ -135,6 +135,8 @@ impl Stmt
                 expr.resolve_syms(env)?;
             }
 
+            Stmt::Break | Stmt::Continue => {}
+
             Stmt::Return => {}
 
             Stmt::ReturnExpr(expr) => {

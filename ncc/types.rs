@@ -37,6 +37,9 @@ impl Stmt
                 expr.eval_type()?;
             }
 
+            Stmt::Break | Stmt::Continue => {}
+
+            // Return void
             Stmt::Return => {
                 todo!();
             }

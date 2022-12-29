@@ -124,6 +124,9 @@ pub enum Stmt
     ReturnExpr(Box<Expr>),
     Return,
 
+    Break,
+    Continue,
+
     Block(Vec<Stmt>),
 
     If {
