@@ -95,12 +95,12 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {
-                Ok(Type::UInt64)
+                Ok(Type::UInt(64))
             }
 
             Expr::String(_) => {
                 // TODO: this should be const char
-                Ok(Type::Pointer(Box::new(Type::UInt64)))
+                Ok(Type::Pointer(Box::new(Type::UInt(8))))
             }
 
             Expr::Ident(_) => panic!("IdentExpr made it past symbol resolution"),
@@ -144,11 +144,11 @@ impl Expr
 
                     And | Or | Xor |
                     Add | Sub | Mul | Div | Mod => {
-                        Ok(Type::UInt64)
+                        Ok(Type::UInt(64))
                     }
 
                     Eq | Ne | Lt | Gt => {
-                        Ok(Type::UInt64)
+                        Ok(Type::UInt(64))
                     }
 
                     //_ => todo!(),

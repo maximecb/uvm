@@ -24,6 +24,16 @@ impl ParseError
             col_no: input.col_no
         }
     }
+
+    /// Parse error with just an error message, no location
+    pub fn msg_only(msg: &str) -> Self
+    {
+        ParseError {
+            msg: msg.to_string(),
+            line_no: 0,
+            col_no: 0,
+        }
+    }
 }
 
 impl fmt::Display for ParseError
@@ -784,19 +794,23 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
     }
 
     if input.match_keyword("u8") {
-        return Ok(Type::UInt8);
-    }
-
-    if input.match_keyword("u64") {
-        return Ok(Type::UInt64);
+        return Ok(Type::UInt(8));
     }
 
     if input.match_keyword("char") {
-        return Ok(Type::UInt8);
+        return Ok(Type::UInt(8));
+    }
+
+    if input.match_keyword("bool") {
+        return Ok(Type::UInt(8));
+    }
+
+    if input.match_keyword("u64") {
+        return Ok(Type::UInt(64));
     }
 
     if input.match_keyword("size_t") {
-        return Ok(Type::UInt64);
+        return Ok(Type::UInt(64));
     }
 
     return input.parse_error("unknown type");

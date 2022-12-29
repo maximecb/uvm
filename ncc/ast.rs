@@ -3,8 +3,7 @@
 pub enum Type
 {
     Void,
-    UInt64,
-    UInt8,
+    UInt(usize),
     Pointer(Box<Type>),
     Array {
         elem_type: Box<Type>,
@@ -20,9 +19,7 @@ impl Type
 
         match (self, other) {
             (Void, Void) => true,
-            (UInt64, UInt64) => true,
-            (UInt8, UInt8) => true,
-
+            (UInt(m), UInt(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
 
             _ => false
