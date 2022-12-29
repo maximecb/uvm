@@ -206,10 +206,47 @@ mod tests
 {
     use super::*;
 
+    fn parse_ok(src: &str)
+    {
+        use crate::parser::{Input, parse_unit};
 
+        dbg!(src);
+        let mut input = Input::new(&src, "src");
+        let mut unit = parse_unit(&mut input).unwrap();
+        unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
+        unit.gen_code().unwrap();
+    }
 
+    fn parse_file(file_name: &str)
+    {
+        use crate::parser::{parse_file};
 
+        dbg!(file_name);
+        let mut unit = crate::parser::parse_file(file_name).unwrap();
+        unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
+        unit.gen_code().unwrap();
+    }
 
+    #[test]
+    fn basics()
+    {
+        parse_ok("void main() {}");
+        parse_ok("void foo(u64 a) {}");
+        parse_ok("u64 foo(u64 a) { return a; }");
 
+        // Local variables
+        //parse_ok("void main() { u64 a = 0; }");
+        //parse_ok("void main(u64 a) { u64 a = 0; }");
 
+        // Infix expressions
+        //parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
+    }
+
+    #[test]
+    fn parse_files()
+    {
+        //parse_file("examples/fill_rect.c");
+    }
 }
