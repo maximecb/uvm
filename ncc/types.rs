@@ -23,14 +23,14 @@ impl Function
 {
     pub fn check_types(&mut self) -> Result<(), ParseError>
     {
-        self.body.check_types()?;
+        self.body.check_types(&self.ret_type)?;
         Ok(())
     }
 }
 
 impl Stmt
 {
-    pub fn check_types(&mut self) -> Result<(), ParseError>
+    pub fn check_types(&mut self, ret_type: &Type) -> Result<(), ParseError>
     {
         match self {
             Stmt::Expr(expr) => {
@@ -47,31 +47,33 @@ impl Stmt
             Stmt::ReturnExpr(expr) => {
                 let expr_type = expr.eval_type()?;
 
-                todo!();
+                if !expr_type.eq(ret_type) {
+                    return ParseError::msg_only("incompatible return type");
+                }
             }
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
                 test_expr.eval_type()?;
-                then_stmt.check_types()?;
+                then_stmt.check_types(ret_type)?;
 
                 if else_stmt.is_some() {
-                    else_stmt.as_mut().unwrap().check_types()?;
+                    else_stmt.as_mut().unwrap().check_types(ret_type)?;
                 }
             }
 
             Stmt::While { test_expr, body_stmt } => {
                 test_expr.eval_type()?;
-                body_stmt.check_types()?;
+                body_stmt.check_types(ret_type)?;
             }
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_mut().unwrap().check_types()?;
+                    init_stmt.as_mut().unwrap().check_types(ret_type)?;
                 }
 
                 test_expr.eval_type()?;
                 incr_expr.eval_type()?;
-                body_stmt.check_types()?;
+                body_stmt.check_types(ret_type)?;
             }
 
             // Local variable declaration
@@ -85,7 +87,7 @@ impl Stmt
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    stmt.check_types()?;
+                    stmt.check_types(ret_type)?;
                 }
             }
         }
