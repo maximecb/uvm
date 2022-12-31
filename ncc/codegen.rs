@@ -43,13 +43,13 @@ impl Stmt
     fn gen_code(&self, out: &mut String) -> Result<(), ParseError>
     {
         match self {
-            /*
             Stmt::Expr(expr) => {
-                expr.eval_type()?;
+                expr.gen_code(out)?;
+                out.push_str("pop;\n");
             }
 
-            Stmt::Break | Stmt::Continue => {}
-            */
+            //Stmt::Break
+            //Stmt::Continue => {}
 
             // Return void
             Stmt::Return => {
@@ -76,17 +76,26 @@ impl Stmt
                 test_expr.eval_type()?;
                 body_stmt.check_types()?;
             }
+            */
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_mut().unwrap().check_types()?;
+                    init_stmt.as_ref().unwrap().gen_code(out)?;
                 }
 
-                test_expr.eval_type()?;
-                incr_expr.eval_type()?;
-                body_stmt.check_types()?;
+
+                todo!();
+
+                // TODO: we need some kind of gensym here
+
+
+
+                //test_expr.eval_type()?;
+                //incr_expr.eval_type()?;
+                //body_stmt.check_types()?;
             }
 
+            /*
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
                 let expr_type = init_expr.eval_type()?;
@@ -188,6 +197,10 @@ impl Expr
                     }
                     */
 
+                    Lt => {
+                        out.push_str("lt_i64\n;");
+                    }
+
                     _ => todo!(),
                 }
             }
@@ -235,6 +248,9 @@ mod tests
         parse_ok("void main() {}");
         parse_ok("void foo(u64 a) {}");
         parse_ok("u64 foo(u64 a) { return a; }");
+        parse_ok("u64 foo(u64 a) { return a + 1; }");
+        parse_ok("u64 foo(u64 a) { return a; }");
+        parse_ok("bool foo(u64 a, u64 b) { return a < b; }");
 
         // Local variables
         //parse_ok("void main() { u64 a = 0; }");
