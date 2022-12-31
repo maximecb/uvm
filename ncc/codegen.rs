@@ -179,8 +179,8 @@ impl Expr
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;
 
-                //let lhs_type = lhs.as_mut().eval_type()?;
-                //let rhs_type = rhs.as_mut().eval_type()?;
+                lhs.as_ref().gen_code(out)?;
+                rhs.as_ref().gen_code(out)?;
 
                 match op {
                     /*
@@ -195,11 +195,11 @@ impl Expr
 
                     // For now we're ignoring the type
                     Add => {
-                        out.push_str("add_u64\n;");
+                        out.push_str("add_u64;\n");
                     }
 
                     Mul => {
-                        out.push_str("mul_u64\n;");
+                        out.push_str("mul_u64;\n");
                     }
 
                     /*
@@ -209,7 +209,7 @@ impl Expr
                     */
 
                     Lt => {
-                        out.push_str("lt_i64\n;");
+                        out.push_str("lt_i64;\n");
                     }
 
                     _ => todo!(),
