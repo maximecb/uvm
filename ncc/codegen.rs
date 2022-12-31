@@ -30,6 +30,11 @@ impl Function
         // Emit label for function
         out.push_str(&format!("{}:\n", self.name));
 
+        // Allocate stack slots for the local variables
+        for i in 0..self.num_locals {
+            out.push_str("push 0;");
+        }
+
         self.body.gen_code(out)?;
 
         out.push_str("\n");
