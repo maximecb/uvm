@@ -7,13 +7,19 @@ use crate::types::*;
 
 impl Unit
 {
-    fn gen_code(&self) -> Result<String, ParseError>
+    pub fn gen_code(&self) -> Result<String, ParseError>
     {
         let mut out: String = "".to_string();
+
+        out.push_str(".data;\n");
+        out.push_str("\n");
 
         //
         // TODO: globals
         //
+
+        out.push_str(".code;\n");
+        out.push_str("\n");
 
         for fun in &self.fun_decls {
             fun.gen_code(&mut out)?;

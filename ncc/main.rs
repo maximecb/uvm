@@ -4,17 +4,18 @@
 #![allow(unused_parens)]
 #![allow(unused_mut)]
 
-use std::env;
-
 mod parser;
-use parser::*;
-
 mod ast;
-use ast::*;
-
 mod symbols;
 mod types;
 mod codegen;
+
+use std::env;
+use parser::*;
+use ast::*;
+use symbols::*;
+use types::*;
+use codegen::*;
 
 fn main()
 {
@@ -23,9 +24,12 @@ fn main()
 
     // If an input file was specified
     if args.len() == 2 {
-        //let unit_fn = parse_file(&mut vm, &args[1]).unwrap();
+        let mut unit = parse_file(&args[1]).unwrap();
 
+        unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
+        let out = unit.gen_code().unwrap();
 
-
+        std::fs::write("out.asm", out).unwrap();
     }
 }
