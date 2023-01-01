@@ -2,13 +2,30 @@ use crate::ast::*;
 use crate::parser::{ParseError};
 use crate::types::*;
 
-// FIXME: ideally, all checking should be done before we get to the
-// codegen, so that it can't return an error?
+#[derive(Default)]
+struct SymGen
+{
+    next_id: usize,
+}
+
+impl SymGen
+{
+    fn gen_sym(&mut self, prefix: &str) -> String
+    {
+        let name = format!("_{}_{}", prefix, self.next_id);
+        self.next_id += 1;
+        name
+    }
+}
+
+// FIXME: ideally, all error checking should be done before we get to the
+// codegen, so that codegen can't return an error?
 
 impl Unit
 {
     pub fn gen_code(&self) -> Result<String, ParseError>
     {
+        let mut sym = SymGen::default();
         let mut out: String = "".to_string();
 
         out.push_str(".data;\n");
@@ -22,7 +39,7 @@ impl Unit
         out.push_str("\n");
 
         for fun in &self.fun_decls {
-            fun.gen_code(&mut out)?;
+            fun.gen_code(&mut sym, &mut out)?;
         }
 
         Ok((out))
@@ -31,7 +48,7 @@ impl Unit
 
 impl Function
 {
-    fn gen_code(&self, out: &mut String) -> Result<(), ParseError>
+    fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
         // Emit label for function
         out.push_str(&format!("{}:\n", self.name));
@@ -41,7 +58,7 @@ impl Function
             out.push_str("push 0;");
         }
 
-        self.body.gen_code(out)?;
+        self.body.gen_code(sym, out)?;
 
         out.push_str("\n");
 
@@ -51,7 +68,7 @@ impl Function
 
 impl Stmt
 {
-    fn gen_code(&self, out: &mut String) -> Result<(), ParseError>
+    fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
         match self {
             Stmt::Expr(expr) => {
@@ -91,7 +108,7 @@ impl Stmt
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_ref().unwrap().gen_code(out)?;
+                    init_stmt.as_ref().unwrap().gen_code(sym, out)?;
                 }
 
 
@@ -119,7 +136,7 @@ impl Stmt
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    stmt.gen_code(out)?;
+                    stmt.gen_code(sym, out)?;
                 }
             }
 
