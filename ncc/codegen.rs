@@ -90,16 +90,33 @@ impl Stmt
                 out.push_str("ret;\n");
             }
 
-            /*
             Stmt::If { test_expr, then_stmt, else_stmt } => {
-                test_expr.eval_type()?;
-                then_stmt.check_types()?;
+
+                test_expr.gen_code(out)?;
+
+                let false_label = sym.gen_sym("if_false");
+
+                // If false, jump to else stmt
+                out.push_str(&format!("jz {};\n", false_label));
 
                 if else_stmt.is_some() {
-                    else_stmt.as_mut().unwrap().check_types()?;
+                    let join_label = sym.gen_sym("if_join");
+
+                    then_stmt.gen_code(sym, out)?;
+                    out.push_str(&format!("jmp {};\n", join_label));
+
+                    out.push_str(&format!("{}:\n", false_label));
+                    else_stmt.as_ref().unwrap().gen_code(sym, out)?;
+                    out.push_str(&format!("{}:\n", join_label));
+                }
+                else
+                {
+                    then_stmt.gen_code(sym, out)?;
+                    out.push_str(&format!("{}:\n", false_label));
                 }
             }
 
+            /*
             Stmt::While { test_expr, body_stmt } => {
                 test_expr.eval_type()?;
                 body_stmt.check_types()?;
@@ -286,6 +303,13 @@ mod tests
 
         // Infix expressions
         //parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
+    }
+
+    #[test]
+    fn if_else()
+    {
+        parse_ok("void foo(u64 a) { if (a) {} }");
+        parse_ok("void foo(u64 a) { if (a) {} else {} }");
     }
 
     #[test]
