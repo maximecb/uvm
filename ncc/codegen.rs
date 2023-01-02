@@ -91,7 +91,6 @@ impl Stmt
             }
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
-
                 test_expr.gen_code(out)?;
 
                 let false_label = sym.gen_sym("if_false");
@@ -128,16 +127,21 @@ impl Stmt
                     init_stmt.as_ref().unwrap().gen_code(sym, out)?;
                 }
 
+                let loop_label = sym.gen_sym("for_loop");
+                let cont_label = sym.gen_sym("for_cont");
+                let break_label = sym.gen_sym("for_break");
 
-                todo!();
+                out.push_str(&format!("{}:\n", loop_label));
+                test_expr.gen_code(out)?;
+                out.push_str(&format!("jz {};\n", break_label));
 
-                // TODO: we need some kind of gensym here
+                body_stmt.gen_code(sym, out)?;
 
+                out.push_str(&format!("{}:\n", cont_label));
+                incr_expr.gen_code(out)?;
+                out.push_str(&format!("jmp {};\n", loop_label));
 
-
-                //test_expr.eval_type()?;
-                //incr_expr.eval_type()?;
-                //body_stmt.check_types()?;
+                out.push_str(&format!("{}:\n", break_label));
             }
 
             /*
@@ -310,6 +314,12 @@ mod tests
     {
         parse_ok("void foo(u64 a) { if (a) {} }");
         parse_ok("void foo(u64 a) { if (a) {} else {} }");
+    }
+
+    #[test]
+    fn for_loop()
+    {
+        parse_ok("void foo(u64 a) { for (;;) {} }");
     }
 
     #[test]

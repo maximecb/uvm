@@ -41,7 +41,9 @@ impl Stmt
 
             // Return void
             Stmt::Return => {
-                todo!();
+                if !ret_type.eq(&Type::Void) {
+                    return ParseError::msg_only("return void in function not returning void");
+                }
             }
 
             Stmt::ReturnExpr(expr) => {
