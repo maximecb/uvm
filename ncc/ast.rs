@@ -54,7 +54,7 @@ impl Decl
 }
 
 /// Unary operator
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum UnOp
 {
     Minus,
@@ -65,7 +65,7 @@ pub enum UnOp
 }
 
 /// Binary operator
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BinOp
 {
     // Assignment

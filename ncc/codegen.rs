@@ -217,20 +217,17 @@ impl Expr
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;
 
+                // Assignments are different from other kinds of expressions
+                // because we don't evaluate the lhs the same way
+                if *op == Assign {
+                    gen_assign(lhs, rhs, out)?;
+                    return Ok(());
+                }
+
                 lhs.as_ref().gen_code(out)?;
                 rhs.as_ref().gen_code(out)?;
 
                 match op {
-                    /*
-                    Assign => {
-                        if !lhs_type.eq(&rhs_type) {
-                            return ParseError::msg_only("rhs not assignable to lhs")
-                        }
-
-                        Ok(lhs_type)
-                    }
-                    */
-
                     // For now we're ignoring the type
                     Add => {
                         out.push_str("add_u64;\n");
@@ -261,6 +258,28 @@ impl Expr
 
         Ok(())
     }
+}
+
+fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
+{
+    rhs.gen_code(out)?;
+
+    match lhs {
+        Expr::Ref(decl) => {
+            match decl {
+                Decl::Arg { idx, .. } => {
+                    out.push_str(&format!("set_arg {};\n", idx));
+                }
+                Decl::Local { idx, .. } => {
+                    out.push_str(&format!("set_local {};\n", idx));
+                }
+                _ => todo!()
+            }
+        }
+        _ => todo!()
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
