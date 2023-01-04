@@ -16,13 +16,32 @@ impl Type
     pub fn eq(&self, other: &Type) -> bool
     {
         use Type::*;
-
         match (self, other) {
             (Void, Void) => true,
             (UInt(m), UInt(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
-
             _ => false
+        }
+    }
+
+    /// Produce the size of this type in bytes
+    pub fn sizeof(&self) -> usize
+    {
+        use Type::*;
+        match self {
+            Void => panic!(),
+            UInt(num_bits) => num_bits / 8,
+            Pointer(_) => 8,
+            _ => panic!()
+        }
+    }
+
+    pub fn elem_type(&self) -> Type
+    {
+        use Type::*;
+        match self {
+            Pointer(t) => *t.clone(),
+            _ => panic!()
         }
     }
 }

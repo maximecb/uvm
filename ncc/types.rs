@@ -100,7 +100,7 @@ impl Stmt
 
 impl Expr
 {
-    pub fn eval_type(&mut self) -> Result<Type, ParseError>
+    pub fn eval_type(&self) -> Result<Type, ParseError>
     {
         match self {
             Expr::Int(_) => {
@@ -120,7 +120,7 @@ impl Expr
             }
 
             Expr::Unary { op, child } => {
-                let child_type = child.as_mut().eval_type()?;
+                let child_type = child.eval_type()?;
 
                 match op {
                     UnOp::Minus => Ok(child_type),
@@ -140,8 +140,8 @@ impl Expr
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;
 
-                let lhs_type = lhs.as_mut().eval_type()?;
-                let rhs_type = rhs.as_mut().eval_type()?;
+                let lhs_type = lhs.eval_type()?;
+                let rhs_type = rhs.eval_type()?;
 
                 match op {
                     Assign => {

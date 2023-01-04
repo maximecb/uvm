@@ -227,8 +227,8 @@ impl Expr
                     return Ok(());
                 }
 
-                lhs.as_ref().gen_code(out)?;
-                rhs.as_ref().gen_code(out)?;
+                lhs.gen_code(out)?;
+                rhs.gen_code(out)?;
 
                 match op {
                     // For now we're ignoring the type
@@ -265,13 +265,34 @@ impl Expr
 
 fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
 {
+    // Evaluate the value expression
     rhs.gen_code(out)?;
 
-    // Assignment expressions must produce an output value
-    out.push_str("dup;\n");
-
     match lhs {
+        Expr::Unary { op, child } => {
+            match op {
+                UnOp::Deref => {
+                    let ptr_type = child.eval_type()?;
+                    let elem_size = ptr_type.elem_type().sizeof();
+                    let elem_bits = elem_size * 8;
+
+                    // Evaluate the address expression
+                    lhs.gen_code(out)?;
+
+                    // Assignment expressions must produce an output value
+                    out.push_str("getn 1;\n");
+
+                    // store (addr) (value)
+                    out.push_str(&format!("store_u{};\n", elem_bits));
+                }
+                _ => todo!()
+            }
+        },
+
         Expr::Ref(decl) => {
+            // Assignment expressions must produce an output value
+            out.push_str("dup;\n");
+
             match decl {
                 Decl::Arg { idx, .. } => {
                     out.push_str(&format!("set_arg {};\n", idx));
