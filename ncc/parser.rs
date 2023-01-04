@@ -473,7 +473,7 @@ const BIN_OPS: [OpInfo; 9] = [
     OpInfo { op_str: "!=", prec: 7, op: BinOp::Ne, rtl: false },
 
     // Assignment operator, evaluates right to left
-    OpInfo { op_str: "=", prec: 14, op: BinOp::Ne, rtl: true },
+    OpInfo { op_str: "=", prec: 14, op: BinOp::Assign, rtl: true },
 ];
 
 /// Try to match a binary operator in the input

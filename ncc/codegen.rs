@@ -55,7 +55,7 @@ impl Function
 
         // Allocate stack slots for the local variables
         for i in 0..self.num_locals {
-            out.push_str("push 0;");
+            out.push_str("push 0;\n");
         }
 
         self.body.gen_code(sym, out)?;
@@ -139,6 +139,7 @@ impl Stmt
 
                 out.push_str(&format!("{}:\n", cont_label));
                 incr_expr.gen_code(out)?;
+                out.push_str("pop;\n");
                 out.push_str(&format!("jmp {};\n", loop_label));
 
                 out.push_str(&format!("{}:\n", break_label));
@@ -189,7 +190,9 @@ impl Expr
                     Decl::Arg { idx, .. } => {
                         out.push_str(&format!("get_arg {};\n", idx));
                     }
-
+                    Decl::Local { idx, .. } => {
+                        out.push_str(&format!("get_local {};\n", idx));
+                    }
                     _ => todo!()
                 }
             }
@@ -247,7 +250,7 @@ impl Expr
                         out.push_str("lt_i64;\n");
                     }
 
-                    _ => todo!(),
+                    _ => todo!("{:?}", op),
                 }
             }
 
@@ -263,6 +266,9 @@ impl Expr
 fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
 {
     rhs.gen_code(out)?;
+
+    // Assignment expressions must produce an output value
+    out.push_str("dup;\n");
 
     match lhs {
         Expr::Ref(decl) => {
@@ -321,11 +327,12 @@ mod tests
         parse_ok("bool foo(u64 a, u64 b) { return a < b; }");
 
         // Local variables
-        //parse_ok("void main() { u64 a = 0; }");
-        //parse_ok("void main(u64 a) { u64 a = 0; }");
+        parse_ok("void main() { u64 a = 0; }");
+        parse_ok("void main(u64 a) { u64 a = 0; }");
+        parse_ok("void main(u64 a) { u64 b = a + 1; }");
 
         // Infix expressions
-        //parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
+        parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
     }
 
     #[test]
@@ -338,7 +345,10 @@ mod tests
     #[test]
     fn for_loop()
     {
-        parse_ok("void foo(u64 a) { for (;;) {} }");
+        parse_ok("void foo(size_t n) { for (;;) {} }");
+        parse_ok("void foo(size_t n) { for (size_t i = 0;;) {} }");
+        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n;) {} }");
+        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
     }
 
     #[test]
