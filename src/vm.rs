@@ -85,12 +85,14 @@ pub enum Op
     // Load a value at a given adress
     // store (addr)
     load_u8,
+    load_u16,
     load_u32,
     load_u64,
 
     // Store a value at a given adress
     // store (addr) (value)
     store_u8,
+    store_u16,
     store_u32,
     store_u64,
 
@@ -157,9 +159,9 @@ impl Value
         val as u8
     }
 
-    pub fn as_i64(&self) -> i64 {
+    pub fn as_u16(&self) -> u16 {
         let Value(val) = *self;
-        val as i64
+        val as u16
     }
 
     pub fn as_u32(&self) -> u32 {
@@ -176,22 +178,21 @@ impl Value
         let Value(val) = *self;
         val as usize
     }
-}
 
-impl From<i8> for Value {
-    fn from(val: i8) -> Self {
-        Value((val as i64) as u64)
-    }
-}
-
-impl From<i64> for Value {
-    fn from(val: i64) -> Self {
-        Value(val as u64)
+    pub fn as_i64(&self) -> i64 {
+        let Value(val) = *self;
+        val as i64
     }
 }
 
 impl From<u8> for Value {
     fn from(val: u8) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<u16> for Value {
+    fn from(val: u16) -> Self {
         Value(val as u64)
     }
 }
@@ -204,6 +205,18 @@ impl From<u32> for Value {
 
 impl From<u64> for Value {
     fn from(val: u64) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<i8> for Value {
+    fn from(val: i8) -> Self {
+        Value((val as i64) as u64)
+    }
+}
+
+impl From<i64> for Value {
+    fn from(val: i64) -> Self {
         Value(val as u64)
     }
 }
@@ -657,6 +670,13 @@ impl VM
                     self.push(Value::from(val));
                 }
 
+                Op::load_u16 => {
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    let val: u16 = unsafe { *heap_ptr };
+                    self.push(Value::from(val));
+                }
+
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
@@ -673,6 +693,13 @@ impl VM
 
                 Op::store_u8 => {
                     let val = self.pop().as_u8();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr(addr);
+                    unsafe { *heap_ptr = val; }
+                }
+
+                Op::store_u16 => {
+                    let val = self.pop().as_u16();
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     unsafe { *heap_ptr = val; }
