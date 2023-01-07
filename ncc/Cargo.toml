@@ -11,4 +11,4 @@ repository = "https://github.com/maximecb/uvm/"
 
 [[bin]]
 name = "ncc"
-path = "main.rs"
+path = "src/main.rs"
