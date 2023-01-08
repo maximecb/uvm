@@ -730,6 +730,7 @@ impl Assembler
             "mod_i64" => self.code.push_op(Op::mod_i64),
 
             "eq_u64" => self.code.push_op(Op::eq_u64),
+            "ne_u64" => self.code.push_op(Op::ne_u64),
             "lt_i64" => self.code.push_op(Op::lt_i64),
             "le_i64" => self.code.push_op(Op::le_i64),
 

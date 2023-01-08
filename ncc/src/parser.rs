@@ -1132,5 +1132,6 @@ mod tests
     fn parse_files()
     {
         parse_file("examples/fill_rect.c");
+        parse_file("examples/strings.c");
     }
 }

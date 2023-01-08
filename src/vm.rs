@@ -79,6 +79,7 @@ pub enum Op
 
     // Comparisons
     eq_u64,
+    ne_u64,
     lt_i64,
     le_i64,
 
@@ -649,6 +650,12 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push_bool(v0.as_u64() == v1.as_u64());
+                }
+
+                Op::ne_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_u64() != v1.as_u64());
                 }
 
                 Op::lt_i64 => {

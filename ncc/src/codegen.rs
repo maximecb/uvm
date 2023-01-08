@@ -115,12 +115,19 @@ impl Stmt
                 }
             }
 
-            /*
             Stmt::While { test_expr, body_stmt } => {
-                test_expr.eval_type()?;
-                body_stmt.check_types()?;
+                let loop_label = sym.gen_sym("while_loop");
+                let break_label = sym.gen_sym("while_break");
+
+                out.push_str(&format!("{}:\n", loop_label));
+                test_expr.gen_code(out)?;
+                out.push_str(&format!("jz {};\n", break_label));
+
+                body_stmt.gen_code(sym, out)?;
+
+                out.push_str(&format!("jmp {};\n", loop_label));
+                out.push_str(&format!("{}:\n", break_label));
             }
-            */
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
@@ -197,25 +204,23 @@ impl Expr
                 }
             }
 
-            /*
             Expr::Unary { op, child } => {
-                let child_type = child.as_mut().eval_type()?;
+                child.gen_code(out)?;
 
                 match op {
-                    UnOp::Minus => Ok(child_type),
-                    UnOp::Not => Ok(child_type),
-
                     UnOp::Deref => {
-                        match child_type {
-                            Pointer(sub_type) => Ok(*sub_type.clone()),
-                            _ => panic!()
-                        }
+                        let ptr_type = child.eval_type()?;
+                        let elem_size = ptr_type.elem_type().sizeof();
+                        let elem_bits = elem_size * 8;
+                        out.push_str(&format!("load_u{};\n", elem_bits));
                     }
+
+                    //UnOp::Minus => Ok(child_type),
+                    //UnOp::Not => Ok(child_type),
 
                     _ => todo!()
                 }
             },
-            */
 
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;
@@ -240,11 +245,9 @@ impl Expr
                         out.push_str("mul_u64;\n");
                     }
 
-                    /*
-                    Eq | Ne | Lt | Gt => {
-                        Ok(UInt(8))
+                    Ne => {
+                        out.push_str("ne_i64;\n");
                     }
-                    */
 
                     Lt => {
                         out.push_str("lt_i64;\n");
@@ -370,8 +373,12 @@ mod tests
         parse_ok("void foo(u8* a) { *a = 255; }");
         parse_ok("void foo(u8* a) { *(a + 1) = 5; }");
 
-        // TODO:
         // Dereferencing a pointer
+        parse_ok("u64 foo(u64* a) { return *a; }");
+        parse_ok("u64 foo(u64* a) { return *(a + 1); }");
+        parse_ok("u8 foo(u8* p) { return *(p + 1); }");
+
+        parse_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
     }
 
     #[test]
