@@ -57,7 +57,7 @@ impl Stmt
             Stmt::Break | Stmt::Continue => {}
 
             // Return void
-            Stmt::Return => {
+            Stmt::ReturnVoid => {
                 if !ret_type.eq(&Type::Void) {
                     return ParseError::msg_only("return void in function not returning void");
                 }

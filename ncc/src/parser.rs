@@ -635,7 +635,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
     if input.match_keyword("return") {
         if input.match_token(";") {
-            return Ok(Stmt::Return);
+            return Ok(Stmt::ReturnVoid);
         }
         else
         {

@@ -48,6 +48,25 @@ impl Unit
 
 impl Function
 {
+    fn needs_final_return(&self) -> bool
+    {
+        if let Stmt::Block(stmts) = &self.body {
+            if stmts.len() > 0 {
+                let last_stmt = &stmts[stmts.len() - 1];
+
+                if let Stmt::ReturnVoid = last_stmt {
+                    return false;
+                }
+
+                if let Stmt::ReturnExpr(_) = last_stmt {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
         // Print the function signature in comments
@@ -66,6 +85,12 @@ impl Function
         }
 
         self.body.gen_code(sym, out)?;
+
+        // If the body needs a final return
+        if self.needs_final_return() {
+            out.push_str("push 0;\n");
+            out.push_str("ret;\n");
+        }
 
         out.push_str("\n");
 
@@ -87,7 +112,7 @@ impl Stmt
             //Stmt::Continue => {}
 
             // Return void
-            Stmt::Return => {
+            Stmt::ReturnVoid => {
                 out.push_str("push 0;\n");
                 out.push_str("ret;\n");
             }
@@ -331,7 +356,7 @@ mod tests
 {
     use super::*;
 
-    fn parse_ok(src: &str)
+    fn parse_ok(src: &str) -> String
     {
         use crate::parser::{Input, parse_unit};
 
@@ -341,7 +366,7 @@ mod tests
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
         dbg!(&unit.fun_decls[0]);
-        unit.gen_code().unwrap();
+        unit.gen_code().unwrap()
     }
 
     fn parse_file(file_name: &str)
@@ -372,6 +397,9 @@ mod tests
 
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
+
+        // Check that a return instruction is automatically inserted
+        parse_ok("void foo() {}").contains("ret;");
     }
 
     #[test]

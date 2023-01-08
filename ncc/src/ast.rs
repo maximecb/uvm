@@ -172,7 +172,7 @@ pub enum Stmt
     Expr(Expr),
 
     ReturnExpr(Box<Expr>),
-    Return,
+    ReturnVoid,
 
     Break,
     Continue,

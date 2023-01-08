@@ -137,7 +137,7 @@ impl Stmt
 
             Stmt::Break | Stmt::Continue => {}
 
-            Stmt::Return => {}
+            Stmt::ReturnVoid => {}
 
             Stmt::ReturnExpr(expr) => {
                 expr.resolve_syms(env)?;
