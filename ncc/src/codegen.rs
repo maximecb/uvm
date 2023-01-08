@@ -245,6 +245,10 @@ impl Expr
                         out.push_str("mul_u64;\n");
                     }
 
+                    Eq => {
+                        out.push_str("eq_i64;\n");
+                    }
+
                     Ne => {
                         out.push_str("ne_i64;\n");
                     }
@@ -400,6 +404,7 @@ mod tests
     #[test]
     fn parse_files()
     {
-        //parse_file("examples/fill_rect.c");
+        parse_file("examples/fill_rect.c");
+        parse_file("examples/strings.c");
     }
 }

@@ -6,6 +6,20 @@ use Type::*;
 // TODO: we should probably automatically insert type promotions
 // and type casting operations in assignments
 
+/// Check if a value of one type can be assigned to another
+fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
+{
+    match (&lhs_type, &rhs_type)
+    {
+        // If m < n, then the assignment truncates
+        (UInt(m), UInt(n)) if m < n => true,
+
+        // TODO: we need to enable sign-extension
+
+        _ => lhs_type.eq(&rhs_type)
+    }
+}
+
 impl Unit
 {
     pub fn check_types(&mut self) -> Result<(), ParseError>
@@ -52,7 +66,7 @@ impl Stmt
             Stmt::ReturnExpr(expr) => {
                 let expr_type = expr.eval_type()?;
 
-                if !expr_type.eq(ret_type) {
+                if !assign_compat(ret_type, &expr_type) {
                     return ParseError::msg_only("incompatible return type");
                 }
             }
@@ -150,19 +164,11 @@ impl Expr
                     // TODO: we need to automatically insert type casting operations
                     // when the cast is valid
                     Assign => {
-                        match (&lhs_type, &rhs_type)
-                        {
-                            // If m < n, then the assignment truncates
-                            (UInt(m), UInt(n)) if m < n => Ok(lhs_type),
-
-                            _ => {
-                                if !lhs_type.eq(&rhs_type) {
-                                    return ParseError::msg_only("rhs not assignable to lhs")
-                                }
-
-                                Ok(lhs_type)
-                            }
+                        if !assign_compat(&lhs_type, &rhs_type) {
+                            return ParseError::msg_only("rhs not assignable to lhs")
                         }
+
+                        Ok(lhs_type)
                     }
 
                     Add | Sub => {
