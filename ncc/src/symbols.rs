@@ -7,7 +7,8 @@ struct Scope
 {
     decls: HashMap<String, Decl>,
 
-    /// Next local slot index to assign
+    /// Next local variable slot index to assign
+    /// this is only used for local variables
     next_idx: usize,
 }
 
@@ -25,10 +26,11 @@ impl Env
 {
     fn push_scope(&mut self)
     {
+        let num_scopes = self.scopes.len();
         let mut new_scope = Scope::default();
 
-        if self.scopes.len() > 0 {
-            new_scope.next_idx = self.scopes[0].next_idx;
+        if num_scopes > 0 {
+            new_scope.next_idx = self.scopes[num_scopes - 1].next_idx;
         }
 
         self.scopes.push(new_scope);
@@ -108,6 +110,9 @@ impl Function
 {
     fn resolve_syms(&mut self, env: &mut Env) -> Result<(), ParseError>
     {
+        // Reset the local variable slot count
+        env.num_locals = 0;
+
         env.push_scope();
 
         // Declare the function arguments
@@ -120,6 +125,7 @@ impl Function
 
         env.pop_scope();
 
+        // Set the local variable slot count for the function
         self.num_locals = env.num_locals;
 
         Ok(())
