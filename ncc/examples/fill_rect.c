@@ -20,6 +20,8 @@ void fill_rect(
             *(pix_addr + 0) = b;
         }
     }
+
+    return;
 }
 
 void main()

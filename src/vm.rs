@@ -858,8 +858,12 @@ mod tests
     #[test]
     fn test_opcodes()
     {
-        dbg!(Op::exit as usize);
+        // We can have at most 127 short single-byte opcodes
         assert!(Op::exit as usize <= 127);
+
+        // Keep track of how many short opcodes we have so far
+        dbg!(Op::exit as usize);
+        assert!(Op::exit as usize <= 50);
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use std::fmt;
+
 // TODO: we may want a const type
 #[derive(Clone, Debug)]
 pub enum Type
@@ -42,6 +44,27 @@ impl Type
         match self {
             Pointer(t) => *t.clone(),
             _ => panic!()
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Type::*;
+        match self {
+            Void => write!(f, "void"),
+            UInt(n) => write!(f, "u{}", n),
+            Pointer(t) => write!(f, "{}*", t.as_ref()),
+
+            /*
+            Array {
+                elem_type: Box<Type>,
+                size_expr: Box<Expr>,
+            }
+            */
+
+            _ => todo!()
+
         }
     }
 }

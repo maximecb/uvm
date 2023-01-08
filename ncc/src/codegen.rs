@@ -50,6 +50,13 @@ impl Function
 {
     fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
+        // Print the function signature in comments
+        out.push_str(&format!("# {} {}(\n", self.ret_type, self.name));
+        for (p_type, p_name) in &self.params {
+            out.push_str(&format!("#     {} {},\n", p_type, p_name));
+        }
+        out.push_str(&format!("# )\n"));
+
         // Emit label for function
         out.push_str(&format!("{}:\n", self.name));
 
