@@ -38,6 +38,11 @@ pub enum Op
     dup,
     swap,
 
+    // Copy the nth-value from the top of the stack
+    // getn 0 is equivalent to dup
+    // getn <idx:u8>
+    getn,
+
     // Pop N values off the stack
     // popn <n:u8>
     popn,
@@ -491,6 +496,12 @@ impl VM
                     for _ in 0..n {
                         self.pop();
                     }
+                }
+
+                Op::getn => {
+                    let n = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let val = self.stack[self.stack.len() - (1 + n)];
+                    self.push(val);
                 }
 
                 Op::dup => {
