@@ -3,6 +3,9 @@ use crate::parser::{ParseError};
 use std::cmp::{max};
 use Type::*;
 
+// TODO: we should probably automatically insert type promotions
+// and type casting operations in assignments
+
 impl Unit
 {
     pub fn check_types(&mut self) -> Result<(), ParseError>
@@ -144,12 +147,22 @@ impl Expr
                 let rhs_type = rhs.eval_type()?;
 
                 match op {
+                    // TODO: we need to automatically insert type casting operations
+                    // when the cast is valid
                     Assign => {
-                        if !lhs_type.eq(&rhs_type) {
-                            return ParseError::msg_only("rhs not assignable to lhs")
-                        }
+                        match (&lhs_type, &rhs_type)
+                        {
+                            // If m < n, then the assignment truncates
+                            (UInt(m), UInt(n)) if m < n => Ok(lhs_type),
 
-                        Ok(lhs_type)
+                            _ => {
+                                if !lhs_type.eq(&rhs_type) {
+                                    return ParseError::msg_only("rhs not assignable to lhs")
+                                }
+
+                                Ok(lhs_type)
+                            }
+                        }
                     }
 
                     Add | Sub => {

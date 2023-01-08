@@ -363,14 +363,15 @@ mod tests
     #[test]
     fn pointers()
     {
+        // Assignment to a pointer
         parse_ok("void foo(u64* a) { *a = 0; }");
         parse_ok("void foo(u64* a) { *(a + 1) = 0; }");
+        parse_ok("void foo(u8* a) { *a = 0; }");
+        parse_ok("void foo(u8* a) { *a = 255; }");
+        parse_ok("void foo(u8* a) { *(a + 1) = 5; }");
 
-        // FIXME:
-        //parse_ok("void foo(u8* a) { *a = 0; }");
-
-        // FIXME:
-        //parse_ok("void foo(u8* a) { *(a + 1) = 5; }");
+        // TODO:
+        // Dereferencing a pointer
     }
 
     #[test]
