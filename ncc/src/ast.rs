@@ -143,6 +143,7 @@ pub enum Expr
 }
 
 /// Statement
+#[derive(Clone, Debug)]
 pub enum Stmt
 {
     Expr(Expr),
@@ -182,6 +183,7 @@ pub enum Stmt
 }
 
 /// Function
+#[derive(Clone, Debug)]
 pub struct Function
 {
     /// Name of the function
@@ -201,6 +203,7 @@ pub struct Function
 }
 
 /// Global variable declaration
+#[derive(Clone, Debug)]
 pub struct Global
 {
     /// Name of the variable
@@ -211,7 +214,7 @@ pub struct Global
 }
 
 /// Top-level unit (e.g. source file)
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct Unit
 {
     pub global_vars: Vec<Global>,

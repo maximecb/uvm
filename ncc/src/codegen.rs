@@ -256,7 +256,7 @@ impl Expr
 
             //Expr::Call { callee, args } => todo!(),
 
-            _ => todo!()
+            _ => todo!("{:?}", self)
         }
 
         Ok(())
@@ -265,6 +265,9 @@ impl Expr
 
 fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
 {
+    //dbg!(lhs);
+    //dbg!(rhs);
+
     // Evaluate the value expression
     rhs.gen_code(out)?;
 
@@ -277,7 +280,7 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError
                     let elem_bits = elem_size * 8;
 
                     // Evaluate the address expression
-                    lhs.gen_code(out)?;
+                    child.gen_code(out)?;
 
                     // Assignment expressions must produce an output value
                     out.push_str("getn 1;\n");
@@ -323,6 +326,7 @@ mod tests
         let mut unit = parse_unit(&mut input).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
+        dbg!(&unit.fun_decls[0]);
         unit.gen_code().unwrap();
     }
 
@@ -354,6 +358,19 @@ mod tests
 
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
+    }
+
+    #[test]
+    fn pointers()
+    {
+        parse_ok("void foo(u64* a) { *a = 0; }");
+        parse_ok("void foo(u64* a) { *(a + 1) = 0; }");
+
+        // FIXME:
+        //parse_ok("void foo(u8* a) { *a = 0; }");
+
+        // FIXME:
+        //parse_ok("void foo(u8* a) { *(a + 1) = 5; }");
     }
 
     #[test]
