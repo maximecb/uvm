@@ -213,8 +213,14 @@ impl Expr
 
             Expr::Ident(name) => {
                 //dbg!(&name);
-                let decl = env.lookup(name).unwrap();
-                *self = Expr::Ref(decl);
+
+                if let Some(decl) = env.lookup(name) {
+                    *self = Expr::Ref(decl);
+                }
+                else
+                {
+                    return ParseError::msg_only(&format!("reference to undeclared identifier \"{}\"", name));
+                }
             }
 
             Expr::Unary { op, child } => {
