@@ -6,6 +6,7 @@ pub enum Type
 {
     Void,
     UInt(usize),
+    Int(usize),
     Pointer(Box<Type>),
     Array {
         elem_type: Box<Type>,
@@ -13,7 +14,7 @@ pub enum Type
     },
     Fun {
         ret_type: Box<Type>,
-        param_types: Box<Type>,
+        param_types: Vec<Type>,
     }
 }
 
@@ -224,6 +225,18 @@ pub struct Function
 
     /// Number of local variables
     pub num_locals: usize,
+}
+
+impl Function
+{
+    /// Get a type representing the function signature
+    pub fn get_type(&self) -> Type
+    {
+        Type::Fun {
+            ret_type: Box::new(self.ret_type.clone()),
+            param_types: self.params.iter().map(|p| p.0.clone()).collect()
+        }
+    }
 }
 
 /// Global variable declaration

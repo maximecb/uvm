@@ -95,6 +95,7 @@ impl Unit
         let mut env = Env::default();
         env.push_scope();
 
+        // Add definitions for all global variables
         for global in &mut self.global_vars {
             env.define(&global.name, Decl::Global {
                 name: global.name.clone(),
@@ -102,6 +103,15 @@ impl Unit
             });
         }
 
+        // Add definitions for all functions
+        for fun in &mut self.fun_decls {
+            env.define(&fun.name, Decl::Fun {
+                name: fun.name.clone(),
+                t: fun.get_type()
+            });
+        }
+
+        // Resolve symbols in all functions
         for fun in &mut self.fun_decls {
             fun.resolve_syms(&mut env)?;
         }
@@ -242,12 +252,12 @@ impl Expr
                 rhs.as_mut().resolve_syms(env)?;
             }
 
-            /*
-            Expr::Call {
-                callee: Box<Expr>,
-                args: Vec<Expr>,
+            Expr::Call { callee, args } => {
+                callee.resolve_syms(env)?;
+                for arg in args {
+                    arg.resolve_syms(env)?;
+                }
             }
-            */
 
             _ => todo!()
         }
@@ -307,6 +317,12 @@ mod tests
         parse_ok("void main() { for (u64 i = 0; i < 10 ;) {} }");
         parse_ok("void main() { for (u64 i = 0; i < 10 ; i = i + 1) {} }");
         parse_ok("void foo(u64 i) { for (u64 i = 0; i < 10 ; i = i + 1) {} }");
+    }
+
+    #[test]
+    fn calls()
+    {
+        parse_ok("void foo() {} void main() { foo(); }");
     }
 
     #[test]
