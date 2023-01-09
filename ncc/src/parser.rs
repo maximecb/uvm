@@ -935,7 +935,6 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
         }
 
         let decl_type = parse_type(input)?;
-        // TODO: parse_type().is_ok()
 
         input.eat_ws();
         let name = input.parse_ident()?;
@@ -949,12 +948,22 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 
         let decl_type = parse_array_type(input, decl_type)?;
 
+        // Global variable initialization
+        let init_expr = if input.match_token("=") {
+            parse_expr(input)?
+        }
+        else
+        {
+            Expr::Int(0)
+        };
+
         // This must be a global variable declaration
         input.expect_token(";")?;
 
         unit.global_vars.push(Global {
             name,
             var_type: decl_type,
+            init_expr
         });
     }
 
@@ -1046,6 +1055,7 @@ mod tests
     fn globals()
     {
         parse_ok("size_t x;");
+        parse_ok("size_t x = 20;");
         parse_ok("size_t x; void main() {}");
         parse_ok("size_t x; u64 y; void main() {}");
 

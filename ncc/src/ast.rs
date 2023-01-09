@@ -234,6 +234,9 @@ pub struct Global
 
     // Return type
     pub var_type: Type,
+
+    // Initialization expression
+    pub init_expr: Expr,
 }
 
 /// Top-level unit (e.g. source file)
