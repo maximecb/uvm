@@ -403,6 +403,12 @@ mod tests
     }
 
     #[test]
+    fn globals()
+    {
+        //parse_ok("u64 g = 5; u64 main() { return g; }");
+    }
+
+    #[test]
     fn pointers()
     {
         // Assignment to a pointer

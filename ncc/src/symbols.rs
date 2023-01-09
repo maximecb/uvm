@@ -93,10 +93,14 @@ impl Unit
     pub fn resolve_syms(&mut self) -> Result<(), ParseError>
     {
         let mut env = Env::default();
+        env.push_scope();
 
-        //
-        // TODO: handle global variables
-        //
+        for global in &mut self.global_vars {
+            env.define(&global.name, Decl::Global {
+                name: global.name.clone(),
+                t: global.var_type.clone(),
+            });
+        }
 
         for fun in &mut self.fun_decls {
             fun.resolve_syms(&mut env)?;
@@ -274,11 +278,6 @@ mod tests
     }
 
     #[test]
-    fn globals()
-    {
-    }
-
-    #[test]
     fn basics()
     {
         parse_ok("void main() {}");
@@ -291,6 +290,13 @@ mod tests
 
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
+    }
+
+    #[test]
+    fn globals()
+    {
+        parse_ok("u64 g = 5; u64 main() { return g; }");
+        parse_ok("u64 g = 5; u64 main() { return g + 1; }");
     }
 
     #[test]
