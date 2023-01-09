@@ -31,9 +31,19 @@ impl Unit
         out.push_str(".data;\n");
         out.push_str("\n");
 
-        //
-        // TODO: globals
-        //
+        // Global variable initialization
+        for global in &self.global_vars {
+            out.push_str(&format!("{}:\n", global.name));
+
+            match (&global.var_type, &global.init_expr) {
+                (Type::UInt(n), Expr::Int(v)) => {
+                    out.push_str(&format!(".u{} {};\n", n, v))
+                }
+                _ => todo!()
+            }
+
+            out.push_str("\n");
+        }
 
         out.push_str(".code;\n");
         out.push_str("\n");
@@ -405,7 +415,9 @@ mod tests
     #[test]
     fn globals()
     {
+        parse_ok("u64 g = 5; u64 main() { return 0; }");
         //parse_ok("u64 g = 5; u64 main() { return g; }");
+        //parse_ok("u64 g = 5; u64 main() { return g + 1; }");
     }
 
     #[test]

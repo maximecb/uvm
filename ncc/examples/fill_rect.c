@@ -1,3 +1,6 @@
+size_t WIDTH = 800;
+size_t HEIGHT = 600;
+
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
     u8* f_buffer,
