@@ -947,6 +947,13 @@ mod tests
 
     #[test]
     #[should_panic]
+    fn test_get_arg_none()
+    {
+        eval_src("call FN, 0; exit; FN: get_arg 0; push 0; ret;");
+    }
+
+    #[test]
+    #[should_panic]
     fn test_memset_oob()
     {
         eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 256; syscall memset; push 0; exit;");
