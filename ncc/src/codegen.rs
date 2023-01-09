@@ -118,7 +118,7 @@ impl Stmt
                 out.push_str("pop;\n");
             }
 
-            //Stmt::Break
+            //Stmt::Break => {}
             //Stmt::Continue => {}
 
             // Return void
@@ -242,6 +242,13 @@ impl Expr
                     Decl::Local { idx, .. } => {
                         out.push_str(&format!("get_local {};\n", idx));
                     }
+                    Decl::Global { name, t } => {
+                        out.push_str(&format!("push {};\n", name));
+                        match t {
+                            Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
+                            _ => todo!()
+                        }
+                    }
                     _ => todo!()
                 }
             }
@@ -257,7 +264,12 @@ impl Expr
                         out.push_str(&format!("load_u{};\n", elem_bits));
                     }
 
-                    //UnOp::Minus => Ok(child_type),
+                    UnOp::Minus => {
+                        out.push_str(&format!("push 0;\n"));
+                        out.push_str(&format!("swap;\n"));
+                        out.push_str(&format!("sub_u64;\n"));
+                    }
+
                     //UnOp::Not => Ok(child_type),
 
                     _ => todo!()
@@ -416,8 +428,8 @@ mod tests
     fn globals()
     {
         parse_ok("u64 g = 5; u64 main() { return 0; }");
-        //parse_ok("u64 g = 5; u64 main() { return g; }");
-        //parse_ok("u64 g = 5; u64 main() { return g + 1; }");
+        parse_ok("u64 g = 5; u64 main() { return g; }");
+        parse_ok("u64 g = 5; u64 main() { return g + 1; }");
     }
 
     #[test]
