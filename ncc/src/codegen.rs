@@ -246,6 +246,8 @@ impl Expr
                         out.push_str(&format!("push {};\n", name));
                         match t {
                             Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
+                            Type::Pointer(_) => {}
+                            Type::Fun { .. } => {}
                             _ => todo!()
                         }
                     }

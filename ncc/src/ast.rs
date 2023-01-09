@@ -10,6 +10,10 @@ pub enum Type
     Array {
         elem_type: Box<Type>,
         size_expr: Box<Expr>,
+    },
+    Fun {
+        ret_type: Box<Type>,
+        param_types: Box<Type>,
     }
 }
 
@@ -76,9 +80,7 @@ pub enum Decl
     Global { name: String, t: Type },
     Arg { idx: usize, t: Type },
     Local { idx: usize, t: Type },
-
-    // TODO: we probably need a function signature type
-    Fun { name: String },
+    Fun { name: String, t: Type },
 }
 
 impl Decl
@@ -89,8 +91,7 @@ impl Decl
             Decl::Global { name, t } => t.clone(),
             Decl::Arg { idx, t } => t.clone(),
             Decl::Local { idx, t } => t.clone(),
-
-            Decl::Fun { name } => todo!(),
+            Decl::Fun { name, t } => t.clone(),
         }
     }
 }
