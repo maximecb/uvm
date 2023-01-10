@@ -619,6 +619,12 @@ impl Assembler
                 self.mem().push_u8(val);
             }
 
+            // Unsigned 32-bit integer constant
+            "u32" => {
+                let val: u32 = self.parse_int_arg(input)?;
+                self.mem().push_u32(val);
+            }
+
             // Unsigned 64-bit integer constant
             "u64" => {
                 let val: u64 = self.parse_int_arg(input)?;
