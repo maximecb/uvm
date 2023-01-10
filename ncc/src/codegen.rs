@@ -48,6 +48,17 @@ impl Unit
         out.push_str(".code;\n");
         out.push_str("\n");
 
+        // If there is a main function
+        let main_fn: Vec<&Function> = self.fun_decls.iter().filter(|f| f.name == "main").collect();
+        if let [main_fn] = main_fn[..] {
+            // TODO: support calling main with argc, argv as well
+            out.push_str("# call the main function and then exit\n");
+            out.push_str("call main, 0;\n");
+            out.push_str("exit;\n");
+            out.push_str("\n");
+        }
+
+        // Generate code for all the functions
         for fun in &self.fun_decls {
             fun.gen_code(&mut sym, &mut out)?;
         }
@@ -497,5 +508,6 @@ mod tests
         parse_file("examples/fill_rect.c");
         parse_file("examples/strings.c");
         parse_file("examples/fib.c");
+        parse_file("examples/paint.c");
     }
 }
