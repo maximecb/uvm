@@ -39,12 +39,17 @@ impl Unit
                 (Type::UInt(n), Expr::Int(v)) => {
                     out.push_str(&format!(".u{} {};\n", n, v))
                 }
+                (Type::Pointer(_), Expr::Int(v)) => {
+                    out.push_str(&format!(".u64 {};\n", v))
+                }
                 _ => todo!()
             }
 
             out.push_str("\n");
         }
 
+        out.push_str(&("#".repeat(78) + "\n"));
+        out.push_str("\n");
         out.push_str(".code;\n");
         out.push_str("\n");
 
@@ -94,10 +99,10 @@ impl Function
         out.push_str(&format!("#\n"));
         out.push_str(&format!("# {} {}(", self.ret_type, self.name));
         for (idx, (p_type, p_name)) in self.params.iter().enumerate() {
-            out.push_str(&format!("{} {}", p_type, p_name));
-            if idx < self.params.len() - 1 {
-                out.push_str(",");
+            if idx > 0 {
+                out.push_str(", ");
             }
+            out.push_str(&format!("{} {}", p_type, p_name));
         }
         out.push_str(&format!(")\n"));
         out.push_str(&format!("#\n"));
@@ -329,11 +334,11 @@ impl Expr
                     }
 
                     Div => {
-                        out.push_str("div_u64;\n");
+                        out.push_str("div_i64;\n");
                     }
 
                     Mod => {
-                        out.push_str("mod_u64;\n");
+                        out.push_str("mod_i64;\n");
                     }
 
                     Eq => {
@@ -481,6 +486,7 @@ mod tests
         parse_ok("u64 g = 5; u64 main() { return 0; }");
         parse_ok("u64 g = 5; u64 main() { return g; }");
         parse_ok("u64 g = 5; u64 main() { return g + 1; }");
+        parse_ok("u8* ptr = null; u8* foo() { return p; }");
     }
 
     #[test]

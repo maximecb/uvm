@@ -1,6 +1,10 @@
-size_t WIDTH = 800;
-size_t HEIGHT = 600;
+size_t FRAME_WIDTH = 800;
+size_t FRAME_HEIGHT = 600;
 size_t NUM_COLORS = 27;
+size_t BOX_WIDTH = 20;
+size_t BOX_HEIGHT = 20;
+
+u8* f_buffer = null;
 
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
@@ -40,14 +44,28 @@ void draw_colors()
         u8 g = ((i/3) % 3) * 127;
         u8 b = ((i/9) % 3) * 127;
 
+        size_t ymin = i * BOX_WIDTH;
 
-
-
-
-
+        fill_rect(
+            f_buffer,
+            FRAME_WIDTH,
+            FRAME_HEIGHT,
+            0,
+            ymin,
+            BOX_WIDTH,
+            BOX_HEIGHT,
+            r,
+            g,
+            b
+        );
     }
 }
 
 void main()
 {
+    // TODO: call to create window
+
+    draw_colors();
+
+    // TODO: call to copy pixels
 }
