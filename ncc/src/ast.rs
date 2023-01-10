@@ -115,20 +115,26 @@ pub enum BinOp
     // Assignment
     Assign,
 
+    // Bitwise
     And,
     Or,
     Xor,
 
+    // Arithmetic
     Add,
     Sub,
     Mul,
     Div,
     Mod,
 
+    // Comparison
     Eq,
     Ne,
     Lt,
     Gt,
+
+    // Sequencing (a, b)
+    Comma,
 }
 
 /// Expression

@@ -44,14 +44,14 @@ dup;
 push 22;
 add_u64;
 
-# R color = (i % 3) % 127
+# R color = (i % 3) * 127
 get_local 2;
 push 3;
 mod_i64;
 push 127;
 mul_u64;
 
-# R color = ((i/3) % 3) % 127
+# R color = ((i/3) % 3) * 127
 get_local 2;
 push 3;
 div_i64;
@@ -60,7 +60,7 @@ mod_i64;
 push 127;
 mul_u64;
 
-# G color = ((i/9) % 3) % 127
+# G color = ((i/9) % 3) * 127
 get_local 2;
 push 9;
 div_i64;

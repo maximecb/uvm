@@ -192,6 +192,10 @@ impl Expr
                         Ok(UInt(8))
                     }
 
+                    Comma => {
+                        Ok(rhs_type)
+                    }
+
                     //_ => todo!(),
                 }
             }

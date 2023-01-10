@@ -30,8 +30,18 @@ void fill_rect(
 
 void draw_colors()
 {
-    for (size_t color_idx = 0; color_idx < NUM_COLORS; color_idx = color_idx + 1)
+    for (size_t i = 0; i < NUM_COLORS; i = i + 1)
     {
+        // Each component is 127 * i where i is 0, 1, 2
+        // R color = (i % 3) * 127
+        // R color = ((i/3) % 3) * 127
+        // G color = ((i/9) % 3) * 127
+        u8 r = (i % 3) * 127;
+        u8 g = ((i/3) % 3) * 127;
+        u8 b = ((i/9) % 3) * 127;
+
+
+
 
 
 

@@ -304,6 +304,13 @@ impl Expr
                     return Ok(());
                 }
 
+                if *op == Comma {
+                    lhs.gen_code(out)?;
+                    out.push_str("pop;\n");
+                    rhs.gen_code(out)?;
+                    return Ok(());
+                }
+
                 lhs.gen_code(out)?;
                 rhs.gen_code(out)?;
 
@@ -319,6 +326,14 @@ impl Expr
 
                     Mul => {
                         out.push_str("mul_u64;\n");
+                    }
+
+                    Div => {
+                        out.push_str("div_u64;\n");
+                    }
+
+                    Mod => {
+                        out.push_str("mod_u64;\n");
                     }
 
                     Eq => {

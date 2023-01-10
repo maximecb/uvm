@@ -461,8 +461,9 @@ struct OpInfo
 /// Binary operators and their precedence level
 /// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 9] = [
+const BIN_OPS: [OpInfo; 10] = [
     OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
+    OpInfo { op_str: "/", prec: 3, op: BinOp::Div, rtl: false },
     OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },
     OpInfo { op_str: "+", prec: 4, op: BinOp::Add, rtl: false },
     OpInfo { op_str: "-", prec: 4, op: BinOp::Sub, rtl: false },
@@ -474,6 +475,9 @@ const BIN_OPS: [OpInfo; 9] = [
 
     // Assignment operator, evaluates right to left
     OpInfo { op_str: "=", prec: 14, op: BinOp::Assign, rtl: true },
+
+    // Sequencing operator
+    //OpInfo { op_str: ",", prec: 15, op: BinOp::Comma, rtl: false },
 ];
 
 /// Try to match a binary operator in the input
