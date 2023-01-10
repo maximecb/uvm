@@ -80,11 +80,16 @@ impl Function
     fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
         // Print the function signature in comments
-        out.push_str(&format!("# {} {}(\n", self.ret_type, self.name));
-        for (p_type, p_name) in &self.params {
-            out.push_str(&format!("#     {} {},\n", p_type, p_name));
+        out.push_str(&format!("#\n"));
+        out.push_str(&format!("# {} {}(", self.ret_type, self.name));
+        for (idx, (p_type, p_name)) in self.params.iter().enumerate() {
+            out.push_str(&format!("{} {}", p_type, p_name));
+            if idx < self.params.len() - 1 {
+                out.push_str(",");
+            }
         }
-        out.push_str(&format!("# )\n"));
+        out.push_str(&format!(")\n"));
+        out.push_str(&format!("#\n"));
 
         // Emit label for function
         out.push_str(&format!("{}:\n", self.name));
@@ -297,6 +302,10 @@ impl Expr
                         out.push_str("add_u64;\n");
                     }
 
+                    Sub => {
+                        out.push_str("sub_u64;\n");
+                    }
+
                     Mul => {
                         out.push_str("mul_u64;\n");
                     }
@@ -317,7 +326,21 @@ impl Expr
                 }
             }
 
-            //Expr::Call { callee, args } => todo!(),
+            Expr::Call { callee, args } => {
+                //callee.gen_code(out)?;
+
+                match callee.as_ref() {
+                    Expr::Ref(Decl::Fun { name, .. }) =>
+                    {
+                        for arg in args {
+                            arg.gen_code(out)?;
+                        }
+
+                        out.push_str(&format!("call {}, {};\n", name, args.len()));
+                    }
+                    _ => todo!()
+                }
+            }
 
             _ => todo!("{:?}", self)
         }
@@ -473,5 +496,6 @@ mod tests
     {
         parse_file("examples/fill_rect.c");
         parse_file("examples/strings.c");
+        parse_file("examples/fib.c");
     }
 }
