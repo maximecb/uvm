@@ -406,7 +406,10 @@ impl VM
 
     pub fn pop(&mut self) -> Value
     {
-        self.stack.pop().unwrap()
+        match self.stack.pop() {
+            Some(val) => val,
+            None => panic!("tried to pop when the stack is empty")
+        }
     }
 
     /// Get a pointer to an address/offset in the heap
@@ -950,6 +953,13 @@ mod tests
     fn test_get_arg_none()
     {
         eval_src("call FN, 0; exit; FN: get_arg 0; push 0; ret;");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_load_oob()
+    {
+        eval_src(".data; .fill 1000, 0; .code; push 1000; load_u64; exit;");
     }
 
     #[test]

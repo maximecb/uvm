@@ -631,6 +631,13 @@ impl Assembler
                 self.mem().push_u64(val);
             }
 
+            // TODO:
+            // Command to read an arbitrary number of bytes
+            // with optional whitespace between bytes
+            "hex" => {
+                todo!();
+            }
+
             // Null-terminated UTF-8 string
             "stringz" => {
                 let val = input.parse_str()?;
