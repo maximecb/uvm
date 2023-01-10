@@ -31,6 +31,10 @@ impl Unit
         out.push_str(".data;\n");
         out.push_str("\n");
 
+        out.push_str("# Reserve the first heap word so we can use address 0 as null;\n");
+        out.push_str(".u64 0;\n");
+        out.push_str("\n");
+
         // Global variable initialization
         for global in &self.global_vars {
             out.push_str(&format!("{}:\n", global.name));
@@ -486,7 +490,7 @@ mod tests
         parse_ok("u64 g = 5; u64 main() { return 0; }");
         parse_ok("u64 g = 5; u64 main() { return g; }");
         parse_ok("u64 g = 5; u64 main() { return g + 1; }");
-        parse_ok("u8* ptr = null; u8* foo() { return p; }");
+        parse_ok("u8* p = null; u8* foo() { return p; }");
     }
 
     #[test]
