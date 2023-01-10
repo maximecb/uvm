@@ -196,7 +196,28 @@ impl Expr
                 }
             }
 
-            Expr::Call { callee, args } => todo!(),
+            Expr::Call { callee, args } => {
+                let fn_type = callee.eval_type()?;
+
+                match fn_type {
+                    Type::Fun { ret_type, param_types } => {
+                        if args.len() != param_types.len() {
+                            return ParseError::msg_only("argument count doesn't match function parameter count")
+                        }
+
+                        for (idx, arg) in args.iter().enumerate() {
+                            let arg_type = arg.eval_type()?;
+
+                            if !assign_compat(&param_types[idx], &arg_type) {
+                                return ParseError::msg_only("argument type not compatible with parameter type")
+                            }
+                        }
+
+                        Ok(*ret_type)
+                    },
+                    _ => ParseError::msg_only("callee is not a function")
+                }
+            }
 
             //_ => todo!()
         }
@@ -227,6 +248,17 @@ mod tests
         let mut unit = crate::parser::parse_file(file_name).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
+    }
+
+    #[test]
+    fn calls()
+    {
+        parse_ok("void foo() {} void main() { foo(); }");
+        parse_ok("u64 foo(u64 v) { return v; } void main() { foo(1); }");
+        parse_ok("u64 foo(u64 a, u64 b) { return a + b; } void main() { foo(1, 2); }");
+
+        // FIXME:
+        //parse_ok("u64 foo(u64 v, u8* p) { return v; } void main() { foo(1, null); }");
     }
 
     #[test]
