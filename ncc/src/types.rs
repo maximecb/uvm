@@ -121,12 +121,12 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {
-                // TODO: we should probably get the smallest valid UInt type here
+                // TODO: this should be int instead of UInt
                 Ok(UInt(64))
             }
 
             Expr::String(_) => {
-                // TODO: this should be const char
+                // TODO: this type should be const char
                 Ok(Pointer(Box::new(UInt(8))))
             }
 

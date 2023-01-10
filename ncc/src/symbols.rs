@@ -20,6 +20,9 @@ struct Env
 
     /// Number of local slots needed in the function
     num_locals: usize,
+
+    /// Map of strings to global symbols
+    string_tbl: HashMap<String, Decl>,
 }
 
 impl Env
@@ -69,6 +72,26 @@ impl Env
         assert!(top_scope.decls.get(name).is_none());
 
         top_scope.decls.insert(name.to_string(), decl);
+    }
+
+    /// Get a global declaration for a string constant
+    fn get_string(&mut self, str_const: &str) -> Decl
+    {
+        // Try to find the string in the string table
+        if let Some(global_decl) = self.string_tbl.get(str_const) {
+            return global_decl.clone();
+        }
+
+        // Generate a unique global symbol
+        let sym_name = format!("__CONST_STR_{}__", self.string_tbl.len());
+
+        let new_decl = Decl::Global {
+            name: sym_name.to_string(),
+            t: Type::Pointer(Box::new(Type::UInt(8))) // FIXME: should be const char type
+        };
+
+        self.string_tbl.insert(str_const.to_string(), new_decl.clone());
+        new_decl
     }
 
     fn lookup(&self, name: &str) -> Option<Decl>
@@ -229,7 +252,13 @@ impl Expr
     fn resolve_syms(&mut self, env: &mut Env) -> Result<(), ParseError>
     {
         match self {
-            Expr::Int(_) | Expr::String(_) => {}
+            Expr::Int(_) => {}
+
+            Expr::String(str_const) => {
+                // Get a global symbol for the string constant
+                let decl = env.get_string(str_const);
+                *self = Expr::Ref(decl);
+            }
 
             Expr::Ident(name) => {
                 //dbg!(&name);
@@ -307,6 +336,7 @@ mod tests
     {
         parse_ok("u64 g = 5; u64 main() { return g; }");
         parse_ok("u64 g = 5; u64 main() { return g + 1; }");
+        parse_ok("char* global_str = \"foo\"; void main() {}");
     }
 
     #[test]

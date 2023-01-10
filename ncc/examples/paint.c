@@ -1,3 +1,5 @@
+//char* WINDOW_TITLE = "UVM Paint Program Demo";
+
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
 size_t NUM_COLORS = 27;
@@ -5,6 +7,10 @@ size_t BOX_WIDTH = 20;
 size_t BOX_HEIGHT = 20;
 
 u8* f_buffer = null;
+
+// Current mouse pointer position
+size_t pos_x = 0;
+size_t pos_y = 0;
 
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(

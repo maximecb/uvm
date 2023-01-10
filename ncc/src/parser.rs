@@ -1063,6 +1063,8 @@ mod tests
         parse_ok("size_t x; void main() {}");
         parse_ok("size_t x; u64 y; void main() {}");
 
+        parse_ok("char* str = \"FOO\n\";");
+
         parse_ok("u8* pixel_buffer; u64 x; u64 y; void main() {}");
         parse_ok("u8 pixel_buffer[100]; void main() {}");
         parse_ok("u8 pixel_buffer[800][600]; void main() {}");
