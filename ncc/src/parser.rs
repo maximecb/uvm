@@ -384,6 +384,24 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
+    // Pre-increment expression
+    if input.match_token("++") {
+        let sub_expr = parse_atom(input)?;
+
+        // Transform into i = i + 1
+        return Ok(
+            Expr::Binary{
+                op: BinOp::Assign,
+                lhs: Box::new(sub_expr.clone()),
+                rhs: Box::new(Expr::Binary{
+                    op: BinOp::Add,
+                    lhs: Box::new(sub_expr.clone()),
+                    rhs: Box::new(Expr::Int(1))
+                })
+            }
+        );
+    }
+
     // Pointer dereference
     if ch == '*' {
         input.eat_ch();

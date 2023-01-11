@@ -32,9 +32,9 @@ void fill_rect(
     u8 b
 )
 {
-    for (size_t j = 0; j < r_height; j = j + 1)
+    for (size_t j = 0; j < r_height; ++j)
     {
-        for (size_t i = 0; i < r_width; i = i + 1)
+        for (size_t i = 0; i < r_width; ++i)
         {
             u8* pix_addr = f_buffer + (3 * f_width) * (r_y + j) + 3 * (r_x + i);
             *(pix_addr + 0) = r;
@@ -73,7 +73,7 @@ void draw_colors()
         255
     );
 
-    for (size_t i = 0; i < NUM_COLORS; i = i + 1)
+    for (size_t i = 0; i < NUM_COLORS; ++i)
     {
         // Each component is 127 * i where i is 0, 1, 2
         // R color = (i % 3) * 127
