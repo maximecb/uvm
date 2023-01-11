@@ -39,6 +39,14 @@ impl Type
             Void => panic!(),
             UInt(num_bits) => num_bits / 8,
             Pointer(_) => 8,
+            Array { elem_type, size_expr } => {
+                match size_expr.as_ref() {
+                    Expr::Int(num_elems) => {
+                        usize::try_from(*num_elems).unwrap() * elem_type.sizeof()
+                    }
+                    _ => panic!()
+                }
+            }
             _ => panic!()
         }
     }

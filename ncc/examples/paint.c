@@ -7,6 +7,8 @@ size_t BOX_WIDTH = 29;
 size_t BOX_HEIGHT = 29;
 size_t POINTER_SIZE = 10;
 
+u8 FRAME_BUFFER[600][800][3];
+
 u8* f_buffer = null;
 
 // Current mouse pointer position

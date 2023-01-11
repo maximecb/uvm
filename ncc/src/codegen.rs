@@ -43,12 +43,19 @@ impl Unit
                 (Type::UInt(n), Expr::Int(v)) => {
                     out.push_str(&format!(".u{} {};\n", n, v))
                 }
+
                 (Type::Pointer(_), Expr::Int(v)) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
+
                 (Type::Pointer(_), Expr::String(s)) => {
                     out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
                 }
+
+                (Type::Array {..}, Expr::Int(0)) => {
+                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
+                }
+
                 _ => todo!()
             }
 
@@ -520,6 +527,12 @@ mod tests
         parse_ok("char* str = \"foo\\nbar\"; void foo() {}");
         parse_ok("char* str = \"foo\\nbar\"; void bar(char* str) {} void foo() { bar(str); }");
         parse_ok("void bar(char* str) {} void foo() { bar(\"string constant\"); }");
+    }
+
+    #[test]
+    fn arrays()
+    {
+        parse_ok("u8 PIXELS[800][600][3]; void foo() {}");
     }
 
     #[test]
