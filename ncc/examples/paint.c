@@ -5,12 +5,18 @@ size_t FRAME_HEIGHT = 600;
 size_t NUM_COLORS = 27;
 size_t BOX_WIDTH = 29;
 size_t BOX_HEIGHT = 29;
+size_t POINTER_SIZE = 10;
 
 u8* f_buffer = null;
 
 // Current mouse pointer position
-size_t pos_x = 0;
-size_t pos_y = 0;
+size_t pos_x = 200;
+size_t pos_y = 200;
+
+// Current color to draw with
+u8 current_r = 0;
+u8 current_g = 0;
+u8 current_b = 0;
 
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
@@ -36,6 +42,19 @@ void fill_rect(
             *(pix_addr + 2) = b;
         }
     }
+}
+
+/// Get a pointer to the pixel data at a given position
+/// so that we can read the current pixel color there
+u8* get_pixel_ptr(
+    u8* f_buffer,
+    size_t f_width,
+    size_t f_height,
+    size_t x,
+    size_t y,
+)
+{
+    return f_buffer + (3 * f_width) * y + 3 * x;
 }
 
 void draw_colors()
@@ -89,6 +108,9 @@ void main()
     // TODO: call to create window
 
     draw_colors();
+
+    // TODO: try drawing the mouse pointer the current color (see globals)
+
 
     // TODO: call to copy pixels
 }

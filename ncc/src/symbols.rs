@@ -69,7 +69,12 @@ impl Env
     {
         let num_scopes = self.scopes.len();
         let top_scope = &mut self.scopes[num_scopes - 1];
-        assert!(top_scope.decls.get(name).is_none());
+
+        assert!(
+            top_scope.decls.get(name).is_none(),
+            "two declarations with name \"{}\"",
+            name
+        );
 
         top_scope.decls.insert(name.to_string(), decl);
     }
@@ -329,6 +334,9 @@ mod tests
 
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b; }");
+
+        // Two functions with the same parameter name
+        parse_ok("void foo(u64 a) {} void bar(u64 a) {}");
     }
 
     #[test]
