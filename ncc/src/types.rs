@@ -14,6 +14,9 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
         // If m < n, then the assignment truncates
         (UInt(m), UInt(n)) if m < n => true,
 
+        // Assigning an array to a pointer
+        (Pointer(base_type), Array { elem_type, .. }) => base_type.eq(&elem_type),
+
         // TODO: we need to enable sign-extension
 
         _ => lhs_type.eq(&rhs_type)
@@ -176,6 +179,7 @@ impl Expr
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Pointer(b), UInt(n)) => Ok(Pointer(b)),
                             (UInt(n), Pointer(b)) => Ok(Pointer(b)),
+                            (Array{elem_type, .. }, UInt(n)) => Ok(Pointer(elem_type)),
                             _ => ParseError::msg_only("incompatible types in add/sub")
                         }
                     }

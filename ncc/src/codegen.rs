@@ -283,6 +283,7 @@ impl Expr
                             Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
                             Type::Pointer(_) => {}
                             Type::Fun { .. } => {}
+                            Type::Array { .. } => {}
                             _ => todo!()
                         }
                     }
@@ -315,6 +316,7 @@ impl Expr
 
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;
+                use Type::*;
 
                 // Assignments are different from other kinds of expressions
                 // because we don't evaluate the lhs the same way
@@ -333,10 +335,25 @@ impl Expr
                 lhs.gen_code(out)?;
                 rhs.gen_code(out)?;
 
+                let lhs_type = lhs.eval_type()?;
+                let rhs_type = lhs.eval_type()?;
+
                 match op {
                     // For now we're ignoring the type
                     Add => {
-                        out.push_str("add_u64;\n");
+                        match (lhs_type, rhs_type) {
+                            (Pointer(b), UInt(n)) => {
+                                let elem_sizeof = b.sizeof();
+                                out.push_str(&format!("push {};\n", elem_sizeof));
+                                out.push_str("mul_u64;\n");
+                            }
+                            (Array{ elem_type , ..}, UInt(n)) => {
+                                let elem_sizeof = elem_type.sizeof();
+                                out.push_str(&format!("push {};\n", elem_sizeof));
+                                out.push_str("mul_u64;\n");
+                            }
+                            _ => out.push_str("add_u64;\n")
+                        }
                     }
 
                     Sub => {

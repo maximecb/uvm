@@ -7,9 +7,8 @@ size_t BOX_WIDTH = 29;
 size_t BOX_HEIGHT = 29;
 size_t POINTER_SIZE = 10;
 
-u8 FRAME_BUFFER[600][800][3];
-
-u8* f_buffer = null;
+// RGB pixels: 800 * 600 * 3
+u8 FRAME_BUFFER[1_440_000];
 
 // Current mouse pointer position
 size_t pos_x = 200;
@@ -81,7 +80,7 @@ void draw_palette()
         size_t ymin = FRAME_HEIGHT - BOX_HEIGHT;
 
         fill_rect(
-            f_buffer,
+            FRAME_BUFFER,
             FRAME_WIDTH,
             FRAME_HEIGHT,
             xmin,
@@ -102,7 +101,7 @@ void main()
 
     // Initially fill the canvas with white
     fill_rect(
-        f_buffer,
+        FRAME_BUFFER,
         FRAME_WIDTH,
         FRAME_HEIGHT,
         0,
