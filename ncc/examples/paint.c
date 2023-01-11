@@ -61,22 +61,8 @@ void create_window(char* window_title, size_t width, size_t height)
 {
 }
 
-void draw_colors()
+void draw_palette()
 {
-    // Initially fill the canvas with white
-    fill_rect(
-        f_buffer,
-        FRAME_WIDTH,
-        FRAME_HEIGHT,
-        0,
-        0,
-        FRAME_WIDTH,
-        FRAME_HEIGHT,
-        255,
-        255,
-        255
-    );
-
     for (size_t i = 0; i < NUM_COLORS; ++i)
     {
         // Each component is 127 * i where i is 0, 1, 2
@@ -112,7 +98,21 @@ void main()
     // TODO: call to create window
     create_window(WINDOW_TITLE, FRAME_WIDTH, FRAME_HEIGHT);
 
-    draw_colors();
+    // Initially fill the canvas with white
+    fill_rect(
+        f_buffer,
+        FRAME_WIDTH,
+        FRAME_HEIGHT,
+        0,
+        0,
+        FRAME_WIDTH,
+        FRAME_HEIGHT,
+        255,
+        255,
+        255
+    );
+
+    draw_palette();
 
     // TODO: try drawing the mouse pointer the current color (see globals)
 

@@ -30,6 +30,7 @@ impl fmt::Display for ParseError
     }
 }
 
+#[derive(Debug)]
 struct Input
 {
     input: Vec<char>,
@@ -208,6 +209,10 @@ impl Input
     {
         let tok_chars: Vec<char> = token.chars().collect();
         let tok_end_idx = self.idx + tok_chars.len();
+
+        if tok_end_idx > self.input.len() {
+            return false;
+        }
 
         // If the token matches the input
         if self.input[self.idx .. tok_end_idx] == tok_chars {
@@ -631,11 +636,36 @@ impl Assembler
                 self.mem().push_u64(val);
             }
 
-            // TODO:
             // Command to read an arbitrary number of bytes
             // with optional whitespace between bytes
             "hex" => {
-                todo!();
+                loop {
+                    let ch0 = input.peek_ch();
+                    let digit0 = ch0.to_digit(16);
+
+                    if digit0.is_none() {
+                        break;
+                    }
+
+                    let digit0 = digit0.unwrap();
+                    input.eat_ch();
+
+                    let ch1 = input.peek_ch();
+                    let digit1 = ch1.to_digit(16);
+
+                    if digit1.is_none() {
+                        return input.parse_error("expected hex digit");
+                    }
+
+                    let digit1 = digit1.unwrap();
+                    input.eat_ch();
+
+                    let byte_val = ((digit0 << 4) + digit1) as u8;
+                    self.mem().push_u8(byte_val);
+
+                    // Allow whitespace between bytes
+                    input.eat_ws()?;
+                }
             }
 
             // Null-terminated UTF-8 string
@@ -907,6 +937,19 @@ mod tests
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
+    }
+
+    #[test]
+    fn test_hex()
+    {
+        parse_ok(".hex FF;");
+        parse_ok(".hex ffaabbcc;");
+        parse_ok(".hex FF AA BB CC 09;");
+        parse_ok(".hex FFAABBCC09;");
+        parse_ok(".hex\nFF AA\nBB CC\n09;");
+
+        parse_fails(".hex F;");
+        parse_fails(".hex FAB;");
     }
 
     #[test]
