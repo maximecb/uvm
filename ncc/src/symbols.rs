@@ -91,7 +91,7 @@ impl Env
         let sym_name = format!("__CONST_STR_{}__", self.string_tbl.len());
 
         let new_decl = Decl::Global {
-            name: sym_name.to_string(),
+            name: sym_name.clone(),
             t: Type::Pointer(Box::new(Type::UInt(8))) // FIXME: should be const char type
         };
 
@@ -142,6 +142,17 @@ impl Unit
         // Resolve symbols in all functions
         for fun in &mut self.fun_decls {
             fun.resolve_syms(&mut env)?;
+        }
+
+        // Create new globals for each string constant
+        for (str_const, decl) in env.string_tbl {
+            if let Decl::Global{ name, t } = decl {
+                self.global_vars.push(Global {
+                    name: name.clone(),
+                    var_type: t.clone(),
+                    init_expr: Expr::String(str_const.clone())
+                });
+            }
         }
 
         Ok(())

@@ -1,4 +1,4 @@
-//char* WINDOW_TITLE = "UVM Paint Program Demo";
+char* WINDOW_TITLE = "UVM Paint Program Demo";
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
@@ -57,6 +57,10 @@ u8* get_pixel_ptr(
     return f_buffer + (3 * f_width) * y + 3 * x;
 }
 
+void create_window(char* window_title, size_t width, size_t height)
+{
+}
+
 void draw_colors()
 {
     // Initially fill the canvas with white
@@ -106,6 +110,7 @@ void draw_colors()
 void main()
 {
     // TODO: call to create window
+    create_window(WINDOW_TITLE, FRAME_WIDTH, FRAME_HEIGHT);
 
     draw_colors();
 

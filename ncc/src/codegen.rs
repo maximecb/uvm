@@ -46,6 +46,9 @@ impl Unit
                 (Type::Pointer(_), Expr::Int(v)) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
+                (Type::Pointer(_), Expr::String(s)) => {
+                    out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
+                }
                 _ => todo!()
             }
 
@@ -509,6 +512,14 @@ mod tests
         parse_ok("u8 foo(u8* p) { return *(p + 1); }");
 
         parse_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
+    }
+
+    #[test]
+    fn strings()
+    {
+        parse_ok("char* str = \"foo\\nbar\"; void foo() {}");
+        parse_ok("char* str = \"foo\\nbar\"; void bar(char* str) {} void foo() { bar(str); }");
+        parse_ok("void bar(char* str) {} void foo() { bar(\"string constant\"); }");
     }
 
     #[test]
