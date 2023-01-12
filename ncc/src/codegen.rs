@@ -392,6 +392,18 @@ impl Expr
                         out.push_str("lt_i64;\n");
                     }
 
+                    Le => {
+                        out.push_str("le_i64;\n");
+                    }
+
+                    Gt => {
+                        out.push_str("gt_i64;\n");
+                    }
+
+                    Ge => {
+                        out.push_str("ge_i64;\n");
+                    }
+
                     _ => todo!("{:?}", op),
                 }
             }

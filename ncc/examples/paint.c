@@ -2,10 +2,10 @@ char* WINDOW_TITLE = "UVM Paint Program Demo";
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
-size_t NUM_COLORS = 27;
-size_t BOX_WIDTH = 29;
-size_t BOX_HEIGHT = 29;
-size_t POINTER_SIZE = 10;
+size_t NUM_COLORS = 32;
+size_t BOX_WIDTH = 25;
+size_t BOX_HEIGHT = 25;
+size_t BRUSH_RADIUS = 8;
 
 // RGB pixels: 800 * 600 * 3
 u8 FRAME_BUFFER[1_440_000];
@@ -15,7 +15,7 @@ size_t pos_x = 200;
 size_t pos_y = 200;
 
 // Current color to draw with
-u8 current_r = 0;
+u8 current_r = 255;
 u8 current_g = 0;
 u8 current_b = 0;
 
@@ -41,6 +41,37 @@ void fill_rect(
             *(pix_addr + 0) = r;
             *(pix_addr + 1) = g;
             *(pix_addr + 2) = b;
+        }
+    }
+}
+
+void draw_brush()
+{
+    size_t xmin = pos_x;
+    size_t xmax = pos_x + BRUSH_RADIUS;
+    if (pos_x >= BRUSH_RADIUS) xmin = pos_x - BRUSH_RADIUS;
+    if (xmax >= FRAME_WIDTH) xmax = FRAME_WIDTH;
+
+    size_t ymin = pos_y;
+    size_t ymax = pos_y + BRUSH_RADIUS;
+    if (pos_y >= BRUSH_RADIUS) ymin = pos_y - BRUSH_RADIUS;
+    if (ymax >= FRAME_HEIGHT - BOX_HEIGHT) ymax = FRAME_HEIGHT - BOX_HEIGHT;
+
+    for (size_t x = xmin; x < xmax; ++x)
+    {
+        for (size_t y = ymin; y < ymax; ++y)
+        {
+            size_t dx = x - pos_x;
+            size_t dy = y - pos_y;
+            size_t dist_sqr = dx * dx + dy * dy;
+
+            if (dist_sqr <= BRUSH_RADIUS * BRUSH_RADIUS)
+            {
+                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
+                *(pix_ptr + 0) = current_r;
+                *(pix_ptr + 1) = current_g;
+                *(pix_ptr + 2) = current_b;
+            }
         }
     }
 }
@@ -121,7 +152,7 @@ void main()
     draw_palette();
 
     // TODO: try drawing the mouse pointer the current color (see globals)
-
+    draw_brush();
 
 
 

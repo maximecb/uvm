@@ -82,11 +82,14 @@ pub enum Op
     // This can be used for tag bit tests
     // test_u8 <u8_flags>
 
+    // TODO: fill out the complete set of comparisons necessary
     // Comparisons
     eq_u64,
     ne_u64,
     lt_i64,
     le_i64,
+    gt_i64,
+    ge_i64,
 
     // Load a value at a given adress
     // store (addr)
@@ -682,6 +685,18 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push_bool(v0.as_i64() <= v1.as_i64());
+                }
+
+                Op::gt_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_i64() > v1.as_i64());
+                }
+
+                Op::ge_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_i64() >= v1.as_i64());
                 }
 
                 Op::load_u8 => {

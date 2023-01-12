@@ -127,6 +127,8 @@ pub enum BinOp
     And,
     Or,
     Xor,
+    LShift,
+    RShift,
 
     // Arithmetic
     Add,
@@ -139,7 +141,9 @@ pub enum BinOp
     Eq,
     Ne,
     Lt,
+    Le,
     Gt,
+    Ge,
 
     // Sequencing (a, b)
     Comma,

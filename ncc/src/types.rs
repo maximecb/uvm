@@ -184,7 +184,7 @@ impl Expr
                         }
                     }
 
-                    And | Or | Xor |
+                    And | Or | Xor | LShift | RShift |
                     Mul | Div | Mod => {
                         match (lhs_type, rhs_type) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
@@ -192,7 +192,7 @@ impl Expr
                         }
                     }
 
-                    Eq | Ne | Lt | Gt => {
+                    Eq | Ne | Lt | Le | Gt | Ge => {
                         Ok(UInt(8))
                     }
 

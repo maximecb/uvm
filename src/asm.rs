@@ -782,6 +782,8 @@ impl Assembler
             "ne_u64" => self.code.push_op(Op::ne_u64),
             "lt_i64" => self.code.push_op(Op::lt_i64),
             "le_i64" => self.code.push_op(Op::le_i64),
+            "gt_i64" => self.code.push_op(Op::gt_i64),
+            "ge_i64" => self.code.push_op(Op::ge_i64),
 
             "load_u8" => self.code.push_op(Op::load_u8),
             "load_u16" => self.code.push_op(Op::load_u16),
