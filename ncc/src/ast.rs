@@ -178,6 +178,12 @@ pub enum Expr
     Call {
         callee: Box<Expr>,
         args: Vec<Expr>,
+    },
+
+    Asm {
+        text: String,
+        args: Vec<Expr>,
+        out_type: Type,
     }
 }
 

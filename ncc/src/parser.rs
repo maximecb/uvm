@@ -424,18 +424,22 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
+    // Inline assembly expression
+    if input.match_token("asm") {
+        return parse_asm_expr(input);
+    }
+
     // Identifier (variable reference)
     if is_ident_ch(ch) {
         let ident = input.parse_ident()?;
-
         return Ok(Expr::Ident(ident));
     }
 
     input.parse_error("unknown atomic expression")
 }
 
-/// Parse a function call expression
-fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
+/// Parse a list of argument expressions
+fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
 {
     let mut arg_exprs = Vec::default();
 
@@ -461,6 +465,67 @@ fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
         // has to be a comma separator
         input.expect_token(",")?;
     }
+
+    Ok(arg_exprs)
+}
+
+/// Parse an inline assembly expression
+fn parse_asm_expr(input: &mut Input) -> Result<Expr, ParseError>
+{
+    input.expect_token("(")?;
+    let arg_exprs = parse_arg_exprs(input)?;
+    input.expect_token("->")?;
+    let out_type = parse_type(input)?;
+    input.expect_token("{")?;
+
+    let mut text = "".to_string();
+
+    loop {
+        if input.eof() {
+            return input.parse_error("unexpected end of input in asm expression");
+        }
+
+        let ch = input.peek_ch();
+
+        // If this is the end of the asm expression
+        if ch == '}' {
+            input.eat_ch();
+            break;
+        }
+
+        input.eat_ch();
+        text.push(ch);
+
+        // Consume whitespace after newlines
+        if ch == '\n' {
+            loop {
+                let ch = input.peek_ch();
+
+                // Consume whitespace characters
+                if !ch.is_ascii_whitespace()
+                {
+                    break;
+                }
+
+                input.eat_ch();
+            }
+        }
+    }
+
+    // Trim leading and trailing whitespace
+    let text = text.trim().to_string();
+
+    Ok(Expr::Asm {
+        text,
+        args: arg_exprs,
+        out_type
+    })
+}
+
+/// Parse a function call expression
+fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
+{
+    let arg_exprs = parse_arg_exprs(input)?;
 
     Ok(Expr::Call {
         callee: Box::new(callee),
@@ -1118,6 +1183,15 @@ mod tests
         parse_ok("void main() { foo( 0 , 1 , 2 , ); }");
         parse_ok("void main() { foo(0,1,2) + 3; }");
         parse_ok("void main() { foo(0,1,2) + bar(); }");
+    }
+
+    #[test]
+    fn asm_expr()
+    {
+        parse_ok("void main() { asm () -> void {}; }");
+        parse_ok("void main() { asm (1, 2, 3) -> u64 {}; }");
+        parse_ok("void main() { asm (1, 2, 3) -> u64 { push 1; }; }");
+        parse_ok("void main() { asm (1, 2, 3) -> u64 { push 1;\n push2; }; }");
     }
 
     #[test]

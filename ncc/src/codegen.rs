@@ -149,8 +149,16 @@ impl Stmt
     {
         match self {
             Stmt::Expr(expr) => {
-                expr.gen_code(out)?;
-                out.push_str("pop;\n");
+                // For asm expressions with void output type, don't pop
+                // the output because no output is produced
+                if let Expr::Asm { out_type: Type::Void, .. } = expr {
+                    expr.gen_code(out)?;
+                }
+                else
+                {
+                    expr.gen_code(out)?;
+                    out.push_str("pop;\n");
+                }
             }
 
             //Stmt::Break => {}
@@ -402,6 +410,14 @@ impl Expr
                     }
                     _ => todo!()
                 }
+            }
+
+            Expr::Asm { text, args, out_type } => {
+                for arg in args {
+                    arg.gen_code(out)?;
+                }
+
+                out.push_str(&text);
             }
 
             _ => todo!("{:?}", self)

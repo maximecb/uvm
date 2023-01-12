@@ -227,6 +227,14 @@ impl Expr
                 }
             }
 
+            Expr::Asm { args, out_type, .. } => {
+                for arg in args {
+                    arg.eval_type()?;
+                }
+
+                Ok(out_type.clone())
+            }
+
             //_ => todo!()
         }
     }

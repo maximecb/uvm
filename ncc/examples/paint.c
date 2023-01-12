@@ -60,6 +60,11 @@ u8* get_pixel_ptr(
 
 void create_window(char* window_title, size_t width, size_t height)
 {
+    asm (width, height, window_title) -> void
+    {
+        syscall window_create;
+        syscall window_show;
+    };
 }
 
 void draw_palette()
@@ -118,5 +123,13 @@ void main()
     // TODO: try drawing the mouse pointer the current color (see globals)
 
 
-    // TODO: call to copy pixels
+
+
+
+
+    asm (FRAME_BUFFER) -> void
+    {
+        syscall window_copy_pixels;
+        wait;
+    };
 }

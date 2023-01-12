@@ -304,6 +304,12 @@ impl Expr
                 }
             }
 
+            Expr::Asm { args, .. } => {
+                for arg in args {
+                    arg.resolve_syms(env)?;
+                }
+            }
+
             _ => todo!()
         }
 
