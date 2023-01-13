@@ -349,12 +349,6 @@ pub struct VM
 
     // List of stack frames (activation records)
     frames: Vec<StackFrame>,
-
-    // Base pointer for the current stack frame
-    bp: usize,
-
-    // Points at a byte in the executable memory
-    pc: usize,
 }
 
 impl VM
@@ -377,8 +371,6 @@ impl VM
             heap,
             stack: Vec::default(),
             frames: Vec::default(),
-            bp: 0,
-            pc: 0,
         }
     }
 
@@ -465,25 +457,28 @@ impl VM
     /// Call a function at a given address
     pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> ExitReason
     {
+        assert!(self.stack.len() == 0);
+        assert!(self.frames.len() == 0);
+
         // Push a new stack frame
         self.frames.push(StackFrame {
-            prev_bp: self.bp,
-            ret_addr: self.pc,
+            prev_bp: usize::MAX,
+            ret_addr: usize::MAX,
             argc: args.len(),
         });
 
         // The base pointer will point at the first local
-        self.bp = self.stack.len();
-        self.pc = callee_pc as usize;
+        let mut bp = self.stack.len();
+        let mut pc = callee_pc as usize;
 
         // For each instruction to execute
         loop
         {
-            if self.pc >= self.code.len() {
+            if pc >= self.code.len() {
                 panic!("pc outside bounds of code space")
             }
 
-            let op = self.code.read_pc::<Op>(&mut self.pc);
+            let op = self.code.read_pc::<Op>(&mut pc);
             //dbg!(op);
 
             match op
@@ -504,14 +499,14 @@ impl VM
                 }
 
                 Op::popn => {
-                    let n = self.code.read_pc::<u8>(&mut self.pc);
+                    let n = self.code.read_pc::<u8>(&mut pc);
                     for _ in 0..n {
                         self.pop();
                     }
                 }
 
                 Op::getn => {
-                    let n = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let n = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.stack[self.stack.len() - (1 + n)];
                     self.push(val);
                 }
@@ -530,7 +525,7 @@ impl VM
                 }
 
                 Op::get_arg => {
-                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
@@ -538,29 +533,29 @@ impl VM
                     }
 
                     // Last argument is at bp - 1 (if there are arguments)
-                    let stack_idx = (self.bp - argc) + idx;
+                    let stack_idx = (bp - argc) + idx;
                     self.push(self.stack[stack_idx]);
                 }
 
                 Op::get_local => {
-                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
-                    if self.bp + idx >= self.stack.len() {
+                    if bp + idx >= self.stack.len() {
                         panic!("invalid index {} in get_local", idx);
                     }
 
-                    self.push(self.stack[self.bp + idx]);
+                    self.push(self.stack[bp + idx]);
                 }
 
                 Op::set_local => {
-                    let idx = self.code.read_pc::<u8>(&mut self.pc) as usize;
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.pop();
 
-                    if self.bp + idx >= self.stack.len() {
+                    if bp + idx >= self.stack.len() {
                         panic!("invalid index in set_local");
                     }
 
-                    self.stack[self.bp + idx] = val;
+                    self.stack[bp + idx] = val;
                 }
 
                 Op::push_0 => {
@@ -568,17 +563,17 @@ impl VM
                 }
 
                 Op::push_i8 => {
-                    let val = self.code.read_pc::<i8>(&mut self.pc);
+                    let val = self.code.read_pc::<i8>(&mut pc);
                     self.push(val.into());
                 }
 
                 Op::push_u32 => {
-                    let val = self.code.read_pc::<u32>(&mut self.pc);
+                    let val = self.code.read_pc::<u32>(&mut pc);
                     self.push(Value::from(val));
                 }
 
                 Op::push_u64 => {
-                    let val = self.code.read_pc::<u64>(&mut self.pc);
+                    let val = self.code.read_pc::<u64>(&mut pc);
                     self.push(Value::from(val));
                 }
 
@@ -762,50 +757,50 @@ impl VM
                 }
 
                 Op::jmp => {
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
-                    self.pc = ((self.pc as isize) + offset) as usize;
+                    let offset = self.code.read_pc::<i32>(&mut pc) as isize;
+                    pc = ((pc as isize) + offset) as usize;
                 }
 
                 Op::jz => {
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+                    let offset = self.code.read_pc::<i32>(&mut pc) as isize;
                     let v0 = self.pop();
 
                     if v0.as_i64() == 0 {
-                        self.pc = ((self.pc as isize) + offset) as usize;
+                        pc = ((pc as isize) + offset) as usize;
                     }
                 }
 
                 Op::jnz => {
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+                    let offset = self.code.read_pc::<i32>(&mut pc) as isize;
                     let v0 = self.pop();
 
                     if v0.as_i64() != 0 {
-                        self.pc = ((self.pc as isize) + offset) as usize;
+                        pc = ((pc as isize) + offset) as usize;
                     }
                 }
 
                 // call <num_args:u8> <offset:i32> (arg0, arg1, ..., argN)
                 Op::call => {
                     // Offset of the function to call
-                    let offset = self.code.read_pc::<i32>(&mut self.pc) as isize;
+                    let offset = self.code.read_pc::<i32>(&mut pc) as isize;
 
                     // Argument count
-                    let num_args = self.code.read_pc::<u8>(&mut self.pc) as usize;
-                    assert!(num_args <= self.stack.len() - self.bp);
+                    let num_args = self.code.read_pc::<u8>(&mut pc) as usize;
+                    assert!(num_args <= self.stack.len() - bp);
 
                     self.frames.push(StackFrame {
-                        prev_bp: self.bp,
-                        ret_addr: self.pc,
+                        prev_bp: bp,
+                        ret_addr: pc,
                         argc: num_args,
                     });
 
                     // The base pointer will point at the first local
-                    self.bp = self.stack.len();
-                    self.pc = ((self.pc as isize) + offset) as usize;
+                    bp = self.stack.len();
+                    pc = ((pc as isize) + offset) as usize;
                 }
 
                 Op::syscall => {
-                    let table_idx = self.code.read_pc::<u16>(&mut self.pc) as usize;
+                    let table_idx = self.code.read_pc::<u16>(&mut pc) as usize;
 
                     assert!(table_idx < self.syscalls.len());
                     let syscall_fn = self.syscalls[table_idx];
@@ -842,20 +837,22 @@ impl VM
                 }
 
                 Op::ret => {
-                    if self.stack.len() <= self.bp {
+                    if self.stack.len() <= bp {
                         panic!("ret with no return value on stack");
                     }
 
                     let ret_val = self.pop();
 
                     if self.frames.len() == 1 {
+                        self.stack.clear();
+                        self.frames.clear();
                         return ExitReason::Return(ret_val);
                     }
 
                     assert!(self.frames.len() > 0);
                     let top_frame = self.frames.pop().unwrap();
-                    self.pc = top_frame.ret_addr;
-                    self.bp = top_frame.prev_bp;
+                    pc = top_frame.ret_addr;
+                    bp = top_frame.prev_bp;
 
                     // Pop the arguments
                     // We do this in the callee so we can support tail calls
@@ -885,6 +882,7 @@ mod tests
         let asm = Assembler::new();
         let mut vm = asm.parse_str(src).unwrap();
         let result = vm.call(0, &[]);
+        assert!(vm.stack.len() == 0 && vm.frames.len() == 0);
 
         match result
         {

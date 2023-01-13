@@ -53,13 +53,13 @@ syscall print_endl;
 
 # x = x + dx
 get_local 0;
-push 50;
+push 10;
 add_u64;
 set_local 0;
 
-# x % 600
+# x % 800
 get_local 0;
-push 600;
+push 800;
 mod_i64;
 set_local 0;
 
@@ -67,12 +67,6 @@ set_local 0;
 push X_COORD;
 get_local 0;
 store_u64;
-
-# x += 100
-get_local 0;
-push 100;
-add_u64;
-set_local 0;
 
 # Clear the screen
 push PIXEL_BUFFER;
@@ -91,7 +85,7 @@ push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 # Schedule the animation callback again
-push 100;
+push 25;
 push ANIM_CALLBACK;
 syscall time_delay_cb;
 

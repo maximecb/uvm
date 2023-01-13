@@ -67,8 +67,6 @@ fn run_program(vm: &mut VM) -> Value
                 }
                 ExitReason::Return(val) => {}
             }
-
-            dbg!(vm.stack_size());
         }
     }
 
