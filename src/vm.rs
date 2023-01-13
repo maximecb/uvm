@@ -494,6 +494,8 @@ impl VM
 
                 Op::exit => {
                     let val = self.pop();
+                    self.stack.clear();
+                    self.frames.clear();
                     return ExitReason::Exit(val);
                 }
 
