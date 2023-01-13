@@ -37,12 +37,22 @@ fn run_program(vm: &mut VM) -> Value
     'main_loop: loop
     {
         // Process all pending events
+        // See: https://docs.rs/sdl2/0.30.0/sdl2/event/enum.Event.html
+        // TODO: we probably want to process window/input related events in window.rs ?
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} |
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'main_loop
                 },
+
+                Event::MouseMotion { window_id, x, y, .. } => {
+                    window::window_call_mousemove(vm, window_id, x, y);
+                }
+
+                // MouseButtonDown
+                // MouseButtonUp
+
                 _ => {}
             }
         }

@@ -220,6 +220,12 @@ impl From<i8> for Value {
     }
 }
 
+impl From<i32> for Value {
+    fn from(val: i32) -> Self {
+        Value(val as u64)
+    }
+}
+
 impl From<i64> for Value {
     fn from(val: i64) -> Self {
         Value(val as u64)
@@ -466,6 +472,11 @@ impl VM
             ret_addr: usize::MAX,
             argc: args.len(),
         });
+
+        // Push the arguments on the stack
+        for arg in args {
+            self.stack.push(*arg);
+        }
 
         // The base pointer will point at the first local
         let mut bp = self.stack.len();

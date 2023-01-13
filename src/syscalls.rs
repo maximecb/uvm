@@ -94,6 +94,7 @@ impl SysState
         self.reg_syscall("window_create", SysCallFn::Fn3_0(window_create));
         self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
         self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
+        self.reg_syscall("window_on_mousemove", SysCallFn::Fn2_0(window_on_mousemove));
     }
 }
 

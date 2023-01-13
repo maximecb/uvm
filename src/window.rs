@@ -11,21 +11,23 @@ use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
 
 use crate::syscalls::{SysState};
-use crate::vm::{VM, Value};
+use crate::vm::{VM, Value, ExitReason};
 
 struct Window<'a>
 {
     width: u32,
     height: u32,
 
-    // TODO: to support multiple windows
+    // TODO: we should support multiple windows
     //window_id
 
+    // SDL canvas to draw into
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
-
     texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
-
     texture: Option<Texture<'a>>,
+
+    // Callback for mouse movement
+    cb_mousemove: u64,
 }
 
 /// Mutable state for the window syscalls
@@ -85,6 +87,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value)
         canvas,
         texture_creator,
         texture: None,
+        cb_mousemove: 0,
     };
 
     unsafe {
@@ -139,5 +142,37 @@ pub fn window_copy_pixels(vm: &mut VM, src_addr: Value)
 
         // Update the screen with any rendering performed since the previous call
         window.canvas.present();
+    }
+}
+
+pub fn window_on_mousemove(vm: &mut VM, window_id: Value, cb: Value)
+{
+    let cb = cb.as_u64();
+
+    unsafe {
+        let mut window = WINDOW.as_mut().unwrap();
+        window.cb_mousemove = cb;
+    }
+}
+
+// TODO: function to process window-related events
+// TODO: we should return the exit reason?
+// this is gonna be awkward if we have audio processing threads/processes and such?
+// though I suppose exit would just end those processes
+
+// TODO: this is just for testing
+// we should handle window-related events here instead
+pub fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
+{
+    unsafe {
+        let mut window = WINDOW.as_mut().unwrap();
+        let cb = window.cb_mousemove;
+
+        match vm.call(cb, &[Value::from(x), Value::from(y)])
+        {
+            // TODO: we should return the exit reason?
+            ExitReason::Exit(val) => {}
+            ExitReason::Return(val) => {}
+        }
     }
 }
