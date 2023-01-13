@@ -69,7 +69,13 @@ impl SysState
     /// Get the syscall with a given name string
     pub fn get_syscall(&self, name: &str) -> SysCallFn
     {
-        *self.syscalls.get(name).unwrap()
+        if let Some(syscall_fn) = self.syscalls.get(name) {
+            return *syscall_fn;
+        }
+        else
+        {
+            panic!("unknown syscall \"{}\"", name);
+        }
     }
 
     fn init_syscalls(&mut self)

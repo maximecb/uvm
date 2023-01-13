@@ -540,7 +540,7 @@ impl VM
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
-                        panic!("invalid index in get_arg");
+                        panic!("invalid index in get_arg, idx={}, argc={}", idx, argc);
                     }
 
                     // Last argument is at bp - 1 (if there are arguments)
@@ -972,6 +972,9 @@ mod tests
     {
         eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
         eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_u64; ret;", 4);
+
+        // Two arguments and subtract (order of arguments matters)
+        eval_i64("push_i8 7; push 5; call FN, 2; exit; FN: get_arg 0; get_arg 1; sub_u64; ret;", 2);
 
         // Recursive decrement function
         eval_i64("push 10; call DEC, 1; exit; DEC: get_arg 0; dup; jz ZERO; push 1; sub_u64; call DEC, 1; ret; ZERO: ret;", 0);

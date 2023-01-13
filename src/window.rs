@@ -168,7 +168,8 @@ pub fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
         let mut window = WINDOW.as_mut().unwrap();
         let cb = window.cb_mousemove;
 
-        match vm.call(cb, &[Value::from(x), Value::from(y)])
+        // TODO: pass window id
+        match vm.call(cb, &[Value::from(0), Value::from(x), Value::from(y)])
         {
             // TODO: we should return the exit reason?
             ExitReason::Exit(val) => {}

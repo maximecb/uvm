@@ -29,6 +29,7 @@ impl Unit
     {
         //
         // TODO: handle global variables
+        // need to check init expr type?
         //
 
         for fun in &mut self.fun_decls {

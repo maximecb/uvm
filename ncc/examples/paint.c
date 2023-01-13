@@ -5,7 +5,7 @@ size_t FRAME_HEIGHT = 600;
 size_t NUM_COLORS = 32;
 size_t BOX_WIDTH = 25;
 size_t BOX_HEIGHT = 25;
-size_t BRUSH_RADIUS = 8;
+size_t BRUSH_RADIUS = 4;
 
 // RGB pixels: 800 * 600 * 3
 u8 FRAME_BUFFER[1_440_000];
@@ -130,6 +130,25 @@ void draw_palette()
     }
 }
 
+// Mouve movement callback
+void mousemove(u64 window_id, u64 x, u64 y)
+{
+    // Update the brush position
+    pos_x = x;
+    pos_y = y;
+
+    draw_brush();
+
+
+    asm (FRAME_BUFFER) -> void
+    {
+        syscall window_copy_pixels;
+    };
+
+
+
+}
+
 void main()
 {
     // TODO: call to create window
@@ -151,16 +170,26 @@ void main()
 
     draw_palette();
 
-    // TODO: try drawing the mouse pointer the current color (see globals)
-    draw_brush();
-
-
-
-
+    asm (0, mousemove) -> void
+    {
+        syscall window_on_mousemove;
+    };
 
     asm (FRAME_BUFFER) -> void
     {
         syscall window_copy_pixels;
-        wait;
+    };
+
+    __enable_event_loop__();
+}
+
+// Function to enable returning to the event loop instead of exiting
+void __enable_event_loop__()
+{
+    asm () -> void
+    {
+        push __EVENT_LOOP_ENABLED__;
+        push 1;
+        store_u8;
     };
 }

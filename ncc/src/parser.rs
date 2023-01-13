@@ -307,7 +307,7 @@ impl Input
     {
         let mut ident = String::new();
 
-        if self.eof() || !self.peek_ch().is_ascii_alphabetic() {
+        if self.eof() || !is_ident_ch(self.peek_ch()) {
             return self.parse_error("expected identifier");
         }
 

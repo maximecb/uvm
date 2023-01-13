@@ -35,6 +35,10 @@ impl Unit
         out.push_str(".u64 0;\n");
         out.push_str("\n");
 
+        out.push_str("__EVENT_LOOP_ENABLED__:\n");
+        out.push_str(".u8 0;\n");
+        out.push_str("\n");
+
         // Global variable initialization
         for global in &self.global_vars {
             out.push_str(&format!("{}:\n", global.name));
@@ -70,10 +74,18 @@ impl Unit
         // If there is a main function
         let main_fn: Vec<&Function> = self.fun_decls.iter().filter(|f| f.name == "main").collect();
         if let [main_fn] = main_fn[..] {
+            //
             // TODO: support calling main with argc, argv as well
+            //
+
             out.push_str("# call the main function and then exit\n");
             out.push_str("call main, 0;\n");
+            out.push_str("push __EVENT_LOOP_ENABLED__;\n");
+            out.push_str("load_u8;\n");
+            out.push_str("jnz __ret_to_event_loop__;\n");
             out.push_str("exit;\n");
+            out.push_str("__ret_to_event_loop__:\n");
+            out.push_str("ret;\n");
             out.push_str("\n");
         }
 
@@ -295,7 +307,10 @@ impl Expr
                             _ => todo!()
                         }
                     }
-                    _ => todo!()
+                    Decl::Fun { name, t } => {
+                        out.push_str(&format!("push {};\n", name));
+                    }
+                    //_ => todo!()
                 }
             }
 
@@ -430,6 +445,7 @@ impl Expr
                 }
 
                 out.push_str(&text);
+                out.push_str("\n");
             }
 
             _ => todo!("{:?}", self)
@@ -469,16 +485,29 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError
         },
 
         Expr::Ref(decl) => {
-            // Assignment expressions must produce an output value
-            out.push_str("dup;\n");
-
             match decl {
                 Decl::Arg { idx, .. } => {
+                    out.push_str("dup;\n");
                     out.push_str(&format!("set_arg {};\n", idx));
                 }
                 Decl::Local { idx, .. } => {
+                    out.push_str("dup;\n");
                     out.push_str(&format!("set_local {};\n", idx));
                 }
+
+                Decl::Global { name, t } => {
+                    // Push the address
+                    out.push_str(&format!("push {};\n", name));
+
+                    // Assignment expressions must produce an output value
+                    out.push_str("getn 1;\n");
+
+                    match t {
+                        Type::UInt(n) => out.push_str(&format!("store_u{};\n", n)),
+                        _ => todo!()
+                    }
+                }
+
                 _ => todo!()
             }
         }
