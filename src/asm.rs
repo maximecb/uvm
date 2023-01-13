@@ -598,6 +598,20 @@ impl Assembler
             "code" => self.section = Section::Code,
             "data" => self.section = Section::Data,
 
+            "align" => {
+                let align_bytes = self.parse_int_arg::<u32>(input)? as usize;
+                let mem = self.mem();
+                let cur_pos = mem.len();
+                let pos_rem = cur_pos % align_bytes;
+
+                if pos_rem != 0 {
+                    let delta = align_bytes - pos_rem;
+                    for i in 0..delta {
+                        mem.push_u8(0);
+                    }
+                }
+            }
+
             "zero" => {
                 let num_bytes: u32 = self.parse_int_arg(input)?;
                 let mem = self.mem();
@@ -939,6 +953,7 @@ mod tests
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
+
     }
 
     #[test]
@@ -978,6 +993,7 @@ mod tests
         parse_ok(".code; .data;");
         parse_ok(".data; .u8 255;");
         parse_ok(".data; .u64 7777;");
+        parse_ok(".data; .align 64; .u64 255;");
         parse_ok(".data; DATA_LABEL: .zero 256;");
         parse_ok(" .data;   .fill 256   ,   0xFF ;   #comment");
         parse_ok(" .data; .fill 256,0xFF;");
