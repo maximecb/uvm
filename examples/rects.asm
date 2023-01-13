@@ -61,8 +61,7 @@ call fill_rect, 10;
 push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
-wait;
-exit;
+ret;
 
 #############################################################################
 

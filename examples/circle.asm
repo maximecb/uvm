@@ -26,24 +26,16 @@ syscall window_create;
 # Show the window
 syscall window_show;
 
-
-
 push 100;
 push ANIM_CALLBACK;
 syscall time_delay_cb;
 
-
-
-
-
 push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
-
-
-
 # Wait for an event
-wait;
+push 0;
+ret;
 
 ###########################################################
 
@@ -103,8 +95,8 @@ push 100;
 push ANIM_CALLBACK;
 syscall time_delay_cb;
 
-pop;
-wait;
+push 0;
+ret;
 
 ###########################################################
 

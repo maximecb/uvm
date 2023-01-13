@@ -126,26 +126,17 @@ pub enum Op
     // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
     call,
 
-    // Return to caller function
-    ret,
-
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
-    // syscall <syscall_idx:u16>
+    // syscall <syscall_idx:u16> (arg0, arg1, ..., argN)
     syscall,
 
-    // Yield control to the event loop and wait for a callback
-    // from the host or a device (go into a waiting state)
-    // Ideally the stack should be fully unwound when this is called,
-    // we can relax this assumption later
-    wait,
-
-    // Suspend execution, release devices, save image
-    // Ideally the stack should be unwound when this is called,
-    // we can relax this assumption later
-    //suspend,
+    // Return to caller function
+    // ret (value)
+    ret,
 
     // End execution normally
+    // exit (value)
     exit,
 
     // NOTE: last opcode must have value <= 127
@@ -186,6 +177,11 @@ impl Value
     pub fn as_usize(&self) -> usize {
         let Value(val) = *self;
         val as usize
+    }
+
+    pub fn as_i32(&self) -> i32 {
+        let Value(val) = *self;
+        val as i32
     }
 
     pub fn as_i64(&self) -> i64 {
@@ -329,9 +325,9 @@ struct StackFrame
 
 pub enum ExitReason
 {
+    Return(Value),
+    Exit(Value),
     //Panic,
-    Wait,
-    Exit,
 }
 
 pub struct VM
@@ -384,11 +380,6 @@ impl VM
             bp: 0,
             pc: 0,
         }
-    }
-
-    pub fn set_pc(&mut self, pc: u64)
-    {
-        self.pc = pc as usize;
     }
 
     pub fn stack_size(&self) -> usize
@@ -471,13 +462,25 @@ impl VM
         rust_str
     }
 
-    /// Execute instructions until halt/exit/pause
-    pub fn eval(&mut self) -> ExitReason
+    /// Call a function at a given address
+    pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> ExitReason
     {
+        // Push a new stack frame
+        self.frames.push(StackFrame {
+            prev_bp: self.bp,
+            ret_addr: self.pc,
+            argc: args.len(),
+        });
+
+        // The base pointer will point at the first local
+        self.bp = self.stack.len();
+        self.pc = callee_pc as usize;
+
+        // For each instruction to execute
         loop
         {
             if self.pc >= self.code.len() {
-                panic!("pc out of bounds")
+                panic!("pc outside bounds of code space")
             }
 
             let op = self.code.read_pc::<Op>(&mut self.pc);
@@ -489,9 +492,10 @@ impl VM
 
                 Op::nop => continue,
 
-                Op::exit => return ExitReason::Exit,
-
-                Op::wait => return ExitReason::Wait,
+                Op::exit => {
+                    let val = self.pop();
+                    return ExitReason::Exit(val);
+                }
 
                 Op::pop => {
                     self.pop();
@@ -798,28 +802,6 @@ impl VM
                     self.pc = ((self.pc as isize) + offset) as usize;
                 }
 
-                Op::ret => {
-                    assert!(self.frames.len() > 0);
-
-                    let top_frame = self.frames.pop().unwrap();
-                    self.pc = top_frame.ret_addr;
-                    self.bp = top_frame.prev_bp;
-
-                    if self.stack.len() <= self.bp {
-                        panic!("ret with no return value on stack");
-                    }
-
-                    let ret_val = self.pop();
-
-                    // Pop the arguments
-                    // We do this in the callee so we can support tail calls
-                    for _ in 0..top_frame.argc {
-                        self.stack.pop();
-                    }
-
-                    self.push(ret_val);
-                }
-
                 Op::syscall => {
                     let table_idx = self.code.read_pc::<u16>(&mut self.pc) as usize;
 
@@ -857,6 +839,32 @@ impl VM
                     }
                 }
 
+                Op::ret => {
+                    if self.stack.len() <= self.bp {
+                        panic!("ret with no return value on stack");
+                    }
+
+                    let ret_val = self.pop();
+
+                    if self.frames.len() == 1 {
+                        return ExitReason::Return(ret_val);
+                    }
+
+                    assert!(self.frames.len() > 0);
+                    let top_frame = self.frames.pop().unwrap();
+                    self.pc = top_frame.ret_addr;
+                    self.bp = top_frame.prev_bp;
+
+                    // Pop the arguments
+                    // We do this in the callee so we can support tail calls
+                    for _ in 0..top_frame.argc {
+                        self.stack.pop();
+                    }
+
+                    self.push(ret_val);
+                }
+
+
                 //_ => panic!("unknown opcode"),
             }
         }
@@ -874,8 +882,13 @@ mod tests
         dbg!(src);
         let asm = Assembler::new();
         let mut vm = asm.parse_str(src).unwrap();
-        vm.eval();
-        vm.pop()
+        let result = vm.call(0, &[]);
+
+        match result
+        {
+            ExitReason::Exit(value) => value,
+            ExitReason::Return(value) => value,
+        }
     }
 
     fn eval_i64(src: &str, expected: i64)

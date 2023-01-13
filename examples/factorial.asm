@@ -21,6 +21,7 @@ call FACT, 1;
 syscall print_i64;
 syscall print_endl;
 
+push 0;
 exit;
 
 #### fact(n) ####

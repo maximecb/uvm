@@ -111,7 +111,6 @@ syscall print_str;
 push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
-# Wait for an event
-wait;
-
-exit;
+# Return to the event loop
+push 0;
+ret;

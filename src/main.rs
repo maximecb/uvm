@@ -12,23 +12,23 @@ mod time;
 
 extern crate sdl2;
 use std::env;
-use crate::vm::{VM, MemBlock, ExitReason};
+use crate::vm::{VM, Value, MemBlock, ExitReason};
 use crate::asm::{Assembler};
 
-fn run_program(vm: &mut VM)
+fn run_program(vm: &mut VM) -> Value
 {
     use sdl2::event::Event;
     use sdl2::keyboard::Keycode;
 
-    match vm.eval()
+    match vm.call(0, &[])
     {
-        ExitReason::Exit => {
+        ExitReason::Exit(val) => {
             //dbg!(vm.stack_size());
-            return
-        },
+            return val;
+        }
 
         // Keep processig events
-        ExitReason::Wait => {}
+        ExitReason::Return(val) => {}
     }
 
     let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
@@ -60,17 +60,19 @@ fn run_program(vm: &mut VM)
         // For each callback to run
         for pc in time::get_cbs_to_run(vm)
         {
-            vm.set_pc(pc);
-
-            match vm.eval()
+            match vm.call(pc, &[])
             {
-                ExitReason::Exit => { return },
-                ExitReason::Wait => {}
+                ExitReason::Exit(val) => {
+                    return val;
+                }
+                ExitReason::Return(val) => {}
             }
 
             dbg!(vm.stack_size());
         }
     }
+
+    Value::from(0 as u32)
 }
 
 fn main()
@@ -81,6 +83,9 @@ fn main()
     if args.len() == 2 {
         let asm = Assembler::new();
         let mut vm = asm.parse_file(&args[1]).unwrap();
-        run_program(&mut vm);
+        let ret_val = run_program(&mut vm);
+        std::process::exit(ret_val.as_i32());
     }
+
+    std::process::exit(0);
 }

@@ -89,9 +89,8 @@ push PIXEL_BUFFER;
 syscall window_copy_pixels;
 
 # Wait for an event
-wait;
-
-exit;
+push 0;
+ret;
 
 #############################################################################
 
