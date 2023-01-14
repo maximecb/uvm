@@ -123,10 +123,14 @@ pub enum BinOp
     // Assignment
     Assign,
 
-    // Bitwise
+    // Logical and, logical or
     And,
     Or,
-    Xor,
+
+    // Bitwise
+    BitAnd,
+    BitOr,
+    BitXor,
     LShift,
     RShift,
 

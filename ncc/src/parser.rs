@@ -551,7 +551,7 @@ struct OpInfo
 /// Binary operators and their precedence level
 /// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 17] = [
+const BIN_OPS: [OpInfo; 19] = [
     OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
     OpInfo { op_str: "/", prec: 3, op: BinOp::Div, rtl: false },
     OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },
@@ -568,13 +568,13 @@ const BIN_OPS: [OpInfo; 17] = [
     OpInfo { op_str: "==", prec: 7, op: BinOp::Eq, rtl: false },
     OpInfo { op_str: "!=", prec: 7, op: BinOp::Ne, rtl: false },
 
-    OpInfo { op_str: "&", prec: 8, op: BinOp::And, rtl: false },
-    OpInfo { op_str: "^", prec: 9, op: BinOp::Xor, rtl: false },
-    OpInfo { op_str: "|", prec: 10, op: BinOp::Or, rtl: false },
+    OpInfo { op_str: "&", prec: 8, op: BinOp::BitAnd, rtl: false },
+    OpInfo { op_str: "^", prec: 9, op: BinOp::BitXor, rtl: false },
+    OpInfo { op_str: "|", prec: 10, op: BinOp::BitOr, rtl: false },
 
-    // TODO
-    // 11  &&  Logical AND
-    // 12  ||  Logical OR
+    // Logical and, logical or
+    OpInfo { op_str: "&&", prec: 11, op: BinOp::And, rtl: false },
+    OpInfo { op_str: "||", prec: 12, op: BinOp::Or, rtl: false },
 
     // Assignment operator, evaluates right to left
     OpInfo { op_str: "=", prec: 14, op: BinOp::Assign, rtl: true },

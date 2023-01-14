@@ -45,6 +45,8 @@ pub enum Op
     // getn <idx:u8>
     getn,
 
+    // TODO: are we even using this instruction?
+    // replace by pop2?
     // Pop N values off the stack
     // popn <n:u8>
     popn,
@@ -86,20 +88,27 @@ pub enum Op
     div_i64,
     mod_i64,
 
-    //add_u64_ovf,
-    //sub_u64_ovf,
-    //mul_i64_ovf, // produces two 64-bit words of output
+    // TODO: should we add an increment instruction?
+    // Wait because this may be premature optimization
+    // This is a minor size optimization
+    // inc_u64 ?
 
+    // TODO: arithmetic with overflow
+    // I think these instructions shouldn't jump directly?
+    // depends. We don't need to worry about compactness.
+    // add_u64_ovf,
+    // sub_u64_ovf,
+    // mul_i64_ovf, // produces two 64-bit words of output
 
     // NOTE: may want to wait for this because it's not RISC,
     //       but it could help reduce code flag
     // NOTE: should this insn have a jump offset built in?
+    // - no, for consistency, let jz/jnz handle that
     // Test flag bits (logical and) with a constant
-    // This can be used for tag bit tests
+    // This can be used for tag bit tests (e.g. fixnum test)
     // Do we want to test just one specific bit, bit_idx:u8?
-    // test_u8 <u8_flags>
-
-
+    // test_bit_z <bit_idx:u8>
+    // test_bit_nz <bit_idx:u8>
 
     // 64-bit integer comparisons
     eq_u64,
@@ -135,13 +144,20 @@ pub enum Op
     load_static_u64 <address>
     */
 
+    // TODO: we should probably have 8-bit offset versions
+    // However, this can wait. Premature optimization.
+    // of jmp, jz, jnz
+
     // Jump to pc offset
+    // jmp <offset:i32>
     jmp,
 
     // Jump to pc offset if stack top is zero
+    // jz <offset:i32>
     jz,
 
     // Jump to pc offset if stack top is not zero
+    // jnz <offset:i32>
     jnz,
 
     // Call a function using the call stack

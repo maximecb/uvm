@@ -185,7 +185,16 @@ impl Expr
                         }
                     }
 
-                    And | Or | Xor | LShift | RShift |
+                    // Logical and/or
+                    And | Or => {
+                        // How do we deal with something like pointer vs integer here?
+                        // What does gotbolt say?
+
+                        todo!();
+                        //Ok(lhs_type)
+                    }
+
+                    BitAnd | BitOr | BitXor | LShift | RShift |
                     Mul | Div | Mod => {
                         match (lhs_type, rhs_type) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
