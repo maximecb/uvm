@@ -1,11 +1,12 @@
 # UVM
 
+**NOTE: this project is very much a work in progress and not stable at this point, but I am looking for collaborators who
+share the vision.**
+
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
 with and approachable to newcomers.
 
-**NOTE: this project is very much WIP and not ready for production, but I am looking for contributors who share
-the vision :)**
 
 ## Features
 
@@ -118,3 +119,11 @@ There's a downside in UVM having its own unique architecture, which is that it c
 UVM uses a Harvard architecture, meaning it has separate memory spaces for code and data. The downside here is that you need special instructions to write to the code memory space. You can still write a JIT compiler that runs inside UVM, or self-modifying code, but you can't just store a value into the code space, you have to do it through a special UVM system call.
 
 The reason for this is that this makes the implementation of an efficient JIT compiler easier. If UVM only had a single memory space, then a JIT compiler would have to assume that every store instruction can possibly overwrite existing core. That would mean each store instruction has to perform additional run-time checks so that JIT compiled code can be invalidated if necessary. By requiring that all writes to the code space use a specific system call, UVM knows when you are (over)writing code, and it also knows that regular store instructions can't possibly overwrite code.
+
+### Will it be possible to do code patching in UVM, or to write a JIT that runs inside UVM?
+
+Yes. This is very much a design goal of the system. In order to enable executing dynamic languages with good performance, it's going to be possible
+to implement a JIT compiler that runs inside UVM. This will be done by writing UVM bytecode instructions into the UVM code memory space, which will
+then in turn be translated into machine code by UVM's own JIT compiler. Writing to the code space will be done through specialized system calls,
+and it will also be possible to disable these if desired for security reasons. That is, if your application is fully statically compiled and you have
+no need to generate code on the fly, you can disable this feature for enhanced security.
