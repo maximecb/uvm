@@ -89,7 +89,7 @@ u8* get_pixel_ptr(
     size_t y,
 )
 {
-    return f_buffer + (3 * f_width) * y + 3 * x;
+    return f_buffer + (3 * f_width * y) + (3 * x);
 }
 
 void create_window(char* window_title, size_t width, size_t height)
@@ -152,12 +152,23 @@ void mousemove(u64 window_id, u64 x, u64 y)
 
 void mousedown(u64 window_id, u8 btn_id)
 {
-    if (btn_id != 0) {
-        return;
+    if (btn_id == 0) {
+        drawing = 1;
+        draw_brush();
     }
 
-    drawing = 1;
-    draw_brush();
+    asm (btn_id) -> void
+    {
+        syscall print_i64;
+        syscall print_endl;
+    };
+
+    if (btn_id == 2) {
+        u8* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
+        current_r = *(pixel_ptr + 0);
+        current_g = *(pixel_ptr + 1);
+        current_b = *(pixel_ptr + 2);
+    }
 
     asm (FRAME_BUFFER) -> void
     {
@@ -167,11 +178,9 @@ void mousedown(u64 window_id, u8 btn_id)
 
 void mouseup(u64 window_id, u8 btn_id)
 {
-    if (btn_id != 0) {
-        return;
+    if (btn_id == 0) {
+        drawing = 0;
     }
-
-    drawing = 0;
 }
 
 void main()
