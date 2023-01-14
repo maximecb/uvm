@@ -19,7 +19,7 @@ Current features:
 - Easily accessible frame buffer to draw RGB graphics
 - Event-driven event execution model
 
-Planned features:
+Planned future features:
 - Easy to use audio output API
 - Async file and network I/O with callbacks
   - Synchronous I/O possible as well
