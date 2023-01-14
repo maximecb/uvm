@@ -19,6 +19,9 @@ u8 current_r = 255;
 u8 current_g = 0;
 u8 current_b = 0;
 
+// Are we currently drawing?
+u8 drawing = 0;
+
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
     u8* f_buffer,
@@ -137,16 +140,38 @@ void mousemove(u64 window_id, u64 x, u64 y)
     pos_x = x;
     pos_y = y;
 
-    draw_brush();
-
+    if (drawing) {
+        draw_brush();
+    }
 
     asm (FRAME_BUFFER) -> void
     {
         syscall window_copy_pixels;
     };
+}
 
+void mousedown(u64 window_id, u8 btn_id)
+{
+    if (btn_id != 0) {
+        return;
+    }
 
+    drawing = 1;
+    draw_brush();
 
+    asm (FRAME_BUFFER) -> void
+    {
+        syscall window_copy_pixels;
+    };
+}
+
+void mouseup(u64 window_id, u8 btn_id)
+{
+    if (btn_id != 0) {
+        return;
+    }
+
+    drawing = 0;
 }
 
 void main()
@@ -170,10 +195,10 @@ void main()
 
     draw_palette();
 
-    asm (0, mousemove) -> void
-    {
-        syscall window_on_mousemove;
-    };
+    // Register mouse event callbacks
+    asm (0, mousemove) -> void { syscall window_on_mousemove; };
+    asm (0, mousedown) -> void { syscall window_on_mousedown; };
+    asm (0, mouseup) -> void { syscall window_on_mouseup; };
 
     asm (FRAME_BUFFER) -> void
     {

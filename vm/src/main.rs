@@ -46,12 +46,17 @@ fn run_program(vm: &mut VM) -> Value
                     break 'main_loop
                 },
 
+                // TODO: we need to move mouse event handling to window.rs
+                // tuck the SDL-specifics in there
                 Event::MouseMotion { window_id, x, y, .. } => {
                     window::window_call_mousemove(vm, window_id, x, y);
                 }
-
-                // MouseButtonDown
-                // MouseButtonUp
+                Event::MouseButtonDown { window_id, which, mouse_btn, .. } => {
+                    window::window_call_mousedown(vm, window_id, which, mouse_btn);
+                }
+                Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
+                    window::window_call_mouseup(vm, window_id, which, mouse_btn);
+                }
 
                 _ => {}
             }

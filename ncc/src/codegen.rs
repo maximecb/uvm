@@ -396,11 +396,11 @@ impl Expr
                     }
 
                     Eq => {
-                        out.push_str("eq_i64;\n");
+                        out.push_str("eq_u64;\n");
                     }
 
                     Ne => {
-                        out.push_str("ne_i64;\n");
+                        out.push_str("ne_u64;\n");
                     }
 
                     Lt => {
