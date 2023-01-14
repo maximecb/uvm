@@ -748,6 +748,12 @@ impl Assembler
             "push_0" => {
                 self.code.push_op(Op::push_0);
             }
+            "push_1" => {
+                self.code.push_op(Op::push_1);
+            }
+            "push_2" => {
+                self.code.push_op(Op::push_2);
+            }
 
             "push_i8" => {
                 let val: i8 = self.parse_int_arg(input)?;
@@ -876,6 +882,12 @@ impl Assembler
 
             if int_val == 0 {
                 self.code.push_op(Op::push_0);
+            }
+            else if int_val == 1 {
+                self.code.push_op(Op::push_1);
+            }
+            else if int_val == 2 {
+                self.code.push_op(Op::push_2);
             }
             else if let Ok(val) = i8::try_from(int_val) {
                 self.code.push_op(Op::push_i8);

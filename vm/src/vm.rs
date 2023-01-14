@@ -21,8 +21,10 @@ pub enum Op
     // This instruction must be just one byte so it can be patched anywhere.
     breakpoint,
 
-    // Push the value zero
+    // Push common constants (0, 1, 2)
     push_0,
+    push_1,
+    push_2,
 
     // push_i8 <i8_imm> (sign-extended)
     push_i8,
@@ -595,6 +597,12 @@ impl VM
 
                 Op::push_0 => {
                     self.push(Value::from(0 as u64));
+                }
+                Op::push_1 => {
+                    self.push(Value::from(1 as u64));
+                }
+                Op::push_2 => {
+                    self.push(Value::from(2 as u64));
                 }
 
                 Op::push_i8 => {
