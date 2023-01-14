@@ -922,6 +922,10 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         return Ok(Type::UInt(8));
     }
 
+    if input.match_keyword("u32") {
+        return Ok(Type::UInt(32));
+    }
+
     if input.match_keyword("u64") {
         return Ok(Type::UInt(64));
     }
