@@ -26,6 +26,7 @@ Planned features:
 - Fast JIT compiler based on dynamic binary translation and basic block versioning
   - Expected performance ~80% of native speed (maybe more?)
   - Near-instant warmup
+- Permission system to safely sandbox apps without granting access to entire computer
 - Ability to compile without SDL and without graphics/audio for headless server-side use
 - Ability to encode metadata such as author name and app icon into app image files
 - Ability to suspend running programs and save them to a new app image file
