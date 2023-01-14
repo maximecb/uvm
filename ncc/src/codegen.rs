@@ -638,5 +638,7 @@ mod tests
         parse_file("examples/strings.c");
         parse_file("examples/fib.c");
         parse_file("examples/paint.c");
+        parse_file("examples/ball.c");
+        // TODO: add crc32.c example
     }
 }
