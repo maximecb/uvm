@@ -7,19 +7,23 @@ A minimalistic virtual machine designed to run self-contained applications. UVM 
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
 with and approachable to newcomers.
 
-
 ## Features
 
-- Stack-machine interpreter
-  - Eventually to include a JIT compiler
-- Untyped design, manipulates 64-bit words
-- Little-endian byte ordering (like x86, ARM & RISC-V)
+Current features:
+- Stack-based bytecode interpreter
 - Variable-length instructions for compactness
-- Linear address spaces for data and code
-- Separate address spaces for code and data
-  - For security and to facilitate JIT compilation
+- Untyped design for simplicity
+- Little-endian byte ordering (like x86, ARM & RISC-V)
+- Separate flat, linear address spaces for code and data
 - Built-in, easy to use assembler with a simple syntax
-- Provides an easily accessible frame buffer to draw RGB graphics
+- Easily accessible frame buffer to draw RGB graphics
+
+Planned features:
+- Fast JIT compiler based on dynamic binary translation and basic block versioning
+  - Expected performance ~80% of native speed (maybe more?)
+  - Near-instant warmup
+- Async file and network I/O
+- Ability to suspend running programs and save them to a new app image file
 
 ## Build instructions
 
