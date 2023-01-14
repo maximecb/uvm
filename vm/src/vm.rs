@@ -18,8 +18,8 @@ pub enum Op
     nop,
 
     // Debugger breakpoint.
-    // This instruction must be one byte so it can be patched anywhere.
-    //breakpoint,
+    // This instruction must be just one byte so it can be patched anywhere.
+    breakpoint,
 
     // Push the value zero
     push_0,
@@ -47,9 +47,16 @@ pub enum Op
     // popn <n:u8>
     popn,
 
+    // Get the argument count for the current stack frame
+    get_argc,
+
     // Get the function argument at a given index
     // get_arg <idx:u8>
     get_arg,
+
+    // Set the function argument at a given index
+    // set_arg <idx:u8> (value)
+    set_arg,
 
     // Get the local variable at a given index
     // get_local <idx:u8>
@@ -59,33 +66,46 @@ pub enum Op
     // set_local <idx:u8> (value)
     set_local,
 
-    // Bitwise operations
+    // 64-bit bitwise operations
     and_u64,
     or_u64,
     xor_u64,
     not_u64,
     lshift_u64,
     rshift_u64,
-    //rshift_i64,
+    rshift_i64,
 
-    // Integer arithmetic
+    // 64-bit integer arithmetic
     add_u64,
     sub_u64,
     mul_u64,
+    div_u64,
+    mod_u64,
     div_i64,
     mod_i64,
+
+    //add_u64_ovf,
+    //sub_u64_ovf,
+    //mul_i64_ovf, // produces two 64-bit words of output
+
 
     // NOTE: may want to wait for this because it's not RISC,
     //       but it could help reduce code flag
     // NOTE: should this insn have a jump offset built in?
     // Test flag bits (logical and) with a constant
     // This can be used for tag bit tests
+    // Do we want to test just one specific bit, bit_idx:u8?
     // test_u8 <u8_flags>
 
-    // TODO: fill out the complete set of comparisons necessary
-    // Comparisons
+
+
+    // 64-bit integer comparisons
     eq_u64,
     ne_u64,
+    lt_u64,
+    le_u64,
+    gt_u64,
+    ge_u64,
     lt_i64,
     le_i64,
     gt_i64,
@@ -126,6 +146,10 @@ pub enum Op
     // call <offset:i32> <num_args:u8> (arg0, arg1, ..., argN)
     call,
 
+    // Call a function pointer passed as argument
+    // call <num_args:u8> (f_ptr, arg0, arg1, ..., argN)
+    call_fp,
+
     // Call into a blocking host function
     // For example, to set up a device or to allocate more memory
     // syscall <syscall_idx:u16> (arg0, arg1, ..., argN)
@@ -139,9 +163,9 @@ pub enum Op
     // exit (value)
     exit,
 
-    // NOTE: last opcode must have value <= 127
-    // so that we can use 128 as an opcode extension bit
-    // Infrequent opcodes can use a longer encoding.
+    // NOTE: last opcode must have value < 255
+    // The value 255 is reserved for 16-bit opcode extensions.
+    // OP_EXT = 255
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -874,8 +898,7 @@ impl VM
                     self.push(ret_val);
                 }
 
-
-                //_ => panic!("unknown opcode"),
+                _ => panic!("unknown opcode {:?}", op),
             }
         }
     }
@@ -911,12 +934,12 @@ mod tests
     #[test]
     fn test_opcodes()
     {
-        // We can have at most 127 short single-byte opcodes
-        assert!(Op::exit as usize <= 127);
+        // We can have at most 254 short single-byte opcodes
+        assert!(Op::exit as usize <= 254);
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 50);
+        assert!(Op::exit as usize <= 60);
     }
 
     #[test]
