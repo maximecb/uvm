@@ -20,7 +20,7 @@ u8 current_g = 0;
 u8 current_b = 0;
 
 // Are we currently drawing?
-u8 drawing = 0;
+bool drawing = false;
 
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
@@ -153,7 +153,7 @@ void mousemove(u64 window_id, u64 x, u64 y)
 void mousedown(u64 window_id, u8 btn_id)
 {
     if (btn_id == 0) {
-        drawing = 1;
+        drawing = true;
         draw_brush();
     }
 
@@ -179,7 +179,7 @@ void mousedown(u64 window_id, u8 btn_id)
 void mouseup(u64 window_id, u8 btn_id)
 {
     if (btn_id == 0) {
-        drawing = 0;
+        drawing = false;
     }
 }
 

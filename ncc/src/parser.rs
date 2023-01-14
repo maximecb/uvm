@@ -343,8 +343,15 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
-    // Unary negation expression
     if input.match_keyword("NULL") || input.match_keyword("null") {
+        return Ok(Expr::Int(0));
+    }
+
+    if input.match_keyword("true") {
+        return Ok(Expr::Int(1));
+    }
+
+    if input.match_keyword("false") {
         return Ok(Expr::Int(0));
     }
 
