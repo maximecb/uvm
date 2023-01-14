@@ -119,45 +119,6 @@ impl Input
         return ch;
     }
 
-    /// Consume whitespace
-    pub fn eat_ws(&mut self)
-    {
-        // Until the end of the whitespace
-        loop
-        {
-            // If we are at the end of the input, stop
-            if self.eof()
-            {
-                break;
-            }
-
-            // Single-line comments
-            if self.match_chars(&['/', '/'])
-            {
-                loop
-                {
-                    // If we are at the end of the input, stop
-                    if self.eof() || self.eat_ch() == '\n'
-                    {
-                        break;
-                    }
-                }
-            }
-
-            let ch = self.peek_ch();
-
-            // Consume whitespace characters
-            if ch.is_ascii_whitespace()
-            {
-                self.eat_ch();
-                continue;
-            }
-
-            // This isn't whitespace, stop
-            break;
-        }
-    }
-
     /// Match characters in the input, no preceding whitespace allowed
     pub fn match_chars(&mut self, chars: &[char]) -> bool
     {
@@ -182,24 +143,100 @@ impl Input
         return true;
     }
 
+    /// Consume characters until the end of a multi-line comment
+    fn eat_multi_comment(&mut self) -> Result<(), ParseError>
+    {
+        let mut depth = 1;
+
+        loop
+        {
+            if self.eof() {
+                return self.parse_error(&format!("unexpected end of input inside multi-line comment"));
+            }
+            else if self.match_chars(&['/', '*']) {
+                depth += 1;
+            }
+            else if self.match_chars(&['*', '/']) {
+                depth -= 1;
+
+                if depth == 0 {
+                    break
+                }
+            }
+            else
+            {
+                self.eat_ch();
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Consume whitespace
+    pub fn eat_ws(&mut self) -> Result<(), ParseError>
+    {
+        // Until the end of the whitespace
+        loop
+        {
+            // If we are at the end of the input, stop
+            if self.eof()
+            {
+                break;
+            }
+
+            // Single-line comment
+            if self.match_chars(&['/', '/'])
+            {
+                loop
+                {
+                    // If we are at the end of the input, stop
+                    if self.eof() || self.eat_ch() == '\n' {
+                        break;
+                    }
+                }
+            }
+
+            // Multi-line comment
+            if self.match_chars(&['/', '*'])
+            {
+                self.eat_multi_comment()?;
+            }
+
+            let ch = self.peek_ch();
+
+            // Consume whitespace characters
+            if ch.is_ascii_whitespace()
+            {
+                self.eat_ch();
+                continue;
+            }
+
+            // This isn't whitespace, stop
+            break;
+        }
+
+        Ok(())
+    }
+
+
     /// Match a string in the input, ignoring preceding whitespace
     /// Do not use this method to match a keyword which could be
     /// an identifier.
-    pub fn match_token(&mut self, token: &str) -> bool
+    pub fn match_token(&mut self, token: &str) -> Result<bool, ParseError>
     {
         // Consume preceding whitespace
-        self.eat_ws();
+        self.eat_ws()?;
 
         let token_chars: Vec<char> = token.chars().collect();
-        return self.match_chars(&token_chars);
+        return Ok(self.match_chars(&token_chars));
     }
 
     /// Match a keyword in the input, ignoring preceding whitespace
     /// This is different from match_token because there can't be a
     /// match if the following chars are also valid identifier chars.
-    pub fn match_keyword(&mut self, keyword: &str) -> bool
+    pub fn match_keyword(&mut self, keyword: &str) -> Result<bool, ParseError>
     {
-        self.eat_ws();
+        self.eat_ws()?;
 
         let chars: Vec<char> = keyword.chars().collect();
         let end_pos = self.pos + chars.len();
@@ -207,10 +244,10 @@ impl Input
         // We can't match as a keyword if the next chars are
         // valid identifier characters
         if end_pos < self.input_str.len() && is_ident_ch(self.input_str[end_pos]) {
-            return false;
+            return Ok(false);
         }
 
-        return self.match_chars(&chars);
+        return Ok(self.match_chars(&chars));
     }
 
     /// Shortcut for yielding a parse error wrapped in a result type
@@ -222,7 +259,7 @@ impl Input
     /// Produce an error if the input doesn't match a given token
     pub fn expect_token(&mut self, token: &str) -> Result<(), ParseError>
     {
-        if self.match_token(token) {
+        if self.match_token(token)? {
             return Ok(())
         }
 
@@ -334,7 +371,7 @@ impl Input
 /// Parse an atomic expression
 fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 {
-    input.eat_ws();
+    input.eat_ws()?;
     let ch = input.peek_ch();
 
     // Decimal integer literal
@@ -343,15 +380,15 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
-    if input.match_keyword("NULL") || input.match_keyword("null") {
+    if input.match_keyword("NULL")? || input.match_keyword("null")? {
         return Ok(Expr::Int(0));
     }
 
-    if input.match_keyword("true") {
+    if input.match_keyword("true")? {
         return Ok(Expr::Int(1));
     }
 
-    if input.match_keyword("false") {
+    if input.match_keyword("false")? {
         return Ok(Expr::Int(0));
     }
 
@@ -392,7 +429,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     }
 
     // Pre-increment expression
-    if input.match_token("++") {
+    if input.match_token("++")? {
         let sub_expr = parse_atom(input)?;
 
         // Transform into i = i + 1
@@ -432,7 +469,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     }
 
     // Inline assembly expression
-    if input.match_token("asm") {
+    if input.match_token("asm")? {
         return parse_asm_expr(input);
     }
 
@@ -451,20 +488,20 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
     let mut arg_exprs = Vec::default();
 
     loop {
-        input.eat_ws();
+        input.eat_ws()?;
 
         if input.eof() {
             return input.parse_error("unexpected end of input in call expression");
         }
 
-        if input.match_token(")") {
+        if input.match_token(")")? {
             break;
         }
 
         // Parse one argument
         arg_exprs.push(parse_expr(input)?);
 
-        if input.match_token(")") {
+        if input.match_token(")")? {
             break;
         }
 
@@ -584,15 +621,15 @@ const BIN_OPS: [OpInfo; 19] = [
 ];
 
 /// Try to match a binary operator in the input
-fn match_bin_op(input: &mut Input) -> Option<OpInfo>
+fn match_bin_op(input: &mut Input) -> Result<Option<OpInfo>, ParseError>
 {
     for op_info in BIN_OPS {
-        if input.match_token(op_info.op_str) {
-            return Some(op_info);
+        if input.match_token(op_info.op_str)? {
+            return Ok(Some(op_info));
         }
     }
 
-    None
+    Ok(None)
 }
 
 /// Parse a complex expression
@@ -616,14 +653,14 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
         }
 
         // If this is a function call
-        if input.match_token("(") {
+        if input.match_token("(")? {
             let callee = expr_stack.pop().unwrap();
             let call_expr = parse_call_expr(input, callee)?;
             expr_stack.push(call_expr);
             continue;
         }
 
-        let new_op = match_bin_op(input);
+        let new_op = match_bin_op(input)?;
 
         // If no operator could be matched, stop
         if new_op.is_none() {
@@ -704,13 +741,13 @@ fn parse_block_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
     loop
     {
-        input.eat_ws();
+        input.eat_ws()?;
 
         if input.eof() {
             return input.parse_error("unexpected end of input in block statement");
         }
 
-        if input.match_token("}") {
+        if input.match_token("}")? {
             break;
         }
 
@@ -738,10 +775,10 @@ fn parse_decl(input: &mut Input) -> Result<(Type, String, Expr), ParseError>
 /// Parse a statement
 fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 {
-    input.eat_ws();
+    input.eat_ws()?;
 
-    if input.match_keyword("return") {
-        if input.match_token(";") {
+    if input.match_keyword("return")? {
+        if input.match_token(";")? {
             return Ok(Stmt::ReturnVoid);
         }
         else
@@ -754,18 +791,18 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         }
     }
 
-    if input.match_keyword("break") {
+    if input.match_keyword("break")? {
         input.expect_token("?")?;
         return Ok(Stmt::Break);
     }
 
-    if input.match_keyword("continue") {
+    if input.match_keyword("continue")? {
         input.expect_token("?")?;
         return Ok(Stmt::Continue);
     }
 
     // If-else statement
-    if input.match_keyword("if") {
+    if input.match_keyword("if")? {
         // Parse the test expression
         input.expect_token("(")?;
         let test_expr = parse_expr(input)?;
@@ -775,7 +812,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         let then_stmt = parse_stmt(input)?;
 
         // If there is an else statement
-        if input.match_keyword("else") {
+        if input.match_keyword("else")? {
             // Parse the else statement
             let else_stmt = parse_stmt(input)?;
 
@@ -796,7 +833,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     }
 
     // While loop
-    if input.match_keyword("while") {
+    if input.match_keyword("while")? {
         // Parse the test expression
         input.expect_token("(")?;
         let test_expr = parse_expr(input)?;
@@ -812,10 +849,10 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     }
 
     // For loop
-    if input.match_keyword("for") {
+    if input.match_keyword("for")? {
         input.expect_token("(")?;
 
-        let init_stmt = if input.match_token(";") {
+        let init_stmt = if input.match_token(";")? {
             None
         }
         else
@@ -823,7 +860,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
             Some(Box::new(parse_stmt(input)?))
         };
 
-        let test_expr = if input.match_token(";") {
+        let test_expr = if input.match_token(";")? {
             Expr::Int(1)
         }
         else
@@ -833,7 +870,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
             test_expr
         };
 
-        let incr_expr = if input.match_token(")") {
+        let incr_expr = if input.match_token(")")? {
             Expr::Int(1)
         }
         else
@@ -856,7 +893,7 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
     /*
     // Assert statement
-    if input.match_keyword("assert") {
+    if input.match_keyword("assert")? {
         parse_expr(vm, input, fun, scope)?;
         input.expect_token(";")?;
 
@@ -904,33 +941,33 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 /// Parse an atomic type expression
 fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 {
-    input.eat_ws();
+    input.eat_ws()?;
 
-    if input.match_keyword("void") {
+    if input.match_keyword("void")? {
         return Ok(Type::Void);
     }
 
-    if input.match_keyword("u8") {
+    if input.match_keyword("u8")? {
         return Ok(Type::UInt(8));
     }
 
-    if input.match_keyword("char") {
+    if input.match_keyword("char")? {
         return Ok(Type::UInt(8));
     }
 
-    if input.match_keyword("bool") {
+    if input.match_keyword("bool")? {
         return Ok(Type::UInt(8));
     }
 
-    if input.match_keyword("u32") {
+    if input.match_keyword("u32")? {
         return Ok(Type::UInt(32));
     }
 
-    if input.match_keyword("u64") {
+    if input.match_keyword("u64")? {
         return Ok(Type::UInt(64));
     }
 
-    if input.match_keyword("size_t") {
+    if input.match_keyword("size_t")? {
         return Ok(Type::UInt(64));
     }
 
@@ -940,13 +977,13 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 /// Parse a type name
 fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 {
-    input.eat_ws();
+    input.eat_ws()?;
 
     let mut cur_type = parse_type_atom(input)?;
 
     loop
     {
-        if input.match_token("*") {
+        if input.match_token("*")? {
             cur_type = Type::Pointer(
                 Box::new(cur_type)
             );
@@ -963,13 +1000,13 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 /// Parse an array type
 fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseError>
 {
-    input.eat_ws();
+    input.eat_ws()?;
 
     let mut cur_type = elem_type;
 
     loop
     {
-        if input.match_token("[") {
+        if input.match_token("[")? {
             let size_expr = parse_atom(input)?;
             input.expect_token("]")?;
 
@@ -994,13 +1031,13 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
 
     loop
     {
-        input.eat_ws();
+        input.eat_ws()?;
 
         if input.eof() {
             return input.parse_error("unexpected end of input inside function parameter list");
         }
 
-        if input.match_token(")") {
+        if input.match_token(")")? {
             break;
         }
 
@@ -1010,7 +1047,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
         let param_type = parse_array_type(input, param_type)?;
         params.push((param_type, param_name));
 
-        if input.match_token(")") {
+        if input.match_token(")")? {
             break;
         }
 
@@ -1039,7 +1076,7 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 
     loop
     {
-        input.eat_ws();
+        input.eat_ws()?;
 
         if input.eof() {
             break;
@@ -1047,11 +1084,11 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 
         let decl_type = parse_type(input)?;
 
-        input.eat_ws();
+        input.eat_ws()?;
         let name = input.parse_ident()?;
 
         // If this is the beginning of a function declaration
-        if input.match_token("(") {
+        if input.match_token("(")? {
             let fun = parse_function(input, name, decl_type)?;
             unit.fun_decls.push(fun);
             continue;
@@ -1060,7 +1097,7 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
         let decl_type = parse_array_type(input, decl_type)?;
 
         // Global variable initialization
-        let init_expr = if input.match_token("=") {
+        let init_expr = if input.match_token("=")? {
             parse_expr(input)?
         }
         else
@@ -1127,8 +1164,13 @@ mod tests
         parse_ok("");
         parse_ok(" ");
         parse_ok("// Hi!\n ");
+        parse_ok("/* Hi! */");
+        parse_ok("/* Hi\nthere */");
+        parse_ok("/* Hi\n/*there*/ */");
+
         parse_fails("x");
         parse_fails("x;");
+        parse_fails("/* Hi\nthere");
     }
 
     #[test]

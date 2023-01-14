@@ -1,3 +1,7 @@
+/*
+Classic recursive fibonacci test / microbenchmark
+*/
+
 u64 fib(u64 n)
 {
     if (n < 2)
