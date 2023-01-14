@@ -29,7 +29,7 @@ Planned features:
 
 Dependencies:
 - The [Rust toolchain](https://www.rust-lang.org/tools/install)
-- The SDL2 libraries
+- The [SDL2 libraries](https://wiki.libsdl.org/SDL2/Installation)
 
 To install SDL2 on MacOS:
 ```
