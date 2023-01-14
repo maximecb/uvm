@@ -17,12 +17,17 @@ Current features:
 - Separate flat, linear address spaces for code and data
 - Built-in, easy to use assembler with a simple syntax
 - Easily accessible frame buffer to draw RGB graphics
+- Event-driven event execution model
 
 Planned features:
+- Easy to use audio output API
+- Async file and network I/O with callbacks
+  - Synchronous I/O possible as well
 - Fast JIT compiler based on dynamic binary translation and basic block versioning
   - Expected performance ~80% of native speed (maybe more?)
   - Near-instant warmup
-- Async file and network I/O
+- Ability to compile without SDL and without graphics/audio for headless server-side use
+- Ability to encode metadata such as author name and app icon into app image files
 - Ability to suspend running programs and save them to a new app image file
 
 ## Build instructions
