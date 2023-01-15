@@ -527,7 +527,7 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
         }
 
         // Parse one argument
-        arg_exprs.push(parse_expr(input)?);
+        arg_exprs.push(parse_infix_expr(input, true)?);
 
         if input.match_token(")")? {
             break;
@@ -616,7 +616,7 @@ struct OpInfo
 /// Binary operators and their precedence level
 /// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 19] = [
+const BIN_OPS: [OpInfo; 20] = [
     OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
     OpInfo { op_str: "/", prec: 3, op: BinOp::Div, rtl: false },
     OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },
@@ -646,13 +646,17 @@ const BIN_OPS: [OpInfo; 19] = [
     OpInfo { op_str: "=", prec: 14, op: BinOp::Assign, rtl: true },
 
     // Sequencing operator
-    //OpInfo { op_str: ",", prec: 15, op: BinOp::Comma, rtl: false },
+    OpInfo { op_str: ",", prec: 15, op: BinOp::Comma, rtl: false },
 ];
 
 /// Try to match a binary operator in the input
-fn match_bin_op(input: &mut Input) -> Result<Option<OpInfo>, ParseError>
+fn match_bin_op(input: &mut Input, no_comma: bool) -> Result<Option<OpInfo>, ParseError>
 {
     for op_info in BIN_OPS {
+        if no_comma && op_info.op_str == "," {
+            continue;
+        }
+
         if input.match_token(op_info.op_str)? {
             return Ok(Some(op_info));
         }
@@ -661,10 +665,15 @@ fn match_bin_op(input: &mut Input) -> Result<Option<OpInfo>, ParseError>
     Ok(None)
 }
 
-/// Parse a complex expression
+fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
+{
+    parse_infix_expr(input, false)
+}
+
+/// Parse a complex infix expression
 /// This uses the shunting yard algorithm to parse infix expressions:
 /// https://en.wikipedia.org/wiki/Shunting_yard_algorithm
-fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
+fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseError>
 {
     // Operator stack
     let mut op_stack: Vec<OpInfo> = Vec::default();
@@ -708,7 +717,7 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
             continue;
         }
 
-        let new_op = match_bin_op(input)?;
+        let new_op = match_bin_op(input, no_comma)?;
 
         // If no operator could be matched, stop
         if new_op.is_none() {
@@ -1284,6 +1293,13 @@ mod tests
         parse_ok("u64 foo() { return 1 + 2 + 3 + 4; }");
         parse_ok("u64 foo() { return (1) + 2 + 3 * 4; }");
         parse_ok("u64 foo(u64* p) { return 1 + p[0] + 2; }");
+
+        // Comma operator
+        parse_ok("u64 foo() { return 1, 2; }");
+        parse_ok("u64 foo() { return 1 + (1, 2); }");
+        parse_ok("u64 foo() { return 1, 2, 3; }");
+        parse_ok("u64 foo() { return 1, 2 + 3; }");
+        parse_ok("u64 foo() { return 1 + 2, 3; }");
 
         // Should not parse
         parse_fails("u64 foo() { return 1 + 2 +; }");
