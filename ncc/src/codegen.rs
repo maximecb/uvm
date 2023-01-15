@@ -336,9 +336,7 @@ impl Expr
                         out.push_str(&format!("sub_u64;\n"));
                     }
 
-                    //UnOp::Not => Ok(child_type),
-
-                    UnOp::BitNot => {
+                    UnOp::BitNot | UnOp::Not => {
                         out.push_str(&format!("not_u64;\n"));
                     }
 
