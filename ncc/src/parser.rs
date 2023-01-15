@@ -380,6 +380,12 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
+    // Binary integer literal
+    if input.match_token("0b")? {
+        let val = input.parse_int(2)?;
+        return Ok(Expr::Int(val));
+    }
+
     // Decimal integer literal
     if ch.is_digit(10) {
         let val = input.parse_int(10)?;
