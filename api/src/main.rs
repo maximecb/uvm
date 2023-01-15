@@ -4,16 +4,40 @@
 #![allow(unused_parens)]
 #![allow(unused_mut)]
 
-use serde_json::json;
 use std::env;
 
-//mod parser;
-//use parser::*;
+// https://docs.rs/serde_json/latest/serde_json/
+//use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+
+
+
+
+#[derive(Serialize, Deserialize)]
+struct Person {
+    name: String,
+    age: u8,
+    phones: Vec<String>,
+}
+
+
+
+
+
+
+
 
 fn main()
 {
-    //let args: Vec<String> = env::args().collect();
-    //println!("{:?}", args);
+
+
+
+
+
+    //let p: Person = serde_json::from_str(data)?;
+
+
 
 
 
