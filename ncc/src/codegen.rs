@@ -169,11 +169,11 @@ impl Stmt
                 // For asm expressions with void output type, don't pop
                 // the output because no output is produced
                 if let Expr::Asm { out_type: Type::Void, .. } = expr {
-                    expr.gen_code(out)?;
+                    expr.gen_code(sym, out)?;
                 }
                 else
                 {
-                    expr.gen_code(out)?;
+                    expr.gen_code(sym, out)?;
                     out.push_str("pop;\n");
                 }
             }
@@ -188,12 +188,12 @@ impl Stmt
             }
 
             Stmt::ReturnExpr(expr) => {
-                expr.gen_code(out)?;
+                expr.gen_code(sym, out)?;
                 out.push_str("ret;\n");
             }
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
-                test_expr.gen_code(out)?;
+                test_expr.gen_code(sym, out)?;
 
                 let false_label = sym.gen_sym("if_false");
 
@@ -222,7 +222,7 @@ impl Stmt
                 let break_label = sym.gen_sym("while_break");
 
                 out.push_str(&format!("{}:\n", loop_label));
-                test_expr.gen_code(out)?;
+                test_expr.gen_code(sym, out)?;
                 out.push_str(&format!("jz {};\n", break_label));
 
                 body_stmt.gen_code(sym, out)?;
@@ -241,13 +241,13 @@ impl Stmt
                 let break_label = sym.gen_sym("for_break");
 
                 out.push_str(&format!("{}:\n", loop_label));
-                test_expr.gen_code(out)?;
+                test_expr.gen_code(sym, out)?;
                 out.push_str(&format!("jz {};\n", break_label));
 
                 body_stmt.gen_code(sym, out)?;
 
                 out.push_str(&format!("{}:\n", cont_label));
-                incr_expr.gen_code(out)?;
+                incr_expr.gen_code(sym, out)?;
                 out.push_str("pop;\n");
                 out.push_str(&format!("jmp {};\n", loop_label));
 
@@ -280,7 +280,7 @@ impl Stmt
 
 impl Expr
 {
-    fn gen_code(&self, out: &mut String) -> Result<(), ParseError>
+    fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
     {
         match self {
             Expr::Int(v) => {
@@ -320,7 +320,7 @@ impl Expr
             }
 
             Expr::Unary { op, child } => {
-                child.gen_code(out)?;
+                child.gen_code(sym, out)?;
 
                 match op {
                     UnOp::Deref => {
@@ -345,7 +345,7 @@ impl Expr
             },
 
             Expr::Binary { op, lhs, rhs } => {
-                gen_bin_op(op, lhs, rhs, out)?;
+                gen_bin_op(op, lhs, rhs, sym, out)?;
             }
 
             Expr::Call { callee, args } => {
@@ -355,7 +355,7 @@ impl Expr
                     Expr::Ref(Decl::Fun { name, .. }) =>
                     {
                         for arg in args {
-                            arg.gen_code(out)?;
+                            arg.gen_code(sym, out)?;
                         }
 
                         out.push_str(&format!("call {}, {};\n", name, args.len()));
@@ -366,7 +366,7 @@ impl Expr
 
             Expr::Asm { text, args, out_type } => {
                 for arg in args {
-                    arg.gen_code(out)?;
+                    arg.gen_code(sym, out)?;
                 }
 
                 out.push_str(&text);
@@ -380,7 +380,7 @@ impl Expr
     }
 }
 
-fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
+fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
 {
     use BinOp::*;
     use Type::*;
@@ -388,19 +388,19 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<()
     // Assignments are different from other kinds of expressions
     // because we don't evaluate the lhs the same way
     if *op == Assign {
-        gen_assign(lhs, rhs, out)?;
+        gen_assign(lhs, rhs, sym, out)?;
         return Ok(());
     }
 
     if *op == Comma {
-        lhs.gen_code(out)?;
+        lhs.gen_code(sym, out)?;
         out.push_str("pop;\n");
-        rhs.gen_code(out)?;
+        rhs.gen_code(sym, out)?;
         return Ok(());
     }
 
-    lhs.gen_code(out)?;
-    rhs.gen_code(out)?;
+    lhs.gen_code(sym, out)?;
+    rhs.gen_code(sym, out)?;
 
     let lhs_type = lhs.eval_type()?;
     let rhs_type = lhs.eval_type()?;
@@ -483,19 +483,50 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<()
             out.push_str("ge_i64;\n");
         }
 
+        // Logical AND
+        And => {
+
+            /*
+            if init_stmt.is_some() {
+                init_stmt.as_ref().unwrap().gen_code(sym, out)?;
+            }
+
+            let loop_label = sym.gen_sym("for_loop");
+            let cont_label = sym.gen_sym("for_cont");
+            let break_label = sym.gen_sym("for_break");
+
+            out.push_str(&format!("{}:\n", loop_label));
+            test_expr.gen_code(sym, out)?;
+            out.push_str(&format!("jz {};\n", break_label));
+
+            body_stmt.gen_code(sym, out)?;
+
+            out.push_str(&format!("{}:\n", cont_label));
+            incr_expr.gen_code(sym, out)?;
+            out.push_str("pop;\n");
+            out.push_str(&format!("jmp {};\n", loop_label));
+
+            out.push_str(&format!("{}:\n", break_label));
+            */
+
+
+
+
+        }
+
         _ => todo!("{:?}", op),
     }
 
     Ok(())
 }
 
-fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
+fn gen_assign(lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
 {
     //dbg!(lhs);
     //dbg!(rhs);
 
     // Evaluate the value expression
-    rhs.gen_code(out)?;
+    rhs.gen_code(sym, out)?;
 
     match lhs {
         Expr::Unary { op, child } => {
@@ -506,7 +537,7 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError
                     let elem_bits = elem_size * 8;
 
                     // Evaluate the address expression
-                    child.gen_code(out)?;
+                    child.gen_code(sym, out)?;
 
                     // Assignment expressions must produce an output value
                     out.push_str("getn 1;\n");
