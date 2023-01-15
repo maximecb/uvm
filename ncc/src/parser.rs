@@ -434,6 +434,11 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         input.eat_ch();
         let sub_expr = parse_atom(input)?;
 
+        // If this is an integer value, negate it
+        if let Expr::Int(int_val) = sub_expr {
+            return Ok(Expr::Int(-int_val));
+        }
+
         return Ok(Expr::Unary{
             op: UnOp::Minus,
             child: Box::new(sub_expr)
@@ -1253,6 +1258,7 @@ mod tests
         parse_ok("size_t x = 20;");
         parse_ok("size_t x; void main() {}");
         parse_ok("size_t x; u64 y; void main() {}");
+        parse_ok("u64 v = -1;");
 
         parse_ok("char* str = \"FOO\n\";");
 
