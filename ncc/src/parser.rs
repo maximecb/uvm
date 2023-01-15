@@ -267,11 +267,11 @@ impl Input
     }
 
     /// Parse a decimal integer value
-    pub fn parse_int(&mut self) -> Result<i128, ParseError>
+    pub fn parse_int(&mut self, radix: u32) -> Result<i128, ParseError>
     {
         let mut int_val: i128 = 0;
 
-        if self.eof() || self.peek_ch().to_digit(10).is_none() {
+        if self.eof() || self.peek_ch().to_digit(radix).is_none() {
             return self.parse_error("expected digit");
         }
 
@@ -289,13 +289,13 @@ impl Input
                 continue;
             }
 
-            let digit = ch.to_digit(10);
+            let digit = ch.to_digit(radix);
 
             if digit.is_none() {
                 break
             }
 
-            int_val = 10 * int_val + digit.unwrap() as i128;
+            int_val = (radix as i128) * int_val + digit.unwrap() as i128;
             self.eat_ch();
         }
 
@@ -374,9 +374,15 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     input.eat_ws()?;
     let ch = input.peek_ch();
 
+    // Hexadecimal integer literal
+    if input.match_token("0x")? {
+        let val = input.parse_int(16)?;
+        return Ok(Expr::Int(val));
+    }
+
     // Decimal integer literal
     if ch.is_digit(10) {
-        let val = input.parse_int()?;
+        let val = input.parse_int(10)?;
         return Ok(Expr::Int(val));
     }
 
@@ -1264,11 +1270,14 @@ mod tests
     fn local_vars()
     {
         parse_ok("void main() { u64 x = 0; return; }");
-        //parse_ok("void main() { u8 x[100] = 0; return; }");
+        parse_ok("void main() { u32 crc = 0xFFFFFFFF; return; }");
         parse_ok("void main() { u64 x = 0; u64 y = x + 1; return; }");
         parse_ok("void main() { u64 x = 0; foo(x); return; }");
         parse_ok("u8 global; void main() { u8* p = &global; return; }");
         parse_ok("u8* global; void main() { u8 p = *global; return; }");
+
+        // TODO:
+        //parse_ok("void main() { u8 x[100] = 0; return; }");
     }
 
     #[test]
