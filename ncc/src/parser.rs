@@ -440,6 +440,17 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
+    // Unary bitwise not expression
+    if ch == '~' {
+        input.eat_ch();
+        let sub_expr = parse_atom(input)?;
+
+        return Ok(Expr::Unary{
+            op: UnOp::BitNot,
+            child: Box::new(sub_expr)
+        });
+    }
+
     // Pre-increment expression
     if input.match_token("++")? {
         let sub_expr = parse_atom(input)?;
@@ -669,6 +680,25 @@ fn parse_expr(input: &mut Input) -> Result<Expr, ParseError>
             let callee = expr_stack.pop().unwrap();
             let call_expr = parse_call_expr(input, callee)?;
             expr_stack.push(call_expr);
+            continue;
+        }
+
+        // Array indexing
+        if input.match_token("[")? {
+            let base_expr = expr_stack.pop().unwrap();
+            let index_expr = parse_expr(input)?;
+            input.expect_token("]")?;
+
+            // Transform into dereferencing and pointer addition
+            expr_stack.push(Expr::Unary {
+                op: UnOp::Deref,
+                child: Box::new(Expr::Binary {
+                    op: BinOp::Add,
+                    lhs: Box::new(base_expr),
+                    rhs: Box::new(index_expr),
+                })
+            });
+
             continue;
         }
 
@@ -1195,7 +1225,7 @@ mod tests
         parse_ok("void main(u64 argc, char** argv) {}");
 
         parse_ok("void foo() {}");
-        //parse_ok("void foo() { /* hello! */}");
+        parse_ok("void foo() { /* hello! */}");
         parse_ok("u64 foo() {}");
         parse_ok("u64 foo() { {} }");
         parse_ok("u64 foo() { return (0); }");
@@ -1246,6 +1276,7 @@ mod tests
         parse_ok("u64 foo() { return 1 + 2 + 3; }");
         parse_ok("u64 foo() { return 1 + 2 + 3 + 4; }");
         parse_ok("u64 foo() { return (1) + 2 + 3 * 4; }");
+        parse_ok("u64 foo(u64* p) { return 1 + p[0] + 2; }");
 
         // Should not parse
         parse_fails("u64 foo() { return 1 + 2 +; }");

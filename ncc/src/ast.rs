@@ -111,21 +111,19 @@ pub enum UnOp
 {
     Minus,
     Not,
+    BitNot,
 
     Deref,
     AddressOf,
 }
 
 /// Binary operator
+/// https://en.cppreference.com/w/c/language/operator_precedence
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BinOp
 {
-    // Assignment
-    Assign,
-
-    // Logical and, logical or
-    And,
-    Or,
+    // Struct member access
+    //Member,
 
     // Bitwise
     BitAnd,
@@ -148,6 +146,13 @@ pub enum BinOp
     Le,
     Gt,
     Ge,
+
+    // Logical and, logical or
+    And,
+    Or,
+
+    // Assignment
+    Assign,
 
     // Sequencing (a, b)
     Comma,

@@ -338,6 +338,10 @@ impl Expr
 
                     //UnOp::Not => Ok(child_type),
 
+                    UnOp::BitNot => {
+                        out.push_str(&format!("not_u64;\n"));
+                    }
+
                     _ => todo!()
                 }
             },
@@ -367,6 +371,22 @@ impl Expr
                 let rhs_type = lhs.eval_type()?;
 
                 match op {
+                    BitAnd => {
+                        out.push_str("and_u64;\n");
+                    }
+
+                    BitOr => {
+                        out.push_str("or_u64;\n");
+                    }
+
+                    BitXor => {
+                        out.push_str("xor_u64;\n");
+                    }
+
+                    RShift => {
+                        out.push_str("rshift_u64;\n");
+                    }
+
                     // For now we're ignoring the type
                     Add => {
                         match (lhs_type, rhs_type) {
@@ -639,6 +659,6 @@ mod tests
         parse_file("examples/fib.c");
         parse_file("examples/paint.c");
         parse_file("examples/ball.c");
-        // TODO: add crc32.c example
+        parse_file("examples/crc32.c");
     }
 }

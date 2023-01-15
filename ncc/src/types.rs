@@ -146,6 +146,7 @@ impl Expr
                 match op {
                     UnOp::Minus => Ok(child_type),
                     UnOp::Not => Ok(child_type),
+                    UnOp::BitNot => Ok(child_type),
 
                     UnOp::Deref => {
                         match child_type {
