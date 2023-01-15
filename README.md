@@ -130,6 +130,13 @@ UVM uses a Harvard architecture, meaning it has separate memory spaces for code 
 
 The reason for this is that this makes the implementation of an efficient JIT compiler easier. If UVM only had a single memory space, then a JIT compiler would have to assume that every store instruction can possibly overwrite existing core. That would mean each store instruction has to perform additional run-time checks so that JIT compiled code can be invalidated if necessary. By requiring that all writes to the code space use a specific system call, UVM knows when you are (over)writing code, and it also knows that regular store instructions can't possibly overwrite code.
 
+### Why doesn't UVM implement a garbage collector?
+
+This comes down to two main reasons. The first is a desire to keep the VM simple and minimalistic. Many programs don't need a GC, and if you need one,
+you can implement one yourself. The second reason is that garbage collection is an entire field of research. UVM doesn't want to have to pick a
+certain kind of GC, because inevitably, it would be more suitable for some kinds of software than others. By implementing your own GC, you can choose
+whichever algorithm suits your needs. You can also guarantee that your GC implementation isn't going to change unless you make that choice.
+
 ### Will it be possible to do code patching in UVM, or to write a JIT that runs inside UVM?
 
 Yes. This is very much a design goal of the system. In order to enable executing dynamic languages with good performance, it's going to be possible
