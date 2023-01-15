@@ -345,109 +345,7 @@ impl Expr
             },
 
             Expr::Binary { op, lhs, rhs } => {
-                use BinOp::*;
-                use Type::*;
-
-                // Assignments are different from other kinds of expressions
-                // because we don't evaluate the lhs the same way
-                if *op == Assign {
-                    gen_assign(lhs, rhs, out)?;
-                    return Ok(());
-                }
-
-                if *op == Comma {
-                    lhs.gen_code(out)?;
-                    out.push_str("pop;\n");
-                    rhs.gen_code(out)?;
-                    return Ok(());
-                }
-
-                lhs.gen_code(out)?;
-                rhs.gen_code(out)?;
-
-                let lhs_type = lhs.eval_type()?;
-                let rhs_type = lhs.eval_type()?;
-
-                match op {
-                    BitAnd => {
-                        out.push_str("and_u64;\n");
-                    }
-
-                    BitOr => {
-                        out.push_str("or_u64;\n");
-                    }
-
-                    BitXor => {
-                        out.push_str("xor_u64;\n");
-                    }
-
-                    LShift => {
-                        out.push_str("lshift_u64;\n");
-                    }
-
-                    RShift => {
-                        out.push_str("rshift_u64;\n");
-                    }
-
-                    // For now we're ignoring the type
-                    Add => {
-                        match (lhs_type, rhs_type) {
-                            (Pointer(b), UInt(n)) => {
-                                let elem_sizeof = b.sizeof();
-                                out.push_str(&format!("push {};\n", elem_sizeof));
-                                out.push_str("mul_u64;\n");
-                            }
-                            (Array{ elem_type , ..}, UInt(n)) => {
-                                let elem_sizeof = elem_type.sizeof();
-                                out.push_str(&format!("push {};\n", elem_sizeof));
-                                out.push_str("mul_u64;\n");
-                            }
-                            _ => out.push_str("add_u64;\n")
-                        }
-                    }
-
-                    Sub => {
-                        out.push_str("sub_u64;\n");
-                    }
-
-                    Mul => {
-                        out.push_str("mul_u64;\n");
-                    }
-
-                    Div => {
-                        out.push_str("div_i64;\n");
-                    }
-
-                    Mod => {
-                        out.push_str("mod_i64;\n");
-                    }
-
-                    Eq => {
-                        out.push_str("eq_u64;\n");
-                    }
-
-                    Ne => {
-                        out.push_str("ne_u64;\n");
-                    }
-
-                    Lt => {
-                        out.push_str("lt_i64;\n");
-                    }
-
-                    Le => {
-                        out.push_str("le_i64;\n");
-                    }
-
-                    Gt => {
-                        out.push_str("gt_i64;\n");
-                    }
-
-                    Ge => {
-                        out.push_str("ge_i64;\n");
-                    }
-
-                    _ => todo!("{:?}", op),
-                }
+                gen_bin_op(op, lhs, rhs, out)?;
             }
 
             Expr::Call { callee, args } => {
@@ -480,6 +378,115 @@ impl Expr
 
         Ok(())
     }
+}
+
+fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>
+{
+    use BinOp::*;
+    use Type::*;
+
+    // Assignments are different from other kinds of expressions
+    // because we don't evaluate the lhs the same way
+    if *op == Assign {
+        gen_assign(lhs, rhs, out)?;
+        return Ok(());
+    }
+
+    if *op == Comma {
+        lhs.gen_code(out)?;
+        out.push_str("pop;\n");
+        rhs.gen_code(out)?;
+        return Ok(());
+    }
+
+    lhs.gen_code(out)?;
+    rhs.gen_code(out)?;
+
+    let lhs_type = lhs.eval_type()?;
+    let rhs_type = lhs.eval_type()?;
+
+    match op {
+        BitAnd => {
+            out.push_str("and_u64;\n");
+        }
+
+        BitOr => {
+            out.push_str("or_u64;\n");
+        }
+
+        BitXor => {
+            out.push_str("xor_u64;\n");
+        }
+
+        LShift => {
+            out.push_str("lshift_u64;\n");
+        }
+
+        RShift => {
+            out.push_str("rshift_u64;\n");
+        }
+
+        // For now we're ignoring the type
+        Add => {
+            match (lhs_type, rhs_type) {
+                (Pointer(b), UInt(n)) => {
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                }
+                (Array{ elem_type , ..}, UInt(n)) => {
+                    let elem_sizeof = elem_type.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                }
+                _ => out.push_str("add_u64;\n")
+            }
+        }
+
+        Sub => {
+            out.push_str("sub_u64;\n");
+        }
+
+        Mul => {
+            out.push_str("mul_u64;\n");
+        }
+
+        Div => {
+            out.push_str("div_i64;\n");
+        }
+
+        Mod => {
+            out.push_str("mod_i64;\n");
+        }
+
+        Eq => {
+            out.push_str("eq_u64;\n");
+        }
+
+        Ne => {
+            out.push_str("ne_u64;\n");
+        }
+
+        Lt => {
+            out.push_str("lt_i64;\n");
+        }
+
+        Le => {
+            out.push_str("le_i64;\n");
+        }
+
+        Gt => {
+            out.push_str("gt_i64;\n");
+        }
+
+        Ge => {
+            out.push_str("ge_i64;\n");
+        }
+
+        _ => todo!("{:?}", op),
+    }
+
+    Ok(())
 }
 
 fn gen_assign(lhs: &Expr, rhs: &Expr, out: &mut String) -> Result<(), ParseError>

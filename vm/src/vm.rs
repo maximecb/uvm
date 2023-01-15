@@ -122,6 +122,14 @@ pub enum Op
     gt_i64,
     ge_i64,
 
+    //
+    // TODO: 32-bit integer bitwise, arithmetic & comparison operations
+    //
+
+    //
+    // TODO: 32-bit floating-point arithmetic & comparison operations
+    //
+
     // Load a value at a given adress
     // store (addr)
     load_u8,
@@ -144,9 +152,9 @@ pub enum Op
     load_static_u64 <address>
     */
 
-    // TODO: we should probably have 8-bit offset versions
+    // TODO: we should probably have 8-bit offset versions of jump insns
     // However, this can wait. Premature optimization.
-    // of jmp, jz, jnz
+    // jmp_8, jz_8, jnz_8
 
     // Jump to pc offset
     // jmp <offset:i32>
