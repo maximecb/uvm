@@ -383,6 +383,10 @@ impl Expr
                         out.push_str("xor_u64;\n");
                     }
 
+                    LShift => {
+                        out.push_str("lshift_u64;\n");
+                    }
+
                     RShift => {
                         out.push_str("rshift_u64;\n");
                     }
