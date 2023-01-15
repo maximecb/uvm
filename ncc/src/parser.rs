@@ -633,13 +633,14 @@ const BIN_OPS: [OpInfo; 19] = [
     OpInfo { op_str: "==", prec: 7, op: BinOp::Eq, rtl: false },
     OpInfo { op_str: "!=", prec: 7, op: BinOp::Ne, rtl: false },
 
+    // Logical and, logical or
+    // We place these first because they are longer tokens
+    OpInfo { op_str: "&&", prec: 11, op: BinOp::And, rtl: false },
+    OpInfo { op_str: "||", prec: 12, op: BinOp::Or, rtl: false },
+
     OpInfo { op_str: "&", prec: 8, op: BinOp::BitAnd, rtl: false },
     OpInfo { op_str: "^", prec: 9, op: BinOp::BitXor, rtl: false },
     OpInfo { op_str: "|", prec: 10, op: BinOp::BitOr, rtl: false },
-
-    // Logical and, logical or
-    OpInfo { op_str: "&&", prec: 11, op: BinOp::And, rtl: false },
-    OpInfo { op_str: "||", prec: 12, op: BinOp::Or, rtl: false },
 
     // Assignment operator, evaluates right to left
     OpInfo { op_str: "=", prec: 14, op: BinOp::Assign, rtl: true },

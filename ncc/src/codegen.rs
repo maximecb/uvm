@@ -392,10 +392,61 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
         return Ok(());
     }
 
+    // Comma sequencing operator: (a, b)
     if *op == Comma {
         lhs.gen_code(sym, out)?;
         out.push_str("pop;\n");
         rhs.gen_code(sym, out)?;
+        return Ok(());
+    }
+
+    // Logical AND (a && b)
+    if *op == And {
+        let false_label = sym.gen_sym("and_false");
+        let done_label = sym.gen_sym("and_done");
+
+        // If a is false, the expression evaluates to false
+        lhs.gen_code(sym, out)?;
+        out.push_str(&format!("jz {};\n", false_label));
+
+        // Evaluate the rhs
+        rhs.gen_code(sym, out)?;
+        out.push_str(&format!("jz {};\n", false_label));
+
+        // Both subexpressions are true
+        out.push_str("push 1;");
+        out.push_str(&format!("jz {};\n", done_label));
+
+        out.push_str(&format!("{}:\n", false_label));
+        out.push_str("push 0;");
+
+        out.push_str(&format!("{}:\n", done_label));
+
+        return Ok(());
+    }
+
+    // Logical OR (a || b)
+    if *op == Or {
+        let true_label = sym.gen_sym("or_true");
+        let done_label = sym.gen_sym("or_done");
+
+        // If a is true, the expression evaluates to true
+        lhs.gen_code(sym, out)?;
+        out.push_str(&format!("jnz {};\n", true_label));
+
+        // Evaluate the rhs
+        rhs.gen_code(sym, out)?;
+        out.push_str(&format!("jnz {};\n", true_label));
+
+        // Both subexpressions are false
+        out.push_str("push 0;");
+        out.push_str(&format!("jz {};\n", done_label));
+
+        out.push_str(&format!("{}:\n", true_label));
+        out.push_str("push 1;");
+
+        out.push_str(&format!("{}:\n", done_label));
+
         return Ok(());
     }
 
@@ -481,37 +532,6 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
 
         Ge => {
             out.push_str("ge_i64;\n");
-        }
-
-        // Logical AND
-        And => {
-
-            /*
-            if init_stmt.is_some() {
-                init_stmt.as_ref().unwrap().gen_code(sym, out)?;
-            }
-
-            let loop_label = sym.gen_sym("for_loop");
-            let cont_label = sym.gen_sym("for_cont");
-            let break_label = sym.gen_sym("for_break");
-
-            out.push_str(&format!("{}:\n", loop_label));
-            test_expr.gen_code(sym, out)?;
-            out.push_str(&format!("jz {};\n", break_label));
-
-            body_stmt.gen_code(sym, out)?;
-
-            out.push_str(&format!("{}:\n", cont_label));
-            incr_expr.gen_code(sym, out)?;
-            out.push_str("pop;\n");
-            out.push_str(&format!("jmp {};\n", loop_label));
-
-            out.push_str(&format!("{}:\n", break_label));
-            */
-
-
-
-
         }
 
         _ => todo!("{:?}", op),
@@ -680,6 +700,8 @@ mod tests
     {
         parse_ok("void foo(u64 a) { if (a) {} }");
         parse_ok("void foo(u64 a) { if (a) {} else {} }");
+        parse_ok("void foo(u64 a, u64 b) { if (a || b) {} }");
+        parse_ok("void foo(u64 a, u64 b) { if (a && b) {} }");
     }
 
     #[test]
