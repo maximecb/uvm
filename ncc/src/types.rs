@@ -186,15 +186,6 @@ impl Expr
                         }
                     }
 
-                    // Logical and/or
-                    And | Or => {
-                        // How do we deal with something like pointer vs integer here?
-                        // What does gotbolt say?
-
-                        todo!();
-                        //Ok(lhs_type)
-                    }
-
                     BitAnd | BitOr | BitXor | LShift | RShift |
                     Mul | Div | Mod => {
                         match (lhs_type, rhs_type) {
@@ -203,6 +194,12 @@ impl Expr
                         }
                     }
 
+                    // Logical and/or
+                    And | Or => {
+                        Ok(UInt(8))
+                    }
+
+                    // Comparison operators
                     Eq | Ne | Lt | Le | Gt | Ge => {
                         Ok(UInt(8))
                     }
