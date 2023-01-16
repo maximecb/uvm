@@ -1,45 +1,51 @@
 [
     {
-        "subsystem": "VM",
+        "subsystem": "vm",
         "description": "Core functionality provided by the VM that isn't related to any kind of I/O.",
         "syscalls": [
         ]
     },
 
     {
-        "subsystem": "TIME",
+        "subsystem": "time",
         "description": "Date, time and timing related system calls.",
         "syscalls": [
-        ]
-    },
-
-    {
-        "subsystem": "WINDOW",
-        "syscalls": [
             {
-                "name": "WINDOW_CREATE",
-                "args": ["u32", "width", "u32", "height", "const char*", "title"],
-                "ret_type": "void",
-                "permission": "WINDOW_DISPLAY"
+                "name": "time_current_ms",
+                "args": [],
+                "ret_type": "u64",
+                "permission": "time_get_time"
             }
         ]
     },
 
     {
-        "subsystem": "AUDIO",
+        "subsystem": "window",
+        "syscalls": [
+            {
+                "name": "window_create",
+                "args": ["u32", "width", "u32", "height", "const char*", "title"],
+                "ret_type": "void",
+                "permission": "window_display"
+            }
+        ]
+    },
+
+    {
+        "subsystem": "audio",
         "description": "Audio input and output.",
         "syscalls": [
         ]
     },
 
     {
-        "subsystem": "IO",
+        "subsystem": "io",
         "syscalls": [
         ]
     },
 
     {
-        "subsystem": "NET",
+        "subsystem": "net",
         "syscalls": [
         ]
     }
