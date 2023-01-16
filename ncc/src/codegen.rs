@@ -660,6 +660,9 @@ mod tests
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
         parse_ok("u64 foo() { return 1 + 2, 3; }");
+        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b:c; }");
+        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return 1 + a? b:c; }");
+        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b+1:c+2; }");
 
         // Check that a return instruction is automatically inserted
         parse_ok("void foo() {}").contains("ret;");

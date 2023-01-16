@@ -717,6 +717,22 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
             continue;
         }
 
+        // Ternary operator
+        if input.match_token("?")? {
+            let test_expr = expr_stack.pop().unwrap();
+            let then_expr = parse_expr(input)?;
+            input.expect_token(":")?;
+            let else_expr = parse_expr(input)?;
+
+            expr_stack.push(Expr::Ternary {
+                test_expr: Box::new(test_expr),
+                then_expr: Box::new(then_expr),
+                else_expr: Box::new(else_expr),
+            });
+
+            break;
+        }
+
         let new_op = match_bin_op(input, no_comma)?;
 
         // If no operator could be matched, stop
