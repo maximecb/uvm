@@ -287,13 +287,6 @@ impl Expr
                 out.push_str(&format!("push {};\n", v));
             }
 
-            /*
-            Expr::String(_) => {
-                // TODO: this should be const char
-                Ok(Pointer(Box::new(UInt(8))))
-            }
-            */
-
             Expr::Ref(decl) => {
                 match decl {
                     Decl::Arg { idx, .. } => {
@@ -346,6 +339,24 @@ impl Expr
 
             Expr::Binary { op, lhs, rhs } => {
                 gen_bin_op(op, lhs, rhs, sym, out)?;
+            }
+
+            Expr::Ternary { test_expr, then_expr, else_expr } => {
+                let false_label = sym.gen_sym("and_false");
+                let done_label = sym.gen_sym("and_done");
+
+                test_expr.gen_code(sym, out)?;
+                out.push_str(&format!("jz {};\n", false_label));
+
+                // Evaluate the then expression
+                then_expr.gen_code(sym, out)?;
+                out.push_str(&format!("jz {};\n", done_label));
+
+                // Evaluate the else expression
+                out.push_str(&format!("{}:\n", false_label));
+                else_expr.gen_code(sym, out)?;
+
+                out.push_str(&format!("{}:\n", done_label));
             }
 
             Expr::Call { callee, args } => {

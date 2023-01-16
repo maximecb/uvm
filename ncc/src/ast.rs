@@ -188,6 +188,12 @@ pub enum Expr
         rhs: Box<Expr>,
     },
 
+    Ternary {
+        test_expr: Box<Expr>,
+        then_expr: Box<Expr>,
+        else_expr: Box<Expr>,
+    },
+
     Call {
         callee: Box<Expr>,
         args: Vec<Expr>,

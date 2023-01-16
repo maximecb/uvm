@@ -288,6 +288,8 @@ impl Expr
                 }
             }
 
+            Expr::Ref(_) => panic!(),
+
             Expr::Unary { op, child } => {
                 child.as_mut().resolve_syms(env)?;
             },
@@ -295,6 +297,12 @@ impl Expr
             Expr::Binary { op, lhs, rhs } => {
                 lhs.as_mut().resolve_syms(env)?;
                 rhs.as_mut().resolve_syms(env)?;
+            }
+
+            Expr::Ternary { test_expr, then_expr, else_expr } => {
+                test_expr.as_mut().resolve_syms(env)?;
+                then_expr.as_mut().resolve_syms(env)?;
+                else_expr.as_mut().resolve_syms(env)?;
             }
 
             Expr::Call { callee, args } => {
@@ -310,7 +318,7 @@ impl Expr
                 }
             }
 
-            _ => todo!()
+            //_ => todo!()
         }
 
         Ok(())

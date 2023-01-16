@@ -24,7 +24,7 @@
         "syscalls": [
             {
                 "name": "window_create",
-                "args": ["u32", "width", "u32", "height", "const char*", "title"],
+                "args": ["u32", "width", "u32", "height", "const char*", "title", "u64", "flags"],
                 "ret_type": "void",
                 "permission": "window_display"
             }

@@ -212,6 +212,20 @@ impl Expr
                 }
             }
 
+            Expr::Ternary { test_expr, then_expr, else_expr } => {
+                // TODO: should we check that this is not an array type or some such?
+                test_expr.eval_type()?;
+
+                let then_type = then_expr.eval_type()?;
+                let else_type = else_expr.eval_type()?;
+
+                if !then_type.eq(&else_type) {
+                    return ParseError::msg_only("mismatched types in ternary expression")
+                }
+
+                Ok(then_type)
+            }
+
             Expr::Call { callee, args } => {
                 let fn_type = callee.eval_type()?;
 

@@ -92,7 +92,9 @@ fn main()
                 panic!();
             }
 
-
+            if syscall.args.len() % 2 != 0 {
+                panic!();
+            }
 
 
         }
