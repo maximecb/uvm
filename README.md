@@ -146,7 +146,9 @@ more fragile and detract from our design goals.
 
 ### Why a 64-bit machine? Why not 32-bit or 16-bit?
 
-This is a matter of pragmatism. Most modern microprocessors on PCs, laptops, tablets, cellphones and supercomputers are 64-bit designs. There are still 32-bit microprocessors out there, but they are the minority by far. Note that it should be very feasible to port UVM to a 32-bit machine. Also note that if the programs you want to run on UVM use less than 4GiB of memory, you can use 32-bit pointers, which are more compact than 64-bit pointers. This means you can effectively run 32-bit programs on UVM without the data size overhead of 64-bit pointers. You could even use 16-bit pointers if you wanted to.
+UVM is a 64-bit machine in the sense that each stack slot holds 64 bits, and it provides 64-bit integer arithmetic operations. 
+This is a pragmatic hoice as most modern microprocessors on PCs, laptops, tablets, cellphones and supercomputers are 64-bit designs. There are still 32-bit microprocessors out there, but they are the minority by far. However, note that it should be very feasible to port UVM to a 32-bit machine.
+Also note that UVM also provides 32-bit integer arithmetic operations, and that if the programs you want to run on UVM use less than 4GiB of memory, you can use 32-bit pointers, which are more compact than 64-bit pointers. This means you can effectively run 32-bit programs on UVM without the memory overhead of 64-bit pointers. You could even use 16-bit pointers if you wanted to.
 
 ### Why a stack machine and not a register machine?
 
