@@ -254,17 +254,6 @@ impl Stmt
                 out.push_str(&format!("{}:\n", break_label));
             }
 
-            /*
-            // Local variable declaration
-            Stmt::VarDecl { var_type, var_name, init_expr } => {
-                let expr_type = init_expr.eval_type()?;
-
-                if !expr_type.eq(var_type) {
-                    panic!();
-                }
-            }
-            */
-
             Stmt::Block(stmts) => {
                 for stmt in stmts {
                     stmt.gen_code(sym, out)?;
@@ -683,8 +672,8 @@ mod tests
     {
         // Void pointers
         parse_ok("void foo(void* a) {}");
-        //parse_ok("void foo() { void* a = 0; }");
-        //parse_ok("void foo() { u64* a = 0; }");
+        parse_ok("void foo() { void* a = 0; }");
+        parse_ok("void foo() { u64* a = 0; }");
 
         // Assignment to a pointer
         parse_ok("void foo(u64* a) { *a = 0; }");
