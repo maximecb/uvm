@@ -88,24 +88,31 @@ Rust code that automatically generate Rust constants and C function definitions 
 
 ## Motivation
 
+We live in a world where software is increasingly complex, and increasingly fragile as a result. It's very
+easy to end up in a situation where software that was working just fine a few months ago can no longer
+compile and run due to broken dependencies. One of the main goals of UVM is to combat the phenomenon
+known as "code rot" or "bit rot". UVM will provides simple, minimalistic and robust APIs. Most importantly,
+after a certain experimentation period, existing APIs will be essentially frozen and guaranteed to remain
+stable. That will ensure that software built to run on UVM will have a much better chance of working,
+hopefully years or even decades into the future.
 
-- Virtual machines are not a new idea.
-- Platform that is conceptually simple and easy to wrap your head around
-- Link to blog post about stable foundations
-  - Link to multiple blog posts
-- Lots of interest in retrocomputing
-  - Make computing fun
-- Simpler, more stable platform
+The idea of a virtual machine is obviously not new. We're all familiar with the JVM. You can also think
+of the web platform as a VM. The key differences are that UVM will be much smaller, and that its APIs will
+be much simpler. UVM isn't going to provide complex, high-level APIs like a GUI toolkit, because different
+implementations of such an API would be almost guaranteed to behave differently, in the same way that
+modern web browsers can't manage to produce an identical rendering of the same webpage.
 
+There seems to be a growing interest in retrocomputing, and that interest likely stems, in large part,
+because the complexity of modern computer systems and their software environment is extremely high, and
+there is constant unnecessary churn becomes exhausting. UVM aims to provide a platform that is simple,
+stable over time, and easy to target and develop for. I hope that this platform will bring back the joy
+of programming for many.
 
-https://pointersgonewild.com/2022/02/11/code-that-doesnt-rot/
-https://pointersgonewild.com/2022/06/08/typed-vs-untyped-virtual-machines/
-https://pointersgonewild.com/2020/09/22/the-need-for-stable-foundations-in-software-development/
-https://pointersgonewild.com/2018/02/18/minimalism-in-programming/
-
-
-
-
+If you'd like to read more about the philosophy behind UVM's design, here are some relevant blog posts:
+- [Code that doesn't rot](https://pointersgonewild.com/2022/02/11/code-that-doesnt-rot/)
+- [Typed vs Untyped Virtual Machines](https://pointersgonewild.com/2022/06/08/typed-vs-untyped-virtual-machines/)
+- [The Need for Stable Foundations in Software Development](https://pointersgonewild.com/2020/09/22/the-need-for-stable-foundations-in-software-development/)
+- [Minimalism in Programming](https://pointersgonewild.com/2018/02/18/minimalism-in-programming/)
 
 ## Design Goals
 

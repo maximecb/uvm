@@ -126,7 +126,7 @@ pub enum Op
     // TODO: 32-bit integer bitwise, arithmetic & comparison operations
     //
 
-    // Sign extension
+    // Integer sign extension
     sx_i8_i32,
     sx_i8_i64,
     sx_i16_i32,
@@ -136,10 +136,19 @@ pub enum Op
     //
     // TODO: 32-bit floating-point arithmetic & comparison operations
     //
+    //add_f32,
+    //sub_f32,
+    //mul_f32,
+    //div_f32,
+    //
+    // Do we want to provide sin, cos, sqrt as built-ins or not?
+    // sin_f32, cos_f32, sqrt_f32?
 
     //
     // TODO: int/float conversion instructions
     //
+    //f32_to_i64
+    //f64_to_i32
 
     // Load a value at a given adress
     // store (addr)
