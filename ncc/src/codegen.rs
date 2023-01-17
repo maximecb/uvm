@@ -146,7 +146,7 @@ impl Function
             out.push_str("push 0;\n");
         }
 
-        self.body.gen_code(sym, out)?;
+        self.body.gen_code(&None, &None, sym, out)?;
 
         // If the body needs a final return
         if self.needs_final_return() {
@@ -162,7 +162,13 @@ impl Function
 
 impl Stmt
 {
-    fn gen_code(&self, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
+    fn gen_code(
+        &self,
+        break_label: &Option<String>,
+        cont_label: &Option<String>,
+        sym: &mut SymGen,
+        out: &mut String
+    ) -> Result<(), ParseError>
     {
         match self {
             Stmt::Expr(expr) => {
@@ -178,8 +184,19 @@ impl Stmt
                 }
             }
 
-            //Stmt::Break => {}
-            //Stmt::Continue => {}
+            Stmt::Break => {
+                match break_label {
+                    Some(label) => out.push_str(&format!("jmp {};\n", label)),
+                    None => return ParseError::msg_only("break outside of loop context")
+                }
+            }
+
+            Stmt::Continue => {
+                match cont_label {
+                    Some(label) => out.push_str(&format!("jmp {};\n", label)),
+                    None => return ParseError::msg_only("continue outside of loop context")
+                }
+            }
 
             // Return void
             Stmt::ReturnVoid => {
@@ -203,16 +220,16 @@ impl Stmt
                 if else_stmt.is_some() {
                     let join_label = sym.gen_sym("if_join");
 
-                    then_stmt.gen_code(sym, out)?;
+                    then_stmt.gen_code(break_label, cont_label, sym, out)?;
                     out.push_str(&format!("jmp {};\n", join_label));
 
                     out.push_str(&format!("{}:\n", false_label));
-                    else_stmt.as_ref().unwrap().gen_code(sym, out)?;
+                    else_stmt.as_ref().unwrap().gen_code(break_label, cont_label, sym, out)?;
                     out.push_str(&format!("{}:\n", join_label));
                 }
                 else
                 {
-                    then_stmt.gen_code(sym, out)?;
+                    then_stmt.gen_code(break_label, cont_label, sym, out)?;
                     out.push_str(&format!("{}:\n", false_label));
                 }
             }
@@ -225,7 +242,12 @@ impl Stmt
                 test_expr.gen_code(sym, out)?;
                 out.push_str(&format!("jz {};\n", break_label));
 
-                body_stmt.gen_code(sym, out)?;
+                body_stmt.gen_code(
+                    &Some(break_label.clone()),
+                    &Some(loop_label.clone()),
+                    sym,
+                    out
+                )?;
 
                 out.push_str(&format!("jmp {};\n", loop_label));
                 out.push_str(&format!("{}:\n", break_label));
@@ -233,7 +255,7 @@ impl Stmt
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_ref().unwrap().gen_code(sym, out)?;
+                    init_stmt.as_ref().unwrap().gen_code(break_label, cont_label, sym, out)?;
                 }
 
                 let loop_label = sym.gen_sym("for_loop");
@@ -244,7 +266,12 @@ impl Stmt
                 test_expr.gen_code(sym, out)?;
                 out.push_str(&format!("jz {};\n", break_label));
 
-                body_stmt.gen_code(sym, out)?;
+                body_stmt.gen_code(
+                    &Some(break_label.clone()),
+                    &Some(cont_label.clone()),
+                    sym,
+                    out
+                )?;
 
                 out.push_str(&format!("{}:\n", cont_label));
                 incr_expr.gen_code(sym, out)?;
@@ -256,7 +283,7 @@ impl Stmt
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    stmt.gen_code(sym, out)?;
+                    stmt.gen_code(break_label, cont_label, sym, out)?;
                 }
             }
 
@@ -720,6 +747,8 @@ mod tests
         parse_ok("void foo(size_t n) { for (size_t i = 0;;) {} }");
         parse_ok("void foo(size_t n) { for (size_t i = 0; i < n;) {} }");
         parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
+        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { break; } }");
+        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { continue; } }");
     }
 
     #[test]

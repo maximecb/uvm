@@ -68,13 +68,13 @@ void draw_brush()
             size_t dy = y - pos_y;
             size_t dist_sqr = dx * dx + dy * dy;
 
-            if (dist_sqr <= BRUSH_RADIUS * BRUSH_RADIUS)
-            {
-                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
-                *(pix_ptr + 0) = current_r;
-                *(pix_ptr + 1) = current_g;
-                *(pix_ptr + 2) = current_b;
-            }
+            if (dist_sqr > BRUSH_RADIUS * BRUSH_RADIUS)
+                continue;
+
+            u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
+            *(pix_ptr + 0) = current_r;
+            *(pix_ptr + 1) = current_g;
+            *(pix_ptr + 2) = current_b;
         }
     }
 }
