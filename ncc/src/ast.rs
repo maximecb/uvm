@@ -5,13 +5,18 @@ use std::fmt;
 pub enum Type
 {
     Void,
+
     UInt(usize),
     Int(usize),
+    Float(usize),
+
     Pointer(Box<Type>),
+
     Array {
         elem_type: Box<Type>,
         size_expr: Box<Expr>,
     },
+
     Fun {
         ret_type: Box<Type>,
         param_types: Vec<Type>,
@@ -26,6 +31,7 @@ impl Type
         match (self, other) {
             (Void, Void) => true,
             (UInt(m), UInt(n)) if m == n => true,
+            (Float(m), Float(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
             _ => false
         }
@@ -37,7 +43,7 @@ impl Type
         use Type::*;
         match self {
             Void => panic!(),
-            UInt(num_bits) => num_bits / 8,
+            UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
             Pointer(_) => 8,
             Array { elem_type, size_expr } => {
                 match size_expr.as_ref() {
