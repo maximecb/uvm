@@ -93,6 +93,11 @@ fn main()
     let args: Vec<String> = env::args().collect();
     //println!("{:?}", args);
 
+    // TODO: command-line argument parsing
+    // --allow <permissions>
+    // --deny <permissions>
+    // --allow-all
+
     if args.len() == 2 {
         let asm = Assembler::new();
         let mut vm = asm.parse_file(&args[1]).unwrap();

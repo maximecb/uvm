@@ -1,7 +1,7 @@
 # UVM
 
-**NOTE: this project is very much a work in progress and not stable at this point, but I am looking for collaborators who
-share the vision.**
+**NOTE: this project is very much a work in progress and not ready for prime time at this point, but I am looking for
+collaborators who share the vision.**
 
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
@@ -85,6 +85,27 @@ time, the `ncc` compiler will be improved. Contributions to it are welcome.
 The `api` directory contains JSON files that represent a declarative listing of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
 Rust code that automatically generate Rust constants and C function definitions for system calls.
+
+## Motivation
+
+
+- Virtual machines are not a new idea.
+- Platform that is conceptually simple and easy to wrap your head around
+- Link to blog post about stable foundations
+  - Link to multiple blog posts
+- Lots of interest in retrocomputing
+  - Make computing fun
+- Simpler, more stable platform
+
+
+https://pointersgonewild.com/2022/02/11/code-that-doesnt-rot/
+https://pointersgonewild.com/2022/06/08/typed-vs-untyped-virtual-machines/
+https://pointersgonewild.com/2020/09/22/the-need-for-stable-foundations-in-software-development/
+https://pointersgonewild.com/2018/02/18/minimalism-in-programming/
+
+
+
+
 
 ## Design Goals
 

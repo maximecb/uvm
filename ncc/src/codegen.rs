@@ -681,6 +681,11 @@ mod tests
     #[test]
     fn pointers()
     {
+        // Void pointers
+        parse_ok("void foo(void* a) {}");
+        //parse_ok("void foo() { void* a = 0; }");
+        //parse_ok("void foo() { u64* a = 0; }");
+
         // Assignment to a pointer
         parse_ok("void foo(u64* a) { *a = 0; }");
         parse_ok("void foo(u64* a) { *(a + 1) = 0; }");

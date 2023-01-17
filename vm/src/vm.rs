@@ -126,8 +126,19 @@ pub enum Op
     // TODO: 32-bit integer bitwise, arithmetic & comparison operations
     //
 
+    // Sign extension
+    sx_i8_i32,
+    sx_i8_i64,
+    sx_i16_i32,
+    sx_i16_i64,
+    sx_i32_i64,
+
     //
     // TODO: 32-bit floating-point arithmetic & comparison operations
+    //
+
+    //
+    // TODO: int/float conversion instructions
     //
 
     // Load a value at a given adress
@@ -971,7 +982,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 60);
+        assert!(Op::exit as usize <= 64);
     }
 
     #[test]
