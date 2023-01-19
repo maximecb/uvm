@@ -20,6 +20,10 @@ pub enum Type
     Fun {
         ret_type: Box<Type>,
         param_types: Vec<Type>,
+    },
+
+    Struct {
+        fields: Vec<(String, Type)>,
     }
 }
 

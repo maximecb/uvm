@@ -1,52 +1,73 @@
 [
-    {
-        "subsystem": "vm",
-        "description": "Core functionality provided by the VM that isn't related to any kind of I/O.",
-        "syscalls": [
-        ]
-    },
-
-    {
-        "subsystem": "time",
-        "description": "Date, time and timing related system calls.",
-        "syscalls": [
-            {
-                "name": "time_current_ms",
-                "args": [],
-                "ret_type": "u64",
-                "permission": "time_get_time"
-            }
-        ]
-    },
-
-    {
-        "subsystem": "window",
-        "syscalls": [
-            {
-                "name": "window_create",
-                "args": ["u32", "width", "u32", "height", "const char*", "title", "u64", "flags"],
-                "ret_type": "void",
-                "permission": "window_display"
-            }
-        ]
-    },
-
-    {
-        "subsystem": "audio",
-        "description": "Audio input and output.",
-        "syscalls": [
-        ]
-    },
-
-    {
-        "subsystem": "io",
-        "syscalls": [
-        ]
-    },
-
-    {
-        "subsystem": "net",
-        "syscalls": [
-        ]
-    }
+  {
+    "subsystem": "vm",
+    "description": "Core functionality provided by the VM that isn't related to any kind of I/O.",
+    "syscalls": []
+  },
+  {
+    "subsystem": "time",
+    "description": "Date, time and timing related system calls.",
+    "syscalls": [
+      {
+        "name": "time_current_ms",
+        "args": [],
+        "returns": [
+          "u64",
+          "timestamp"
+        ],
+        "permission": "time_get_time",
+        "const_idx": 0,
+        "description": null
+      }
+    ]
+  },
+  {
+    "subsystem": "window",
+    "description": null,
+    "syscalls": [
+      {
+        "name": "window_create",
+        "args": [
+          [
+            "u32",
+            "width"
+          ],
+          [
+            "u32",
+            "height"
+          ],
+          [
+            "const char*",
+            "title"
+          ],
+          [
+            "u64",
+            "flags"
+          ]
+        ],
+        "returns": [
+          "u32",
+          "window_id"
+        ],
+        "permission": "window_display",
+        "const_idx": 1,
+        "description": null
+      }
+    ]
+  },
+  {
+    "subsystem": "audio",
+    "description": "Audio input and output.",
+    "syscalls": []
+  },
+  {
+    "subsystem": "io",
+    "description": "Functionality related to file I/O.",
+    "syscalls": []
+  },
+  {
+    "subsystem": "net",
+    "description": "Network-related functionality.",
+    "syscalls": []
+  }
 ]
