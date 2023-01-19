@@ -134,24 +134,68 @@ fn main()
     file.write_all(json_output.as_bytes()).unwrap();
 
 
+
+
+
+
+
     // TODO: need a better name for the syscall constants
-    //let mut file = File::create("syscalls.rs").unwrap();
-
-
-
-
-    // TODO:
     // Generate syscall constants in rust
+    let mut file = File::create("syscalls.rs").unwrap();
+    writeln!(&mut file, "// This file was automatically generated based on syscalls.json").unwrap();
+    writeln!(&mut file).unwrap();
 
+    writeln!(&mut file, "#![allow(unused)]").unwrap();
+    for subsystem in &subsystems {
+        for syscall in &subsystem.syscalls {
+            let name = syscall.name.to_uppercase();
+            let idx = syscall.const_idx.unwrap();
+            writeln!(&mut file, "const {}: u16 = {};", name, idx).unwrap();
+        }
+    }
 
-
-
-
-
-
-    // TODO:
     // Generate global array of syscall descriptors
-    // Need to include name, const idx and arg count
+    writeln!(&mut file).unwrap();
+    writeln!(&mut file, "{}", concat!(
+        "struct SysCallDesc\n",
+        "{\n",
+        "    name: &'static str,\n",
+        "    const_idx: u16,\n",
+        "    argc: usize,\n",
+        "}",
+    )).unwrap();
+    writeln!(&mut file).unwrap();
+
+    let mut syscall_list: Vec<SysCall> = Vec::new();
+    for subsystem in &subsystems {
+        for syscall in &subsystem.syscalls {
+            syscall_list.push(syscall.clone());
+        }
+    }
+    syscall_list.sort_by(|a, b| a.const_idx.unwrap().cmp(&b.const_idx.unwrap()));
+
+    writeln!(&mut file, "const SYSCALL_DESCS: [SysCallDesc; {}] = [", syscall_list.len()).unwrap();
+    for syscall in syscall_list {
+        writeln!(
+            &mut file,
+            "    SysCallDesc {{ name: \"{}\", const_idx: {}, argc: {} }},",
+            syscall.name,
+            syscall.const_idx.unwrap(),
+            syscall.args.len(),
+        ).unwrap();
+    }
+    writeln!(&mut file, "];").unwrap();
+
+
+
+
+
+
+
+    // TODO: generate C bindings, start with signature
+
+
+
 
 
 
