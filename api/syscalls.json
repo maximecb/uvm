@@ -17,7 +17,7 @@
         ],
         "permission": "time_get_time",
         "const_idx": 0,
-        "description": null
+        "description": "Get the UNIX time stamp in milliseconds"
       }
     ]
   },
@@ -51,7 +51,7 @@
         ],
         "permission": "window_display",
         "const_idx": 1,
-        "description": null
+        "description": "Create a new window with a frame buffer to draw into"
       }
     ]
   },

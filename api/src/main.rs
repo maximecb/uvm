@@ -191,23 +191,25 @@ fn main()
 
 
 
-    // TODO: generate C bindings, start with signature
-
-
-
+    // Generate C bindings
     let mut file = File::create("syscalls.c").unwrap();
+    writeln!(&mut file, "//").unwrap();
     writeln!(&mut file, "// This file was automatically generated based on syscalls.json").unwrap();
+    writeln!(&mut file, "//").unwrap();
     writeln!(&mut file).unwrap();
-
-
-
 
     for subsystem in &subsystems {
         for syscall in &subsystem.syscalls {
+            // Add description comment if present
+            if let Some(text) = &syscall.description {
+                writeln!(&mut file, "// {}", text).unwrap();
+            }
+
             //let name = syscall.name.to_uppercase();
             let fn_name = syscall.name.clone();
-            let idx = syscall.const_idx.unwrap();
+            let const_idx = syscall.const_idx.unwrap();
 
+            // Function arguments
             let mut arg_str = "".to_string();
             for (idx, arg) in syscall.args.iter().enumerate() {
                 if idx > 0 {
@@ -217,12 +219,23 @@ fn main()
             }
             //println!("{}", arg_str);
 
+            let mut sys_arg_str = "".to_string();
+            for (idx, arg) in syscall.args.iter().enumerate() {
+                if idx > 0 {
+                    sys_arg_str += ", ";
+                }
+                sys_arg_str += &arg.1;
+            }
+            //println!("{}", sys_arg_str);
 
             writeln!(&mut file,
-                "{} {}({})\n{{\n}}\n",
+                "{} {}({})\n{{\n    return syscall ({}) -> {} {{ syscall {}; }};\n}}\n",
                 syscall.returns.0,
                 fn_name,
                 arg_str,
+                sys_arg_str,
+                syscall.returns.0,
+                const_idx,
             ).unwrap();
         }
     }
