@@ -138,12 +138,29 @@ fn main()
 
 fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
 {
+    // Generate an array of syscalls sorted by const_idx
+    let mut syscall_list: Vec<SysCall> = Vec::new();
+    for subsystem in subsystems {
+        for syscall in &subsystem.syscalls {
+            syscall_list.push(syscall.clone());
+        }
+    }
+    syscall_list.sort_by(|a, b| a.const_idx.unwrap().cmp(&b.const_idx.unwrap()));
+
     // Generate syscall constants in rust
     let mut file = File::create(out_file).unwrap();
-    writeln!(&mut file, "// This file was automatically generated based on syscalls.json").unwrap();
+    writeln!(&mut file, "//").unwrap();
+    writeln!(&mut file, "// This file was automatically generated based on api/syscalls.json").unwrap();
+    writeln!(&mut file, "//").unwrap();
     writeln!(&mut file).unwrap();
 
     writeln!(&mut file, "#![allow(unused)]").unwrap();
+    writeln!(&mut file).unwrap();
+
+    writeln!(&mut file, "const NUM_SYSCALLS: usize = {};", syscall_list.len()).unwrap();
+    writeln!(&mut file).unwrap();
+
+    // Constants for each syscall index
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
             let name = syscall.name.to_uppercase();
@@ -164,16 +181,7 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     )).unwrap();
     writeln!(&mut file).unwrap();
 
-    // Generate an array of syscalls sorted by const_idx
-    let mut syscall_list: Vec<SysCall> = Vec::new();
-    for subsystem in subsystems {
-        for syscall in &subsystem.syscalls {
-            syscall_list.push(syscall.clone());
-        }
-    }
-    syscall_list.sort_by(|a, b| a.const_idx.unwrap().cmp(&b.const_idx.unwrap()));
-
-    writeln!(&mut file, "const SYSCALL_DESCS: [SysCallDesc; {}] = [", syscall_list.len()).unwrap();
+    writeln!(&mut file, "const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [").unwrap();
     for syscall in syscall_list {
         writeln!(
             &mut file,
@@ -191,7 +199,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     // Generate C bindings
     let mut file = File::create(out_file).unwrap();
     writeln!(&mut file, "//").unwrap();
-    writeln!(&mut file, "// This file was automatically generated based on syscalls.json").unwrap();
+    writeln!(&mut file, "// This file was automatically generated based on api/syscalls.json").unwrap();
     writeln!(&mut file, "//").unwrap();
     writeln!(&mut file).unwrap();
 
