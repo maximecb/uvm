@@ -88,6 +88,7 @@ impl SysState
         //vm_resize_heap(new_size)
 
         self.reg_syscall("memset", SysCallFn::Fn3_0(memset));
+        self.reg_syscall("memcpy", SysCallFn::Fn3_0(memcpy));
 
         self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
         self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));
@@ -114,6 +115,22 @@ fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)
 
     let mem_slice: &mut [u8] = vm.get_heap_slice(dst_ptr, num_bytes);
     mem_slice.fill(val);
+}
+
+fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
+{
+    let dst_ptr = dst_ptr.as_usize();
+    let src_ptr = src_ptr.as_usize();
+    let num_bytes = num_bytes.as_usize();
+
+    // TODO: panic if slices are overlapping
+
+    let dst_ptr: *mut u8 = vm.get_heap_ptr(dst_ptr);
+    let src_ptr: *mut u8 = vm.get_heap_ptr(src_ptr);
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, num_bytes);
+    }
 }
 
 fn print_i64(vm: &mut VM, v: Value)

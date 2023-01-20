@@ -16,7 +16,7 @@
           ],
           [
             "u64",
-            "num"
+            "num_bytes"
           ]
         ],
         "returns": [
@@ -26,6 +26,30 @@
         "permission": "always_allowed",
         "const_idx": 3,
         "description": "Copy a block of memory in the heap from a source address to a destination address"
+      },
+      {
+        "name": "memset",
+        "args": [
+          [
+            "u8*",
+            "dst"
+          ],
+          [
+            "u8",
+            "value"
+          ],
+          [
+            "u64",
+            "num_bytes"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "always_allowed",
+        "const_idx": 4,
+        "description": "Fill a block of bytes with a given value"
       }
     ]
   },
