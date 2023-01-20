@@ -1032,6 +1032,10 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         return Ok(Type::UInt(8));
     }
 
+    if input.match_keyword("int")? {
+        return Ok(Type::Int(32));
+    }
+
     if input.match_keyword("u32")? {
         return Ok(Type::UInt(32));
     }
@@ -1098,7 +1102,7 @@ fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseErr
 }
 
 /// Parse a function declaration
-fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Function, ParseError>
+fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool) -> Result<Function, ParseError>
 {
     let mut params = Vec::default();
 
@@ -1137,6 +1141,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type) -> Result<Fun
         name,
         ret_type,
         params,
+        inline,
         body,
         num_locals: 0,
     })
@@ -1151,20 +1156,29 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
     {
         input.eat_ws()?;
 
+        // If this is the end of the input
         if input.eof() {
             break;
         }
 
-        let decl_type = parse_type(input)?;
+        // If this is an inline function attribute
+        let inline = input.match_token("inline")?;
 
+        // Parse the global declaration type and name
+        let decl_type = parse_type(input)?;
         input.eat_ws()?;
         let name = input.parse_ident()?;
 
         // If this is the beginning of a function declaration
         if input.match_token("(")? {
-            let fun = parse_function(input, name, decl_type)?;
+            let fun = parse_function(input, name, decl_type, inline)?;
             unit.fun_decls.push(fun);
             continue;
+        }
+
+        // If we parsed a function attribute
+        if inline {
+            return input.parse_error("expected function declaration");
         }
 
         let decl_type = parse_array_type(input, decl_type)?;

@@ -12,7 +12,6 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 
 // https://docs.rs/serde_json/latest/serde_json/
-//use serde_json::json;
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
@@ -130,10 +129,9 @@ fn main()
     let mut file = File::create("syscalls.json").unwrap();
     file.write_all(json_output.as_bytes()).unwrap();
 
-    // TODO: need some better output file names
-    gen_rust_bindings("syscalls.rs", &subsystems);
-
-    gen_c_bindings("syscalls.c", &subsystems);
+    gen_rust_bindings("output/syscalls.rs", &subsystems);
+    gen_c_bindings("output/syscalls.c", &subsystems);
+    gen_markdown("output/syscalls.md", &subsystems);
 }
 
 fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
@@ -244,4 +242,23 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             ).unwrap();
         }
     }
+}
+
+/// Generate markdown documentation
+fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
+{
+    let mut file = File::create(out_file).unwrap();
+
+    for subsystem in subsystems {
+        for syscall in &subsystem.syscalls {
+            // Add description comment if present
+            if let Some(text) = &syscall.description {
+                writeln!(&mut file, "// {}", text).unwrap();
+            }
+        }
+    }
+
+
+
+    //todo!();
 }

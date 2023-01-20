@@ -269,6 +269,9 @@ pub struct Function
     /// Parameter list
     pub params: Vec<(Type, String)>,
 
+    /// Inline attribute
+    pub inline: bool,
+
     /// Body of the function
     pub body: Stmt,
 
