@@ -24,11 +24,12 @@ pub enum SysCallFn
     Fn1_0(fn(&mut VM, a0: Value)),
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
     Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
+    Fn4_0(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value)),
 }
 
 impl SysCallFn
 {
-    fn argc(&self ) -> usize
+    fn argc(&self) -> usize
     {
         match self {
             Self::Fn0_0(_) => 0,
@@ -36,6 +37,19 @@ impl SysCallFn
             Self::Fn1_0(_) => 1,
             Self::Fn2_0(_) => 2,
             Self::Fn3_0(_) => 3,
+            Self::Fn4_0(_) => 4,
+        }
+    }
+
+    fn has_ret(&self) -> bool
+    {
+        match self {
+            Self::Fn0_0(_) => false,
+            Self::Fn0_1(_) => true,
+            Self::Fn1_0(_) => false,
+            Self::Fn2_0(_) => false,
+            Self::Fn3_0(_) => false,
+            Self::Fn4_0(_) => false,
         }
     }
 }
@@ -101,11 +115,6 @@ impl SysState
     fn init_syscalls(&mut self)
     {
         let mut syscalls = HashMap::<String, SysCallFn>::new();
-
-        //TODO:
-        //memcpy(dst, src, num_bytes)
-        //memset(ptr, val, num_bytes)
-        //vm_resize_heap(new_size)
 
         self.reg_syscall("memset", SysCallFn::Fn3_0(memset));
         self.reg_syscall("memcpy", SysCallFn::Fn3_0(memcpy));

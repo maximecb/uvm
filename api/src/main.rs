@@ -57,6 +57,10 @@ fn is_valid_ident(name: &str) -> bool
     return true;
 }
 
+// TODO:
+// SysCall::c_sig_string() -> String
+// We can reuse this for the documentation
+
 fn main()
 {
     let mut unique_names: HashSet<String> = HashSet::new();
