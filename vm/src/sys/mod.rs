@@ -1,15 +1,19 @@
+pub mod window;
+pub mod audio;
+pub mod time;
+
 extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdout, stdin};
 use crate::vm::{Value, VM};
-use crate::window::*;
-use crate::audio::*;
-use crate::time::*;
+use window::*;
+use audio::*;
+use time::*;
 
 /// System call function signature
 /// Note: the in/out arg count should be fixed so
-///       that we can JIT syscalls effectively
+///       that we can JIT syscalls efficiently
 #[derive(Copy, Clone)]
 pub enum SysCallFn
 {
@@ -18,6 +22,20 @@ pub enum SysCallFn
     Fn1_0(fn(&mut VM, a0: Value)),
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
     Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
+}
+
+impl SysCallFn
+{
+    fn argc(&self ) -> usize
+    {
+        match self {
+            Self::Fn0_0(_) => 0,
+            Self::Fn0_1(_) => 0,
+            Self::Fn1_0(_) => 1,
+            Self::Fn2_0(_) => 2,
+            Self::Fn3_0(_) => 3,
+        }
+    }
 }
 
 pub struct SysState

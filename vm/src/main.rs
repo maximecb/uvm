@@ -4,11 +4,8 @@
 #![allow(unused_imports)]
 
 mod vm;
-mod syscalls;
+mod sys;
 mod asm;
-mod window;
-mod audio;
-mod time;
 
 extern crate sdl2;
 use std::env;
@@ -49,20 +46,20 @@ fn run_program(vm: &mut VM) -> Value
                 // TODO: we need to move mouse event handling to window.rs
                 // tuck the SDL-specifics in there
                 Event::MouseMotion { window_id, x, y, .. } => {
-                    window::window_call_mousemove(vm, window_id, x, y);
+                    sys::window::window_call_mousemove(vm, window_id, x, y);
                 }
                 Event::MouseButtonDown { window_id, which, mouse_btn, .. } => {
-                    window::window_call_mousedown(vm, window_id, which, mouse_btn);
+                    sys::window::window_call_mousedown(vm, window_id, which, mouse_btn);
                 }
                 Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
-                    window::window_call_mouseup(vm, window_id, which, mouse_btn);
+                    sys::window::window_call_mouseup(vm, window_id, which, mouse_btn);
                 }
 
                 _ => {}
             }
         }
 
-        let next_cb_time = time::time_until_next_cb(&vm);
+        let next_cb_time = sys::time::time_until_next_cb(&vm);
 
         if let Some(delay_ms) = next_cb_time {
             std::thread::sleep(std::time::Duration::from_millis(delay_ms));
@@ -73,7 +70,7 @@ fn run_program(vm: &mut VM) -> Value
         }
 
         // For each callback to run
-        for pc in time::get_cbs_to_run(vm)
+        for pc in sys::time::get_cbs_to_run(vm)
         {
             match vm.call(pc, &[])
             {

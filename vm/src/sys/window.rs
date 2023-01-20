@@ -12,7 +12,7 @@ use sdl2::pixels::PixelFormatEnum;
 
 use std::time::Duration;
 
-use crate::syscalls::{SysState};
+use crate::sys::{SysState};
 use crate::vm::{VM, Value, ExitReason};
 
 struct Window<'a>

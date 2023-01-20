@@ -1,6 +1,6 @@
 use std::mem::{transmute, size_of};
 use std::ffi::CStr;
-use crate::syscalls::*;
+use crate::sys::*;
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
