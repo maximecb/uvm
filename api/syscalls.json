@@ -2,7 +2,32 @@
   {
     "subsystem": "vm",
     "description": "Core functionality provided by the VM that isn't related to any kind of I/O.",
-    "syscalls": []
+    "syscalls": [
+      {
+        "name": "memcpy",
+        "args": [
+          [
+            "u8*",
+            "dst"
+          ],
+          [
+            "const u8*",
+            "src"
+          ],
+          [
+            "u64",
+            "num"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "always_allowed",
+        "const_idx": 3,
+        "description": "Copy a block of memory in the heap from a source address to a destination address"
+      }
+    ]
   },
   {
     "subsystem": "time",
