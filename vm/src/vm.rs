@@ -136,10 +136,10 @@ pub enum Op
     //
     // TODO: 32-bit floating-point arithmetic & comparison operations
     //
-    //add_f32,
-    //sub_f32,
-    //mul_f32,
-    //div_f32,
+    add_f32,
+    sub_f32,
+    mul_f32,
+    div_f32,
     //
     // Do we want to provide sin, cos, sqrt as built-ins or not?
     // sin_f32, cos_f32, sqrt_f32?
@@ -147,8 +147,8 @@ pub enum Op
     //
     // TODO: int/float conversion instructions
     //
-    //f32_to_i64
-    //f64_to_i32
+    //f32_to_i64,
+    //f64_to_i32,
 
     // Load a value at a given adress
     // store (addr)
@@ -196,7 +196,7 @@ pub enum Op
     // call <num_args:u8> (f_ptr, arg0, arg1, ..., argN)
     call_fp,
 
-    // Call into a blocking host function
+    // Call into a host function
     // For example, to set up a device or to allocate more memory
     // syscall <syscall_idx:u16> (arg0, arg1, ..., argN)
     syscall,
@@ -210,8 +210,10 @@ pub enum Op
     exit,
 
     // NOTE: last opcode must have value < 255
-    // The value 255 is reserved for 16-bit opcode extensions.
-    // OP_EXT = 255
+    // Currently, every opcode is just one byte long,
+    // and we hope to keep it that way, but the value
+    // 255 is reserved for future 16-bit opcode extensions.
+    OP_EXT = 255,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -991,7 +993,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 64);
+        assert!(Op::exit as usize <= 80);
     }
 
     #[test]

@@ -18,6 +18,26 @@
         "permission": "time_get_time",
         "const_idx": 0,
         "description": "Get the UNIX time stamp in milliseconds"
+      },
+      {
+        "name": "time_delay_cb",
+        "args": [
+          [
+            "u64",
+            "delay_ms"
+          ],
+          [
+            "u64",
+            "callback_pc"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "always_allowed",
+        "const_idx": 2,
+        "description": "Schedule a callback to be called once after a given delay"
       }
     ]
   },
