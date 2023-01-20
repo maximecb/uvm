@@ -129,9 +129,9 @@ fn main()
     let mut file = File::create("syscalls.json").unwrap();
     file.write_all(json_output.as_bytes()).unwrap();
 
-    gen_rust_bindings("output/syscalls.rs", &subsystems);
-    gen_c_bindings("output/syscalls.c", &subsystems);
-    gen_markdown("output/syscalls.md", &subsystems);
+    gen_rust_bindings("../vm/src/sys/constants.rs", &subsystems);
+    gen_c_bindings("../ncc/include/uvm/syscalls.h", &subsystems);
+    gen_markdown("../doc/syscalls.md", &subsystems);
 }
 
 fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)

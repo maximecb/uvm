@@ -1,6 +1,7 @@
 pub mod window;
 pub mod audio;
 pub mod time;
+pub mod constants;
 
 extern crate sdl2;
 use std::collections::HashMap;
@@ -10,6 +11,7 @@ use crate::vm::{Value, VM};
 use window::*;
 use audio::*;
 use time::*;
+use constants::*;
 
 /// System call function signature
 /// Note: the in/out arg count should be fixed so
