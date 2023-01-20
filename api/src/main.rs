@@ -138,7 +138,6 @@ fn main()
 
 
 
-
     // TODO: need a better name for the syscall constants
     // Generate syscall constants in rust
     let mut file = File::create("syscalls.rs").unwrap();
@@ -196,6 +195,37 @@ fn main()
 
 
 
+    let mut file = File::create("syscalls.c").unwrap();
+    writeln!(&mut file, "// This file was automatically generated based on syscalls.json").unwrap();
+    writeln!(&mut file).unwrap();
+
+
+
+
+    for subsystem in &subsystems {
+        for syscall in &subsystem.syscalls {
+            //let name = syscall.name.to_uppercase();
+            let fn_name = syscall.name.clone();
+            let idx = syscall.const_idx.unwrap();
+
+            let mut arg_str = "".to_string();
+            for (idx, arg) in syscall.args.iter().enumerate() {
+                if idx > 0 {
+                    arg_str += ", ";
+                }
+                arg_str += &format!("{} {}", arg.0, arg.1);
+            }
+            //println!("{}", arg_str);
+
+
+            writeln!(&mut file,
+                "{} {}({})\n{{\n}}\n",
+                syscall.returns.0,
+                fn_name,
+                arg_str,
+            ).unwrap();
+        }
+    }
 
 
 
