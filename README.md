@@ -1,7 +1,7 @@
 # UVM
 
-**NOTE: this project is very much a work in progress and not ready for prime time at this point, but I am looking for
-collaborators who share the vision.**
+**NOTE: this project is very much a work in progress and not ready for prime time at this point. You're likely to run
+into bugs and missing features, but I am looking for collaborators who share the vision.**
 
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
@@ -80,11 +80,11 @@ The repository is organized into a 3 different subprojects:
 
 The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
 was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over
-time, the `ncc` compiler will be improved. Contributions to it are welcome.
+time, the `ncc` compiler will be improved. Despite its limitations, it is still usable to write small programs. Contributions to it are welcome.
 
 The `api` directory contains JSON files that represent a declarative listing of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
-Rust code that automatically generate Rust constants and C function definitions for system calls.
+code that automatically generate Rust constants and C function definitions for system calls.
 
 ## Motivation
 
@@ -143,6 +143,14 @@ may be disappointed. However, we believe that trying to implement every feature 
 more fragile and detract from our design goals.
 
 ## Design Choices
+
+### UVM provides a frame buffer, but it doesn't provide GUI APIs
+
+The APIs provided by UVM are intentionally kept simple and low-level. To produce graphics, UVM provides an API to draw a pixel buffer one frame at a time into a window. It doesn't provide a Graphical User Interface (GUI) toolkit as part of the VM itself. The reason for that is simple, it's because GUIs are complex and any GUI API that you design will inevitably have a large API surface. Another problem is that a high-level GUI will inevitably keep growing as users request more and more features that other GUI frameworks offer. If we want UVM to be small, portable, and to behave the same everywhere, then including complex APIs in the VM itself will necessarily become a liability.
+
+UVM provides a frame buffer API. The API is dead simple, you give it an array of pixels, and it shows the frame in a window. This puts the burden on the software to implement its own GUI. This might seem awful to some, but it also means you have complete freedom and control over what your GUI looks like, and you can be guaranteed that it will look the same on any machine you try it on. Furthermore, once one person implements a GUI library for UVM, this code can be reused.
+
+You may feel concerned about the performance of rendering GUIs in software, but there are a few simple things that UVM can do to make things faster. As it stands, UVM provides a system call to perform the `memcpy` operation. This may not seem like much, but it allows programs running on UVM to copy rows of pixels using SIMD operations running on the host machine instead of going pixel by pixel. In the future, we may provide more sophisticated blitting operations inspired by the Amiga's bit blit or using alpha blending, and/or more general APIs for SIMD computations.
 
 ### Why a 64-bit machine? Why not 32-bit or 16-bit?
 
