@@ -64,7 +64,7 @@ impl SysState
 // TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
-pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value)
+pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, flags: Value) -> Value
 {
     let width: u32 = width.as_usize().try_into().unwrap();
     let height: u32 = height.as_usize().try_into().unwrap();
@@ -110,6 +110,9 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value)
             height
         ).unwrap());
     }
+
+    // TODO: return window id
+    Value::from(0)
 }
 
 pub fn window_show(vm: &mut VM)

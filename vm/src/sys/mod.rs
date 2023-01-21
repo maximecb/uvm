@@ -25,6 +25,7 @@ pub enum SysCallFn
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
     Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
     Fn4_0(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value)),
+    Fn4_1(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value) -> Value),
 }
 
 impl SysCallFn
@@ -38,6 +39,7 @@ impl SysCallFn
             Self::Fn2_0(_) => 2,
             Self::Fn3_0(_) => 3,
             Self::Fn4_0(_) => 4,
+            Self::Fn4_1(_) => 4,
         }
     }
 
@@ -50,6 +52,7 @@ impl SysCallFn
             Self::Fn2_0(_) => false,
             Self::Fn3_0(_) => false,
             Self::Fn4_0(_) => false,
+            Self::Fn4_1(_) => true,
         }
     }
 }
@@ -127,7 +130,7 @@ impl SysState
         self.reg_syscall("time_current_ms", SysCallFn::Fn0_1(time_current_ms));
         self.reg_syscall("time_delay_cb", SysCallFn::Fn2_0(time_delay_cb));
 
-        self.reg_syscall("window_create", SysCallFn::Fn3_0(window_create));
+        self.reg_syscall("window_create", SysCallFn::Fn4_1(window_create));
         self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
         self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
         self.reg_syscall("window_on_mousemove", SysCallFn::Fn2_0(window_on_mousemove));

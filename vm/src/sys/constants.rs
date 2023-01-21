@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-const NUM_SYSCALLS: usize = 9;
+const NUM_SYSCALLS: usize = 14;
 
 const MEMCPY: u16 = 3;
 const MEMSET: u16 = 4;
@@ -15,6 +15,11 @@ const READ_I64: u16 = 8;
 const TIME_CURRENT_MS: u16 = 0;
 const TIME_DELAY_CB: u16 = 2;
 const WINDOW_CREATE: u16 = 1;
+const WINDOW_SHOW: u16 = 9;
+const WINDOW_DRAW_FRAME: u16 = 10;
+const WINDOW_ON_MOUSEMOVE: u16 = 11;
+const WINDOW_ON_MOUSEDOWN: u16 = 12;
+const WINDOW_ON_MOUSEUP: u16 = 13;
 
 struct SysCallDesc
 {
@@ -33,4 +38,9 @@ const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [
     SysCallDesc { name: "print_str", const_idx: 6, argc: 1 },
     SysCallDesc { name: "print_endl", const_idx: 7, argc: 0 },
     SysCallDesc { name: "read_i64", const_idx: 8, argc: 0 },
+    SysCallDesc { name: "window_show", const_idx: 9, argc: 1 },
+    SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 1 },
+    SysCallDesc { name: "window_on_mousemove", const_idx: 11, argc: 2 },
+    SysCallDesc { name: "window_on_mousedown", const_idx: 12, argc: 2 },
+    SysCallDesc { name: "window_on_mouseup", const_idx: 13, argc: 2 },
 ];

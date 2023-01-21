@@ -45,14 +45,43 @@ inline u64 time_current_ms()
 }
 
 // Schedule a callback to be called once after a given delay
-inline void time_delay_cb(u64 delay_ms, u64 callback_pc)
+inline void time_delay_cb(u64 delay_ms, void* callback)
 {
-    return syscall (delay_ms, callback_pc) -> void { syscall 2; };
+    return syscall (delay_ms, callback) -> void { syscall 2; };
 }
 
 // Create a new window with a frame buffer to draw into
 inline u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 {
     return syscall (width, height, title, flags) -> u32 { syscall 1; };
+}
+
+inline void window_show(u32 window_id)
+{
+    return syscall (window_id) -> void { syscall 9; };
+}
+
+// Copy a frame of RGB24 pixels to be displayed into the window
+inline void window_draw_frame(u32 window_id)
+{
+    return syscall (window_id) -> void { syscall 10; };
+}
+
+// Register a callback for mouse movement
+inline void window_on_mousemove(u32 window_id, void* callback)
+{
+    return syscall (window_id, callback) -> void { syscall 11; };
+}
+
+// Register a callback for mouse button press events
+inline void window_on_mousedown(u32 window_id, void* callback)
+{
+    return syscall (window_id, callback) -> void { syscall 12; };
+}
+
+// Register a callback for mouse button release events
+inline void window_on_mouseup(u32 window_id, void* callback)
+{
+    return syscall (window_id, callback) -> void { syscall 13; };
 }
 

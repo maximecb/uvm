@@ -7,3 +7,7 @@
 // Get the UNIX time stamp in milliseconds
 // Schedule a callback to be called once after a given delay
 // Create a new window with a frame buffer to draw into
+// Copy a frame of RGB24 pixels to be displayed into the window
+// Register a callback for mouse movement
+// Register a callback for mouse button press events
+// Register a callback for mouse button release events

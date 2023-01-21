@@ -136,8 +136,8 @@
             "delay_ms"
           ],
           [
-            "u64",
-            "callback_pc"
+            "void*",
+            "callback"
           ]
         ],
         "returns": [
@@ -181,17 +181,104 @@
         "permission": "window_display",
         "const_idx": 1,
         "description": "Create a new window with a frame buffer to draw into"
+      },
+      {
+        "name": "window_show",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 9,
+        "description": null
+      },
+      {
+        "name": "window_draw_frame",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 10,
+        "description": "Copy a frame of RGB24 pixels to be displayed into the window"
+      },
+      {
+        "name": "window_on_mousemove",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 11,
+        "description": "Register a callback for mouse movement"
+      },
+      {
+        "name": "window_on_mousedown",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 12,
+        "description": "Register a callback for mouse button press events"
+      },
+      {
+        "name": "window_on_mouseup",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 13,
+        "description": "Register a callback for mouse button release events"
       }
     ]
   },
   {
     "subsystem": "audio",
     "description": "Audio input and output.",
-    "syscalls": []
-  },
-  {
-    "subsystem": "io",
-    "description": "Functionality related to file I/O.",
     "syscalls": []
   },
   {
