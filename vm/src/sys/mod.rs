@@ -131,8 +131,8 @@ impl SysState
         self.reg_syscall("time_delay_cb", SysCallFn::Fn2_0(time_delay_cb));
 
         self.reg_syscall("window_create", SysCallFn::Fn4_1(window_create));
-        self.reg_syscall("window_show", SysCallFn::Fn0_0(window_show));
-        self.reg_syscall("window_copy_pixels", SysCallFn::Fn1_0(window_copy_pixels));
+        self.reg_syscall("window_show", SysCallFn::Fn1_0(window_show));
+        self.reg_syscall("window_copy_pixels", SysCallFn::Fn2_0(window_copy_pixels));
         self.reg_syscall("window_on_mousemove", SysCallFn::Fn2_0(window_on_mousemove));
         self.reg_syscall("window_on_mousedown", SysCallFn::Fn2_0(window_on_mousedown));
         self.reg_syscall("window_on_mouseup", SysCallFn::Fn2_0(window_on_mouseup));

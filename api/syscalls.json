@@ -23,7 +23,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 3,
         "description": "Copy a block of memory in the heap from a source address to a destination address"
       },
@@ -47,7 +47,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 4,
         "description": "Fill a block of bytes with a given value"
       }
@@ -69,7 +69,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 5,
         "description": "Print an i64 value to standard output"
       },
@@ -85,7 +85,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 6,
         "description": "Print a string to standard output"
       },
@@ -96,7 +96,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 7,
         "description": "Print a newline to standard output"
       },
@@ -107,7 +107,7 @@
           "i64",
           "val"
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 8,
         "description": "Read an i64 value from standard input"
       }
@@ -144,7 +144,7 @@
           "void",
           ""
         ],
-        "permission": "always_allowed",
+        "permission": "default_allowed",
         "const_idx": 2,
         "description": "Schedule a callback to be called once after a given delay"
       }

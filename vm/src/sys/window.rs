@@ -115,7 +115,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     Value::from(0)
 }
 
-pub fn window_show(vm: &mut VM)
+pub fn window_show(vm: &mut VM, window_id: Value)
 {
     //println!("show the window");
 
@@ -128,7 +128,7 @@ pub fn window_show(vm: &mut VM)
     }
 }
 
-pub fn window_copy_pixels(vm: &mut VM, src_addr: Value)
+pub fn window_copy_pixels(vm: &mut VM, window_id: Value, src_addr: Value)
 {
     // Get the address to copy pixel data from
     let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
