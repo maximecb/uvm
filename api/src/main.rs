@@ -272,11 +272,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
         }
 
         for syscall in &subsystem.syscalls {
-            writeln!(&mut file, "## {}", syscall.name).unwrap();
-            writeln!(&mut file).unwrap();
-
-            // C signature string
-            writeln!(&mut file, "**{}**", syscall.c_sig_string()).unwrap();
+            writeln!(&mut file, "## {}", syscall.c_sig_string()).unwrap();
             writeln!(&mut file).unwrap();
 
             // Add description comment if present
