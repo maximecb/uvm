@@ -25,7 +25,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 3,
-        "description": "Copy a block of memory in the heap from a source address to a destination address"
+        "description": "Copy a block of memory in the heap from a source address to a destination address."
       },
       {
         "name": "memset",
@@ -49,7 +49,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 4,
-        "description": "Fill a block of bytes with a given value"
+        "description": "Fill a block of bytes in the heap with a given value."
       }
     ]
   },
@@ -126,7 +126,7 @@
         ],
         "permission": "time_get_time",
         "const_idx": 0,
-        "description": "Get the UNIX time stamp in milliseconds"
+        "description": "Get the UNIX time stamp in milliseconds."
       },
       {
         "name": "time_delay_cb",
@@ -146,7 +146,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 2,
-        "description": "Schedule a callback to be called once after a given delay"
+        "description": "Schedule a callback to be called once after a given delay."
       }
     ]
   },
@@ -180,7 +180,7 @@
         ],
         "permission": "window_display",
         "const_idx": 1,
-        "description": "Create a new window with a frame buffer to draw into"
+        "description": "Create a new window with a frame buffer to draw into."
       },
       {
         "name": "window_show",
@@ -196,7 +196,7 @@
         ],
         "permission": "window_display",
         "const_idx": 9,
-        "description": null
+        "description": "Show a window, initially not visible when created."
       },
       {
         "name": "window_draw_frame",
@@ -212,7 +212,7 @@
         ],
         "permission": "window_display",
         "const_idx": 10,
-        "description": "Copy a frame of RGB24 pixels to be displayed into the window"
+        "description": "Copy a frame of RGB24 pixels to be displayed into the window."
       },
       {
         "name": "window_on_mousemove",
@@ -232,7 +232,7 @@
         ],
         "permission": "window_display",
         "const_idx": 11,
-        "description": "Register a callback for mouse movement"
+        "description": "Register a callback for mouse movement."
       },
       {
         "name": "window_on_mousedown",
@@ -252,7 +252,7 @@
         ],
         "permission": "window_display",
         "const_idx": 12,
-        "description": "Register a callback for mouse button press events"
+        "description": "Register a callback for mouse button press events."
       },
       {
         "name": "window_on_mouseup",
@@ -272,7 +272,7 @@
         ],
         "permission": "window_display",
         "const_idx": 13,
-        "description": "Register a callback for mouse button release events"
+        "description": "Register a callback for mouse button release events."
       }
     ]
   },

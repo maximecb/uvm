@@ -15,25 +15,6 @@ use std::time::Duration;
 use crate::sys::{SysState};
 use crate::vm::{VM, Value, ExitReason};
 
-struct Window<'a>
-{
-    width: u32,
-    height: u32,
-
-    // TODO: we should support multiple windows
-    //window_id
-
-    // SDL canvas to draw into
-    canvas: sdl2::render::Canvas<sdl2::video::Window>,
-    texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
-    texture: Option<Texture<'a>>,
-
-    // Callbacks for mouse events
-    cb_mousemove: u64,
-    cb_mousedown: u64,
-    cb_mouseup: u64,
-}
-
 /// Mutable state for the window syscalls
 pub struct WindowState
 {
@@ -59,13 +40,49 @@ impl SysState
     }
 }
 
+struct Window<'a>
+{
+    width: u32,
+    height: u32,
+
+    // TODO: we should support multiple windows
+    //window_id
+
+    // SDL canvas to draw into
+    canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
+    texture: Option<Texture<'a>>,
+
+    // Callbacks for mouse events
+    cb_mousemove: u64,
+    cb_mousedown: u64,
+    cb_mouseup: u64,
+}
+
 // Note: we're leaving this global to avoid the Window lifetime
 // bubbling up everywhere.
 // TODO: eventually we will likely want to allow multiple windows
 static mut WINDOW: Option<Window> = None;
 
+fn get_window(window_id: u32) -> &'static mut Window<'static>
+{
+    if window_id != 0 {
+        panic!("for now, only one window supported");
+    }
+
+    unsafe {
+        WINDOW.as_mut().unwrap()
+    }
+}
+
 pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, flags: Value) -> Value
 {
+    unsafe {
+        if WINDOW.is_some() {
+            panic!("for now, only one window supported");
+        }
+    }
+
     let width: u32 = width.as_usize().try_into().unwrap();
     let height: u32 = height.as_usize().try_into().unwrap();
     let title_str = vm.get_heap_str(title.as_usize()).to_owned();
@@ -111,21 +128,16 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
         ).unwrap());
     }
 
-    // TODO: return window id
+    // TODO: return unique window id
     Value::from(0)
 }
 
 pub fn window_show(vm: &mut VM, window_id: Value)
 {
-    //println!("show the window");
-
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        window.canvas.window_mut().show();
-
-        let (width, height) = window.canvas.window().size();
-        println!("width={}, height={}", width, height);
-    }
+    let window = get_window(window_id.as_u32());
+    window.canvas.window_mut().show();
+    //let (width, height) = window.canvas.window().size();
+    //println!("width={}, height={}", width, height);
 }
 
 pub fn window_copy_pixels(vm: &mut VM, window_id: Value, src_addr: Value)
@@ -156,32 +168,20 @@ pub fn window_copy_pixels(vm: &mut VM, window_id: Value, src_addr: Value)
 
 pub fn window_on_mousemove(vm: &mut VM, window_id: Value, cb: Value)
 {
-    let cb = cb.as_u64();
-
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        window.cb_mousemove = cb;
-    }
+    let window = get_window(window_id.as_u32());
+    window.cb_mousemove = cb.as_u64();
 }
 
 pub fn window_on_mousedown(vm: &mut VM, window_id: Value, cb: Value)
 {
-    let cb = cb.as_u64();
-
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        window.cb_mousedown = cb;
-    }
+    let window = get_window(window_id.as_u32());
+    window.cb_mousedown = cb.as_u64();
 }
 
 pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
 {
-    let cb = cb.as_u64();
-
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        window.cb_mouseup = cb;
-    }
+    let window = get_window(window_id.as_u32());
+    window.cb_mouseup = cb.as_u64();
 }
 
 // TODO: functions to process window-related events
@@ -193,21 +193,19 @@ pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
 // we should handle window-related events here instead
 pub fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
 {
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        let cb = window.cb_mousemove;
+    let window = get_window(window_id);
+    let cb = window.cb_mousemove;
 
-        if cb == 0 {
-            return;
-        }
+    if cb == 0 {
+        return;
+    }
 
-        // TODO: pass window id
-        match vm.call(cb, &[Value::from(0), Value::from(x), Value::from(y)])
-        {
-            // TODO: we should return the exit reason?
-            ExitReason::Exit(val) => {}
-            ExitReason::Return(val) => {}
-        }
+    // TODO: pass window id
+    match vm.call(cb, &[Value::from(0), Value::from(x), Value::from(y)])
+    {
+        // TODO: we should return the exit reason?
+        ExitReason::Exit(val) => {}
+        ExitReason::Return(val) => {}
     }
 }
 
@@ -223,72 +221,68 @@ MouseButtonDown {
 */
 pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        let cb = window.cb_mousedown;
+    let window = get_window(window_id);
+    let cb = window.cb_mousedown;
 
-        if cb == 0 {
-            return;
-        }
+    if cb == 0 {
+        return;
+    }
 
-        // TODO: ignore
-        //SDL_TOUCH_MOUSEID
-        // where is that defined in Rust?
-        // or just support mouse id 0?
-        println!("mouse_id={}", mouse_id);
+    // TODO: ignore
+    //SDL_TOUCH_MOUSEID
+    // where is that defined in Rust?
+    // or just support mouse id 0?
+    println!("mouse_id={}", mouse_id);
 
-        let btn_id = match mouse_btn {
-            MouseButton::Left => 0,
-            MouseButton::Middle => 1,
-            MouseButton::Right => 2,
-            MouseButton::X1 => 3,
-            MouseButton::X2 => 4,
-            // TODO: just don't fire an event for these?
-            MouseButton::Unknown => { panic!("wtf"); }
-        };
+    let btn_id = match mouse_btn {
+        MouseButton::Left => 0,
+        MouseButton::Middle => 1,
+        MouseButton::Right => 2,
+        MouseButton::X1 => 3,
+        MouseButton::X2 => 4,
+        // TODO: just don't fire an event for these?
+        MouseButton::Unknown => { panic!("wtf"); }
+    };
 
-        // TODO: pass window id
-        match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
-        {
-            // TODO: we should return the exit reason?
-            ExitReason::Exit(val) => {}
-            ExitReason::Return(val) => {}
-        }
+    // TODO: pass window id
+    match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
+    {
+        // TODO: we should return the exit reason?
+        ExitReason::Exit(val) => {}
+        ExitReason::Return(val) => {}
     }
 }
 
 pub fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
-        let cb = window.cb_mouseup;
+    let window = get_window(window_id);
+    let cb = window.cb_mousedown;
 
-        if cb == 0 {
-            return;
-        }
+    if cb == 0 {
+        return;
+    }
 
-        // TODO: ignore
-        //SDL_TOUCH_MOUSEID
-        // where is that defined in Rust?
-        // or just support mouse id 0?
-        println!("mouse_id={}", mouse_id);
+    // TODO: ignore
+    //SDL_TOUCH_MOUSEID
+    // where is that defined in Rust?
+    // or just support mouse id 0?
+    println!("mouse_id={}", mouse_id);
 
-        let btn_id = match mouse_btn {
-            MouseButton::Left => 0,
-            MouseButton::Middle => 1,
-            MouseButton::Right => 2,
-            MouseButton::X1 => 3,
-            MouseButton::X2 => 4,
-            // TODO: just don't fire an event for these?
-            MouseButton::Unknown => { panic!("wtf"); }
-        };
+    let btn_id = match mouse_btn {
+        MouseButton::Left => 0,
+        MouseButton::Middle => 1,
+        MouseButton::Right => 2,
+        MouseButton::X1 => 3,
+        MouseButton::X2 => 4,
+        // TODO: just don't fire an event for these?
+        MouseButton::Unknown => { panic!("wtf"); }
+    };
 
-        // TODO: pass window id
-        match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
-        {
-            // TODO: we should return the exit reason?
-            ExitReason::Exit(val) => {}
-            ExitReason::Return(val) => {}
-        }
+    // TODO: pass window id
+    match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
+    {
+        // TODO: we should return the exit reason?
+        ExitReason::Exit(val) => {}
+        ExitReason::Return(val) => {}
     }
 }

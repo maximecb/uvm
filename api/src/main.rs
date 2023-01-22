@@ -16,6 +16,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+struct SubSystem {
+    subsystem: String,
+    description: Option<String>,
+    syscalls: Vec<SysCall>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct SysCall {
     name: String,
     args: Vec<(String, String)>,
@@ -23,13 +30,6 @@ struct SysCall {
     permission: String,
     const_idx: Option<u16>,
     description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct SubSystem {
-    subsystem: String,
-    description: Option<String>,
-    syscalls: Vec<SysCall>,
 }
 
 /// Verify that a string is a valid ascii identifier
@@ -253,16 +253,30 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
 {
     let mut file = File::create(out_file).unwrap();
 
+    writeln!(&mut file, "# UVM Subsystems and System Calls").unwrap();
+    writeln!(&mut file).unwrap();
+
     for subsystem in subsystems {
+        writeln!(&mut file, "# {}", subsystem.subsystem).unwrap();
+        writeln!(&mut file).unwrap();
+
+        // Add description comment if present
+        if let Some(text) = &subsystem.description {
+            writeln!(&mut file, "{}", text).unwrap();
+            writeln!(&mut file).unwrap();
+        }
+
         for syscall in &subsystem.syscalls {
+            writeln!(&mut file, "## {}", syscall.name).unwrap();
+            writeln!(&mut file).unwrap();
+
+            // TODO: add C signature
+
             // Add description comment if present
             if let Some(text) = &syscall.description {
-                writeln!(&mut file, "// {}", text).unwrap();
+                writeln!(&mut file, "{}", text).unwrap();
+                writeln!(&mut file).unwrap();
             }
         }
     }
-
-
-
-    //todo!();
 }
