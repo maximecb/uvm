@@ -62,6 +62,9 @@ pub struct SysState
     /// Map of names to syscall functions
     syscalls: HashMap::<String, SysCallFn>,
 
+    syscalls_2: [Option<SysCallFn>; NUM_SYSCALLS],
+
+
     /// SDL context (used for UI and audio)
     sdl: Option<sdl2::Sdl>,
 
@@ -78,6 +81,9 @@ impl SysState
     {
         let mut sys_state = Self {
             syscalls: HashMap::default(),
+
+            syscalls_2: [None; NUM_SYSCALLS],
+
             sdl: None,
             window_state: None,
             time_state: TimeState::new(),
@@ -114,6 +120,32 @@ impl SysState
             panic!("unknown syscall \"{}\"", name);
         }
     }
+
+
+
+
+    pub fn reg_syscall_2(&mut self, const_idx: u16, fun: SysCallFn)
+    {
+        let desc = &SYSCALL_DESCS[const_idx as usize];
+        assert!(fun.argc() == desc.argc);
+        assert!(fun.has_ret() == desc.has_ret);
+        self.syscalls_2[const_idx as usize] = Some(fun);
+    }
+
+    pub fn get_syscall_2(&self, const_idx: u16) -> SysCallFn
+    {
+
+        if let Some(syscall_fn) = self.syscalls_2[const_idx as usize] {
+            return syscall_fn;
+        }
+        else
+        {
+            panic!("unknown syscall \"{}\"", const_idx);
+        }
+    }
+
+
+
 
     fn init_syscalls(&mut self)
     {

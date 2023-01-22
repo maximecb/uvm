@@ -32,6 +32,22 @@ struct SysCall {
     description: Option<String>,
 }
 
+impl SysCall
+{
+    fn c_sig_string(&self) -> String
+    {
+        let mut param_str = "".to_string();
+        for (idx, arg) in self.args.iter().enumerate() {
+            if idx > 0 {
+                param_str += ", ";
+            }
+            param_str += &format!("{} {}", arg.0, arg.1);
+        }
+
+        format!("{} {}({})", self.returns.0, self.name, param_str)
+    }
+}
+
 /// Verify that a string is a valid ascii identifier
 fn is_valid_ident(name: &str) -> bool
 {
@@ -56,10 +72,6 @@ fn is_valid_ident(name: &str) -> bool
 
     return true;
 }
-
-// TODO:
-// SysCall::c_sig_string() -> String
-// We can reuse this for the documentation
 
 fn main()
 {
@@ -159,7 +171,7 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     writeln!(&mut file, "#![allow(unused)]").unwrap();
     writeln!(&mut file).unwrap();
 
-    writeln!(&mut file, "const NUM_SYSCALLS: usize = {};", syscall_list.len()).unwrap();
+    writeln!(&mut file, "pub const NUM_SYSCALLS: usize = {};", syscall_list.len()).unwrap();
     writeln!(&mut file).unwrap();
 
     // Constants for each syscall index
@@ -167,30 +179,33 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
         for syscall in &subsystem.syscalls {
             let name = syscall.name.to_uppercase();
             let idx = syscall.const_idx.unwrap();
-            writeln!(&mut file, "const {}: u16 = {};", name, idx).unwrap();
+            writeln!(&mut file, "pub const {}: u16 = {};", name, idx).unwrap();
         }
     }
 
     // Generate global array of syscall descriptors
     writeln!(&mut file).unwrap();
     writeln!(&mut file, "{}", concat!(
-        "struct SysCallDesc\n",
+        "pub struct SysCallDesc\n",
         "{\n",
-        "    name: &'static str,\n",
-        "    const_idx: u16,\n",
-        "    argc: usize,\n",
+        "    pub name: &'static str,\n",
+        "    pub const_idx: u16,\n",
+        "    pub argc: usize,\n",
+        "    pub has_ret: bool,\n",
         "}",
     )).unwrap();
     writeln!(&mut file).unwrap();
 
-    writeln!(&mut file, "const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [").unwrap();
+    writeln!(&mut file, "pub const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [").unwrap();
     for syscall in syscall_list {
+        let has_ret = syscall.returns.0 != "void";
         writeln!(
             &mut file,
-            "    SysCallDesc {{ name: \"{}\", const_idx: {}, argc: {} }},",
+            "    SysCallDesc {{ name: \"{}\", const_idx: {}, argc: {}, has_ret: {} }},",
             syscall.name,
             syscall.const_idx.unwrap(),
             syscall.args.len(),
+            has_ret,
         ).unwrap();
     }
     writeln!(&mut file, "];").unwrap();
@@ -216,15 +231,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             let fn_name = syscall.name.clone();
             let const_idx = syscall.const_idx.unwrap();
 
-            // Function arguments
-            let mut arg_str = "".to_string();
-            for (idx, arg) in syscall.args.iter().enumerate() {
-                if idx > 0 {
-                    arg_str += ", ";
-                }
-                arg_str += &format!("{} {}", arg.0, arg.1);
-            }
-            //println!("{}", arg_str);
+            let c_sig_str = syscall.c_sig_string();
 
             let mut sys_arg_str = "".to_string();
             for (idx, arg) in syscall.args.iter().enumerate() {
@@ -236,10 +243,8 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             //println!("{}", sys_arg_str);
 
             writeln!(&mut file,
-                "inline {} {}({})\n{{\n    return syscall ({}) -> {} {{ syscall {}; }};\n}}\n",
-                syscall.returns.0,
-                fn_name,
-                arg_str,
+                "inline {}\n{{\n    return syscall ({}) -> {} {{ syscall {}; }};\n}}\n",
+                c_sig_str,
                 sys_arg_str,
                 syscall.returns.0,
                 const_idx,
@@ -270,7 +275,9 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
             writeln!(&mut file, "## {}", syscall.name).unwrap();
             writeln!(&mut file).unwrap();
 
-            // TODO: add C signature
+            // C signature string
+            writeln!(&mut file, "**{}**", syscall.c_sig_string()).unwrap();
+            writeln!(&mut file).unwrap();
 
             // Add description comment if present
             if let Some(text) = &syscall.description {
