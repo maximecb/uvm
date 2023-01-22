@@ -414,7 +414,7 @@ pub struct VM
     pub sys_state: SysState,
 
     /// Table of system calls the program can refer to
-    syscalls: Vec<SysCallFn>,
+    //syscalls: Vec<SysCallFn>,
 
     // Heap memory space
     heap: MemBlock,
@@ -436,15 +436,9 @@ impl VM
         // Initialize the system state
         let sys_state = SysState::new();
 
-        let mut syscall_fns = Vec::new();
-
-        for syscall_name in syscalls {
-            syscall_fns.push(sys_state.get_syscall(&syscall_name));
-        }
-
         Self {
             sys_state,
-            syscalls: syscall_fns,
+            //syscalls: syscall_fns,
             code,
             heap,
             stack: Vec::default(),
@@ -889,10 +883,8 @@ impl VM
                 }
 
                 Op::syscall => {
-                    let table_idx = self.code.read_pc::<u16>(&mut pc) as usize;
-
-                    assert!(table_idx < self.syscalls.len());
-                    let syscall_fn = self.syscalls[table_idx];
+                    let syscall_idx = self.code.read_pc::<u16>(&mut pc);
+                    let syscall_fn = self.sys_state.get_syscall(syscall_idx);
 
                     match syscall_fn
                     {

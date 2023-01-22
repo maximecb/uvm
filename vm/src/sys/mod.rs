@@ -59,11 +59,8 @@ impl SysCallFn
 
 pub struct SysState
 {
-    /// Map of names to syscall functions
-    syscalls: HashMap::<String, SysCallFn>,
-
-    syscalls_2: [Option<SysCallFn>; NUM_SYSCALLS],
-
+    /// Map of indices to syscall functions
+    syscalls: [Option<SysCallFn>; NUM_SYSCALLS],
 
     /// SDL context (used for UI and audio)
     sdl: Option<sdl2::Sdl>,
@@ -80,10 +77,7 @@ impl SysState
     pub fn new() -> Self
     {
         let mut sys_state = Self {
-            syscalls: HashMap::default(),
-
-            syscalls_2: [None; NUM_SYSCALLS],
-
+            syscalls: [None; NUM_SYSCALLS],
             sdl: None,
             window_state: None,
             time_state: TimeState::new(),
@@ -104,38 +98,19 @@ impl SysState
         self.sdl.as_mut().unwrap()
     }
 
-    pub fn reg_syscall(&mut self, name: &str, fun: SysCallFn)
-    {
-        self.syscalls.insert(name.to_string(), fun);
-    }
-
-    /// Get the syscall with a given name string
-    pub fn get_syscall(&self, name: &str) -> SysCallFn
-    {
-        if let Some(syscall_fn) = self.syscalls.get(name) {
-            return *syscall_fn;
-        }
-        else
-        {
-            panic!("unknown syscall \"{}\"", name);
-        }
-    }
-
-
-
-
-    pub fn reg_syscall_2(&mut self, const_idx: u16, fun: SysCallFn)
+    pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
     {
         let desc = &SYSCALL_DESCS[const_idx as usize];
         assert!(fun.argc() == desc.argc);
         assert!(fun.has_ret() == desc.has_ret);
-        self.syscalls_2[const_idx as usize] = Some(fun);
+        self.syscalls[const_idx as usize] = Some(fun);
     }
 
-    pub fn get_syscall_2(&self, const_idx: u16) -> SysCallFn
+    /// Get the syscall with a given index
+    pub fn get_syscall(&self, const_idx: u16) -> SysCallFn
     {
 
-        if let Some(syscall_fn) = self.syscalls_2[const_idx as usize] {
+        if let Some(syscall_fn) = self.syscalls[const_idx as usize] {
             return syscall_fn;
         }
         else
@@ -144,30 +119,27 @@ impl SysState
         }
     }
 
-
-
-
     fn init_syscalls(&mut self)
     {
         let mut syscalls = HashMap::<String, SysCallFn>::new();
 
-        self.reg_syscall("memset", SysCallFn::Fn3_0(memset));
-        self.reg_syscall("memcpy", SysCallFn::Fn3_0(memcpy));
+        self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
+        self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
 
-        self.reg_syscall("print_i64", SysCallFn::Fn1_0(print_i64));
-        self.reg_syscall("print_str", SysCallFn::Fn1_0(print_str));
-        self.reg_syscall("print_endl", SysCallFn::Fn0_0(print_endl));
-        self.reg_syscall("read_i64", SysCallFn::Fn0_1(read_i64));
+        self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
+        self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
+        self.reg_syscall(PRINT_ENDL, SysCallFn::Fn0_0(print_endl));
+        self.reg_syscall(READ_I64, SysCallFn::Fn0_1(read_i64));
 
-        self.reg_syscall("time_current_ms", SysCallFn::Fn0_1(time_current_ms));
-        self.reg_syscall("time_delay_cb", SysCallFn::Fn2_0(time_delay_cb));
+        self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
+        self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
 
-        self.reg_syscall("window_create", SysCallFn::Fn4_1(window_create));
-        self.reg_syscall("window_show", SysCallFn::Fn1_0(window_show));
-        self.reg_syscall("window_copy_pixels", SysCallFn::Fn2_0(window_copy_pixels));
-        self.reg_syscall("window_on_mousemove", SysCallFn::Fn2_0(window_on_mousemove));
-        self.reg_syscall("window_on_mousedown", SysCallFn::Fn2_0(window_on_mousedown));
-        self.reg_syscall("window_on_mouseup", SysCallFn::Fn2_0(window_on_mouseup));
+        self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
+        self.reg_syscall(WINDOW_SHOW, SysCallFn::Fn1_0(window_show));
+        self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
+        self.reg_syscall(WINDOW_ON_MOUSEMOVE, SysCallFn::Fn2_0(window_on_mousemove));
+        self.reg_syscall(WINDOW_ON_MOUSEDOWN, SysCallFn::Fn2_0(window_on_mousedown));
+        self.reg_syscall(WINDOW_ON_MOUSEUP, SysCallFn::Fn2_0(window_on_mouseup));
     }
 }
 

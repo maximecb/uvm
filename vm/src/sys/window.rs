@@ -140,7 +140,7 @@ pub fn window_show(vm: &mut VM, window_id: Value)
     //println!("width={}, height={}", width, height);
 }
 
-pub fn window_copy_pixels(vm: &mut VM, window_id: Value, src_addr: Value)
+pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
 {
     // Get the address to copy pixel data from
     let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
