@@ -276,7 +276,6 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
             writeln!(&mut file).unwrap();
 
             // C signature string
-            writeln!(&mut file, "C signature:").unwrap();
             writeln!(&mut file, "```\n{}\n```", syscall.c_sig_string()).unwrap();
             writeln!(&mut file).unwrap();
 
