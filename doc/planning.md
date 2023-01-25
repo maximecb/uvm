@@ -4,7 +4,9 @@
 
 # JIT
 
-# Freeze at 1.0
+# Feeeze existing APIs
+
+Stabilizing near 1.0
 
 # SIMD Support
 
