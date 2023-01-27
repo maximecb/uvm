@@ -204,6 +204,10 @@
           [
             "u32",
             "window_id"
+          ],
+          [
+            "const u8*",
+            "pixel_data"
           ]
         ],
         "returns": [

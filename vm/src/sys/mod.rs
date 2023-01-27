@@ -101,8 +101,17 @@ impl SysState
     pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
     {
         let desc = &SYSCALL_DESCS[const_idx as usize];
-        assert!(fun.argc() == desc.argc);
+
+        assert!(
+            fun.argc() == desc.argc,
+            "{} should accept {} args but implementation has {} params",
+            desc.name,
+            desc.argc,
+            fun.argc()
+        );
+
         assert!(fun.has_ret() == desc.has_ret);
+
         self.syscalls[const_idx as usize] = Some(fun);
     }
 

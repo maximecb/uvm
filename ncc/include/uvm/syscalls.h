@@ -63,9 +63,9 @@ inline void window_show(u32 window_id)
 }
 
 // Copy a frame of RGB24 pixels to be displayed into the window.
-inline void window_draw_frame(u32 window_id)
+inline void window_draw_frame(u32 window_id, const u8* pixel_data)
 {
-    return syscall (window_id) -> void { syscall 10; };
+    return syscall (window_id, pixel_data) -> void { syscall 10; };
 }
 
 // Register a callback for mouse movement.

@@ -9,17 +9,17 @@ PROMPT_STR: .stringz "Input an integer:\n";
 .code;
 
 push PROMPT_STR;
-syscall print_str;
+syscall $PRINT_STR;
 
 # Read input number
-syscall read_i64;
+syscall $READ_I64;
 
 # Fall FACT with 1 argument
 call FACT, 1;
 
 # Print the result
-syscall print_i64;
-syscall print_endl;
+syscall $PRINT_I64;
+syscall $PRINT_ENDL;
 
 push 0;
 exit;

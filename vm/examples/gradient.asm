@@ -22,8 +22,9 @@ push 600;
 get_local 0;
 get_local 1;
 push WINDOW_TITLE;
-syscall window_create;
-syscall window_show;
+push 0;
+syscall $WINDOW_CREATE;
+syscall $WINDOW_SHOW;
 
 # Local 2: Y=0
 push 0;
@@ -32,7 +33,7 @@ push 0;
 push 0;
 
 # Start time in ms, local 4
-syscall time_current_ms;
+syscall $TIME_CURRENT_MS;
 
 # For each row
 LOOP_Y:
@@ -98,18 +99,19 @@ lt_i64;
 jnz LOOP_Y;
 
 # End time in ms
-syscall time_current_ms;
+syscall $TIME_CURRENT_MS;
 
 # Compute render time in ms
 get_local 4;
 sub_u64;
 
-syscall print_i64;
+syscall $PRINT_I64;
 push MS_STR;
-syscall print_str;
+syscall $PRINT_STR;
 
+push 0;
 push PIXEL_BUFFER;
-syscall window_copy_pixels;
+syscall $WINDOW_DRAW_FRAME;
 
 # Return to the event loop
 push 0;

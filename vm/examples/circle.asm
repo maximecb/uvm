@@ -21,17 +21,19 @@ X_COORD:
 push 800;
 push 600;
 push WINDOW_TITLE;
-syscall window_create;
+push 0;
+syscall $WINDOW_CREATE;
 
 # Show the window
-syscall window_show;
+syscall $WINDOW_SHOW;
 
 push 100;
 push ANIM_CALLBACK;
-syscall time_delay_cb;
+syscall $TIME_DELAY_CB;
 
+push 0;
 push PIXEL_BUFFER;
-syscall window_copy_pixels;
+syscall $WINDOW_DRAW_FRAME;
 
 # Wait for an event
 push 0;
@@ -45,11 +47,6 @@ ANIM_CALLBACK:
 # x: local 0
 push X_COORD;
 load_u64;
-
-get_local 0;
-syscall print_i64;
-syscall print_endl;
-syscall print_endl;
 
 # x = x + dx
 get_local 0;
@@ -72,7 +69,7 @@ store_u64;
 push PIXEL_BUFFER;
 push 0;
 push 1_440_000;
-syscall memset;
+syscall $MEMSET;
 
 # Draw the circle
 get_local 0;
@@ -81,13 +78,14 @@ push 20;
 call DRAW_CIRCLE, 3;
 pop;
 
+push 0;
 push PIXEL_BUFFER;
-syscall window_copy_pixels;
+syscall $WINDOW_DRAW_FRAME;
 
 # Schedule the animation callback again
 push 25;
 push ANIM_CALLBACK;
-syscall time_delay_cb;
+syscall $TIME_DELAY_CB;
 
 push 0;
 ret;

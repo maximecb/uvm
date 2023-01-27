@@ -40,7 +40,7 @@ pub const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [
     SysCallDesc { name: "print_endl", const_idx: 7, argc: 0, has_ret: false },
     SysCallDesc { name: "read_i64", const_idx: 8, argc: 0, has_ret: true },
     SysCallDesc { name: "window_show", const_idx: 9, argc: 1, has_ret: false },
-    SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 1, has_ret: false },
+    SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false },
     SysCallDesc { name: "window_on_mousemove", const_idx: 11, argc: 2, has_ret: false },
     SysCallDesc { name: "window_on_mousedown", const_idx: 12, argc: 2, has_ret: false },
     SysCallDesc { name: "window_on_mouseup", const_idx: 13, argc: 2, has_ret: false },

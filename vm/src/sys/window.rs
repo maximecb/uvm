@@ -193,7 +193,7 @@ pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
 // we should handle window-related events here instead
 pub fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
 {
-    let window = get_window(window_id);
+    let window = get_window(0);
     let cb = window.cb_mousemove;
 
     if cb == 0 {
@@ -221,7 +221,7 @@ MouseButtonDown {
 */
 pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
-    let window = get_window(window_id);
+    let window = get_window(0);
     let cb = window.cb_mousedown;
 
     if cb == 0 {
@@ -255,7 +255,7 @@ pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_b
 
 pub fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
-    let window = get_window(window_id);
+    let window = get_window(0);
     let cb = window.cb_mousedown;
 
     if cb == 0 {

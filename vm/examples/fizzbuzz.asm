@@ -16,7 +16,7 @@ push 15;
 mod_i64;
 jnz NOT_FIZZBUZZ;
 push FIZZBUZZ;
-syscall print_str;
+syscall $PRINT_STR;
 jmp INCR;
 NOT_FIZZBUZZ:
 
@@ -26,7 +26,7 @@ push 3;
 mod_i64;
 jnz NOT_FIZZ;
 push FIZZ;
-syscall print_str;
+syscall $PRINT_STR;
 jmp INCR;
 NOT_FIZZ:
 
@@ -36,14 +36,14 @@ push 5;
 mod_i64;
 jnz NOT_BUZZ;
 push BUZZ;
-syscall print_str;
+syscall $PRINT_STR;
 jmp INCR;
 NOT_BUZZ:
 
 # Print the number
 get_local 0;
-syscall print_i64;
-syscall print_endl;
+syscall $PRINT_I64;
+syscall $PRINT_ENDL;
 
 # Increment
 INCR:

@@ -97,7 +97,7 @@ Show a window, initially not visible when created.
 ## window_draw_frame
 
 ```
-void window_draw_frame(u32 window_id)
+void window_draw_frame(u32 window_id, const u8* pixel_data)
 ```
 
 Copy a frame of RGB24 pixels to be displayed into the window.

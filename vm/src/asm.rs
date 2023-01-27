@@ -407,8 +407,18 @@ impl Assembler
 {
     pub fn new() -> Self
     {
+        // Populate the available constants
+        use crate::sys::constants::SYSCALL_DESCS;
+        let mut const_map = HashMap::new();
+        for syscall in SYSCALL_DESCS {
+            const_map.insert(
+                syscall.name.to_uppercase(),
+                syscall.const_idx as i128
+            );
+        }
+
         Self {
-            const_map: HashMap::new(),
+            const_map: const_map,
             syscall_set: HashSet::new(),
             code: MemBlock::new(),
             data: MemBlock::new(),
@@ -1048,6 +1058,7 @@ mod tests
     #[test]
     fn parse_files()
     {
+        parse_file("examples/empty.asm");
         parse_file("examples/factorial.asm");
         parse_file("examples/fib.asm");
         parse_file("examples/fizzbuzz.asm");
