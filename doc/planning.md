@@ -1,15 +1,29 @@
-# Iterate with interpreter and APIs
+# Planning and Evolution
 
-# Binary image format
+## Iterate with Interpreter and APIs
 
-# JIT
 
-# Feeeze existing APIs
+## C Compiler Development
 
-Stabilizing near 1.0
+Link to ncc
 
-# SIMD Support
+## Binary Image Format
+
+
+
+## JIT Compiler
+
+
+
+## Stabilizing Near 1.0
+
+Freeze existing APIs
+
+
+## SIMD Support
 
 Memcpy, blit. Vector and matrix operations. Einsum.
 
-# Future extensions
+
+
+## Future Extensions
