@@ -39,7 +39,7 @@ Planned future features:
 - Ability to encode metadata such as author name and app icon into app image files
 - Ability to suspend running programs and save them to a new app image file
 
-## Build instructions
+## Build Instructions
 
 Dependencies:
 - The [Rust toolchain](https://www.rust-lang.org/tools/install)

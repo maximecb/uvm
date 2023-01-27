@@ -1,6 +1,7 @@
 use std::fmt;
 use std::convert::{TryFrom};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use crate::vm::{VM, MemBlock, Op};
 
 #[derive(Debug)]
@@ -380,14 +381,16 @@ struct LabelRef
 
 pub struct Assembler
 {
-    /// Map of syscall names to indices
-    syscall_map: HashMap<String, u16>,
+    /// Map of available special constants
+    const_map: HashMap<String, i128>,
 
-    /// Table of syscall names, sorted by index
-    syscall_tbl: Vec<String>,
+    /// Set of syscalls referenced by this program
+    syscall_set: HashSet<u16>,
 
+    // Generated code
     code: MemBlock,
 
+    // Data section
     data: MemBlock,
 
     /// Label definitions (name, position)
@@ -405,8 +408,8 @@ impl Assembler
     pub fn new() -> Self
     {
         Self {
-            syscall_map: HashMap::new(),
-            syscall_tbl: Vec::new(),
+            const_map: HashMap::new(),
+            syscall_set: HashSet::new(),
             code: MemBlock::new(),
             data: MemBlock::new(),
             label_defs: HashMap::default(),
@@ -466,7 +469,7 @@ impl Assembler
             }
         }
 
-        Ok(VM::new(self.code, self.data, self.syscall_tbl))
+        Ok(VM::new(self.code, self.data, self.syscall_set))
     }
 
     pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
@@ -489,6 +492,23 @@ impl Assembler
         input.eat_ws()?;
 
         let ch = input.peek_ch();
+
+        // If this is a special constant
+        if ch == '$' {
+            input.eat_ch();
+            let const_name = input.parse_ident()?;
+
+            if let Some(int_val) = self.const_map.get(&const_name) {
+                return match (*int_val).try_into() {
+                    Ok(out_val) => Ok(out_val),
+                    Err(_) => input.parse_error("special constant did not fit required size")
+                }
+            }
+            else
+            {
+                return input.parse_error(&format!("unknown special constant ${}", const_name));
+            }
+        }
 
         // If this is an integer literal
         if ch.is_digit(10) || ch == '-' {
@@ -833,16 +853,9 @@ impl Assembler
             }
 
             "syscall" => {
-                let syscall_name = input.parse_ident()?;
-
-                // Get the index for this syscall method name
-                if self.syscall_map.get(&syscall_name).is_none() {
-                    let syscall_idx = self.syscall_map.len();
-                    self.syscall_map.insert(syscall_name.clone(), syscall_idx.try_into().unwrap());
-                    self.syscall_tbl.push(syscall_name.clone());
-                }
-                let syscall_idx = *self.syscall_map.get(&syscall_name).unwrap();
-
+                // Get the index for this syscall
+                let syscall_idx: u16 = self.parse_int_arg(input)?;
+                self.syscall_set.insert(syscall_idx);
                 self.code.push_op(Op::syscall);
                 self.code.push_u16(syscall_idx);
             }

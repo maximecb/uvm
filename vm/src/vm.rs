@@ -1,4 +1,5 @@
 use std::mem::{transmute, size_of};
+use std::collections::HashSet;
 use std::ffi::CStr;
 use crate::sys::*;
 
@@ -413,9 +414,6 @@ pub struct VM
     // Host system state
     pub sys_state: SysState,
 
-    /// Table of system calls the program can refer to
-    //syscalls: Vec<SysCallFn>,
-
     // Heap memory space
     heap: MemBlock,
 
@@ -431,7 +429,7 @@ pub struct VM
 
 impl VM
 {
-    pub fn new(code: MemBlock, heap: MemBlock, syscalls: Vec<String>) -> Self
+    pub fn new(code: MemBlock, heap: MemBlock, syscalls: HashSet<u16>) -> Self
     {
         // Initialize the system state
         let sys_state = SysState::new();
