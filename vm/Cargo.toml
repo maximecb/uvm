@@ -10,3 +10,13 @@ sdl2 = "0.35.2"
 
 [profile.dev]
 opt-level = 1
+overflow-checks = true
+debug-assertions = true
+
+[profile.release]
+opt-level = 3
+lto = true
+# For now, we leave overflow checks and debug assertions
+# enabled in release mode for security reasons
+overflow-checks = true
+debug-assertions = true
