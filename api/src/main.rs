@@ -243,7 +243,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             //println!("{}", sys_arg_str);
 
             writeln!(&mut file,
-                "inline {}\n{{\n    return syscall ({}) -> {} {{ syscall {}; }};\n}}\n",
+                "inline {}\n{{\n    return asm ({}) -> {} {{ syscall {}; }};\n}}\n",
                 c_sig_str,
                 sys_arg_str,
                 syscall.returns.0,

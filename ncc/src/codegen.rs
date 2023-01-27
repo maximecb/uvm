@@ -205,8 +205,16 @@ impl Stmt
             }
 
             Stmt::ReturnExpr(expr) => {
-                expr.gen_code(sym, out)?;
-                out.push_str("ret;\n");
+                if let Expr::Asm { out_type: Type::Void, .. } = expr.as_ref() {
+                    expr.gen_code(sym, out)?;
+                    out.push_str("push 0;\n");
+                    out.push_str("ret;\n");
+                }
+                else
+                {
+                    expr.gen_code(sym, out)?;
+                    out.push_str("ret;\n");
+                }
             }
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
@@ -692,6 +700,13 @@ mod tests
         parse_ok("u64 g = 5; u64 main() { return g + 1; }");
         parse_ok("u8* p = null; u8* foo() { return p; }");
         parse_ok("bool levar = true; bool foo() { return levar; }");
+    }
+
+    #[test]
+    fn call_ret()
+    {
+        parse_ok("void foo() {} void bar() {}");
+        parse_ok("void foo() {} void bar() { return foo(); } ");
     }
 
     #[test]

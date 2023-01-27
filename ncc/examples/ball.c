@@ -48,21 +48,10 @@ void draw_ball()
     }
 }
 
-void create_window(char* window_title, size_t width, size_t height)
-{
-    asm (width, height, window_title) -> void
-    {
-        syscall window_create;
-        syscall window_show;
-    };
-}
-
 void anim_callback()
 {
-    u64 start_time_ms = asm () -> u64 { syscall time_current_ms; };
-
     // Clear the screen
-    asm (FRAME_BUFFER, 0, 1_440_000) -> void { syscall memset; };
+    memset(FRAME_BUFFER, 0, 1_440_000);
 
     draw_ball();
 
@@ -87,26 +76,16 @@ void anim_callback()
         vy = -vy;
     }
 
-    asm (FRAME_BUFFER) -> void { syscall window_copy_pixels; };
+    window_draw_frame(0, FRAME_BUFFER);
 
-    asm (10, anim_callback) -> void { syscall time_delay_cb; };
-
-    u64 end_time_ms = asm () -> u64 { syscall time_current_ms; };
-    u64 delta_time = end_time_ms - start_time_ms;
-
-    asm ("ms", delta_time) -> u64 {
-        syscall print_i64;
-        syscall print_str;
-        syscall print_endl;
-    };
+    time_delay_cb(10, anim_callback);
 }
 
 void main()
 {
-    // TODO: call to create window
-    create_window(WINDOW_TITLE, FRAME_WIDTH, FRAME_HEIGHT);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, WINDOW_TITLE, 0);
 
-    asm (0, anim_callback) -> void { syscall time_delay_cb; };
+    time_delay_cb(0, anim_callback);
 
     __enable_event_loop__();
 }
@@ -120,4 +99,58 @@ void __enable_event_loop__()
         push 1;
         store_u8;
     };
+}
+
+// Fill a block of bytes in the heap with a given value.
+inline void memset(u8* dst, u8 value, u64 num_bytes)
+{
+    return asm (dst, value, num_bytes) -> void { syscall 4; };
+}
+
+// Print an i64 value to standard output
+inline void print_i64(i64 val)
+{
+    return asm (val) -> void { syscall 5; };
+}
+
+// Print a string to standard output
+inline void print_str(char* str)
+{
+    return asm (str) -> void { syscall 6; };
+}
+
+// Print a newline to standard output
+inline void print_endl()
+{
+    return asm () -> void { syscall 7; };
+}
+
+// Get the UNIX time stamp in milliseconds.
+inline u64 time_current_ms()
+{
+    return asm () -> u64 { syscall 0; };
+}
+
+// Schedule a callback to be called once after a given delay.
+inline void time_delay_cb(u64 delay_ms, void* callback)
+{
+    return asm (delay_ms, callback) -> void { syscall 2; };
+}
+
+// Create a new window with a frame buffer to draw into.
+inline u32 window_create(u32 width, u32 height, char* title, u64 flags)
+{
+    return asm (width, height, title, flags) -> u32 { syscall 1; };
+}
+
+// Show a window, initially not visible when created.
+inline void window_show(u32 window_id)
+{
+    return asm (window_id) -> void { syscall 9; };
+}
+
+// Copy a frame of RGB24 pixels to be displayed into the window.
+inline void window_draw_frame(u32 window_id, u8* pixel_data)
+{
+    return asm (window_id, pixel_data) -> void { syscall 10; };
 }

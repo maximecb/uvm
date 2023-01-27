@@ -35,6 +35,7 @@ impl Type
         match (self, other) {
             (Void, Void) => true,
             (UInt(m), UInt(n)) if m == n => true,
+            (Int(m), Int(n)) if m == n => true,
             (Float(m), Float(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
             _ => false
@@ -77,6 +78,7 @@ impl fmt::Display for Type {
         match self {
             Void => write!(f, "void"),
             UInt(n) => write!(f, "u{}", n),
+            Int(n) => write!(f, "i{}", n),
             Pointer(t) => write!(f, "{}*", t.as_ref()),
 
             /*
