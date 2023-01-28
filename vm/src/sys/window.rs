@@ -256,7 +256,7 @@ pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_b
 pub fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
     let window = get_window(0);
-    let cb = window.cb_mousedown;
+    let cb = window.cb_mouseup;
 
     if cb == 0 {
         return;

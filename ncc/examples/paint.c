@@ -92,15 +92,6 @@ u8* get_pixel_ptr(
     return f_buffer + (3 * f_width * y) + (3 * x);
 }
 
-void create_window(char* window_title, size_t width, size_t height)
-{
-    asm (width, height, window_title) -> void
-    {
-        syscall window_create;
-        syscall window_show;
-    };
-}
-
 void draw_palette()
 {
     for (size_t i = 0; i < NUM_COLORS; ++i)
@@ -144,10 +135,7 @@ void mousemove(u64 window_id, u64 x, u64 y)
         draw_brush();
     }
 
-    asm (FRAME_BUFFER) -> void
-    {
-        syscall window_copy_pixels;
-    };
+    window_draw_frame(0, FRAME_BUFFER);
 }
 
 void mousedown(u64 window_id, u8 btn_id)
@@ -157,12 +145,6 @@ void mousedown(u64 window_id, u8 btn_id)
         draw_brush();
     }
 
-    asm (btn_id) -> void
-    {
-        syscall print_i64;
-        syscall print_endl;
-    };
-
     if (btn_id == 2) {
         u8* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
         current_r = *(pixel_ptr + 0);
@@ -170,14 +152,13 @@ void mousedown(u64 window_id, u8 btn_id)
         current_b = *(pixel_ptr + 2);
     }
 
-    asm (FRAME_BUFFER) -> void
-    {
-        syscall window_copy_pixels;
-    };
+    window_draw_frame(0, FRAME_BUFFER);
 }
 
 void mouseup(u64 window_id, u8 btn_id)
 {
+    print_str("mouseup!\n");
+
     if (btn_id == 0) {
         drawing = false;
     }
@@ -185,8 +166,8 @@ void mouseup(u64 window_id, u8 btn_id)
 
 void main()
 {
-    // TODO: call to create window
-    create_window(WINDOW_TITLE, FRAME_WIDTH, FRAME_HEIGHT);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, WINDOW_TITLE, 0);
+    window_show(0);
 
     // Initially fill the canvas with white
     fill_rect(
@@ -205,14 +186,11 @@ void main()
     draw_palette();
 
     // Register mouse event callbacks
-    asm (0, mousemove) -> void { syscall window_on_mousemove; };
-    asm (0, mousedown) -> void { syscall window_on_mousedown; };
-    asm (0, mouseup) -> void { syscall window_on_mouseup; };
+    window_on_mousemove(0, mousemove);
+    window_on_mousedown(0, mousedown);
+    window_on_mouseup(0, mouseup);
 
-    asm (FRAME_BUFFER) -> void
-    {
-        syscall window_copy_pixels;
-    };
+    window_draw_frame(0, FRAME_BUFFER);
 
     __enable_event_loop__();
 }
@@ -226,4 +204,46 @@ void __enable_event_loop__()
         push 1;
         store_u8;
     };
+}
+
+// Print a string to standard output
+inline void print_str(char* str)
+{
+    return asm (str) -> void { syscall 6; };
+}
+
+// Create a new window with a frame buffer to draw into.
+inline u32 window_create(u32 width, u32 height, char* title, u64 flags)
+{
+    return asm (width, height, title, flags) -> u32 { syscall 1; };
+}
+
+// Show a window, initially not visible when created.
+inline void window_show(u32 window_id)
+{
+    return asm (window_id) -> void { syscall 9; };
+}
+
+// Copy a frame of RGB24 pixels to be displayed into the window.
+inline void window_draw_frame(u32 window_id, u8* pixel_data)
+{
+    return asm (window_id, pixel_data) -> void { syscall 10; };
+}
+
+// Register a callback for mouse movement.
+inline void window_on_mousemove(u32 window_id, void* callback)
+{
+    return asm (window_id, callback) -> void { syscall 11; };
+}
+
+// Register a callback for mouse button press events.
+inline void window_on_mousedown(u32 window_id, void* callback)
+{
+    return asm (window_id, callback) -> void { syscall 12; };
+}
+
+// Register a callback for mouse button release events.
+inline void window_on_mouseup(u32 window_id, void* callback)
+{
+    return asm (window_id, callback) -> void { syscall 13; };
 }
