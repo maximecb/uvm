@@ -775,5 +775,6 @@ mod tests
         parse_file("examples/paint.c");
         parse_file("examples/ball.c");
         parse_file("examples/crc32.c");
+        parse_file("examples/random.c");
     }
 }
