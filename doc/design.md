@@ -3,6 +3,18 @@
 This document discusses the design of UVM and explains the reasoning
 behind various architectural choices.
 
+## Overview
+
+UVM is a bytecode VM with a stack-based interpreter, which will eventually integrate a JIT compiler as well.
+It uses a Harvard architecture where the stack, code and data (the heap) are effectively 3 separate address
+spaces. The following sections go in to details to motivate these design choices and explain more about the
+architecture of UVM. You can find a list of supported bytecode instructions in (vm/src/vm.rs)[vm/src/vm.rs].
+
+Do note that the design of UVM is evolving and some architectural choices are not yet finalized. Changes
+will likely be made at various points to make the design more robust and also more flexible. Notably, the
+strategies to be used to support parallel computations are still completely open for discussion. Your
+feedback and ideas are welcome. We just ask that criticism be friendly and constructive.
+
 ## Design Goals
 
 UVM is designed with the following goals in mind.
