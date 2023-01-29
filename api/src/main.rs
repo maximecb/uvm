@@ -73,6 +73,24 @@ fn is_valid_ident(name: &str) -> bool
     return true;
 }
 
+/// Used to make sure that description strings all start with a capital
+// letter and end with a period for consistency
+fn normalize_description(text: &str) -> String
+{
+    let mut text = text.to_string().trim().to_string();
+
+    if !text.ends_with(".") {
+        text += ".";
+    }
+
+    let first_ch = text.chars().nth(0).unwrap();
+    if first_ch.is_lowercase() {
+        text = text.replacen(first_ch, &first_ch.to_uppercase().to_string(), 1);
+    }
+
+    text
+}
+
 fn main()
 {
     let mut unique_names: HashSet<String> = HashSet::new();
@@ -85,16 +103,24 @@ fn main()
     //println!("deserialized = {:?}", deserialized);
 
     // For each subsystem
-    for subsystem in &subsystems {
+    for subsystem in &mut subsystems {
         if !is_valid_ident(&subsystem.subsystem) {
             panic!();
         }
 
+        if let Some(text) = &subsystem.description {
+            subsystem.description = Some(normalize_description(&text));
+        }
+
         // For each syscall for this subsystem
-        for syscall in &subsystem.syscalls {
+        for syscall in &mut subsystem.syscalls {
             // Make sure that syscall names are valid
             if !is_valid_ident(&syscall.name) {
                 panic!();
+            }
+
+            if let Some(text) = &syscall.description {
+                syscall.description = Some(normalize_description(&text));
             }
 
             // Make sure that syscall names are unique
@@ -259,6 +285,9 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
     let mut file = File::create(out_file).unwrap();
 
     writeln!(&mut file, "# UVM Subsystems and System Calls").unwrap();
+    writeln!(&mut file).unwrap();
+    writeln!(&mut file, "The APIs exposed to software running on UVM are divided into").unwrap();
+    writeln!(&mut file, "the following subsystems.").unwrap();
     writeln!(&mut file).unwrap();
 
     for subsystem in subsystems {

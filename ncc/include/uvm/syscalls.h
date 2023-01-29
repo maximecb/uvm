@@ -14,25 +14,25 @@ inline void memset(u8* dst, u8 value, u64 num_bytes)
     return asm (dst, value, num_bytes) -> void { syscall 4; };
 }
 
-// Print an i64 value to standard output
+// Print an i64 value to standard output.
 inline void print_i64(i64 val)
 {
     return asm (val) -> void { syscall 5; };
 }
 
-// Print a string to standard output
+// Print a string to standard output.
 inline void print_str(const char* str)
 {
     return asm (str) -> void { syscall 6; };
 }
 
-// Print a newline to standard output
+// Print a newline to standard output.
 inline void print_endl()
 {
     return asm () -> void { syscall 7; };
 }
 
-// Read an i64 value from standard input
+// Read an i64 value from standard input.
 inline i64 read_i64()
 {
     return asm () -> i64 { syscall 8; };

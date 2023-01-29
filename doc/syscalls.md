@@ -1,5 +1,8 @@
 # UVM Subsystems and System Calls
 
+The APIs exposed to software running on UVM are divided into
+the following subsystems.
+
 # vm
 
 Core functionality provided by the VM that isn't related to any kind of I/O.
@@ -22,7 +25,7 @@ Fill a block of bytes in the heap with a given value.
 
 # io
 
-File and stream I/O functionality
+File and stream I/O functionality.
 
 ## print_i64
 
@@ -30,7 +33,7 @@ File and stream I/O functionality
 void print_i64(i64 val)
 ```
 
-Print an i64 value to standard output
+Print an i64 value to standard output.
 
 ## print_str
 
@@ -38,7 +41,7 @@ Print an i64 value to standard output
 void print_str(const char* str)
 ```
 
-Print a string to standard output
+Print a string to standard output.
 
 ## print_endl
 
@@ -46,7 +49,7 @@ Print a string to standard output
 void print_endl()
 ```
 
-Print a newline to standard output
+Print a newline to standard output.
 
 ## read_i64
 
@@ -54,7 +57,7 @@ Print a newline to standard output
 i64 read_i64()
 ```
 
-Read an i64 value from standard input
+Read an i64 value from standard input.
 
 # time
 

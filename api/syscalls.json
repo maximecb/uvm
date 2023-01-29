@@ -55,7 +55,7 @@
   },
   {
     "subsystem": "io",
-    "description": "File and stream I/O functionality",
+    "description": "File and stream I/O functionality.",
     "syscalls": [
       {
         "name": "print_i64",
@@ -71,7 +71,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 5,
-        "description": "Print an i64 value to standard output"
+        "description": "Print an i64 value to standard output."
       },
       {
         "name": "print_str",
@@ -87,7 +87,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 6,
-        "description": "Print a string to standard output"
+        "description": "Print a string to standard output."
       },
       {
         "name": "print_endl",
@@ -98,7 +98,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 7,
-        "description": "Print a newline to standard output"
+        "description": "Print a newline to standard output."
       },
       {
         "name": "read_i64",
@@ -109,7 +109,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 8,
-        "description": "Read an i64 value from standard input"
+        "description": "Read an i64 value from standard input."
       }
     ]
   },
