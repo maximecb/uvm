@@ -286,7 +286,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
 
     writeln!(&mut file, "# UVM Subsystems and System Calls").unwrap();
     writeln!(&mut file).unwrap();
-    writeln!(&mut file, "The APIs exposed to software running on UVM are divided into").unwrap();
+    writeln!(&mut file, "The host APIs exposed to programs running on UVM are organized into").unwrap();
     writeln!(&mut file, "the following subsystems.").unwrap();
     writeln!(&mut file).unwrap();
 
@@ -307,6 +307,12 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
             // C signature string
             writeln!(&mut file, "```\n{}\n```", syscall.c_sig_string()).unwrap();
             writeln!(&mut file).unwrap();
+
+            // If this syscall returns something
+            if syscall.returns.0 != "void" {
+                writeln!(&mut file, "**Returns:** {} {}", syscall.returns.0, syscall.returns.1).unwrap();
+                writeln!(&mut file).unwrap();
+            }
 
             // Add description comment if present
             if let Some(text) = &syscall.description {

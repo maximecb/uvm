@@ -1,6 +1,6 @@
 # UVM Subsystems and System Calls
 
-The APIs exposed to software running on UVM are divided into
+The host APIs exposed to programs running on UVM are organized into
 the following subsystems.
 
 # vm
@@ -57,6 +57,8 @@ Print a newline to standard output.
 i64 read_i64()
 ```
 
+**Returns:** i64 val
+
 Read an i64 value from standard input.
 
 # time
@@ -68,6 +70,8 @@ Date, time and timing related system calls.
 ```
 u64 time_current_ms()
 ```
+
+**Returns:** u64 timestamp
 
 Get the UNIX time stamp in milliseconds.
 
@@ -86,6 +90,8 @@ Schedule a callback to be called once after a given delay.
 ```
 u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 ```
+
+**Returns:** u32 window_id
 
 Create a new window with a frame buffer to draw into.
 
