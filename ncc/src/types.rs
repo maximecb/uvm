@@ -11,8 +11,13 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
 {
     match (&lhs_type, &rhs_type)
     {
-        // If m < n, then the assignment truncates
-        (UInt(m), UInt(n)) if m < n => true,
+        // If m < n, then the assignment truncates,
+        // If m > n, then zero-extension is used
+        (UInt(m), UInt(n)) => true,
+
+        // Unsigned to signed conversion is ok in C,
+        // zero-extension is used if m > n
+        (Int(m), UInt(n)) if m >= n => true,
 
         // Assigning an integer to a pointer
         // Note: in C, this works but only for the value 0

@@ -707,6 +707,7 @@ mod tests
     {
         parse_ok("void foo() {} void bar() {}");
         parse_ok("void foo() {} void bar() { return foo(); } ");
+        parse_ok("void print_i64(i64 v) {} void bar(u64 v) { print_i64(v); }");
     }
 
     #[test]
