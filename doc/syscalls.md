@@ -57,7 +57,7 @@ Print a newline to standard output.
 i64 read_i64()
 ```
 
-**Returns:** i64 val
+**Returns:** `i64 val`
 
 Read an i64 value from standard input.
 
@@ -71,7 +71,7 @@ Date, time and timing related system calls.
 u64 time_current_ms()
 ```
 
-**Returns:** u64 timestamp
+**Returns:** `u64 timestamp`
 
 Get the UNIX time stamp in milliseconds.
 
@@ -91,7 +91,7 @@ Schedule a callback to be called once after a given delay.
 u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 ```
 
-**Returns:** u32 window_id
+**Returns:** `u32 window_id`
 
 Create a new window with a frame buffer to draw into.
 
@@ -109,7 +109,7 @@ Show a window, initially not visible when created.
 void window_draw_frame(u32 window_id, const u8* pixel_data)
 ```
 
-Copy a frame of RGB24 pixels to be displayed into the window.
+Copy a frame of RGB24 pixels to be displayed into the window. The frame must have the same width and height as the window.
 
 ## window_on_mousemove
 

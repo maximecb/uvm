@@ -310,7 +310,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
 
             // If this syscall returns something
             if syscall.returns.0 != "void" {
-                writeln!(&mut file, "**Returns:** {} {}", syscall.returns.0, syscall.returns.1).unwrap();
+                writeln!(&mut file, "**Returns:** `{} {}`", syscall.returns.0, syscall.returns.1).unwrap();
                 writeln!(&mut file).unwrap();
             }
 
