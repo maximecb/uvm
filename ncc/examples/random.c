@@ -35,7 +35,7 @@ void main()
     u32 max_val = 0;
     u32 sum = 0;
 
-    for (u32 i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
     {
         u32 r = rand() % 10;
         sum = sum + r;

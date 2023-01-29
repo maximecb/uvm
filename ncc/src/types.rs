@@ -17,11 +17,21 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
 
         // Unsigned to signed conversion is ok in C,
         // zero-extension is used if m > n
+        // NOTE: if dst has fewer bits, we may need to use truncation
         (Int(m), UInt(n)) if m >= n => true,
+
+        // This just reinterprets the bits,
+        // NOTE: if dst has fewer bits, we may need to use truncation
+        (UInt(m), Int(n)) => true,
+
+        // This just reinterprets the bits,
+        // NOTE: we may need to use truncation or sign-extension here
+        (Int(m), Int(n)) => true,
 
         // Assigning an integer to a pointer
         // Note: in C, this works but only for the value 0
         (Pointer(base_type), UInt(_)) => true,
+        (Pointer(base_type), Int(64)) => true,
 
         // Assigning an array to a pointer
         (Pointer(base_type), Array { elem_type, .. }) => base_type.eq(&elem_type),
@@ -137,8 +147,7 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {
-                // TODO: this should be int instead of UInt
-                Ok(UInt(64))
+                Ok(Int(64))
             }
 
             Expr::String(_) => {
@@ -193,20 +202,43 @@ impl Expr
                     }
 
                     Add | Sub => {
-                        match (lhs_type, rhs_type) {
+                        match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
-                            (Pointer(b), UInt(n)) => Ok(Pointer(b)),
-                            (UInt(n), Pointer(b)) => Ok(Pointer(b)),
+                            (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
+
+                            // TODO: we may need to do sign-extension here
+                            // we could do it in the backend, but it might be better/simpler
+                            // to insert an explicit cast operation
+                            (Int(m), Int(n)) => Ok(Int(max(m, n))),
+
+                            (Pointer(b), UInt(n)) | (UInt(n), Pointer(b)) => Ok(Pointer(b)),
+                            (Pointer(b), Int(n)) | (Int(n), Pointer(b)) => Ok(Pointer(b)),
+
                             (Array{elem_type, .. }, UInt(n)) => Ok(Pointer(elem_type)),
-                            _ => ParseError::msg_only("incompatible types in add/sub")
+                            _ => ParseError::msg_only(&format!(
+                                "incompatible types in add/sub {}, {}",
+                                lhs_type,
+                                rhs_type
+                            ))
                         }
                     }
 
                     BitAnd | BitOr | BitXor | LShift | RShift |
                     Mul | Div | Mod => {
-                        match (lhs_type, rhs_type) {
+                        match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
-                            _ => ParseError::msg_only("incompatible types in arithmetic op")
+                            (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
+
+                            // TODO: we may need to do sign-extension here
+                            // we could do it in the backend, but it might be better/simpler
+                            // to insert an explicit cast operation
+                            (Int(m), Int(n)) => Ok(Int(max(m, n))),
+
+                            _ => ParseError::msg_only(&format!(
+                                "incompatible types in arithmetic op {}, {}",
+                                lhs_type,
+                                rhs_type
+                            ))
                         }
                     }
 
