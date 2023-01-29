@@ -700,6 +700,7 @@ mod tests
         parse_ok("u64 g = 5; u64 main() { return g + 1; }");
         parse_ok("u8* p = null; u8* foo() { return p; }");
         parse_ok("bool levar = true; bool foo() { return levar; }");
+        parse_ok("u64 g = 0; void foo(u32 v) { g = v; }");
     }
 
     #[test]

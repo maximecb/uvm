@@ -21,12 +21,17 @@ u32 rand()
 
 void srand(u32 seed)
 {
+    cur_rand = seed;
+
     // Seed must be an odd number
-    //cur_rand = seed;
+    if (cur_rand % 2 == 0)
+        cur_rand = cur_rand + 1;
 }
 
 void main()
 {
+    srand(9000);
+
     u32 N = 50;
 
     u32 min_val = 0xFFFF;
