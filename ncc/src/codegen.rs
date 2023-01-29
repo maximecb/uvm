@@ -681,12 +681,19 @@ mod tests
         parse_ok("void main(u64 a) { u64 a = 0; }");
         parse_ok("void main(u64 a) { u64 b = a + 1; }");
 
+        // FIXME:
+        //parse_ok("void main() { int a = 1; }");
+
         // Infix expressions
         parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
         parse_ok("u64 foo() { return 1 + 2, 3; }");
         parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b:c; }");
         parse_ok("u64 foo(u64 a, u64 b, u64 c) { return 1 + a? b:c; }");
         parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b+1:c+2; }");
+        parse_ok("bool foo(int a, int b) { return a < b; }");
+
+        // FIXME:
+        //parse_ok("int foo(int a) { return a + 1; }");
 
         // Check that a return instruction is automatically inserted
         parse_ok("void foo() {}").contains("ret;");
@@ -766,6 +773,9 @@ mod tests
         parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
         parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { break; } }");
         parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { continue; } }");
+
+        // FIXME
+        //parse_ok("void foo(int n) { for (int i = 0; i < n; ++i) {} }");
     }
 
     #[test]

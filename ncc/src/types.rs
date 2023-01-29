@@ -182,7 +182,11 @@ impl Expr
                     // when the cast is valid
                     Assign => {
                         if !assign_compat(&lhs_type, &rhs_type) {
-                            return ParseError::msg_only("rhs not assignable to lhs")
+                            return ParseError::msg_only(&format!(
+                                "rhs type {} not assignable to lhs of type {}",
+                                rhs_type,
+                                lhs_type
+                            ))
                         }
 
                         Ok(lhs_type)
