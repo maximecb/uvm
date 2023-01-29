@@ -21,11 +21,8 @@ u32 rand()
 
 void srand(u32 seed)
 {
-    cur_rand = seed;
-
     // Seed must be an odd number
-    if (cur_rand % 2 == 0)
-        cur_rand = cur_rand + 1;
+    cur_rand = (seed << 3) + 1;
 }
 
 void main()
