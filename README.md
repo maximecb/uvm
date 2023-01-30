@@ -13,6 +13,7 @@ Contents:
 - [Codebase Organization](#codebase-organization)
 - [Vision and Motivation](doc/vision.md)
 - [Design and Architecture](docs/design.md)
+- [Subsystems and System Calls](docs/syscalls.md)
 - [Planning and Evolution](docs/planning.md)
 
 ## Features
