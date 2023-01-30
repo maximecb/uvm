@@ -5,7 +5,8 @@ behind various architectural choices.
 
 ## Overview
 
-UVM is a bytecode VM with a stack-based interpreter, which will eventually integrate a JIT compiler as well.
+UVM is a bytecode VM with a [stack-based](https://en.wikipedia.org/wiki/Stack_machine) interpreter,
+which will eventually integrate a JIT compiler as well.
 It uses a Harvard architecture where the stack, code and data (the heap) are effectively 3 separate address
 spaces. The following sections go in to details to motivate these design choices and explain more about the
 architecture of UVM. You can find a list of supported bytecode instructions in [vm/src/vm.rs](/vm/src/vm.rs).
