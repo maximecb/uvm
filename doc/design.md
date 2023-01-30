@@ -8,7 +8,7 @@ behind various architectural choices.
 UVM is a bytecode VM with a stack-based interpreter, which will eventually integrate a JIT compiler as well.
 It uses a Harvard architecture where the stack, code and data (the heap) are effectively 3 separate address
 spaces. The following sections go in to details to motivate these design choices and explain more about the
-architecture of UVM. You can find a list of supported bytecode instructions in (vm/src/vm.rs)[vm/src/vm.rs].
+architecture of UVM. You can find a list of supported bytecode instructions in [vm/src/vm.rs](/vm/src/vm.rs).
 
 Do note that the design of UVM is evolving and some architectural choices are not yet finalized. Changes
 will likely be made at various points to make the design more robust and also more flexible. Notably, the
@@ -48,7 +48,7 @@ more fragile and detract from our design goals.
 ### There is No Foreign Function Interface (FFI)
 
 UVM provides no FFI. If your program wants to communicate with the outside world, it has to be done through the
-small set of minimalistic APIs ((system calls)[doc/syscalls.md]) that UVM provides. This is likely going to turn
+small set of minimalistic APIs ([system calls](/doc/syscalls.md)) that UVM provides. This is likely going to turn
 many people away as it means that UVM can't interface with many existing libraries unless said libraries are
 recompiled to target UVM.
 To many developers, the lack of an FFI will probably seem ridiculous, but I view it as a necessary sacrifice.
