@@ -53,6 +53,10 @@ impl Unit
                     out.push_str(&format!(".u{} {};\n", n, v))
                 }
 
+                (Type::Int(n), Expr::Int(v)) => {
+                    out.push_str(&format!(".i{} {};\n", n, v))
+                }
+
                 (Type::Pointer(_), Expr::Int(v)) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
@@ -323,6 +327,7 @@ impl Expr
                         out.push_str(&format!("push {};\n", name));
                         match t {
                             Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
+                            Type::Int(64) => out.push_str("load_u64;\n"),
                             Type::Pointer(_) => {}
                             Type::Fun { .. } => {}
                             Type::Array { .. } => {}
@@ -624,6 +629,7 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Res
 
                     match t {
                         Type::UInt(n) => out.push_str(&format!("store_u{};\n", n)),
+                        Type::Int(64) => out.push_str("store_u64;\n"),
                         _ => todo!()
                     }
                 }
@@ -704,6 +710,8 @@ mod tests
         parse_ok("u8* p = null; u8* foo() { return p; }");
         parse_ok("bool levar = true; bool foo() { return levar; }");
         parse_ok("u64 g = 0; void foo(u32 v) { g = v; }");
+        parse_ok("i64 g = -77; i64 foo() { return g; }");
+        parse_ok("i64 g = -77; void foo() { g = 1; }");
     }
 
     #[test]

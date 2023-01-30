@@ -93,7 +93,11 @@ impl Stmt
                 let expr_type = expr.eval_type()?;
 
                 if !assign_compat(ret_type, &expr_type) {
-                    return ParseError::msg_only("incompatible return type");
+                    return ParseError::msg_only(&format!(
+                        "incompatible return type {}, expected {}",
+                        expr_type,
+                        ret_type
+                    ));
                 }
             }
 

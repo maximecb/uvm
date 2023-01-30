@@ -680,6 +680,12 @@ impl Assembler
                 self.mem().push_u64(val);
             }
 
+            // Signed 64-bit integer constant
+            "i64" => {
+                let val: i64 = self.parse_int_arg(input)?;
+                self.mem().push_u64(val as u64);
+            }
+
             // Command to read an arbitrary number of bytes
             // with optional whitespace between bytes
             "hex" => {
