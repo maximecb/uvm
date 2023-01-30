@@ -152,7 +152,7 @@
   },
   {
     "subsystem": "window",
-    "description": null,
+    "description": "Functionality related to creating windows, drawing graphics, as well as mouse and keyboard input.",
     "syscalls": [
       {
         "name": "window_create",

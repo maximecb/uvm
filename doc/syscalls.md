@@ -85,6 +85,8 @@ Schedule a callback to be called once after a given delay.
 
 # window
 
+Functionality related to creating windows, drawing graphics, as well as mouse and keyboard input.
+
 ## window_create
 
 ```
