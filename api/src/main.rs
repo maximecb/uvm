@@ -286,7 +286,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
 
     writeln!(&mut file, "# UVM Subsystems and System Calls").unwrap();
     writeln!(&mut file).unwrap();
-    writeln!(&mut file, "This file was automatically generated from [api/syscalls.json](api/syscalls.json).").unwrap();
+    writeln!(&mut file, "This file was automatically generated from [api/syscalls.json](/api/syscalls.json).").unwrap();
     writeln!(&mut file).unwrap();
     writeln!(&mut file, "The host APIs exposed to programs running on UVM are organized into").unwrap();
     writeln!(&mut file, "multiple subsystems described in this document.").unwrap();

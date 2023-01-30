@@ -1,6 +1,6 @@
 # UVM Subsystems and System Calls
 
-This file was automatically generated from [api/syscalls.json](api/syscalls.json).
+This file was automatically generated from [api/syscalls.json](/api/syscalls.json).
 
 The host APIs exposed to programs running on UVM are organized into
 multiple subsystems described in this document.
