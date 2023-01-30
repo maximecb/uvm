@@ -385,7 +385,7 @@ impl MemBlock
             let buf_ptr = self.data.as_ptr();
             let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
             *pc += size_of::<T>();
-            *val_ptr
+            std::ptr::read_unaligned(val_ptr)
         }
     }
 }
@@ -707,7 +707,7 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_u64() << v1.as_u64()
+                        v0.as_u64().wrapping_shl(v1.as_u32())
                     ));
                 }
 
@@ -715,7 +715,7 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(Value::from(
-                        v0.as_u64() >> v1.as_u64()
+                        v0.as_u64().wrapping_shr(v1.as_u32())
                     ));
                 }
 
@@ -743,6 +743,7 @@ impl VM
                     ));
                 }
 
+                // TODO: should we make sure that div panics on division by zero?
                 Op::div_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -751,6 +752,7 @@ impl VM
                     ));
                 }
 
+                // TODO: should we make sure that mod panics on division by zero?
                 Op::mod_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
