@@ -612,6 +612,20 @@ impl VM
                     self.push(self.stack[stack_idx]);
                 }
 
+                Op::set_arg => {
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
+
+                    let argc = self.frames[self.frames.len() - 1].argc;
+                    if idx >= argc {
+                        panic!("invalid index in set_arg, idx={}, argc={}", idx, argc);
+                    }
+
+                    // Last argument is at bp - 1 (if there are arguments)
+                    let stack_idx = (bp - argc) + idx;
+                    let val = self.pop();
+                    self.stack[stack_idx] = val;
+                }
+
                 Op::get_local => {
                     let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
@@ -1056,6 +1070,9 @@ mod tests
     {
         eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
         eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_u64; ret;", 4);
+
+        // set_arg
+        eval_i64("push_i8 3; call FN, 1; exit; FN: push 7; set_arg 0; get_arg 0; ret;", 7);
 
         // Two arguments and subtract (order of arguments matters)
         eval_i64("push_i8 7; push 5; call FN, 2; exit; FN: get_arg 0; get_arg 1; sub_u64; ret;", 2);
