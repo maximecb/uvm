@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_mut)]
 
+mod parsing;
 mod parser;
 mod ast;
 mod symbols;

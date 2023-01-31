@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::ast::*;
-use crate::parser::{ParseError};
+use crate::parsing::{ParseError};
 
 #[derive(Default)]
 struct Scope
@@ -332,7 +332,9 @@ mod tests
 
     fn parse_ok(src: &str)
     {
-        use crate::parser::{Input, parse_unit};
+        use crate::parsing::Input;
+        use crate::parser::parse_unit;
+
         dbg!(src);
         let mut input = Input::new(&src, "src");
         let mut unit = parse_unit(&mut input).unwrap();

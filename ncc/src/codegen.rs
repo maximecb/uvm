@@ -1,5 +1,5 @@
 use crate::ast::*;
-use crate::parser::{ParseError};
+use crate::parsing::{ParseError};
 use crate::types::*;
 
 #[derive(Default)]
@@ -650,7 +650,8 @@ mod tests
 
     fn gen_ok(src: &str) -> String
     {
-        use crate::parser::{Input, parse_unit};
+        use crate::parsing::Input;
+        use crate::parser::parse_unit;
 
         dbg!(src);
         let mut input = Input::new(&src, "src");

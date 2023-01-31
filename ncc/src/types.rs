@@ -1,5 +1,5 @@
 use crate::ast::*;
-use crate::parser::{ParseError};
+use crate::parsing::{ParseError};
 use std::cmp::{max};
 use Type::*;
 
@@ -321,7 +321,8 @@ mod tests
 
     fn parse_ok(src: &str)
     {
-        use crate::parser::{Input, parse_unit};
+        use crate::parsing::Input;
+        use crate::parser::parse_unit;
 
         dbg!(src);
         let mut input = Input::new(&src, "src");
