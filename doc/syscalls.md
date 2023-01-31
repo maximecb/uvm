@@ -4,6 +4,11 @@ This file was automatically generated from [api/syscalls.json](/api/syscalls.jso
 
 The host APIs exposed to programs running on UVM are organized into
 multiple subsystems described in this document.
+Each subsystem includes a number of system calls (syscalls).
+Arguments to syscalls are pushed on the stack in order.
+Each syscall has fixed arity, that is, the number of input arguments is fixed,
+and can output either 0 or 1 value on the stack.
+The syscalls with a `void` return type do not output anything.
 
 # vm
 

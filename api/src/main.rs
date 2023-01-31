@@ -290,6 +290,11 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
     writeln!(&mut file).unwrap();
     writeln!(&mut file, "The host APIs exposed to programs running on UVM are organized into").unwrap();
     writeln!(&mut file, "multiple subsystems described in this document.").unwrap();
+    writeln!(&mut file, "Each subsystem includes a number of system calls (syscalls).").unwrap();
+    writeln!(&mut file, "Arguments to syscalls are pushed on the stack in order.").unwrap();
+    writeln!(&mut file, "Each syscall has fixed arity, that is, the number of input arguments is fixed,").unwrap();
+    writeln!(&mut file, "and can output either 0 or 1 value on the stack.").unwrap();
+    writeln!(&mut file, "The syscalls with a `void` return type do not output anything.").unwrap();
     writeln!(&mut file).unwrap();
 
     for subsystem in subsystems {
