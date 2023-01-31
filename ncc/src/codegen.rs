@@ -648,7 +648,7 @@ mod tests
 {
     use super::*;
 
-    fn parse_ok(src: &str) -> String
+    fn gen_ok(src: &str) -> String
     {
         use crate::parser::{Input, parse_unit};
 
@@ -675,109 +675,109 @@ mod tests
     #[test]
     fn basics()
     {
-        parse_ok("void main() {}");
-        parse_ok("void foo(u64 a) {}");
-        parse_ok("u64 foo(u64 a) { return a; }");
-        parse_ok("u64 foo(u64 a) { return a + 1; }");
-        parse_ok("u64 foo(u64 a) { return a; }");
-        parse_ok("bool foo(u64 a, u64 b) { return a < b; }");
+        gen_ok("void main() {}");
+        gen_ok("void foo(u64 a) {}");
+        gen_ok("u64 foo(u64 a) { return a; }");
+        gen_ok("u64 foo(u64 a) { return a + 1; }");
+        gen_ok("u64 foo(u64 a) { return a; }");
+        gen_ok("bool foo(u64 a, u64 b) { return a < b; }");
 
         // Local variables
-        parse_ok("void main() { u64 a = 0; }");
-        parse_ok("void main(u64 a) { u64 a = 0; }");
-        parse_ok("void main(u64 a) { u64 b = a + 1; }");
-        parse_ok("void main() { int a = 1; }");
+        gen_ok("void main() { u64 a = 0; }");
+        gen_ok("void main(u64 a) { u64 a = 0; }");
+        gen_ok("void main(u64 a) { u64 b = a + 1; }");
+        gen_ok("void main() { int a = 1; }");
 
         // Infix expressions
-        parse_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
-        parse_ok("u64 foo() { return 1 + 2, 3; }");
-        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b:c; }");
-        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return 1 + a? b:c; }");
-        parse_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b+1:c+2; }");
-        parse_ok("bool foo(int a, int b) { return a < b; }");
-        parse_ok("int foo(int a) { return a + 1; }");
+        gen_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");
+        gen_ok("u64 foo() { return 1 + 2, 3; }");
+        gen_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b:c; }");
+        gen_ok("u64 foo(u64 a, u64 b, u64 c) { return 1 + a? b:c; }");
+        gen_ok("u64 foo(u64 a, u64 b, u64 c) { return a? b+1:c+2; }");
+        gen_ok("bool foo(int a, int b) { return a < b; }");
+        gen_ok("int foo(int a) { return a + 1; }");
 
         // Check that a return instruction is automatically inserted
-        parse_ok("void foo() {}").contains("ret;");
+        gen_ok("void foo() {}").contains("ret;");
     }
 
     #[test]
     fn globals()
     {
-        parse_ok("u64 g = 5; u64 main() { return 0; }");
-        parse_ok("u64 g = 5; u64 main() { return g; }");
-        parse_ok("u64 g = 5; u64 main() { return g + 1; }");
-        parse_ok("u8* p = null; u8* foo() { return p; }");
-        parse_ok("bool levar = true; bool foo() { return levar; }");
-        parse_ok("u64 g = 0; void foo(u32 v) { g = v; }");
-        parse_ok("i64 g = -77; i64 foo() { return g; }");
-        parse_ok("i64 g = -77; void foo() { g = 1; }");
+        gen_ok("u64 g = 5; u64 main() { return 0; }");
+        gen_ok("u64 g = 5; u64 main() { return g; }");
+        gen_ok("u64 g = 5; u64 main() { return g + 1; }");
+        gen_ok("u8* p = null; u8* foo() { return p; }");
+        gen_ok("bool levar = true; bool foo() { return levar; }");
+        gen_ok("u64 g = 0; void foo(u32 v) { g = v; }");
+        gen_ok("i64 g = -77; i64 foo() { return g; }");
+        gen_ok("i64 g = -77; void foo() { g = 1; }");
     }
 
     #[test]
     fn call_ret()
     {
-        parse_ok("void foo() {} void bar() {}");
-        parse_ok("void foo() {} void bar() { return foo(); } ");
-        parse_ok("void print_i64(i64 v) {} void bar(u64 v) { print_i64(v); }");
+        gen_ok("void foo() {} void bar() {}");
+        gen_ok("void foo() {} void bar() { return foo(); } ");
+        gen_ok("void print_i64(i64 v) {} void bar(u64 v) { print_i64(v); }");
     }
 
     #[test]
     fn pointers()
     {
         // Void pointers
-        parse_ok("void foo(void* a) {}");
-        parse_ok("void foo() { void* a = 0; }");
-        parse_ok("void foo() { u64* a = 0; }");
+        gen_ok("void foo(void* a) {}");
+        gen_ok("void foo() { void* a = 0; }");
+        gen_ok("void foo() { u64* a = 0; }");
 
         // Assignment to a pointer
-        parse_ok("void foo(u64* a) { *a = 0; }");
-        parse_ok("void foo(u64* a) { *(a + 1) = 0; }");
-        parse_ok("void foo(u8* a) { *a = 0; }");
-        parse_ok("void foo(u8* a) { *a = 255; }");
-        parse_ok("void foo(u8* a) { *(a + 1) = 5; }");
+        gen_ok("void foo(u64* a) { *a = 0; }");
+        gen_ok("void foo(u64* a) { *(a + 1) = 0; }");
+        gen_ok("void foo(u8* a) { *a = 0; }");
+        gen_ok("void foo(u8* a) { *a = 255; }");
+        gen_ok("void foo(u8* a) { *(a + 1) = 5; }");
 
         // Dereferencing a pointer
-        parse_ok("u64 foo(u64* a) { return *a; }");
-        parse_ok("u64 foo(u64* a) { return *(a + 1); }");
-        parse_ok("u8 foo(u8* p) { return *(p + 1); }");
+        gen_ok("u64 foo(u64* a) { return *a; }");
+        gen_ok("u64 foo(u64* a) { return *(a + 1); }");
+        gen_ok("u8 foo(u8* p) { return *(p + 1); }");
 
-        parse_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
+        gen_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
     }
 
     #[test]
     fn strings()
     {
-        parse_ok("char* str = \"foo\\nbar\"; void foo() {}");
-        parse_ok("char* str = \"foo\\nbar\"; void bar(char* str) {} void foo() { bar(str); }");
-        parse_ok("void bar(char* str) {} void foo() { bar(\"string constant\"); }");
+        gen_ok("char* str = \"foo\\nbar\"; void foo() {}");
+        gen_ok("char* str = \"foo\\nbar\"; void bar(char* str) {} void foo() { bar(str); }");
+        gen_ok("void bar(char* str) {} void foo() { bar(\"string constant\"); }");
     }
 
     #[test]
     fn arrays()
     {
-        parse_ok("u8 PIXELS[800][600][3]; void foo() {}");
+        gen_ok("u8 PIXELS[800][600][3]; void foo() {}");
     }
 
     #[test]
     fn if_else()
     {
-        parse_ok("void foo(u64 a) { if (a) {} }");
-        parse_ok("void foo(u64 a) { if (a) {} else {} }");
-        parse_ok("void foo(u64 a, u64 b) { if (a || b) {} }");
-        parse_ok("void foo(u64 a, u64 b) { if (a && b) {} }");
+        gen_ok("void foo(u64 a) { if (a) {} }");
+        gen_ok("void foo(u64 a) { if (a) {} else {} }");
+        gen_ok("void foo(u64 a, u64 b) { if (a || b) {} }");
+        gen_ok("void foo(u64 a, u64 b) { if (a && b) {} }");
     }
 
     #[test]
     fn for_loop()
     {
-        parse_ok("void foo(size_t n) { for (;;) {} }");
-        parse_ok("void foo(size_t n) { for (size_t i = 0;;) {} }");
-        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n;) {} }");
-        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
-        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { break; } }");
-        parse_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { continue; } }");
-        parse_ok("void foo(int n) { for (int i = 0; i < n; ++i) {} }");
+        gen_ok("void foo(size_t n) { for (;;) {} }");
+        gen_ok("void foo(size_t n) { for (size_t i = 0;;) {} }");
+        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n;) {} }");
+        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
+        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { break; } }");
+        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { continue; } }");
+        gen_ok("void foo(int n) { for (int i = 0; i < n; ++i) {} }");
     }
 
     #[test]

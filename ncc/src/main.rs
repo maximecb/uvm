@@ -9,6 +9,7 @@ mod ast;
 mod symbols;
 mod types;
 mod codegen;
+mod exec_tests;
 
 use std::env;
 use parser::*;
