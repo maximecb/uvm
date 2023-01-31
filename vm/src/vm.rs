@@ -368,13 +368,13 @@ impl MemBlock
         }
     }
 
-    /// Read a value at the current PC and then increment the PC
+    /// Write a value at the given address
     pub fn write<T>(&mut self, pos: usize, val: T) where T: Copy
     {
         unsafe {
             let buf_ptr = self.data.as_mut_ptr();
             let val_ptr = transmute::<*mut u8 , *mut T>(buf_ptr.add(pos));
-            *val_ptr = val;
+            std::ptr::write_unaligned(val_ptr, val);
         }
     }
 
