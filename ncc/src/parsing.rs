@@ -1,6 +1,14 @@
+use std::fs;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+pub struct SrcPos
+{
+    line_no: u32,
+    col_no: u32,
+}
+
+#[derive(Debug, Clone)]
 pub struct ParseError
 {
     msg: String,
@@ -64,6 +72,13 @@ pub struct Input
 
 impl Input
 {
+    pub fn from_file(file_name: &str) -> Self
+    {
+        let data = fs::read_to_string(file_name)
+            .expect(&format!("could not read input file {}", file_name));
+        Input::new(&data, file_name)
+    }
+
     pub fn new(input_str: &str, src_name: &str) -> Self
     {
         Input {

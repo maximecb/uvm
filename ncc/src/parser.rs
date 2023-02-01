@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::io;
 use std::io::Read;
 use std::cmp::max;
@@ -836,11 +835,7 @@ pub fn parse_str(src: &str) -> Result<Unit, ParseError>
 
 pub fn parse_file(file_name: &str) -> Result<Unit, ParseError>
 {
-    let data = fs::read_to_string(file_name)
-        .expect(&format!("could not read input file {}", file_name));
-
-    let mut input = Input::new(&data, file_name);
-
+    let mut input = Input::from_file(file_name);
     parse_unit(&mut input)
 }
 

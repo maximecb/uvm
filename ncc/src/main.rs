@@ -5,6 +5,7 @@
 #![allow(unused_mut)]
 
 mod parsing;
+mod cpp;
 mod parser;
 mod ast;
 mod symbols;
