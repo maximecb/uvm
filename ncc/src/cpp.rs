@@ -4,7 +4,7 @@
 use crate::parsing::*;
 
 /// Process the input and generate an otput string
-fn process_input(input: &mut Input) -> Result<String, ParseError>
+pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
     let mut output: String = String::new();
 

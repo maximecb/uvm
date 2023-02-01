@@ -14,6 +14,8 @@ mod codegen;
 mod exec_tests;
 
 use std::env;
+use parsing::*;
+use cpp::*;
 use parser::*;
 use ast::*;
 use symbols::*;
@@ -27,8 +29,13 @@ fn main()
 
     // If an input file was specified
     if args.len() == 2 {
-        let mut unit = parse_file(&args[1]).unwrap();
+        let file_name = &args[1];
 
+        let mut input = Input::from_file(file_name);
+        let output = process_input(&mut input).unwrap();
+
+        let mut input = Input::new(&output, file_name);
+        let mut unit = parse_unit(&mut input).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
         let out = unit.gen_code().unwrap();
