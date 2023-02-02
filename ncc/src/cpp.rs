@@ -138,6 +138,15 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
                 continue
             }
 
+            // Undefine a macro or constant
+            if directive == "undef" {
+                let name = input.parse_ident()?;
+                defs.remove(&name);
+                continue
+            }
+
+
+
             /*
             if directive == "ifndef" {
 
@@ -161,13 +170,23 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
         // Note that we only need to care about ident chars
         // we could read the char and then match instead
 
+        // If this is an identifier
+        if is_ident_ch(ch) {
+            let ident = input.parse_ident()?;
+
+            // If we have a definition for this identifier
+            if let Some(def) = defs.get(&ident) {
 
 
 
 
 
 
+            }
 
+            output += &ident;
+            continue;
+        }
 
         output.push(input.eat_ch());
     }
