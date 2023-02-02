@@ -14,12 +14,16 @@ fn compile_and_run(file_path: &str)
     command.arg(file_path);
     command.output().expect("compilation failed");
 
+    println!("compiled");
+
     // Run the compiled program
     let mut command = Command::new("cargo");
     command.current_dir("../vm");
     command.arg("run");
     command.arg("ncc/out.asm");
     command.output().expect("execution failed");
+
+    println!("executed");
 }
 
 #[test]

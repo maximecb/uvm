@@ -311,10 +311,9 @@ impl Input
     }
 
     /// Parse a string literal
-    pub fn parse_str(&mut self) -> Result<String, ParseError>
+    pub fn parse_str(&mut self, end_ch: char) -> Result<String, ParseError>
     {
-        let open_ch = self.eat_ch();
-        assert!(open_ch == '\'' || open_ch == '"');
+        self.eat_ch();
 
         let mut out = String::new();
 
@@ -326,7 +325,7 @@ impl Input
 
             let ch = self.eat_ch();
 
-            if ch == open_ch {
+            if ch == end_ch {
                 break;
             }
 
@@ -334,6 +333,7 @@ impl Input
                 match self.eat_ch() {
                     '\\' => out.push('\\'),
                     't' => out.push('\t'),
+                    'r' => out.push('\r'),
                     'n' => out.push('\n'),
                     _ => return self.parse_error("unknown escape sequence")
                 }

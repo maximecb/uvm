@@ -43,7 +43,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 
     // String literal
     if ch == '\"' {
-        let str_val = input.parse_str()?;
+        let str_val = input.parse_str('"')?;
         return Ok(Expr::String(str_val));
     }
 

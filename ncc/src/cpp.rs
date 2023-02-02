@@ -1,6 +1,7 @@
 // Reference:
 // https://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html
 
+use std::path::Path;
 use crate::parsing::*;
 
 /// Process the input and generate an otput string
@@ -22,13 +23,21 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
             input.eat_ch();
             let directive = input.parse_ident()?;
 
+            //println!("{}", directive);
+
             if directive == "include" {
                 input.eat_ws()?;
-                let file_name = input.parse_str()?;
 
-                // TODO: need to support square brackets #include <file_name>
+                let file_path = if input.peek_ch() == '<' {
+                    let file_name = input.parse_str('>')?;
+                    Path::new("include").join(file_name).display().to_string()
+                }
+                else
+                {
+                    input.parse_str('"')?
+                };
 
-                let mut input = Input::from_file(&file_name);
+                let mut input = Input::from_file(&file_path);
                 let include_output = process_input(&mut input)?;
 
                 // TODO: emit linenum directive
@@ -39,6 +48,19 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 
                 continue;
             }
+
+            /*
+            if directive == "define" {
+                continue
+            }
+            */
+
+            /*
+            if directive == "ifndef" {
+
+                continue
+            }
+            */
 
             return input.parse_error(&format!(
                 "unknown preprocessor directive {}", directive
