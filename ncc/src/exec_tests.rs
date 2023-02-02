@@ -6,8 +6,7 @@ use std::process::Command;
 
 fn compile_and_run(file_path: &str)
 {
-    io::stdout().write(file_path.as_bytes()).unwrap();
-    io::stdout().write("\n".as_bytes()).unwrap();
+    io::stdout().write(format!("compiling and running: {}\n", file_path).as_bytes()).unwrap();
     io::stdout().flush().unwrap();
 
     // Compile the source file

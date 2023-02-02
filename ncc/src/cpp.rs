@@ -2,12 +2,95 @@
 // https://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html
 
 use std::path::Path;
+use std::collections::HashMap;
 use crate::parsing::*;
+
+struct Macro
+{
+    name: String,
+    params: Vec<String>,
+    text: String,
+}
+
+fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
+{
+    let name = input.parse_ident()?;
+    let mut params = Vec::default();
+
+    if input.match_token("(")? {
+        loop
+        {
+            if input.match_token(")")? {
+                break;
+            }
+
+            if input.eof() {
+                return input.parse_error("eof inside define directive");
+            }
+
+            params.push(input.parse_ident()?);
+
+            if input.match_token(")")? {
+                break;
+            }
+
+            input.expect_token(",")?;
+        }
+    }
+
+    // Read text until \n
+    let mut text = "".to_string();
+    loop
+    {
+        if input.eof() {
+            break;
+        }
+
+        let ch = input.peek_ch();
+
+        if ch == '\n' {
+            break;
+        }
+
+        // Backslash to keep reading on the next line
+        if ch == '\\' {
+            input.eat_ch();
+
+            loop
+            {
+                if input.eof() {
+                    break;
+                }
+
+                match input.eat_ch() {
+                    '\n' => break,
+                    '\r' => {},
+                    ' ' => {},
+                    _ => return input.parse_error("expected newline")
+                }
+            }
+
+            text.push('\n');
+        }
+
+        text.push(input.eat_ch());
+    }
+
+    text = text.trim().to_string();
+
+    Ok(Macro {
+        name,
+        params,
+        text,
+    })
+}
 
 /// Process the input and generate an otput string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
     let mut output: String = String::new();
+
+    let mut defs = HashMap::new();
 
     // For each line of the input
     loop
@@ -22,12 +105,11 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
         if input.peek_ch() == '#' {
             input.eat_ch();
             let directive = input.parse_ident()?;
+            input.eat_ws()?;
 
             //println!("{}", directive);
 
             if directive == "include" {
-                input.eat_ws()?;
-
                 let file_path = if input.peek_ch() == '<' {
                     let file_name = input.parse_str('>')?;
                     Path::new("include").join(file_name).display().to_string()
@@ -49,11 +131,12 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
                 continue;
             }
 
-            /*
+            // Definition or macro
             if directive == "define" {
+                let def = parse_macro(input)?;
+                defs.insert(def.name.clone(), def);
                 continue
             }
-            */
 
             /*
             if directive == "ifndef" {
