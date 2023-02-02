@@ -19,3 +19,7 @@ bool streq(char* s1, char* s2)
             return 1;
     }
 }
+
+void main()
+{
+}

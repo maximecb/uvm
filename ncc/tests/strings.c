@@ -2,5 +2,5 @@
 
 void main()
 {
-    strlen("foo");
+    //strlen("foo");
 }
