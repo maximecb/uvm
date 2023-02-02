@@ -85,11 +85,71 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
     })
 }
 
-/// Process the input and generate an otput string
+/// Ignore contents until #else or #endif
+/// This returns the end keyword that was found
+fn ignore_contents(input: &mut Input) -> Result<String, ParseError>
+{
+
+
+
+
+    todo!();
+
+}
+
+fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Result<String, ParseError>
+{
+    let ident = input.parse_ident()?;
+    let is_defined = defs.get(&ident).is_some();
+
+    let mut output = String::new();
+
+    // If not defined
+    if !is_defined {
+        // Process the then branch normally
+        let mut end_keyword = None;
+        output += &process_input_rec(input, true, &mut end_keyword)?;
+
+        // If there is an else branch
+        if end_keyword.unwrap() == "else" {
+            // Ignore the output until the end
+            let end_keyword = ignore_contents(input)?;
+
+            if end_keyword != "endif" {
+                return input.parse_error("expected #endif");
+            }
+        }
+    }
+    else
+    {
+        // Name defined, we need to ignore the then branch
+
+
+
+
+
+
+
+
+    }
+
+    Ok(output)
+}
+
+/// Process the input and generate an output string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
-    let mut output: String = String::new();
+    process_input_rec(input, false, &mut None)
+}
 
+/// Process the input and generate an output string recursively
+pub fn process_input_rec(
+    input: &mut Input,
+    inside_branch: bool,
+    end_keyword: &mut Option<String>
+) -> Result<String, ParseError>
+{
+    let mut output = String::new();
     let mut defs = HashMap::new();
 
     // For each line of the input
@@ -145,14 +205,24 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
                 continue
             }
 
-
-
-            /*
+            // If not defined
             if directive == "ifndef" {
-
+                output += &process_ifndef(input, &mut defs)?;
                 continue
             }
-            */
+
+            // On #else or #endif, stop
+            if inside_branch {
+                if directive == "#else" {
+                    *end_keyword = Some(directive);
+                    break;
+                }
+
+                if directive == "#endif" {
+                    *end_keyword = Some(directive);
+                    break;
+                }
+            }
 
             return input.parse_error(&format!(
                 "unknown preprocessor directive {}", directive
@@ -160,10 +230,10 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
         }
 
         // TODO: eat comments
+        // We don't want to preprocess things inside comments
 
         // TODO: keep track if we're inside of a string or not
-
-        // Preprocessor needs to be aware if it's inside of a string or inside a comment
+        // We don't want to preprocess things inside strings
 
         // TODO: we need to parse defines
         // Can naively match against all identifiers
