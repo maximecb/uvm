@@ -89,12 +89,28 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
 /// This returns the end keyword that was found
 fn ignore_contents(input: &mut Input) -> Result<String, ParseError>
 {
+    loop
+    {
+        if input.eof() {
+            return input.parse_error("unexpected end of input");
+        }
 
+        if input.match_token("#else")? {
+            return Ok("else".to_string());
+        }
 
+        if input.match_token("#endif")? {
+            return Ok("endif".to_string());
+        }
 
+        // TODO: eat comments
+        // We don't want to preprocess things inside comments
 
-    todo!();
+        // TODO: keep track if we're inside of a string or not
+        // We don't want to preprocess things inside strings
 
+        input.eat_ch();
+    }
 }
 
 fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Result<String, ParseError>
@@ -123,14 +139,18 @@ fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Resul
     else
     {
         // Name defined, we need to ignore the then branch
+        let end_keyword = ignore_contents(input)?;
 
+        // If there is an else branch
+        if end_keyword == "else" {
+            // Process the else branch normally
+            let mut end_keyword = None;
+            output += &process_input_rec(input, true, &mut end_keyword)?;
 
-
-
-
-
-
-
+            if end_keyword.unwrap() != "endif" {
+                return input.parse_error("expected #endif");
+            }
+        }
     }
 
     Ok(output)
@@ -213,12 +233,12 @@ pub fn process_input_rec(
 
             // On #else or #endif, stop
             if inside_branch {
-                if directive == "#else" {
+                if directive == "else" {
                     *end_keyword = Some(directive);
                     break;
                 }
 
-                if directive == "#endif" {
+                if directive == "endif" {
                     *end_keyword = Some(directive);
                     break;
                 }
