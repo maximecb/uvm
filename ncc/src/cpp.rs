@@ -85,35 +85,11 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
     })
 }
 
-/// Ignore contents until #else or #endif
-/// This returns the end keyword that was found
-fn ignore_contents(input: &mut Input) -> Result<String, ParseError>
-{
-    loop
-    {
-        if input.eof() {
-            return input.parse_error("unexpected end of input");
-        }
-
-        if input.match_token("#else")? {
-            return Ok("else".to_string());
-        }
-
-        if input.match_token("#endif")? {
-            return Ok("endif".to_string());
-        }
-
-        // TODO: eat comments
-        // We don't want to preprocess things inside comments
-
-        // TODO: keep track if we're inside of a string or not
-        // We don't want to preprocess things inside strings
-
-        input.eat_ch();
-    }
-}
-
-fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Result<String, ParseError>
+fn process_ifndef(
+    input: &mut Input,
+    defs: &mut HashMap<String, Macro>,
+    gen_output: bool,
+) -> Result<String, ParseError>
 {
     let ident = input.parse_ident()?;
     let is_defined = defs.get(&ident).is_some();
@@ -123,13 +99,21 @@ fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Resul
     // If not defined
     if !is_defined {
         // Process the then branch normally
-        let mut end_keyword = None;
-        output += &process_input_rec(input, true, &mut end_keyword)?;
+        let mut end_keyword = "".to_string();
+        output += &process_input_rec(
+            input,
+            gen_output,
+            &mut end_keyword
+        )?;
 
         // If there is an else branch
-        if end_keyword.unwrap() == "else" {
-            // Ignore the output until the end
-            let end_keyword = ignore_contents(input)?;
+        if end_keyword == "else" {
+            let mut end_keyword = "".to_string();
+            process_input_rec(
+                input,
+                false,
+                &mut end_keyword
+            )?;
 
             if end_keyword != "endif" {
                 return input.parse_error("expected #endif");
@@ -139,15 +123,23 @@ fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Resul
     else
     {
         // Name defined, we need to ignore the then branch
-        let end_keyword = ignore_contents(input)?;
+        let mut end_keyword = "".to_string();
+        process_input_rec(
+            input,
+            false,
+            &mut end_keyword
+        )?;
 
         // If there is an else branch
         if end_keyword == "else" {
-            // Process the else branch normally
-            let mut end_keyword = None;
-            output += &process_input_rec(input, true, &mut end_keyword)?;
+            let mut end_keyword = "".to_string();
+            output += &process_input_rec(
+                input,
+                gen_output,
+                &mut end_keyword
+            )?;
 
-            if end_keyword.unwrap() != "endif" {
+            if end_keyword != "endif" {
                 return input.parse_error("expected #endif");
             }
         }
@@ -159,14 +151,21 @@ fn process_ifndef(input: &mut Input, defs: &mut HashMap<String, Macro>) -> Resul
 /// Process the input and generate an output string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
-    process_input_rec(input, false, &mut None)
+    let mut end_keyword = "".to_string();
+    let result = process_input_rec(input, true, &mut end_keyword);
+
+    if end_keyword != "" {
+        return input.parse_error(&format!("unexpected #{}", end_keyword));
+    }
+
+    result
 }
 
 /// Process the input and generate an output string recursively
 pub fn process_input_rec(
     input: &mut Input,
-    inside_branch: bool,
-    end_keyword: &mut Option<String>
+    gen_output: bool,
+    end_keyword: &mut String
 ) -> Result<String, ParseError>
 {
     let mut output = String::new();
@@ -188,6 +187,22 @@ pub fn process_input_rec(
             input.eat_ws()?;
 
             //println!("{}", directive);
+
+            // If not defined
+            if directive == "ifndef" {
+                output += &process_ifndef(
+                    input,
+                    &mut defs,
+                    gen_output
+                )?;
+                continue
+            }
+
+            // On #else or #endif, stop
+            if directive == "else" || directive == "endif" {
+                *end_keyword = directive;
+                break;
+            }
 
             if directive == "include" {
                 let file_path = if input.peek_ch() == '<' {
@@ -223,25 +238,6 @@ pub fn process_input_rec(
                 let name = input.parse_ident()?;
                 defs.remove(&name);
                 continue
-            }
-
-            // If not defined
-            if directive == "ifndef" {
-                output += &process_ifndef(input, &mut defs)?;
-                continue
-            }
-
-            // On #else or #endif, stop
-            if inside_branch {
-                if directive == "else" {
-                    *end_keyword = Some(directive);
-                    break;
-                }
-
-                if directive == "endif" {
-                    *end_keyword = Some(directive);
-                    break;
-                }
             }
 
             return input.parse_error(&format!(

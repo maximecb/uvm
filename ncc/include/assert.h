@@ -1,4 +1,5 @@
-
+#ifndef __ASSERT_H__
+#define __ASSERT_H__ 1
 
 // assert() macro
 #ifndef NDEBUG
@@ -13,3 +14,4 @@ if (!test_val)\
 #define assert(test_val) {}
 #endif
 
+#endif
