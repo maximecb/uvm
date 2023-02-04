@@ -309,10 +309,32 @@ fn process_input_rec(
             continue;
         }
 
-        // TODO: keep track if we're inside of a string or not
+        // Keep track if we're inside of a string or not
         // We don't want to preprocess things inside strings
+        if input.match_chars(&['"']) {
+            output.push('"');
+            loop
+            {
+                if input.eof() {
+                    return input.parse_error("unexpected end of input inside string");
+                }
 
+                let ch = input.eat_ch();
+                output.push(ch);
 
+                if ch == '"' {
+                    break;
+                }
+
+                if ch == '\\' {
+                    let ch = input.eat_ch();
+                    output.push(ch);
+                    continue;
+                }
+            }
+
+            continue;
+        }
 
         // If this is an identifier
         if gen_output && is_ident_ch(ch) {
