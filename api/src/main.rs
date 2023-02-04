@@ -246,6 +246,10 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     writeln!(&mut file, "//").unwrap();
     writeln!(&mut file).unwrap();
 
+    writeln!(&mut file, "#ifndef __UVM_SYSCALLS__").unwrap();
+    writeln!(&mut file, "#define __UVM_SYSCALLS__").unwrap();
+    writeln!(&mut file).unwrap();
+
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
             // Add description comment if present
@@ -277,6 +281,8 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             ).unwrap();
         }
     }
+
+    writeln!(&mut file, "#endif").unwrap();
 }
 
 /// Generate markdown documentation

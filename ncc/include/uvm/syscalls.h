@@ -2,6 +2,9 @@
 // This file was automatically generated based on api/syscalls.json
 //
 
+#ifndef __UVM_SYSCALLS__
+#define __UVM_SYSCALLS__
+
 // Copy a block of memory in the heap from a source address to a destination address.
 inline void memcpy(u8* dst, const u8* src, u64 num_bytes)
 {
@@ -86,3 +89,4 @@ inline void window_on_mouseup(u32 window_id, void* callback)
     return asm (window_id, callback) -> void { syscall 13; };
 }
 
+#endif
