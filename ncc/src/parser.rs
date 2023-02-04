@@ -55,6 +55,18 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::String(str_val));
     }
 
+    // Character literal
+    if ch == '\'' {
+        let char_str = input.parse_str('\'')?;
+        let chars: Vec<char> = char_str.chars().collect();
+
+        if chars.len() != 1 {
+            return input.parse_error("invalid character constant");
+        }
+
+        return Ok(Expr::Int(chars[0] as i128));
+    }
+
     // Parenthesized expression
     if ch == '(' {
         input.eat_ch();
@@ -949,8 +961,10 @@ mod tests
     }
 
     #[test]
-    fn strings()
+    fn chars_strings()
     {
+        parse_ok("void foo() { char c = 'f'; }");
+        parse_ok("void foo() { char c = '\n'; }");
         parse_ok("void foo() { char* s = \"foo\"; }");
         parse_ok("void foo() { char* s = \"foo\" \"bar\"; }");
         parse_ok("void foo() { char* s = \"foo\"\n\"bar\"; }");

@@ -304,8 +304,12 @@ impl Input
             if ch == '\\' {
                 match self.eat_ch() {
                     '\\' => out.push('\\'),
+                    '\'' => out.push('\''),
+                    '\"' => out.push('\"'),
                     't' => out.push('\t'),
+                    'r' => out.push('\r'),
                     'n' => out.push('\n'),
+                    '0' => out.push('\0'),
                     _ => return self.parse_error("unknown escape sequence")
                 }
 
