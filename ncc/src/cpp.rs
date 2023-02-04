@@ -95,8 +95,6 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
                     _ => return input.parse_error("expected newline")
                 }
             }
-
-            text.push('\n');
         }
 
         text.push(input.eat_ch());
@@ -322,8 +320,6 @@ fn process_input_rec(
 
             // If we have a definition for this identifier
             if let Some(def) = defs.get(&ident) {
-                println!("GOT DEFINITION");
-
                 let mut args = Vec::new();
 
                 // Parse the macro arguments
