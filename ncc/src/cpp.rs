@@ -28,6 +28,7 @@ impl Input
     }
 }
 
+#[derive(Clone, Debug)]
 struct Macro
 {
     name: String,
@@ -127,6 +128,7 @@ fn process_ifndef(
         let mut end_keyword = "".to_string();
         output += &process_input_rec(
             input,
+            defs,
             gen_output,
             &mut end_keyword
         )?;
@@ -136,6 +138,7 @@ fn process_ifndef(
             let mut end_keyword = "".to_string();
             process_input_rec(
                 input,
+                defs,
                 false,
                 &mut end_keyword
             )?;
@@ -151,6 +154,7 @@ fn process_ifndef(
         let mut end_keyword = "".to_string();
         process_input_rec(
             input,
+            defs,
             false,
             &mut end_keyword
         )?;
@@ -160,6 +164,7 @@ fn process_ifndef(
             let mut end_keyword = "".to_string();
             output += &process_input_rec(
                 input,
+                defs,
                 gen_output,
                 &mut end_keyword
             )?;
@@ -176,8 +181,15 @@ fn process_ifndef(
 /// Process the input and generate an output string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
+    let mut defs = HashMap::new();
+
     let mut end_keyword = "".to_string();
-    let result = process_input_rec(input, true, &mut end_keyword);
+    let result = process_input_rec(
+        input,
+        &mut defs,
+        true,
+        &mut end_keyword
+    );
 
     if end_keyword != "" {
         return input.parse_error(&format!("unexpected #{}", end_keyword));
@@ -187,14 +199,14 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 }
 
 /// Process the input and generate an output string recursively
-pub fn process_input_rec(
+fn process_input_rec(
     input: &mut Input,
+    defs: &mut HashMap<String, Macro>,
     gen_output: bool,
     end_keyword: &mut String
 ) -> Result<String, ParseError>
 {
     let mut output = String::new();
-    let mut defs = HashMap::new();
 
     // For each line of the input
     loop
@@ -217,7 +229,7 @@ pub fn process_input_rec(
             if directive == "ifndef" {
                 output += &process_ifndef(
                     input,
-                    &mut defs,
+                    defs,
                     gen_output
                 )?;
                 continue
@@ -254,7 +266,13 @@ pub fn process_input_rec(
             // Definition or macro
             if directive == "define" {
                 let def = parse_macro(input)?;
+
+                println!("GOT DEFINE/MACRO WITH NAME \"{}\"", def.name);
+
                 defs.insert(def.name.clone(), def);
+
+                dbg!(&defs);
+
                 continue
             }
 
@@ -291,26 +309,71 @@ pub fn process_input_rec(
 
 
 
-
-
-
-        // TODO: we need to parse defines
-        // Can naively match against all identifiers
-        // Note that we only need to care about ident chars
-        // we could read the char and then match instead
-
         // If this is an identifier
         if is_ident_ch(ch) {
             let ident = input.parse_ident()?;
 
+            println!("GOT IDENT {}", ident);
+
+            dbg!(&defs);
+
             // If we have a definition for this identifier
             if let Some(def) = defs.get(&ident) {
+                println!("GOT DEFINITION");
 
+                let mut args = Vec::new();
 
+                // Parse the macro arguments
+                if input.match_token("(")? {
+                    loop
+                    {
+                        if input.eof() {
+                            return input.parse_error("unexpected end of input");
+                        }
 
+                        if input.match_token(")")? {
+                            break;
+                        }
 
+                        // Read the argument
+                        let mut arg = "".to_string();
+                        loop
+                        {
+                            if input.eof() {
+                                break;
+                            }
 
+                            let ch = input.peek_ch();
 
+                            if ch == ',' || ch == ')' {
+                                break;
+                            }
+
+                            arg.push(input.eat_ch());
+                        }
+                        args.push(arg);
+
+                        if input.match_token(")")? {
+                            break;
+                        }
+
+                        input.expect_token(",")?;
+                    }
+                }
+
+                if args.len() != def.params.len() {
+                    return input.parse_error(&format!("macro expected {} arguments", def.name));
+                }
+
+                let mut text = def.text.clone();
+
+                // Replace the parameters by their value
+                for (idx, param) in def.params.iter().enumerate() {
+                    text = text.replace(param, &args[idx]);
+                }
+
+                output += &text;
+                continue;
             }
 
             output += &ident;
