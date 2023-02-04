@@ -12,4 +12,7 @@ if (!(test_val))\
 #define assert(test_val) {}
 #endif
 
+// TODO:
+//todo() macro like in Rust
+
 #endif
