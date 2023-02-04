@@ -152,8 +152,20 @@ impl Input
         return true;
     }
 
+    /// Consume characters until the end of a single-line comment
+    pub fn eat_comment(&mut self)
+    {
+        loop
+        {
+            // If we are at the end of the input, stop
+            if self.eof() || self.eat_ch() == '\n' {
+                break;
+            }
+        }
+    }
+
     /// Consume characters until the end of a multi-line comment
-    fn eat_multi_comment(&mut self) -> Result<(), ParseError>
+    pub fn eat_multi_comment(&mut self) -> Result<(), ParseError>
     {
         let mut depth = 1;
 
@@ -196,13 +208,7 @@ impl Input
             // Single-line comment
             if self.match_chars(&['/', '/'])
             {
-                loop
-                {
-                    // If we are at the end of the input, stop
-                    if self.eof() || self.eat_ch() == '\n' {
-                        break;
-                    }
-                }
+                self.eat_comment();
             }
 
             // Multi-line comment

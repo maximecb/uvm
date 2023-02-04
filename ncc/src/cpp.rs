@@ -270,11 +270,29 @@ pub fn process_input_rec(
             ));
         }
 
-        // TODO: eat comments
-        // We don't want to preprocess things inside comments
+        // Eat single-line comments
+        if input.match_chars(&['/', '/']) {
+            input.eat_comment();
+            // Do we want to copy over the content to the output to
+            // avoid messing up the source position?
+            continue;
+        }
+
+        // Eat multi-line comment
+        if input.match_chars(&['/', '*']) {
+            input.eat_multi_comment()?;
+            // Do we want to copy over the content to the output to
+            // avoid messing up the source position?
+            continue;
+        }
 
         // TODO: keep track if we're inside of a string or not
         // We don't want to preprocess things inside strings
+
+
+
+
+
 
         // TODO: we need to parse defines
         // Can naively match against all identifiers
