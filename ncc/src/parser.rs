@@ -451,14 +451,17 @@ fn parse_block_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 
     loop
     {
-        input.eat_ws()?;
-
         if input.eof() {
             return input.parse_error("unexpected end of input in block statement");
         }
 
         if input.match_token("}")? {
             break;
+        }
+
+        if input.match_token(";")? {
+            // Empty statements are ignored
+            continue;
         }
 
         stmts.push(parse_stmt(input)?);
@@ -907,6 +910,14 @@ mod tests
         parse_fails("void* f foo();");
         parse_fails("voidfoo() {}");
         parse_fails("void foo(u64 a, u64 b) { a = a b; }");
+    }
+
+    #[test]
+    fn empty_stmt()
+    {
+        parse_ok("void foo() { ; }");
+        parse_ok("void foo() { {}; }");
+        parse_ok("void foo() { if (1) {}; }");
     }
 
     #[test]

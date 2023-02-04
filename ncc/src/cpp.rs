@@ -241,7 +241,7 @@ fn process_input_rec(
                 break;
             }
 
-            if directive == "include" {
+            if gen_output && directive == "include" {
                 let file_path = if input.peek_ch() == '<' {
                     let file_name = input.parse_str('>')?;
                     Path::new("include").join(file_name).display().to_string()
@@ -252,7 +252,18 @@ fn process_input_rec(
                 };
 
                 let mut input = Input::from_file(&file_path);
-                let include_output = process_input(&mut input)?;
+
+                let mut end_keyword = "".to_string();
+                let include_output = process_input_rec(
+                    &mut input,
+                    defs,
+                    gen_output,
+                    &mut end_keyword
+                )?;
+
+                if end_keyword != "" {
+                    return input.parse_error(&format!("unexpected #{}", end_keyword));
+                }
 
                 // TODO: emit linenum directive
 
@@ -264,28 +275,24 @@ fn process_input_rec(
             }
 
             // Definition or macro
-            if directive == "define" {
+            if gen_output && directive == "define" {
                 let def = parse_macro(input)?;
-
-                println!("GOT DEFINE/MACRO WITH NAME \"{}\"", def.name);
-
                 defs.insert(def.name.clone(), def);
-
-                dbg!(&defs);
-
                 continue
             }
 
             // Undefine a macro or constant
-            if directive == "undef" {
+            if gen_output && directive == "undef" {
                 let name = input.parse_ident()?;
                 defs.remove(&name);
                 continue
             }
 
-            return input.parse_error(&format!(
-                "unknown preprocessor directive {}", directive
-            ));
+            if gen_output {
+                return input.parse_error(&format!(
+                    "unknown preprocessor directive {}", directive
+                ));
+            }
         }
 
         // Eat single-line comments
@@ -310,12 +317,8 @@ fn process_input_rec(
 
 
         // If this is an identifier
-        if is_ident_ch(ch) {
+        if gen_output && is_ident_ch(ch) {
             let ident = input.parse_ident()?;
-
-            println!("GOT IDENT {}", ident);
-
-            dbg!(&defs);
 
             // If we have a definition for this identifier
             if let Some(def) = defs.get(&ident) {

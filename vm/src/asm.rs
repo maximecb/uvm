@@ -745,6 +745,7 @@ impl Assembler
     fn parse_insn(&mut self, input: &mut Input, op_name: String) -> Result<(), ParseError>
     {
         match op_name.as_str() {
+            "panic" => self.code.push_op(Op::panic),
             "nop" => self.code.push_op(Op::nop),
 
             "pop" => self.code.push_op(Op::pop),
