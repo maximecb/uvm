@@ -55,7 +55,7 @@
   },
   {
     "subsystem": "io",
-    "description": "File and stream I/O functionality.",
+    "description": "Stream I/O functionality.",
     "syscalls": [
       {
         "name": "print_i64",
@@ -283,6 +283,11 @@
   {
     "subsystem": "audio",
     "description": "Audio input and output.",
+    "syscalls": []
+  },
+  {
+    "subsystem": "fs",
+    "description": "File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.",
     "syscalls": []
   },
   {

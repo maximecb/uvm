@@ -32,7 +32,7 @@ Fill a block of bytes in the heap with a given value.
 
 # io
 
-File and stream I/O functionality.
+Stream I/O functionality.
 
 ## print_i64
 
@@ -147,6 +147,10 @@ Register a callback for mouse button release events.
 # audio
 
 Audio input and output.
+
+# fs
+
+File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.
 
 # net
 
