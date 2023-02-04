@@ -43,7 +43,15 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 
     // String literal
     if ch == '\"' {
-        let str_val = input.parse_str('"')?;
+        let mut str_val = "".to_string();
+        loop
+        {
+            str_val += &input.parse_str('"')?;
+            if !input.match_token("\"")? {
+                break;
+            }
+        }
+
         return Ok(Expr::String(str_val));
     }
 
@@ -938,6 +946,14 @@ mod tests
 
         // Should fail
         parse_fails("u64x;");
+    }
+
+    #[test]
+    fn strings()
+    {
+        parse_ok("void foo() { char* s = \"foo\"; }");
+        parse_ok("void foo() { char* s = \"foo\" \"bar\"; }");
+        parse_ok("void foo() { char* s = \"foo\"\n\"bar\"; }");
     }
 
     #[test]
