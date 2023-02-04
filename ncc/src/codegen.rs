@@ -358,8 +358,15 @@ impl Expr
                         out.push_str(&format!("sub_u64;\n"));
                     }
 
-                    UnOp::BitNot | UnOp::Not => {
-                        out.push_str(&format!("not_u64;\n"));
+                    UnOp::BitNot => {
+                        out.push_str("not_u64;\n");
+                    }
+
+                    // Logical not operates on the lowest bit only
+                    UnOp::Not => {
+                        out.push_str("not_u64;\n");
+                        out.push_str("push 1;\n");
+                        out.push_str("and_u64;\n");
                     }
 
                     _ => todo!()
