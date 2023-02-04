@@ -22,8 +22,8 @@ get_local 0;
 get_local 1;
 push WINDOW_TITLE;
 push 0;
-syscall $WINDOW_CREATE;
-syscall $WINDOW_SHOW;
+syscall window_create;
+syscall window_show;
 
 # 3^3 = 27, 22 pixels per band
 # We want to map 3 groups of 3 to [0, 127, 255]
@@ -88,7 +88,7 @@ jnz COLOR_LOOP;
 
 push 0;
 push PIXEL_BUFFER;
-syscall $WINDOW_DRAW_FRAME;
+syscall window_draw_frame;
 
 # Wait for an event
 push 0;

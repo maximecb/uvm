@@ -22,18 +22,18 @@ push 800;
 push 600;
 push WINDOW_TITLE;
 push 0;
-syscall $WINDOW_CREATE;
+syscall window_create;
 
 # Show the window
-syscall $WINDOW_SHOW;
+syscall window_show;
 
 push 100;
 push ANIM_CALLBACK;
-syscall $TIME_DELAY_CB;
+syscall time_delay_cb;
 
 push 0;
 push PIXEL_BUFFER;
-syscall $WINDOW_DRAW_FRAME;
+syscall window_draw_frame;
 
 # Wait for an event
 push 0;
@@ -69,7 +69,7 @@ store_u64;
 push PIXEL_BUFFER;
 push 0;
 push 1_440_000;
-syscall $MEMSET;
+syscall memset;
 
 # Draw the circle
 get_local 0;
@@ -80,12 +80,12 @@ pop;
 
 push 0;
 push PIXEL_BUFFER;
-syscall $WINDOW_DRAW_FRAME;
+syscall window_draw_frame;
 
 # Schedule the animation callback again
 push 25;
 push ANIM_CALLBACK;
-syscall $TIME_DELAY_CB;
+syscall time_delay_cb;
 
 push 0;
 ret;

@@ -384,6 +384,9 @@ pub struct Assembler
     /// Map of available special constants
     const_map: HashMap<String, i128>,
 
+    /// Map of available syscalls
+    syscall_map: HashMap<String, u16>,
+
     /// Set of syscalls referenced by this program
     syscall_set: HashSet<u16>,
 
@@ -407,6 +410,7 @@ impl Assembler
 {
     pub fn new() -> Self
     {
+        /*
         // Populate the available constants
         use crate::sys::constants::SYSCALL_DESCS;
         let mut const_map = HashMap::new();
@@ -416,9 +420,19 @@ impl Assembler
                 syscall.const_idx as i128
             );
         }
+        */
+
+        /// Populate the available syscalls
+        use crate::sys::constants::SYSCALL_DESCS;
+        let mut syscall_map = HashMap::new();
+        for syscall in SYSCALL_DESCS {
+            syscall_map.insert(syscall.name.to_string(), syscall.const_idx);
+        }
 
         Self {
-            const_map: const_map,
+            //const_map: const_map,
+            const_map: HashMap::new(),
+            syscall_map: syscall_map,
             syscall_set: HashSet::new(),
             code: MemBlock::new(),
             data: MemBlock::new(),
@@ -895,7 +909,20 @@ impl Assembler
 
             "syscall" => {
                 // Get the index for this syscall
-                let syscall_idx: u16 = self.parse_int_arg(input)?;
+                let syscall_idx: u16 = if input.peek_ch().is_ascii_alphabetic() {
+                    let name = input.parse_ident()?;
+                    match self.syscall_map.get(&name) {
+                        Some(syscall_idx) => *syscall_idx,
+                        None => return input.parse_error(
+                            &format!("unknown syscall \"{}\"", name)
+                        )
+                    }
+                }
+                else
+                {
+                    self.parse_int_arg(input)?
+                };
+
                 self.syscall_set.insert(syscall_idx);
                 self.code.push_op(Op::syscall);
                 self.code.push_u16(syscall_idx);
@@ -1017,7 +1044,6 @@ mod tests
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
-
     }
 
     #[test]
@@ -1094,6 +1120,7 @@ mod tests
         parse_file("examples/fib.asm");
         parse_file("examples/fizzbuzz.asm");
         parse_file("examples/loop.asm");
+        parse_file("examples/memcpy.asm");
         parse_file("examples/gradient.asm");
         parse_file("examples/colors.asm");
         parse_file("examples/circle.asm");

@@ -16,7 +16,7 @@ push 0;
 push 10_000_000;
 
 # Start time in ms, local 2
-syscall $TIME_CURRENT_MS;
+syscall time_current_ms;
 
 # 9 instructions per iteration
 LOOP:
@@ -39,7 +39,7 @@ jmp LOOP;
 DONE:
 
 # End time in ms, local 3
-syscall $TIME_CURRENT_MS;
+syscall time_current_ms;
 
 # Compute time taken
 get_local 3;
@@ -56,9 +56,9 @@ push 1000;
 mul_u64; # Insns / second
 push 1_000_000;
 div_i64; # MIPS (M insns / second)
-syscall $PRINT_I64;
+syscall print_i64;
 push MIPS_STR;
-syscall $PRINT_STR;
-syscall $PRINT_ENDL;
+syscall print_str;
+syscall print_endl;
 
 exit;

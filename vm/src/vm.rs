@@ -1072,7 +1072,7 @@ mod tests
     #[test]
     fn test_syscalls()
     {
-        eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall $MEMSET; push 0; exit;");
+        eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; exit;");
     }
 
     #[test]

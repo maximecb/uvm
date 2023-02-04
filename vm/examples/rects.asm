@@ -20,8 +20,8 @@ get_local 0;
 get_local 1;
 push WINDOW_TITLE;
 push 0;
-syscall $WINDOW_CREATE;
-syscall $WINDOW_SHOW;
+syscall window_create;
+syscall window_show;
 
 # void fill_rect(
 #     u8* f_buffer,
@@ -61,7 +61,7 @@ call fill_rect, 10;
 
 push PIXEL_BUFFER;
 push 0;
-syscall $WINDOW_DRAW_FRAME;
+syscall window_draw_frame;
 
 ret;
 
