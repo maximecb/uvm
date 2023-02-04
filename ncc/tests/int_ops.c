@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 int global_int = 0;
+uint64_t global_u64 = 0;
 
 void main()
 {

@@ -345,7 +345,9 @@ fn process_input_rec(
                 let mut args = Vec::new();
 
                 // Parse the macro arguments
-                if input.match_token("(")? {
+                if def.params.len() > 0 {
+                    input.expect_token("(")?;
+
                     loop
                     {
                         if input.eof() {
