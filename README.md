@@ -86,11 +86,12 @@ The repository is organized into a 3 different subprojects:
 - `/ncc`: An implementation of a C compiler that outputs UVM assembly
   - `/ncc/examples/*`: Example C source files that can be compiled by `ncc`
 - `/api`: A system to document and automatically export bindings for UVM system calls and constants.
+  - `/api/syscalls.json`: Declarative list of system calls exposed by UVM.
 
 The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
 was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over
 time, the `ncc` compiler will be improved. Despite its limitations, it is still usable to write small programs. Contributions to it are welcome.
 
-The `api` directory contains JSON files that represent a declarative listing of system calls, constants and the permission system that UVM exposes
+The `api` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
-code that automatically generate Rust constants and C function definitions for system calls.
+code that automatically generates [markdown documentation](doc/syscalls.md), Rust constants and [C function definitions](ncc/include/uvm/syscalls.h) for system calls.
