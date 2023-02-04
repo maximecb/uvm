@@ -79,7 +79,7 @@ cargo run <input_file>
 
 ## Codebase Organization
 
-The repository is organized into a 3 different subprojects:
+The repository is organized into a 3 different subprojects, each of which is a Rust codebase which can be compiled with `cargo`:
 
 - `/vm` : The implementation of the UVM virtual machine itself
   - `/vm/examples/*`: Example assembly programs that can be run by UVM
