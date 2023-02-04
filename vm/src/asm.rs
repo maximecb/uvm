@@ -751,12 +751,6 @@ impl Assembler
             "dup" => self.code.push_op(Op::dup),
             "swap" => self.code.push_op(Op::swap),
 
-            "popn" => {
-                let n: u8 = self.parse_int_arg(input)?;
-                self.code.push_op(Op::popn);
-                self.code.push_u8(n);
-            }
-
             "getn" => {
                 let n: u8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::getn);

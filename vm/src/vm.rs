@@ -46,12 +46,6 @@ pub enum Op
     // getn <idx:u8>
     getn,
 
-    // TODO: are we even using this instruction?
-    // replace by pop2?
-    // Pop N values off the stack
-    // popn <n:u8>
-    popn,
-
     // Get the argument count for the current stack frame
     get_argc,
 
@@ -573,13 +567,6 @@ impl VM
                     self.pop();
                 }
 
-                Op::popn => {
-                    let n = self.code.read_pc::<u8>(&mut pc);
-                    for _ in 0..n {
-                        self.pop();
-                    }
-                }
-
                 Op::getn => {
                     let n = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.stack[self.stack.len() - (1 + n)];
@@ -1039,7 +1026,6 @@ mod tests
         // Stack manipulation
         eval_i64("push_i8 7; push_i8 3; swap; exit;", 7);
         eval_i64("push_i8 7; push_i8 3; swap; swap; pop; exit;", 7);
-        eval_i64("push_i8 3; push_i8 2; push_i8 1; popn 2; exit;", 3);
 
         // Integer arithmetic
         eval_i64("push_i8 1; push_i8 10; add_u64; exit;", 11);
