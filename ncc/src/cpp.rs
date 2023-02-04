@@ -5,6 +5,29 @@ use std::path::Path;
 use std::collections::HashMap;
 use crate::parsing::*;
 
+impl Input
+{
+    fn eat_spaces(&mut self)
+    {
+        loop
+        {
+            if self.eof() {
+                break;
+            }
+
+            let ch = self.peek_ch();
+
+            if ch == ' ' || ch == '\t' || ch == '\r' {
+                self.eat_ch();
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+}
+
 struct Macro
 {
     name: String,
@@ -15,9 +38,11 @@ struct Macro
 fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
 {
     let name = input.parse_ident()?;
+    input.eat_spaces();
+
     let mut params = Vec::default();
 
-    if input.match_token("(")? {
+    if input.match_chars(&['(']) {
         loop
         {
             if input.match_token(")")? {
@@ -184,7 +209,7 @@ pub fn process_input_rec(
         if input.peek_ch() == '#' {
             input.eat_ch();
             let directive = input.parse_ident()?;
-            input.eat_ws()?;
+            input.eat_spaces();
 
             //println!("{}", directive);
 

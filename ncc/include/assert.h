@@ -1,5 +1,5 @@
 #ifndef __ASSERT_H__
-#define __ASSERT_H__ 1
+#define __ASSERT_H__
 
 // assert() macro
 #ifndef NDEBUG
