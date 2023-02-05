@@ -362,11 +362,10 @@ impl Expr
                         out.push_str("not_u64;\n");
                     }
 
-                    // Logical not operates on the lowest bit only
+                    // Logical negation
                     UnOp::Not => {
-                        out.push_str("not_u64;\n");
-                        out.push_str("push 1;\n");
-                        out.push_str("and_u64;\n");
+                        out.push_str("push 0;\n");
+                        out.push_str("eq_u64;\n");
                     }
 
                     _ => todo!()
