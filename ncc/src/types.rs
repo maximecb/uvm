@@ -217,8 +217,9 @@ impl Expr
 
                             (Pointer(b), UInt(n)) | (UInt(n), Pointer(b)) => Ok(Pointer(b)),
                             (Pointer(b), Int(n)) | (Int(n), Pointer(b)) => Ok(Pointer(b)),
+                            (Array {elem_type, ..}, Int(n)) | (Int(n), Array {elem_type, ..}) => Ok(Pointer(elem_type)),
+                            (Array {elem_type, ..}, UInt(n)) | (UInt(n), Array {elem_type, ..}) => Ok(Pointer(elem_type)),
 
-                            (Array{elem_type, .. }, UInt(n)) => Ok(Pointer(elem_type)),
                             _ => ParseError::msg_only(&format!(
                                 "incompatible types in add/sub {}, {}",
                                 lhs_type,

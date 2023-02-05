@@ -527,12 +527,12 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
         // For now we're ignoring the type
         Add => {
             match (lhs_type, rhs_type) {
-                (Pointer(b), UInt(n)) => {
+                (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
                     let elem_sizeof = b.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
                 }
-                (Array{ elem_type , ..}, UInt(n)) => {
+                (Array{ elem_type , ..}, UInt(n)) | (Array{ elem_type , ..}, Int(n)) => {
                     let elem_sizeof = elem_type.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
@@ -766,6 +766,7 @@ mod tests
     fn arrays()
     {
         gen_ok("u8 PIXELS[800][600][3]; void foo() {}");
+        gen_ok("u32 ARR[4]; void foo() { ARR[0] = 1; }");
     }
 
     #[test]

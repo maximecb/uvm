@@ -80,16 +80,8 @@ impl fmt::Display for Type {
             UInt(n) => write!(f, "u{}", n),
             Int(n) => write!(f, "i{}", n),
             Pointer(t) => write!(f, "{}*", t.as_ref()),
-
-            /*
-            Array {
-                elem_type: Box<Type>,
-                size_expr: Box<Expr>,
-            }
-            */
-
+            Array { elem_type, size_expr } => write!(f, "{}[]", elem_type.as_ref()),
             _ => todo!()
-
         }
     }
 }
