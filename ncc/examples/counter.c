@@ -54,6 +54,15 @@ void init_dots()
         " *** "
     );
 
+    CHAR_DOTS['4'] = (
+        "*   *"
+        "*   *"
+        "*   *"
+        "*****"
+        "    *"
+        "    *"
+        "    *"
+    );
 
 
 
@@ -122,13 +131,14 @@ void anim_callback()
     // Clear the screen
     memset(FRAME_BUFFER, 0, 1_440_000);
 
-    draw_char(100, 100, 10, '0');
-    draw_char(150, 100, 10, '1');
-    draw_char(200, 100, 10, '2');
-    draw_char(250, 100, 10, '3');
 
-
-
+    for (int i = 0; i < 10; ++i)
+    {
+        if (CHAR_DOTS['0' + i])
+        {
+            draw_char(100 + 50 * i, 100, 10, '0' + i);
+        }
+    }
 
 
 
