@@ -6,8 +6,10 @@ uint64_t global_u64 = 0;
 
 void main()
 {
+    // True/false values and logical negation
     assert(1);
     assert(!0);
+    assert(8);
 
     int a = 1;
     int b = 2;
