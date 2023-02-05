@@ -44,20 +44,34 @@ void init_dots()
 
 void draw_circle(int xmin, int ymin, int size)
 {
+    int xmax = xmin + size;
+    int ymax = ymin + size;
     int cx = xmin + size / 2;
     int cy = ymin + size / 2;
 
-    for (int y = ymin; y < size; ++y)
+
+
+
+
+
+    for (int y = ymin; y < ymax; ++y)
     {
-        for (int x = xmin; x < size; ++x)
+        for (int x = xmin; x < xmax; ++x)
         {
+            //print_i64(x);
+            //print_endl();
+
+            //print_i64(y);
+            //print_endl();
+
+
             int dx = x - cx;
             int dy = y - cy;
-            int dist_sqr = dx * dx + dy * dy;
+            int dist_sqr = (dx * dx) + (dy * dy);
 
             if (dist_sqr <= size * size)
             {
-                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
+                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + (3 * x);
                 *(pix_ptr + 0) = 255;
                 *(pix_ptr + 1) = 0;
                 *(pix_ptr + 2) = 0;
@@ -80,6 +94,8 @@ void draw_char(int xmin, int ymin, int dot_size, char ch)
 
     char* dots = CHAR_DOTS['0'];
     assert(dots);
+    print_str(dots);
+    print_endl();
 
     for (int j = 0; j < CH_DOTS_Y; ++j)
     {
@@ -90,8 +106,8 @@ void draw_char(int xmin, int ymin, int dot_size, char ch)
             if (!dot_active)
                 continue;
 
-            int x = i * DOT_SIZE;
-            int y = j * DOT_SIZE;
+            int x = xmin + i * DOT_SIZE;
+            int y = ymin + j * DOT_SIZE;
             draw_circle(x, y, dot_size);
         }
     }
@@ -121,7 +137,10 @@ void anim_callback()
 void main()
 {
     init_dots();
+
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Counter", 0);
+    window_show(0);
+
     time_delay_cb(0, anim_callback);
     __enable_event_loop__();
 }

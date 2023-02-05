@@ -47,7 +47,8 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         loop
         {
             str_val += &input.parse_str('"')?;
-            if !input.match_token("\"")? {
+            input.eat_ws()?;
+            if input.peek_ch() != '\"' {
                 break;
             }
         }
