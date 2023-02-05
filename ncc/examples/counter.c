@@ -25,7 +25,7 @@ void init_dots()
     );
 
     CHAR_DOTS['1'] = (
-        " ** "
+        " **  "
         "  *  "
         "  *  "
         "  *  "
@@ -34,8 +34,27 @@ void init_dots()
         " *** "
     );
 
-    char* dots = CHAR_DOTS['0'];
-    assert(dots);
+    CHAR_DOTS['2'] = (
+        " *** "
+        "*   *"
+        "   * "
+        "  *  "
+        " *   "
+        "*    "
+        "*****"
+    );
+
+    CHAR_DOTS['3'] = (
+        " *** "
+        "*   *"
+        "   * "
+        " *** "
+        "   * "
+        "*   *"
+        " *** "
+    );
+
+
 
 
 
@@ -46,13 +65,11 @@ void draw_circle(int xmin, int ymin, int size)
 {
     int xmax = xmin + size;
     int ymax = ymin + size;
-    int cx = xmin + size / 2;
-    int cy = ymin + size / 2;
+    int cx = xmin + (size / 2);
+    int cy = ymin + (size / 2);
 
-
-
-
-
+    print_i64(size);
+    print_endl();
 
     for (int y = ymin; y < ymax; ++y)
     {
@@ -64,38 +81,25 @@ void draw_circle(int xmin, int ymin, int size)
             //print_i64(y);
             //print_endl();
 
-
             int dx = x - cx;
             int dy = y - cy;
             int dist_sqr = (dx * dx) + (dy * dy);
 
-            if (dist_sqr <= size * size)
-            {
-                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + (3 * x);
-                *(pix_ptr + 0) = 255;
-                *(pix_ptr + 1) = 0;
-                *(pix_ptr + 2) = 0;
-            }
+            if (dist_sqr > size * size)
+                continue;
+
+            u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + (3 * x);
+            *(pix_ptr + 0) = 255;
+            *(pix_ptr + 1) = 0;
+            *(pix_ptr + 2) = 0;
         }
     }
 }
 
 void draw_char(int xmin, int ymin, int dot_size, char ch)
 {
-    //print_i64('0');
-    //print_endl();
-
-    //print_i64(ch);
-    //print_endl();
-
-    //char* dots = CHAR_DOTS[ch];
-    //asm (dots) -> void { syscall 5; };
-    //print_endl();
-
-    char* dots = CHAR_DOTS['0'];
+    char* dots = CHAR_DOTS[ch];
     assert(dots);
-    print_str(dots);
-    print_endl();
 
     for (int j = 0; j < CH_DOTS_Y; ++j)
     {
@@ -113,24 +117,24 @@ void draw_char(int xmin, int ymin, int dot_size, char ch)
     }
 }
 
-
-
-
-
 void anim_callback()
 {
     // Clear the screen
     memset(FRAME_BUFFER, 0, 1_440_000);
 
-
-
     draw_char(100, 100, 10, '0');
+    draw_char(150, 100, 10, '1');
+    draw_char(200, 100, 10, '2');
+    draw_char(250, 100, 10, '3');
 
 
 
 
 
 
+
+
+    window_draw_frame(0, FRAME_BUFFER);
     time_delay_cb(10, anim_callback);
 }
 
