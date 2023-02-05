@@ -531,12 +531,14 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
                     let elem_sizeof = b.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
                 }
 
                 (Array{ elem_type , ..}, UInt(n)) | (Array{ elem_type , ..}, Int(n)) => {
                     let elem_sizeof = elem_type.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
                 }
 
                 _ => out.push_str("add_u64;\n")
