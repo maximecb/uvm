@@ -466,7 +466,10 @@ impl VM
     pub fn get_heap_ptr<T>(&mut self, addr: usize) -> *mut T
     {
         if addr + std::mem::size_of::<T>() > self.heap.len() {
-            panic!("attempting to access data past end of heap");
+            panic!(
+                "attempting to access data of type {} past end of heap",
+                std::any::type_name::<T>()
+            );
         }
 
         unsafe {
