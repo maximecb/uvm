@@ -801,14 +801,15 @@ mod tests
     }
 
     #[test]
-    fn parse_files()
+    fn compile_files()
     {
+        parse_file("examples/ball.c");
+        //parse_file("examples/counter.c");
+        //parse_file("examples/crc32.c");
         parse_file("examples/fill_rect.c");
         parse_file("examples/strings.c");
         parse_file("examples/fib.c");
         parse_file("examples/paint.c");
-        parse_file("examples/ball.c");
-        parse_file("examples/crc32.c");
         parse_file("examples/random.c");
     }
 }

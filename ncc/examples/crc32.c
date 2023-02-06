@@ -12,31 +12,41 @@ If the inner loop is strung out (approx. 5*8 = 40 instructions),
 it would take about 6 + 46n instructions.
 */
 
-u32 crc32b(u8* message)
+#include <assert.h>
+#include <stdint.h>
+
+uint32_t crc32b(uint8_t* message)
 {
-    size_t i = 0;
-    u32 crc = 0xFFFFFFFF;
+    uint32_t i = 0;
+    uint32_t crc = 0xFFFFFFFF;
 
     while (message[i] != 0)
     {
         // Get next byte
-        u8 byte = message[i];
+        uint8_t byte = message[i];
         crc = crc ^ byte;
 
         // Do eight times
-        for (size_t j = 0; j < 8; ++j)
+        for (uint32_t j = 0; j < 8; ++j)
         {
-            u32 mask = -(crc & 1);
+            uint32_t mask = -(crc & 1);
             crc = (crc >> 1) ^ (0xEDB88320 & mask);
         }
 
-        i = i + 1;
+        ++i;
     }
 
     return ~crc;
 }
 
-// TODO: we should create a microbenchmark out of this
 void main()
 {
+    uint32_t r = crc32b("");
+    //assert(r == 0);
+
+    uint32_t r2 = crc32b("foobar");
+    //assert(r2 == 2666930069);
+
+    uint32_t r3 = crc32b("One day at a time, one step at a time.");
+    //assert(r3 == 237905478);
 }
