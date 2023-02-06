@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stddef.h>
 #include <assert.h>
 
 void main()
@@ -8,4 +9,7 @@ void main()
 
     size_t l2 = strlen("foo" "bar");
     assert(l2 == 6);
+
+    // TODO: assert output
+    strcmp("bar", "foo");
 }
