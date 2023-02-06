@@ -97,6 +97,12 @@ impl Unit
             out.push_str("ret;\n");
             out.push_str("\n");
         }
+        else
+        {
+            // If there is no main function, the unit should exit
+            out.push_str("push 0;\n");
+            out.push_str("exit;\n");
+        }
 
         // Generate code for all the functions
         for fun in &self.fun_decls {
