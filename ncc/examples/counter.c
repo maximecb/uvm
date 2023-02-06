@@ -12,6 +12,8 @@ u8 FRAME_BUFFER[1_440_000];
 // Strings mapping the dots for each character
 char* CHAR_DOTS[256] = 0;
 
+u64 start_time = 0;
+
 void init_dots()
 {
     CHAR_DOTS['0'] = (
@@ -25,8 +27,8 @@ void init_dots()
     );
 
     CHAR_DOTS['1'] = (
-        " **  "
         "  *  "
+        " **  "
         "  *  "
         "  *  "
         "  *  "
@@ -47,9 +49,9 @@ void init_dots()
     CHAR_DOTS['3'] = (
         " *** "
         "*   *"
-        "   * "
-        " *** "
-        "   * "
+        "    *"
+        "  ***"
+        "    *"
         "*   *"
         " *** "
     );
@@ -64,21 +66,65 @@ void init_dots()
         "    *"
     );
 
+    CHAR_DOTS['5'] = (
+        "*****"
+        "*    "
+        "*    "
+        "**** "
+        "    *"
+        "    *"
+        "**** "
+    );
 
+    CHAR_DOTS['6'] = (
+        " *** "
+        "*   *"
+        "*    "
+        "**** "
+        "*   *"
+        "*   *"
+        " *** "
+    );
 
+    CHAR_DOTS['7'] = (
+        "*****"
+        "    *"
+        "   * "
+        "  *  "
+        "  *  "
+        "  *  "
+        "  *  "
+    );
 
+    CHAR_DOTS['8'] = (
+        "*****"
+        "*   *"
+        "*   *"
+        "*****"
+        "*   *"
+        "*   *"
+        "*****"
+    );
 
+    CHAR_DOTS['9'] = (
+        "*****"
+        "*   *"
+        "*   *"
+        "*****"
+        "    *"
+        "    *"
+        "*****"
+    );
 }
 
 void draw_circle(int xmin, int ymin, int size)
 {
     int xmax = xmin + size;
     int ymax = ymin + size;
-    int cx = xmin + (size / 2);
-    int cy = ymin + (size / 2);
-
-    print_i64(size);
-    print_endl();
+    int radius = size / 2;
+    int cx = xmin + radius;
+    int cy = ymin + radius;
+    int r2 = (radius - 1) * (radius - 1);
 
     for (int y = ymin; y < ymax; ++y)
     {
@@ -94,7 +140,7 @@ void draw_circle(int xmin, int ymin, int size)
             int dy = y - cy;
             int dist_sqr = (dx * dx) + (dy * dy);
 
-            if (dist_sqr > size * size)
+            if (dist_sqr > r2)
                 continue;
 
             u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + (3 * x);
@@ -126,31 +172,48 @@ void draw_char(int xmin, int ymin, int dot_size, char ch)
     }
 }
 
+void draw_number(int xmax, int ymin, int dot_size, int number)
+{
+    int num_digits = 0;
+    for (int n = number; n > 0; n = n / 10)
+    {
+        ++num_digits;
+    }
+
+    for (int i = 0; i < num_digits; ++i)
+    {
+        int digit = number % 10;
+        number = number / 10;
+
+        draw_char(
+            xmax - 50 * i,
+            ymin,
+            dot_size,
+            '0' + digit
+        );
+    }
+}
+
 void anim_callback()
 {
     // Clear the screen
     memset(FRAME_BUFFER, 0, 1_440_000);
 
+    u64 delta_time = time_current_ms() - start_time;
+    u64 seconds = delta_time / 10;
+    int s = asm (seconds) -> int {};
 
-    for (int i = 0; i < 10; ++i)
-    {
-        if (CHAR_DOTS['0' + i])
-        {
-            draw_char(100 + 50 * i, 100, 10, '0' + i);
-        }
-    }
-
-
-
-
+    draw_number(500, 200, 10, s);
 
     window_draw_frame(0, FRAME_BUFFER);
-    time_delay_cb(10, anim_callback);
+    time_delay_cb(50, anim_callback);
 }
 
 void main()
 {
     init_dots();
+
+    start_time = time_current_ms();
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Counter", 0);
     window_show(0);
@@ -174,24 +237,6 @@ void __enable_event_loop__()
 inline void memset(u8* dst, u8 value, u64 num_bytes)
 {
     return asm (dst, value, num_bytes) -> void { syscall 4; };
-}
-
-// Print an i64 value to standard output
-inline void print_i64(i64 val)
-{
-    return asm (val) -> void { syscall 5; };
-}
-
-// Print a string to standard output
-inline void print_str(char* str)
-{
-    return asm (str) -> void { syscall 6; };
-}
-
-// Print a newline to standard output
-inline void print_endl()
-{
-    return asm () -> void { syscall 7; };
 }
 
 // Get the UNIX time stamp in milliseconds.
