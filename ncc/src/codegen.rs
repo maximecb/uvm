@@ -715,7 +715,8 @@ mod tests
     #[test]
     fn globals()
     {
-        gen_ok("int g = 0; void main() {}");
+        gen_ok("int g = 5; void main() {}");
+        gen_ok("u32 g = 5; void main() {}");
         gen_ok("u64 g = 5; u64 main() { return 0; }");
         gen_ok("u64 g = 5; u64 main() { return g; }");
         gen_ok("u64 g = 5; u64 main() { return g + 1; }");

@@ -90,6 +90,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
 
     let window = video_subsystem.window(&title_str, width, height)
+        .hidden()
         .position_centered()
         .build()
         .unwrap();
@@ -136,8 +137,7 @@ pub fn window_show(vm: &mut VM, window_id: Value)
 {
     let window = get_window(window_id.as_u32());
     window.canvas.window_mut().show();
-    //let (width, height) = window.canvas.window().size();
-    //println!("width={}, height={}", width, height);
+    window.canvas.window_mut().raise();
 }
 
 pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
