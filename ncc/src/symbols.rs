@@ -155,6 +155,10 @@ impl Unit
             }
         }
 
+        // Sort the global variables by name so that
+        // compilation is deterministic
+        self.global_vars.sort_by(|a, b| a.name.cmp(&b.name));
+
         Ok(())
     }
 }
