@@ -44,14 +44,16 @@ void fill_rect(
 
 void draw_brush()
 {
-    size_t xmin = pos_x;
+    size_t xmin = pos_x - BRUSH_RADIUS;
     size_t xmax = pos_x + BRUSH_RADIUS;
-    if (pos_x >= BRUSH_RADIUS) xmin = pos_x - BRUSH_RADIUS;
-    if (xmax >= FRAME_WIDTH) xmax = FRAME_WIDTH;
 
-    size_t ymin = pos_y;
+    size_t ymin = pos_y - BRUSH_RADIUS;
     size_t ymax = pos_y + BRUSH_RADIUS;
-    if (pos_y >= BRUSH_RADIUS) ymin = pos_y - BRUSH_RADIUS;
+
+    if (xmin < 0) xmin = 0;
+    if (xmax > FRAME_WIDTH) xmax = FRAME_WIDTH;
+
+    if (ymin < 0) ymin = 0;
     if (ymax >= FRAME_HEIGHT - BOX_HEIGHT) ymax = FRAME_HEIGHT - BOX_HEIGHT;
 
     for (size_t x = xmin; x < xmax; ++x)
@@ -131,14 +133,18 @@ void mousemove(u64 window_id, u64 x, u64 y)
 
 void mousedown(u64 window_id, u8 btn_id)
 {
-    if (btn_id == 0) {
-        drawing = true;
-        draw_brush();
-    }
-
-    if (btn_id == 2) {
-        u32* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
-        brush_color = *pixel_ptr;
+    if (btn_id == 0)
+    {
+        if (pos_y > FRAME_HEIGHT - BOX_HEIGHT)
+        {
+            u32* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
+            brush_color = *pixel_ptr;
+        }
+        else
+        {
+            drawing = true;
+            draw_brush();
+        }
     }
 
     window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
@@ -146,7 +152,8 @@ void mousedown(u64 window_id, u8 btn_id)
 
 void mouseup(u64 window_id, u8 btn_id)
 {
-    if (btn_id == 0) {
+    if (btn_id == 0)
+    {
         drawing = false;
     }
 }

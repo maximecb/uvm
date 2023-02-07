@@ -229,11 +229,10 @@ pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_b
         return;
     }
 
-    // TODO: ignore
-    //SDL_TOUCH_MOUSEID
+    // TODO: ignore SDL_TOUCH_MOUSEID
     // where is that defined in Rust?
-    // or just support mouse id 0?
-    println!("mouse_id={}", mouse_id);
+    // or only support mouse id 0?
+    //println!("mouse_id={}", mouse_id);
 
     let btn_id = match mouse_btn {
         MouseButton::Left => 0,
@@ -263,11 +262,10 @@ pub fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn
         return;
     }
 
-    // TODO: ignore
-    //SDL_TOUCH_MOUSEID
+    // TODO: ignore SDL_TOUCH_MOUSEID
     // where is that defined in Rust?
-    // or just support mouse id 0?
-    println!("mouse_id={}", mouse_id);
+    // or only support mouse id 0?
+    //println!("mouse_id={}", mouse_id);
 
     let btn_id = match mouse_btn {
         MouseButton::Left => 0,
