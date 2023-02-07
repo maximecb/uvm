@@ -298,7 +298,7 @@ impl Expr
 
                         Ok(*ret_type)
                     },
-                    _ => ParseError::msg_only("callee is not a function")
+                    _ => ParseError::msg_only(&format!("callee is not a function {:?}", callee))
                 }
             }
 

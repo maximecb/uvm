@@ -1,3 +1,5 @@
+#include <uvm/syscalls.h>
+
 // The seed must be an odd number
 u64 cur_rand = 1337;
 
@@ -48,22 +50,4 @@ void main()
     print_str("avg: ");
     print_i64(avg);
     print_endl();
-}
-
-// Print an i64 value to standard output
-inline void print_i64(i64 val)
-{
-    return asm (val) -> void { syscall 5; };
-}
-
-// Print a string to standard output
-inline void print_str(char* str)
-{
-    return asm (str) -> void { syscall 6; };
-}
-
-// Print a newline to standard output
-inline void print_endl()
-{
-    return asm () -> void { syscall 7; };
 }

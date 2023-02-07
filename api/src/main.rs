@@ -252,15 +252,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
 
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
-            // Add description comment if present
-            if let Some(text) = &syscall.description {
-                writeln!(&mut file, "// {}", text).unwrap();
-            }
-
-            //let name = syscall.name.to_uppercase();
             let fn_name = syscall.name.clone();
-            let const_idx = syscall.const_idx.unwrap();
-
             let c_sig_str = syscall.c_sig_string();
 
             let mut sys_arg_str = "".to_string();
@@ -268,9 +260,33 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
                 if idx > 0 {
                     sys_arg_str += ", ";
                 }
+                sys_arg_str += &format!("__{}", arg.1);
+            }
+
+            writeln!(&mut file, "// {}", c_sig_str).unwrap();
+
+            // Add description comment if present
+            if let Some(text) = &syscall.description {
+                writeln!(&mut file, "// {}", text).unwrap();
+            }
+
+            writeln!(&mut file,
+                "#define {}({}) asm ({}) -> {} {{ syscall {}; }}\n",
+                fn_name,
+                sys_arg_str,
+                sys_arg_str,
+                syscall.returns.0,
+                fn_name
+            ).unwrap();
+
+            /*
+            let mut sys_arg_str = "".to_string();
+            for (idx, arg) in syscall.args.iter().enumerate() {
+                if idx > 0 {
+                    sys_arg_str += ", ";
+                }
                 sys_arg_str += &arg.1;
             }
-            //println!("{}", sys_arg_str);
 
             writeln!(&mut file,
                 "inline {}\n{{\n    return asm ({}) -> {} {{ syscall {}; }};\n}}\n",
@@ -279,6 +295,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
                 syscall.returns.0,
                 const_idx,
             ).unwrap();
+            */
         }
     }
 

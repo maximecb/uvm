@@ -29,21 +29,24 @@ impl Input
 }
 
 #[derive(Clone, Debug)]
-struct Macro
+struct Def
 {
     name: String,
-    params: Vec<String>,
+    params: Option<Vec<String>>,
     text: String,
 }
 
-fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
+/// Parse a definition or macro
+fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 {
     let name = input.parse_ident()?;
     input.eat_spaces();
 
-    let mut params = Vec::default();
+    let mut params = None;
 
     if input.match_chars(&['(']) {
+        let mut param_vec = Vec::default();
+
         loop
         {
             if input.match_token(")")? {
@@ -54,7 +57,7 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
                 return input.parse_error("eof inside define directive");
             }
 
-            params.push(input.parse_ident()?);
+            param_vec.push(input.parse_ident()?);
 
             if input.match_token(")")? {
                 break;
@@ -62,6 +65,8 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
 
             input.expect_token(",")?;
         }
+
+        params = Some(param_vec);
     }
 
     // Read text until \n
@@ -102,7 +107,7 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
 
     text = text.trim().to_string();
 
-    Ok(Macro {
+    Ok(Def {
         name,
         params,
         text,
@@ -111,7 +116,7 @@ fn parse_macro(input: &mut Input) -> Result<Macro, ParseError>
 
 fn process_ifndef(
     input: &mut Input,
-    defs: &mut HashMap<String, Macro>,
+    defs: &mut HashMap<String, Def>,
     gen_output: bool,
 ) -> Result<String, ParseError>
 {
@@ -179,16 +184,18 @@ fn process_ifndef(
 /// Expand a definition or macro
 fn expand_macro(
     input: &mut Input,
-    defs: &mut HashMap<String, Macro>,
+    defs: &mut HashMap<String, Def>,
     gen_output: bool,
-    def: &Macro,
+    def: &Def,
 ) -> Result<String, ParseError>
 {
-    let mut args = Vec::new();
+    let mut text = def.text.clone();
 
-    // Parse the macro arguments
-    if def.params.len() > 0 {
+    // If this ia a macro, parse the macro arguments
+    if let Some(params) = &def.params {
         input.expect_token("(")?;
+
+        let mut args = Vec::new();
 
         loop
         {
@@ -235,21 +242,20 @@ fn expand_macro(
 
             input.expect_token(",")?;
         }
-    }
 
-    if args.len() != def.params.len() {
-        return input.parse_error(&format!(
-            "macro {} expected {} arguments",
-            def.name,
-            def.params.len()
-        ));
-    }
+        // If the argument count doesn't match
+        if args.len() != params.len() {
+            return input.parse_error(&format!(
+                "macro {} expected {} arguments",
+                def.name,
+                params.len()
+            ));
+        }
 
-    let mut text = def.text.clone();
-
-    // Replace the parameters by their value
-    for (idx, param) in def.params.iter().enumerate() {
-        text = text.replace(param, &args[idx]);
+        // Replace the parameters by their value
+        for (idx, param) in params.iter().enumerate() {
+            text = text.replace(param, &args[idx]);
+        }
     }
 
     Ok(text)
@@ -278,7 +284,7 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 /// Process the input and generate an output string recursively
 fn process_input_rec(
     input: &mut Input,
-    defs: &mut HashMap<String, Macro>,
+    defs: &mut HashMap<String, Def>,
     gen_output: bool,
     end_keyword: &mut String
 ) -> Result<String, ParseError>
@@ -353,7 +359,7 @@ fn process_input_rec(
 
             // Definition or macro
             if gen_output && directive == "define" {
-                let def = parse_macro(input)?;
+                let def = parse_def(input)?;
                 defs.insert(def.name.clone(), def);
                 continue
             }

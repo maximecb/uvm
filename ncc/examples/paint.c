@@ -1,3 +1,5 @@
+#include <uvm/syscalls.h>
+
 char* WINDOW_TITLE = "UVM Paint Program Demo";
 
 size_t FRAME_WIDTH = 800;
@@ -128,7 +130,7 @@ void mousemove(u64 window_id, u64 x, u64 y)
         draw_brush();
     }
 
-    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
+    window_draw_frame(0, FRAME_BUFFER);
 }
 
 void mousedown(u64 window_id, u8 btn_id)
@@ -147,7 +149,7 @@ void mousedown(u64 window_id, u8 btn_id)
         }
     }
 
-    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
+    window_draw_frame(0, FRAME_BUFFER);
 }
 
 void mouseup(u64 window_id, u8 btn_id)
@@ -182,7 +184,7 @@ void main()
     window_on_mousedown(0, mousedown);
     window_on_mouseup(0, mouseup);
 
-    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
+    window_draw_frame(0, FRAME_BUFFER);
 
     __enable_event_loop__();
 }
@@ -196,46 +198,4 @@ void __enable_event_loop__()
         push 1;
         store_u8;
     };
-}
-
-// Print a string to standard output
-inline void print_str(char* str)
-{
-    return asm (str) -> void { syscall 6; };
-}
-
-// Create a new window with a frame buffer to draw into.
-inline u32 window_create(u32 width, u32 height, char* title, u64 flags)
-{
-    return asm (width, height, title, flags) -> u32 { syscall 1; };
-}
-
-// Show a window, initially not visible when created.
-inline void window_show(u32 window_id)
-{
-    return asm (window_id) -> void { syscall 9; };
-}
-
-// Copy a frame of RGB24 pixels to be displayed into the window.
-inline void window_draw_frame(u32 window_id, u8* pixel_data)
-{
-    return asm (window_id, pixel_data) -> void { syscall 10; };
-}
-
-// Register a callback for mouse movement.
-inline void window_on_mousemove(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 11; };
-}
-
-// Register a callback for mouse button press events.
-inline void window_on_mousedown(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 12; };
-}
-
-// Register a callback for mouse button release events.
-inline void window_on_mouseup(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 13; };
 }

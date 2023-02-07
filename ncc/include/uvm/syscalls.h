@@ -5,88 +5,60 @@
 #ifndef __UVM_SYSCALLS__
 #define __UVM_SYSCALLS__
 
+// void memcpy(u8* dst, const u8* src, u64 num_bytes)
 // Copy a block of memory in the heap from a source address to a destination address.
-inline void memcpy(u8* dst, const u8* src, u64 num_bytes)
-{
-    return asm (dst, src, num_bytes) -> void { syscall 3; };
-}
+#define memcpy(__dst, __src, __num_bytes) asm (__dst, __src, __num_bytes) -> void { syscall memcpy; }
 
+// void memset(u8* dst, u8 value, u64 num_bytes)
 // Fill a block of bytes in the heap with a given value.
-inline void memset(u8* dst, u8 value, u64 num_bytes)
-{
-    return asm (dst, value, num_bytes) -> void { syscall 4; };
-}
+#define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
 
+// void print_i64(i64 val)
 // Print an i64 value to standard output.
-inline void print_i64(i64 val)
-{
-    return asm (val) -> void { syscall 5; };
-}
+#define print_i64(__val) asm (__val) -> void { syscall print_i64; }
 
+// void print_str(const char* str)
 // Print a string to standard output.
-inline void print_str(const char* str)
-{
-    return asm (str) -> void { syscall 6; };
-}
+#define print_str(__str) asm (__str) -> void { syscall print_str; }
 
+// void print_endl()
 // Print a newline to standard output.
-inline void print_endl()
-{
-    return asm () -> void { syscall 7; };
-}
+#define print_endl() asm () -> void { syscall print_endl; }
 
+// i64 read_i64()
 // Read an i64 value from standard input.
-inline i64 read_i64()
-{
-    return asm () -> i64 { syscall 8; };
-}
+#define read_i64() asm () -> i64 { syscall read_i64; }
 
+// u64 time_current_ms()
 // Get the UNIX time stamp in milliseconds.
-inline u64 time_current_ms()
-{
-    return asm () -> u64 { syscall 0; };
-}
+#define time_current_ms() asm () -> u64 { syscall time_current_ms; }
 
+// void time_delay_cb(u64 delay_ms, void* callback)
 // Schedule a callback to be called once after a given delay.
-inline void time_delay_cb(u64 delay_ms, void* callback)
-{
-    return asm (delay_ms, callback) -> void { syscall 2; };
-}
+#define time_delay_cb(__delay_ms, __callback) asm (__delay_ms, __callback) -> void { syscall time_delay_cb; }
 
+// u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 // Create a new window with a frame buffer to draw into.
-inline u32 window_create(u32 width, u32 height, const char* title, u64 flags)
-{
-    return asm (width, height, title, flags) -> u32 { syscall 1; };
-}
+#define window_create(__width, __height, __title, __flags) asm (__width, __height, __title, __flags) -> u32 { syscall window_create; }
 
+// void window_show(u32 window_id)
 // Show a window, initially not visible when created.
-inline void window_show(u32 window_id)
-{
-    return asm (window_id) -> void { syscall 9; };
-}
+#define window_show(__window_id) asm (__window_id) -> void { syscall window_show; }
 
+// void window_draw_frame(u32 window_id, const u8* pixel_data)
 // Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format must be in BGRA byte order, with the B byte at the lowest address.
-inline void window_draw_frame(u32 window_id, const u8* pixel_data)
-{
-    return asm (window_id, pixel_data) -> void { syscall 10; };
-}
+#define window_draw_frame(__window_id, __pixel_data) asm (__window_id, __pixel_data) -> void { syscall window_draw_frame; }
 
+// void window_on_mousemove(u32 window_id, void* callback)
 // Register a callback for mouse movement.
-inline void window_on_mousemove(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 11; };
-}
+#define window_on_mousemove(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mousemove; }
 
+// void window_on_mousedown(u32 window_id, void* callback)
 // Register a callback for mouse button press events.
-inline void window_on_mousedown(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 12; };
-}
+#define window_on_mousedown(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mousedown; }
 
+// void window_on_mouseup(u32 window_id, void* callback)
 // Register a callback for mouse button release events.
-inline void window_on_mouseup(u32 window_id, void* callback)
-{
-    return asm (window_id, callback) -> void { syscall 13; };
-}
+#define window_on_mouseup(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mouseup; }
 
 #endif
