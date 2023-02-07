@@ -569,13 +569,6 @@ impl VM
 
                 Op::nop => continue,
 
-                Op::exit => {
-                    let val = self.pop();
-                    self.stack.clear();
-                    self.frames.clear();
-                    return ExitReason::Exit(val);
-                }
-
                 Op::pop => {
                     self.pop();
                 }
@@ -971,6 +964,17 @@ impl VM
                             self.push(v);
                         }
                     }
+                }
+
+                Op::exit => {
+                    if self.stack.len() <= bp {
+                        panic!("exit with no return value on stack");
+                    }
+
+                    let val = self.pop();
+                    self.stack.clear();
+                    self.frames.clear();
+                    return ExitReason::Exit(val);
                 }
 
                 Op::ret => {
