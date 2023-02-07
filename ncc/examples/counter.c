@@ -2,7 +2,6 @@
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
-u32 DOT_SIZE = 8;
 u32 CH_DOTS_X = 5;
 u32 CH_DOTS_Y = 7;
 
@@ -195,8 +194,8 @@ void draw_char(int xmin, int ymin, int dot_size, char ch)
             if (!dot_active)
                 continue;
 
-            int x = xmin + i * DOT_SIZE;
-            int y = ymin + j * DOT_SIZE;
+            int x = xmin + i * dot_size;
+            int y = ymin + j * dot_size;
             draw_circle(x, y, dot_size);
         }
     }
@@ -216,7 +215,7 @@ void draw_number(int xmax, int ymin, int dot_size, int number)
         number = number / 10;
 
         draw_char(
-            xmax - 50 * i,
+            xmax - 5 * dot_size * i,
             ymin,
             dot_size,
             '0' + digit
@@ -236,7 +235,7 @@ void anim_callback()
     draw_number(500, 200, 10, s);
 
     window_draw_frame(0, FRAME_BUFFER);
-    time_delay_cb(50, anim_callback);
+    time_delay_cb(25, anim_callback);
 }
 
 void main()
