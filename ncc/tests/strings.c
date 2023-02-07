@@ -4,12 +4,17 @@
 
 void main()
 {
-    size_t l = strlen("foo");
-    assert(l == 3);
+    assert(strlen("") == 0);
+    assert(strlen("foo") == 3);
+    assert(strlen("foo" "bar") == 6);
 
-    size_t l2 = strlen("foo" "bar");
-    assert(l2 == 6);
+    // FIXME: macro expansion bug
+    //assert(strlen(")") == 1);
 
-    // TODO: assert output
-    strcmp("bar", "foo");
+    assert(strcmp("", "") == 0);
+    assert(strcmp("bar", "bar") == 0);
+    assert(strcmp("bar", "fooo") == -1);
+    assert(strcmp("bar", "fooo") == -1);
+    assert(strcmp("foo", "fooo") == -1);
+    assert(strcmp("fooo", "foo") == 1);
 }

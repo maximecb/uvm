@@ -202,6 +202,7 @@ fn expand_macro(
 
             // Read the argument
             let mut arg = "".to_string();
+            let mut paren_level: usize = 0;
             loop
             {
                 if input.eof() {
@@ -210,8 +211,18 @@ fn expand_macro(
 
                 let ch = input.peek_ch();
 
-                if ch == ',' || ch == ')' {
-                    break;
+                match ch {
+                    '(' => {
+                        paren_level += 1
+                    }
+                    ')' => {
+                        if paren_level == 0 { break; }
+                        paren_level -= 1;
+                    }
+                    ',' => {
+                        if paren_level == 0 { break; }
+                    }
+                    _ => {}
                 }
 
                 arg.push(input.eat_ch());
