@@ -246,6 +246,16 @@ impl Value
         val as usize
     }
 
+    pub fn as_i8(&self) -> i8 {
+        let Value(val) = *self;
+        val as i8
+    }
+
+    pub fn as_i16(&self) -> i16 {
+        let Value(val) = *self;
+        val as i16
+    }
+
     pub fn as_i32(&self) -> i32 {
         let Value(val) = *self;
         val as i32
@@ -785,6 +795,31 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push_bool(v0.as_i64() >= v1.as_i64());
+                }
+
+                Op::sx_i8_i32 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_i8() as i32));
+                }
+
+                Op::sx_i8_i64 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_i8() as i64));
+                }
+
+                Op::sx_i16_i32 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_i16() as i32));
+                }
+
+                Op::sx_i16_i64 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_i16() as i64));
+                }
+
+                Op::sx_i32_i64 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_i32() as i64));
                 }
 
                 Op::load_u8 => {
