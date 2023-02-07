@@ -209,12 +209,14 @@ impl Input
             if self.match_chars(&['/', '/'])
             {
                 self.eat_comment();
+                continue;
             }
 
             // Multi-line comment
             if self.match_chars(&['/', '*'])
             {
                 self.eat_multi_comment()?;
+                continue;
             }
 
             let ch = self.peek_ch();

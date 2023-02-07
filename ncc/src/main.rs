@@ -31,14 +31,13 @@ fn main()
     if args.len() == 2 {
         let file_name = &args[1];
 
-        //let mut input = Input::from_file(file_name);
-        //let output = process_input(&mut input).unwrap();
-        //println!("{}", output);
+        let mut input = Input::from_file(file_name);
+        let output = process_input(&mut input).unwrap();
+        println!("{}", output);
 
-
-        //let mut input = Input::new(&output, file_name);
-        //let mut unit = parse_unit(&mut input).unwrap();
-        let mut unit = parse_file(file_name).unwrap();
+        let mut input = Input::new(&output, file_name);
+        let mut unit = parse_unit(&mut input).unwrap();
+        //let mut unit = parse_file(file_name).unwrap();
 
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();

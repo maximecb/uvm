@@ -699,7 +699,6 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 /// Parse a type name
 fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 {
-    input.eat_ws()?;
     let mut cur_type = parse_type_atom(input)?;
 
     loop
