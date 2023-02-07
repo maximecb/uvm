@@ -176,6 +176,74 @@ fn process_ifndef(
     Ok(output)
 }
 
+/// Expand a definition or macro
+fn expand_macro(
+    input: &mut Input,
+    defs: &mut HashMap<String, Macro>,
+    gen_output: bool,
+    def: &Macro,
+) -> Result<String, ParseError>
+{
+    let mut args = Vec::new();
+
+    // Parse the macro arguments
+    if def.params.len() > 0 {
+        input.expect_token("(")?;
+
+        loop
+        {
+            if input.eof() {
+                return input.parse_error("unexpected end of input");
+            }
+
+            if input.match_token(")")? {
+                break;
+            }
+
+            // Read the argument
+            let mut arg = "".to_string();
+            loop
+            {
+                if input.eof() {
+                    break;
+                }
+
+                let ch = input.peek_ch();
+
+                if ch == ',' || ch == ')' {
+                    break;
+                }
+
+                arg.push(input.eat_ch());
+            }
+            args.push(arg);
+
+            if input.match_token(")")? {
+                break;
+            }
+
+            input.expect_token(",")?;
+        }
+    }
+
+    if args.len() != def.params.len() {
+        return input.parse_error(&format!(
+            "macro {} expected {} arguments",
+            def.name,
+            def.params.len()
+        ));
+    }
+
+    let mut text = def.text.clone();
+
+    // Replace the parameters by their value
+    for (idx, param) in def.params.iter().enumerate() {
+        text = text.replace(param, &args[idx]);
+    }
+
+    Ok(text)
+}
+
 /// Process the input and generate an output string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
@@ -342,64 +410,14 @@ fn process_input_rec(
 
             // If we have a definition for this identifier
             if let Some(def) = defs.get(&ident) {
-                let mut args = Vec::new();
-
-                // Parse the macro arguments
-                if def.params.len() > 0 {
-                    input.expect_token("(")?;
-
-                    loop
-                    {
-                        if input.eof() {
-                            return input.parse_error("unexpected end of input");
-                        }
-
-                        if input.match_token(")")? {
-                            break;
-                        }
-
-                        // Read the argument
-                        let mut arg = "".to_string();
-                        loop
-                        {
-                            if input.eof() {
-                                break;
-                            }
-
-                            let ch = input.peek_ch();
-
-                            if ch == ',' || ch == ')' {
-                                break;
-                            }
-
-                            arg.push(input.eat_ch());
-                        }
-                        args.push(arg);
-
-                        if input.match_token(")")? {
-                            break;
-                        }
-
-                        input.expect_token(",")?;
-                    }
-                }
-
-                if args.len() != def.params.len() {
-                    return input.parse_error(&format!("macro expected {} arguments", def.name));
-                }
-
-                let mut text = def.text.clone();
-
-                // Replace the parameters by their value
-                for (idx, param) in def.params.iter().enumerate() {
-                    text = text.replace(param, &args[idx]);
-                }
-
-                output += &text;
-                continue;
+                let def = def.clone();
+                output += &expand_macro(input, defs, gen_output, &def)?;
+            }
+            else
+            {
+                output += &ident;
             }
 
-            output += &ident;
             continue;
         }
 

@@ -1,6 +1,14 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
+// TODO:
+/*
+#ifdef memcpy
+//#unset memcpy
+#define memcpy()
+#endif
+*/
+
 size_t strlen(char* p)
 {
     size_t l = 0;
