@@ -653,55 +653,53 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 {
     input.eat_ws()?;
+    let keyword = input.parse_ident()?;
 
-    if input.match_keyword("void")? {
-        return Ok(Type::Void);
+    match keyword.as_str() {
+        "void" => Ok(Type::Void),
+
+        // Unsigned integer types
+        "u8" => Ok(Type::UInt(8)),
+        "u16" => Ok(Type::UInt(16)),
+        "u32" => Ok(Type::UInt(32)),
+        "u64" => Ok(Type::UInt(64)),
+
+        // Signed integer types
+        "i8" => Ok(Type::Int(8)),
+        "i16" => Ok(Type::Int(16)),
+        "i32" => Ok(Type::Int(32)),
+        "i64" => Ok(Type::Int(64)),
+
+        "size_t" => Ok(Type::UInt(64)),
+        "char" => Ok(Type::UInt(8)),
+        "bool" => Ok(Type::UInt(8)),
+
+        // Standard integer types
+        "short" => Ok(Type::Int(16)),
+        "int" => Ok(Type::Int(32)),
+        "long" => Ok(Type::Int(64)),
+
+
+
+        // TODO:
+        // Unsigned modifier
+        /*"unsigned" => {
+
+        }*/
+
+
+
+
+
+        _ => input.parse_error(&format!("unknown type {}", keyword))
     }
 
-    if input.match_keyword("u8")? {
-        return Ok(Type::UInt(8));
-    }
-
-    if input.match_keyword("char")? {
-        return Ok(Type::UInt(8));
-    }
-
-    if input.match_keyword("bool")? {
-        return Ok(Type::UInt(8));
-    }
-
-    if input.match_keyword("int")? {
-        return Ok(Type::Int(32));
-    }
-
-    if input.match_keyword("i32")? {
-        return Ok(Type::Int(32));
-    }
-
-    if input.match_keyword("i64")? {
-        return Ok(Type::Int(64));
-    }
-
-    if input.match_keyword("u32")? {
-        return Ok(Type::UInt(32));
-    }
-
-    if input.match_keyword("u64")? {
-        return Ok(Type::UInt(64));
-    }
-
-    if input.match_keyword("size_t")? {
-        return Ok(Type::UInt(64));
-    }
-
-    return input.parse_error("unknown type");
 }
 
 /// Parse a type name
 fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 {
     input.eat_ws()?;
-
     let mut cur_type = parse_type_atom(input)?;
 
     loop
