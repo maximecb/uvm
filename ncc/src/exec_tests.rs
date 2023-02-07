@@ -33,7 +33,6 @@ fn exec_tests()
 {
     compile_and_run("examples/crc32.c");
     compile_and_run("examples/fib.c");
-    compile_and_run("examples/fill_rect.c");
     compile_and_run("examples/random.c");
     compile_and_run("examples/strings.c");
 

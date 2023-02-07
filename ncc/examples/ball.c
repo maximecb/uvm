@@ -5,8 +5,8 @@ size_t FRAME_HEIGHT = 600;
 size_t NUM_COLORS = 32;
 size_t BALL_RADIUS = 20;
 
-// RGB pixels: 800 * 600 * 3
-u8 FRAME_BUFFER[1_440_000];
+// RGBA pixels: 800 * 600
+u32 FRAME_BUFFER[480_000];
 
 // Current ball position
 u64 px = 200;
@@ -39,10 +39,8 @@ void draw_ball()
 
             if (dist_sqr <= BALL_RADIUS * BALL_RADIUS)
             {
-                u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
-                *(pix_ptr + 0) = 255;
-                *(pix_ptr + 1) = 0;
-                *(pix_ptr + 2) = 0;
+                u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+                *pix_ptr = 0xFF_00_00;
             }
         }
     }
@@ -51,7 +49,7 @@ void draw_ball()
 void anim_callback()
 {
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_440_000);
+    memset(asm (FRAME_BUFFER) -> u8* {}, 0, 1_920_000);
 
     draw_ball();
 
@@ -76,7 +74,7 @@ void anim_callback()
         vy = -vy;
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
 
     time_delay_cb(10, anim_callback);
 }
@@ -84,6 +82,7 @@ void anim_callback()
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, WINDOW_TITLE, 0);
+    window_show(0);
 
     time_delay_cb(0, anim_callback);
 
@@ -149,7 +148,6 @@ inline void window_show(u32 window_id)
     return asm (window_id) -> void { syscall 9; };
 }
 
-// Copy a frame of RGB24 pixels to be displayed into the window.
 inline void window_draw_frame(u32 window_id, u8* pixel_data)
 {
     return asm (window_id, pixel_data) -> void { syscall 10; };

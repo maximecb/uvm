@@ -393,10 +393,4 @@ mod tests
     {
         parse_ok("void foo() {} void main() { foo(); }");
     }
-
-    #[test]
-    fn parse_files()
-    {
-        parse_file("examples/fill_rect.c");
-    }
 }

@@ -352,10 +352,4 @@ mod tests
         // FIXME:
         //parse_ok("u64 foo(u64 v, u8* p) { return v; } void main() { foo(1, null); }");
     }
-
-    #[test]
-    fn parse_files()
-    {
-        parse_file("examples/fill_rect.c");
-    }
 }

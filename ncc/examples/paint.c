@@ -7,43 +7,37 @@ size_t BOX_WIDTH = 25;
 size_t BOX_HEIGHT = 25;
 size_t BRUSH_RADIUS = 4;
 
-// RGB pixels: 800 * 600 * 3
-u8 FRAME_BUFFER[1_440_000];
+// RGBA pixels: 800 * 600
+u32 FRAME_BUFFER[480_000];
 
 // Current mouse pointer position
 size_t pos_x = 200;
 size_t pos_y = 200;
 
 // Current color to draw with
-u8 current_r = 255;
-u8 current_g = 0;
-u8 current_b = 0;
+u32 brush_color = 0xFF_00_00;
 
 // Are we currently drawing?
 bool drawing = false;
 
 // Fill a rectangle area of pixels in a frame buffer
 void fill_rect(
-    u8* f_buffer,
+    u32* f_buffer,
     size_t f_width,
     size_t f_height,
     size_t r_x,
     size_t r_y,
     size_t r_width,
     size_t r_height,
-    u8 r,
-    u8 g,
-    u8 b
+    u32 color,
 )
 {
     for (size_t j = 0; j < r_height; ++j)
     {
         for (size_t i = 0; i < r_width; ++i)
         {
-            u8* pix_addr = f_buffer + (3 * f_width) * (r_y + j) + 3 * (r_x + i);
-            *(pix_addr + 0) = r;
-            *(pix_addr + 1) = g;
-            *(pix_addr + 2) = b;
+            u32* pix_ptr = f_buffer + (f_width) * (r_y + j) + (r_x + i);
+            *pix_ptr = color;
         }
     }
 }
@@ -71,25 +65,23 @@ void draw_brush()
             if (dist_sqr > BRUSH_RADIUS * BRUSH_RADIUS)
                 continue;
 
-            u8* pix_ptr = FRAME_BUFFER + (3 * FRAME_WIDTH) * y + 3 * x;
-            *(pix_ptr + 0) = current_r;
-            *(pix_ptr + 1) = current_g;
-            *(pix_ptr + 2) = current_b;
+            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+            *pix_ptr = brush_color;
         }
     }
 }
 
 /// Get a pointer to the pixel data at a given position
 /// so that we can read the current pixel color there
-u8* get_pixel_ptr(
-    u8* f_buffer,
+u32* get_pixel_ptr(
+    u32* f_buffer,
     size_t f_width,
     size_t f_height,
     size_t x,
     size_t y,
 )
 {
-    return f_buffer + (3 * f_width * y) + (3 * x);
+    return f_buffer + (f_width * y) + x;
 }
 
 void draw_palette()
@@ -105,6 +97,7 @@ void draw_palette()
         u8 r = (color_idx % 3) * 127;
         u8 g = ((color_idx/3) % 3) * 127;
         u8 b = ((color_idx/9) % 3) * 127;
+        u32 color = (r << 16) | (g << 8) | b;
 
         size_t xmin = i * BOX_WIDTH;
         size_t ymin = FRAME_HEIGHT - BOX_HEIGHT;
@@ -117,9 +110,7 @@ void draw_palette()
             ymin,
             BOX_WIDTH,
             BOX_HEIGHT,
-            r,
-            g,
-            b
+            color
         );
     }
 }
@@ -135,7 +126,7 @@ void mousemove(u64 window_id, u64 x, u64 y)
         draw_brush();
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
 }
 
 void mousedown(u64 window_id, u8 btn_id)
@@ -146,19 +137,15 @@ void mousedown(u64 window_id, u8 btn_id)
     }
 
     if (btn_id == 2) {
-        u8* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
-        current_r = *(pixel_ptr + 0);
-        current_g = *(pixel_ptr + 1);
-        current_b = *(pixel_ptr + 2);
+        u32* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
+        brush_color = *pixel_ptr;
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
 }
 
 void mouseup(u64 window_id, u8 btn_id)
 {
-    print_str("mouseup!\n");
-
     if (btn_id == 0) {
         drawing = false;
     }
@@ -178,9 +165,7 @@ void main()
         0,
         FRAME_WIDTH,
         FRAME_HEIGHT,
-        255,
-        255,
-        255
+        0xFF_FF_FF
     );
 
     draw_palette();
@@ -190,7 +175,7 @@ void main()
     window_on_mousedown(0, mousedown);
     window_on_mouseup(0, mouseup);
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, asm (FRAME_BUFFER) -> u8* {});
 
     __enable_event_loop__();
 }

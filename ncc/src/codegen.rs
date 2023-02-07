@@ -806,7 +806,6 @@ mod tests
         parse_file("examples/ball.c");
         //parse_file("examples/counter.c");
         //parse_file("examples/crc32.c");
-        parse_file("examples/fill_rect.c");
         parse_file("examples/strings.c");
         parse_file("examples/fib.c");
         parse_file("examples/paint.c");
