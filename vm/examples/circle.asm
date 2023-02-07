@@ -1,9 +1,9 @@
 # Data section
 .data;
 
-# 800 * 600 * 3
+# 800 * 600 * 4 (RGBX)
 PIXEL_BUFFER:
-.zero 1_440_000;
+.zero 1_920_000;
 
 WINDOW_TITLE:
 .stringz "UVM Circle Animation Example";
@@ -204,17 +204,17 @@ ret;
 SET_PIXEL:
 
 # Compute the pixel's address
-# 800 * 3 * y + 3 * x
-push 2400;
+# 800 * 4 * y + 4 * x
+push 3200;
 get_arg 1;
 mul_u64;
 get_arg 0;
-push 3;
+push 4;
 mul_u64;
 add_u64;
 
-push 255;
-store_u8;
+push 0xFF_00_00;
+store_u32;
 
 push 0;
 ret;

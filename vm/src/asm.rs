@@ -1126,7 +1126,6 @@ mod tests
         parse_file("examples/loop.asm");
         parse_file("examples/memcpy.asm");
         parse_file("examples/gradient.asm");
-        parse_file("examples/colors.asm");
         parse_file("examples/circle.asm");
     }
 }

@@ -8,11 +8,11 @@
 .data;
 FPS_STR: .stringz " FPS (frames/second)";
 
-# Array of 1000 RGB24 pixels (one row)
+# Array of 1000 RGBA pixels (one row)
 SRC_BUFFER:
-.zero 3_000;
+.zero 4_000;
 DST_BUFFER:
-.zero 3_000;
+.zero 4_000;
 
 .code;
 
@@ -42,7 +42,7 @@ set_local 0;
 # Copy one row of pixels using memcpy
 push DST_BUFFER;
 push SRC_BUFFER;
-push 3000;
+push 4000;
 syscall memcpy;
 
 # Loop

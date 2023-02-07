@@ -121,8 +121,9 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     unsafe {
         let window = WINDOW.as_mut().unwrap();
 
+        // Pixels use the BGRA byte order (0xAA_RR_GG_BB on a little-endian machine)
         window.texture = Some(window.texture_creator.create_texture(
-            PixelFormatEnum::RGB24,
+            PixelFormatEnum::BGRA32,
             TextureAccess::Streaming,
             width,
             height
@@ -149,8 +150,8 @@ pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
         let mut window = WINDOW.as_mut().unwrap();
 
         // Update the texture
-        let pitch = 3 * window.width as usize;
-        let data_len = (3 * window.width * window.height) as usize;
+        let pitch = 4 * window.width as usize;
+        let data_len = (4 * window.width * window.height) as usize;
         let pixel_slice = std::slice::from_raw_parts(data_ptr, data_len);
         window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
 

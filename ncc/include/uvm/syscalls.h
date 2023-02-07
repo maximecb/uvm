@@ -65,7 +65,7 @@ inline void window_show(u32 window_id)
     return asm (window_id) -> void { syscall 9; };
 }
 
-// Copy a frame of RGB24 pixels to be displayed into the window. The frame must have the same width and height as the window.
+// Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format must be in BGRA byte order, with the B byte at the lowest address.
 inline void window_draw_frame(u32 window_id, const u8* pixel_data)
 {
     return asm (window_id, pixel_data) -> void { syscall 10; };

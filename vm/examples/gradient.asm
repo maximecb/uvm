@@ -1,9 +1,9 @@
 # Data section
 .data;
 
-# 800 * 600 * 3
+# 800 * 600 * 4 (BGRA byte order)
 PIXEL_BUFFER:
-.zero 1_440_000;
+.zero 1_920_000;
 
 WINDOW_TITLE:
 .stringz "UVM Gradient Example";
@@ -44,35 +44,41 @@ LOOP_Y:
     set_local 3;
     LOOP_X:
 
-    # Pixel address
+    # Pixel address (B byte)
     get_local 2; # Y
     push_u64 800;
     mul_u64;
     get_local 3;
     add_u64; # Y * 800 + X
-    push_u64 3;
-    mul_u64; # (Y * 800 + X) * 3
+    push_u64 4;
+    mul_u64; # (Y * 800 + X) * 4
     dup;
 
+    # Compute red color:
     # Y * 256 / 600
     get_local 2;
     push_u64 256;
     mul_u64;
     push_u64 600;
     div_i64;
-    store_u8;
 
-    # Blue coordinate address
-    push_i8 2;
-    add_u64;
+    // Lshift red
+    push 16;
+    lshift_u64;
 
+    # Compute blue color:
     # X * 256 / 800
     get_local 3;
     push_u64 256;
     mul_u64;
     push_u64 800;
     div_i64;
-    store_u8;
+
+    // R | B
+    or_u64;
+
+    // Store pixel color
+    store_u32;
 
     # X = X + 1
     get_local 3;
