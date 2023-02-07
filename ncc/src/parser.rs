@@ -954,6 +954,9 @@ mod tests
         parse_ok("u8 pixel_buffer[800][600]; void main() {}");
         parse_ok("u8 pixel_buffer[WIDTH][HEIGHT]; void main() {}");
 
+        // Regression
+        parse_ok("u8 g0;//\n//\n//\nu8 g1;");
+
         // Should fail
         parse_fails("u64x;");
     }
