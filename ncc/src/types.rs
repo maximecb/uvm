@@ -165,6 +165,22 @@ impl Expr
                 Ok(decl.get_type())
             }
 
+            Expr::Cast { new_type, child } => {
+                let child_type = child.eval_type()?;
+
+                match (&new_type, &child_type) {
+                    (UInt(m), Int(n)) => Ok(new_type.clone()),
+                    (Int(m), UInt(n)) => Ok(new_type.clone()),
+                    (Pointer(_), Pointer(_)) => Ok(new_type.clone()),
+
+                    _ => ParseError::msg_only(&format!(
+                        "cannot cast type {} into {}",
+                        child_type,
+                        new_type
+                    ))
+                }
+            },
+
             Expr::Unary { op, child } => {
                 let child_type = child.eval_type()?;
 

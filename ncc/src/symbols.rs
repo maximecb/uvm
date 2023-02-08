@@ -294,6 +294,10 @@ impl Expr
 
             Expr::Ref(_) => panic!(),
 
+            Expr::Cast { new_type, child } => {
+                child.as_mut().resolve_syms(env)?;
+            },
+
             Expr::Unary { op, child } => {
                 child.as_mut().resolve_syms(env)?;
             },

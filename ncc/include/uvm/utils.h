@@ -11,11 +11,4 @@ void enable_event_loop()
     };
 }
 
-
-
-
-
-
-
-
 #endif

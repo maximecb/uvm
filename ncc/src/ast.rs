@@ -174,12 +174,11 @@ pub enum Expr
     // Reference to a variable/function declaration
     Ref(Decl),
 
-    // TODO:
     // Type casting expression
-    //Cast {
-    //    t: Type,
-    //    expr: Box<Expr>
-    //}
+    Cast {
+        new_type: Type,
+        child: Box<Expr>
+    },
 
     Unary {
         op: UnOp,

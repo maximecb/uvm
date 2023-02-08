@@ -68,9 +68,23 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(chars[0] as i128));
     }
 
-    // Parenthesized expression
+    // Parenthesized expression or type casting expression
     if ch == '(' {
         input.eat_ch();
+
+        // Try to parse this as a type casting expression
+        let new_type = input.with_backtracking(|input| parse_type(input));
+        if let Ok(new_type) = new_type {
+            input.expect_token(")")?;
+            let child_expr = parse_expr(input)?;
+
+            return Ok(Expr::Cast {
+                new_type,
+                child: Box::new(child_expr)
+            });
+        }
+
+        // Try parsing this as an expression
         let expr = parse_expr(input)?;
         input.expect_token(")")?;
         return Ok(expr);
@@ -993,6 +1007,12 @@ mod tests
 
         // Should not parse
         parse_fails("u64 foo() { return 1 + 2 +; }");
+    }
+
+    #[test]
+    fn cast_exprs()
+    {
+        parse_ok("int foo() { (int)1; }");
     }
 
     #[test]
