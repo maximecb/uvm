@@ -1,8 +1,10 @@
 /*
-Classic recursive fibonacci test / microbenchmark
+* Classic recursive fibonacci test / microbenchmark
 */
 
-u64 fib(u64 n)
+#include <assert.h>
+
+unsigned long fib(unsigned long n)
 {
     if (n < 2)
         return n;
@@ -12,5 +14,6 @@ u64 fib(u64 n)
 
 void main()
 {
-    fib(27);
+    unsigned long r = fib(27);
+    assert(r == 196418);
 }
