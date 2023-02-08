@@ -224,9 +224,8 @@ void anim_callback()
 
     u64 delta_time = time_current_ms() - start_time;
     u64 seconds = delta_time / 10;
-    int s = asm (seconds) -> int {};
 
-    draw_number(500, 200, 10, s);
+    draw_number(500, 200, 10, (int)seconds);
 
     window_draw_frame(0, FRAME_BUFFER);
     time_delay_cb(25, anim_callback);

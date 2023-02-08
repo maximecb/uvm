@@ -347,6 +347,30 @@ impl Expr
                 }
             }
 
+            Expr::Cast { new_type, child } => {
+                use Type::*;
+
+                let child_type = child.eval_type()?;
+                child.gen_code(sym, out)?;
+
+                match (&new_type, &child_type) {
+                    // Cast to a larger type
+                    (UInt(m), Int(n)) if m >= n => {},
+                    (Int(m), UInt(n)) if m >= n => {},
+
+                    (UInt(m), Int(n)) if m < n => {
+                        out.push_str(&format!("trunc_u{};\n", m));
+                    },
+
+                    (Int(m), UInt(n)) if m < n => {
+                        out.push_str(&format!("trunc_u{};\n", m));
+                    },
+
+                    (Pointer(_), Pointer(_)) => {},
+                    _ => todo!()
+                }
+            }
+
             Expr::Unary { op, child } => {
                 child.gen_code(sym, out)?;
 
