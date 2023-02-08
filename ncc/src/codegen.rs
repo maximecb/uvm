@@ -702,12 +702,19 @@ mod tests
         unit.gen_code().unwrap()
     }
 
-    fn parse_file(file_name: &str)
+    fn compile_file(file_name: &str)
     {
-        use crate::parser::{parse_file};
+        use crate::parsing::Input;
+        use crate::parser::parse_unit;
+        use crate::cpp::process_input;
 
         dbg!(file_name);
-        let mut unit = crate::parser::parse_file(file_name).unwrap();
+        let mut input = Input::from_file(file_name);
+        let output = process_input(&mut input).unwrap();
+        //println!("{}", output);
+
+        let mut input = Input::new(&output, file_name);
+        let mut unit = parse_unit(&mut input).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
         unit.gen_code().unwrap();
@@ -827,12 +834,11 @@ mod tests
     #[test]
     fn compile_files()
     {
-        //parse_file("examples/ball.c");
-        //parse_file("examples/counter.c");
-        //parse_file("examples/crc32.c");
-        //parse_file("examples/strings.c");
-        //parse_file("examples/fib.c");
-        //parse_file("examples/paint.c");
-        //parse_file("examples/random.c");
+        // Make sure that we can compile all the examples
+        for file in std::fs::read_dir("./examples").unwrap() {
+            let file_path = file.unwrap().path().display().to_string();
+            println!("{}", file_path);
+            compile_file(&file_path);
+        }
     }
 }

@@ -1,7 +1,7 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
-int abs (int n)
+int abs(int n)
 {
     if (n < 0)
         return -n;
