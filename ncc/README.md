@@ -42,8 +42,8 @@ Running tests:
 cargo test
 ```
 
-To use the UVM bindings, you should include the `uvm/syscalls.h` header,
-see [`include/uvm/syscalls.h`](include/uvm/syscalls.h).
+To use the UVM bindings, you should include the
+[`uvm/syscalls.h`](include/uvm/syscalls.h) header.
 There are example programs under the [`examples`](examples) directory
 that show the kinds of things NCC is able to compile and how to use
 the UVM APIs.
