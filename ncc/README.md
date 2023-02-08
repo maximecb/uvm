@@ -25,8 +25,10 @@ Supported features:
 Not yet implemented (TODO):
 - Do-while loops
 - Float and double types
+- The `const` qualifier
 - `malloc()` / `free()`
 - Structs
+- Unions
 - Local arrays
 - Pointers to local variables
 
