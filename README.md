@@ -12,9 +12,9 @@ Contents:
 - [Build Instructions](#build-instructions)
 - [Codebase Organization](#codebase-organization)
 - [Vision and Motivation](doc/vision.md)
-- [Design and Architecture](docs/design.md)
+- [Design and Architecture](doc/design.md)
 - [Subsystems and System Calls](doc/syscalls.md)
-- [Planning and Evolution](docs/planning.md)
+- [Planning and Evolution](doc/planning.md)
 
 ## Features
 
