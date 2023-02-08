@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <uvm/syscalls.h>
+#include <uvm/utils.h>
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
@@ -241,16 +242,5 @@ void main()
     window_show(0);
 
     time_delay_cb(0, anim_callback);
-    __enable_event_loop__();
-}
-
-// Function to enable returning to the event loop instead of exiting
-void __enable_event_loop__()
-{
-    asm () -> void
-    {
-        push __EVENT_LOOP_ENABLED__;
-        push 1;
-        store_u8;
-    };
+    enable_event_loop();
 }

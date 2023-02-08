@@ -1,6 +1,5 @@
 #include <uvm/syscalls.h>
-
-char* WINDOW_TITLE = "Bouncing Ball Demo";
+#include <uvm/utils.h>
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
@@ -83,21 +82,10 @@ void anim_callback()
 
 void main()
 {
-    window_create(FRAME_WIDTH, FRAME_HEIGHT, WINDOW_TITLE, 0);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
     window_show(0);
 
     time_delay_cb(0, anim_callback);
 
-    __enable_event_loop__();
-}
-
-// Function to enable returning to the event loop instead of exiting
-void __enable_event_loop__()
-{
-    asm () -> void
-    {
-        push __EVENT_LOOP_ENABLED__;
-        push 1;
-        store_u8;
-    };
+    enable_event_loop();
 }

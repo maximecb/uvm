@@ -1,6 +1,5 @@
 #include <uvm/syscalls.h>
-
-char* WINDOW_TITLE = "UVM Paint Program Demo";
+#include <uvm/utils.h>
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
@@ -162,7 +161,7 @@ void mouseup(u64 window_id, u8 btn_id)
 
 void main()
 {
-    window_create(FRAME_WIDTH, FRAME_HEIGHT, WINDOW_TITLE, 0);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "UVM Paint Program Example", 0);
     window_show(0);
 
     // Initially fill the canvas with white
@@ -186,16 +185,5 @@ void main()
 
     window_draw_frame(0, FRAME_BUFFER);
 
-    __enable_event_loop__();
-}
-
-// Function to enable returning to the event loop instead of exiting
-void __enable_event_loop__()
-{
-    asm () -> void
-    {
-        push __EVENT_LOOP_ENABLED__;
-        push 1;
-        store_u8;
-    };
+    enable_event_loop();
 }
