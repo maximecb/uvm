@@ -95,4 +95,4 @@ time, the `ncc` compiler will be improved. Despite its limitations, it is still 
 
 The `api` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
-code that automatically generates [markdown documentation](doc/syscalls.md), Rust constants and [C function definitions](ncc/include/uvm/syscalls.h) for system calls.
+code that automatically generates [markdown documentation](doc/syscalls.md), Rust constants and [C definitions](ncc/include/uvm/syscalls.h) for system calls.
