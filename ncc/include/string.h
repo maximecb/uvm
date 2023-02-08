@@ -43,4 +43,10 @@ int strcmp(char* a, char* b)
     return 0;
 }
 
-#endif
+// TODO:
+// char* strncpy(char* destination, const char* source, size_t num)
+
+// TODO:
+// char* strncat(char* destination, const char* source, size_t num)
+
+#endif // #ifndef __STRING_H__

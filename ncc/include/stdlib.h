@@ -1,6 +1,13 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
+int abs (int n)
+{
+    if (n < 0)
+        return -n;
+    return n;
+}
+
 void exit(int status)
 {
     asm (status) -> void { exit; };
@@ -32,5 +39,11 @@ void srand(unsigned int seed)
     // So we make sure the lowest bit is 1
     __cur_rand__ = (seed << 1) + 1;
 }
+
+// TODO:
+//void* malloc(size_t size)
+
+// TODO:
+//void free(void* ptr)
 
 #endif
