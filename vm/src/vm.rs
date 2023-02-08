@@ -83,27 +83,12 @@ pub enum Op
     div_i64,
     mod_i64,
 
-    // TODO: should we add an increment instruction?
-    // Wait because this may be premature optimization
-    // This is a minor size optimization
-    // inc_u64 ?
-
     // TODO: arithmetic with overflow
     // I think these instructions shouldn't jump directly?
     // depends. We don't need to worry about compactness.
     // add_u64_ovf,
     // sub_u64_ovf,
     // mul_i64_ovf, // produces two 64-bit words of output
-
-    // NOTE: may want to wait for this because it's not RISC,
-    //       but it could help reduce code flag
-    // NOTE: should this insn have a jump offset built in?
-    // - no, for consistency, let jz/jnz handle that
-    // Test flag bits (logical and) with a constant
-    // This can be used for tag bit tests (e.g. fixnum test)
-    // Do we want to test just one specific bit, bit_idx:u8?
-    // test_bit_z <bit_idx:u8>
-    // test_bit_nz <bit_idx:u8>
 
     // 64-bit integer comparisons
     eq_u64,
@@ -133,22 +118,30 @@ pub enum Op
     trunc_u16,
     trunc_u32,
 
-    //
-    // TODO: 32-bit floating-point arithmetic & comparison operations
-    //
+    // NOTE: may want to wait for this because it's not RISC,
+    //       but it could help reduce code flag
+    // NOTE: should this insn have a jump offset built in?
+    // - no, for consistency, let jz/jnz handle that
+    // Test flag bits (logical and) with a constant
+    // This can be used for tag bit tests (e.g. fixnum test)
+    // Do we want to test just one specific bit, bit_idx:u8?
+    // test_bit_z <bit_idx:u8>
+    // test_bit_nz <bit_idx:u8>
+
+    // 32-bit floating-point arithmetic
     add_f32,
     sub_f32,
     mul_f32,
     div_f32,
-    //
+
+    // TODO:
     // Do we want to provide sin, cos, sqrt as built-ins or not?
     // sin_f32, cos_f32, sqrt_f32?
 
-    //
-    // TODO: int/float conversion instructions
-    //
-    //f32_to_i64,
-    //f64_to_i32,
+    // TODO:
+    // int/float conversion instructions
+    //f32_to_i32,
+    //i32_to_f32,
 
     // Load a value at a given adress
     // store (addr)
@@ -194,7 +187,7 @@ pub enum Op
 
     // Call a function pointer passed as argument
     // call <num_args:u8> (f_ptr, arg0, arg1, ..., argN)
-    call_fp,
+    //call_fp,
 
     // Call into a host function
     // For example, to set up a device or to allocate more memory
