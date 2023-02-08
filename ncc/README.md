@@ -12,6 +12,7 @@ Supported features:
 - Integer arithmetic
 - Signed and unsigned integers
 - Pointers and pointer arithmetic
+- The ternary operator `a? b:c`
 - Functions and function calls
 - If/else
 - For loops, while loops
