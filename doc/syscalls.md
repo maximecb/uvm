@@ -118,7 +118,7 @@ Show a window, initially not visible when created.
 void window_draw_frame(u32 window_id, const u8* pixel_data)
 ```
 
-Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format must be in BGRA byte order, with the B byte at the lowest address.
+Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32-bits per pixel in BGRA byte order, with the B byte at the lowest address.
 
 ## window_on_mousemove
 

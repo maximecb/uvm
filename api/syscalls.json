@@ -216,7 +216,7 @@
         ],
         "permission": "window_display",
         "const_idx": 10,
-        "description": "Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format must be in BGRA byte order, with the B byte at the lowest address."
+        "description": "Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32-bits per pixel in BGRA byte order, with the B byte at the lowest address."
       },
       {
         "name": "window_on_mousemove",
