@@ -46,4 +46,7 @@ To use the UVM bindings, you should include the
 [`uvm/syscalls.h`](include/uvm/syscalls.h) header.
 There are example programs under the [`examples`](examples) directory
 that show the kinds of things NCC is able to compile and how to use
-the UVM APIs.
+the UVM APIs. You can also consult the source code for the UVM
+headers in the [`include`](include) directory to see which
+standard library functions are currently available.
+Contributions welcome.
