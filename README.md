@@ -84,6 +84,7 @@ The repository is organized into a 3 different subprojects, each of which is a R
 - `/vm` : The implementation of the UVM virtual machine itself
   - `/vm/examples/*`: Example assembly programs that can be run by UVM
 - `/ncc`: An implementation of a C compiler that outputs UVM assembly
+  - [`/ncc/README.md`](ncc/README.md): documentation for the NCC compiler.
   - `/ncc/examples/*`: Example C source files that can be compiled by `ncc`
 - `/api`: A system to document and automatically export bindings for UVM system calls and constants.
   - `/api/syscalls.json`: Declarative list of system calls exposed by UVM.
