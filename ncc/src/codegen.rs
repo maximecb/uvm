@@ -182,15 +182,24 @@ impl Stmt
     {
         match self {
             Stmt::Expr(expr) => {
-                // For asm expressions with void output type, don't pop
-                // the output because no output is produced
-                if let Expr::Asm { out_type: Type::Void, .. } = expr {
-                    expr.gen_code(sym, out)?;
-                }
-                else
-                {
-                    expr.gen_code(sym, out)?;
-                    out.push_str("pop;\n");
+
+                match expr {
+                    // For assignment expressions as statements,
+                    // avoid generating output that we would then need to pop
+                    Expr::Binary { op: BinOp::Assign, lhs, rhs } => {
+                        gen_assign(lhs, rhs, sym, out, false)?;
+                    }
+
+                    // For asm expressions with void output type, don't pop
+                    // the output because no output is produced
+                    Expr::Asm { out_type: Type::Void, .. } => {
+                        expr.gen_code(sym, out)?;
+                    }
+
+                    _ => {
+                        expr.gen_code(sym, out)?;
+                        out.push_str("pop;\n");
+                    }
                 }
             }
 
@@ -464,7 +473,7 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
     // Assignments are different from other kinds of expressions
     // because we don't evaluate the lhs the same way
     if *op == Assign {
-        gen_assign(lhs, rhs, sym, out)?;
+        gen_assign(lhs, rhs, sym, out, true)?;
         return Ok(());
     }
 
@@ -620,13 +629,16 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
     Ok(())
 }
 
-fn gen_assign(lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
+fn gen_assign(
+    lhs: &Expr,
+    rhs: &Expr,
+    sym: &mut SymGen,
+    out: &mut String,
+    need_value: bool,
+) -> Result<(), ParseError>
 {
     //dbg!(lhs);
     //dbg!(rhs);
-
-    // Evaluate the value expression
-    rhs.gen_code(sym, out)?;
 
     match lhs {
         Expr::Unary { op, child } => {
@@ -636,11 +648,24 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Res
                     let elem_size = ptr_type.elem_type().sizeof();
                     let elem_bits = elem_size * 8;
 
-                    // Evaluate the address expression
-                    child.gen_code(sym, out)?;
+                    // If the output value is needed
+                    if need_value {
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
 
-                    // Assignment expressions must produce an output value
-                    out.push_str("getn 1;\n");
+                        // Evaluate the address expression
+                        child.gen_code(sym, out)?;
+
+                        out.push_str("getn 1;\n");
+                    }
+                    else
+                    {
+                        // Evaluate the address expression
+                        child.gen_code(sym, out)?;
+
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
+                    }
 
                     // store (addr) (value)
                     out.push_str(&format!("store_u{};\n", elem_bits));
@@ -652,20 +677,35 @@ fn gen_assign(lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Res
         Expr::Ref(decl) => {
             match decl {
                 Decl::Arg { idx, .. } => {
-                    out.push_str("dup;\n");
+                    rhs.gen_code(sym, out)?;
+                    if need_value { out.push_str("dup;\n"); }
                     out.push_str(&format!("set_arg {};\n", idx));
                 }
                 Decl::Local { idx, .. } => {
-                    out.push_str("dup;\n");
+                    rhs.gen_code(sym, out)?;
+                    if need_value { out.push_str("dup;\n"); }
                     out.push_str(&format!("set_local {};\n", idx));
                 }
 
                 Decl::Global { name, t } => {
-                    // Push the address
-                    out.push_str(&format!("push {};\n", name));
+                    // If the output value is needed
+                    if need_value {
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
 
-                    // Assignment expressions must produce an output value
-                    out.push_str("getn 1;\n");
+                        // Push the address
+                        out.push_str(&format!("push {};\n", name));
+
+                        out.push_str("getn 1;\n");
+                    }
+                    else
+                    {
+                        // Push the address
+                        out.push_str(&format!("push {};\n", name));
+
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
+                    }
 
                     match t {
                         Type::UInt(n) => out.push_str(&format!("store_u{};\n", n)),

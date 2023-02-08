@@ -37,7 +37,6 @@ fn main()
 
         let mut input = Input::new(&output, file_name);
         let mut unit = parse_unit(&mut input).unwrap();
-        //let mut unit = parse_file(file_name).unwrap();
 
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
