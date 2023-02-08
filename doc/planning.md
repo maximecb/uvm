@@ -48,7 +48,12 @@ JIT compilation needs to happen before we stabilize the current design.
 
 The ultimate goal is to stabilize and freeze the existing opcodes and
 system calls as UVM nears version 1.0. This will take some time as we
-need to experiment and gain confidence in the current design.
+need to experiment and gain confidence in the current design. The
+general expectation should be that there are going to be breaking
+changes in the short term, but less and less so as the design
+evolves and stabilizes. Once version 1.0 is reached, the existing
+features will be essentially frozen and backward compatibility
+will be guaranteed.
 
 ## SIMD Support
 
