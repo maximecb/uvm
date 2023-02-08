@@ -884,6 +884,16 @@ impl Assembler
             "gt_i64" => self.code.push_op(Op::gt_i64),
             "ge_i64" => self.code.push_op(Op::ge_i64),
 
+            "sx_i8_i32" => self.code.push_op(Op::sx_i8_i32),
+            "sx_i8_i64" => self.code.push_op(Op::sx_i8_i64),
+            "sx_i16_i32" => self.code.push_op(Op::sx_i16_i32),
+            "sx_i16_i64" => self.code.push_op(Op::sx_i16_i64),
+            "sx_i32_i64" => self.code.push_op(Op::sx_i32_i64),
+
+            "trunc_u8" => self.code.push_op(Op::trunc_u8),
+            "trunc_u16" => self.code.push_op(Op::trunc_u16),
+            "trunc_u32" => self.code.push_op(Op::trunc_u32),
+
             "load_u8" => self.code.push_op(Op::load_u8),
             "load_u16" => self.code.push_op(Op::load_u16),
             "load_u32" => self.code.push_op(Op::load_u32),

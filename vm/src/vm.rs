@@ -128,6 +128,11 @@ pub enum Op
     sx_i16_i64,
     sx_i32_i64,
 
+    // Truncation instructions
+    trunc_u8,
+    trunc_u16,
+    trunc_u32,
+
     //
     // TODO: 32-bit floating-point arithmetic & comparison operations
     //
@@ -813,6 +818,21 @@ impl VM
                 Op::sx_i32_i64 => {
                     let v = self.pop();
                     self.push(Value::from(v.as_i32() as i64));
+                }
+
+                Op::trunc_u8 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_u8()));
+                }
+
+                Op::trunc_u16 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_u16()));
+                }
+
+                Op::trunc_u32 => {
+                    let v = self.pop();
+                    self.push(Value::from(v.as_u32()));
                 }
 
                 Op::load_u8 => {
