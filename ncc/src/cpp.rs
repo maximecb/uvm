@@ -44,6 +44,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 
     let mut params = None;
 
+    // If there are macro arguments
     if input.match_chars(&['(']) {
         let mut param_vec = Vec::default();
 
@@ -181,6 +182,71 @@ fn process_ifndef(
     Ok(output)
 }
 
+// Read a macro argument
+fn read_macro_arg(input: &mut Input, depth: usize) -> Result<String, ParseError>
+{
+    let mut output = "".to_string();
+
+    loop
+    {
+        if input.eof() {
+            return input.parse_error("end of input inside macro argument");
+        }
+
+        let ch = input.peek_ch();
+
+        // If this is a character string
+        if ch == '"' {
+            output.push(input.eat_ch());
+            loop
+            {
+                if input.eof() {
+                    return input.parse_error("end of input inside string");
+                }
+
+                let ch = input.eat_ch();
+                output.push(ch);
+
+                if ch == '"' {
+                    break;
+                }
+
+                if ch == '\\' {
+                    let ch = input.eat_ch();
+                    output.push(ch);
+                    continue;
+                }
+            }
+
+            continue;
+        }
+
+        // If this is an opening parenthesis
+        if ch == '(' {
+            input.eat_ch();
+            output.push('(');
+            output += &read_macro_arg(input, depth + 1)?;
+            input.eat_ch();
+            output.push(')');
+            continue;
+        }
+
+        if ch == ')' {
+            break;
+        }
+
+        if ch == ',' {
+            if depth == 0 {
+                break;
+            }
+        }
+
+        output.push(input.eat_ch());
+    }
+
+    Ok(output)
+}
+
 /// Expand a definition or macro
 fn expand_macro(
     input: &mut Input,
@@ -191,12 +257,13 @@ fn expand_macro(
 {
     let mut text = def.text.clone();
 
-    // If this ia a macro, parse the macro arguments
+    // If this is a macro, parse the macro arguments
     if let Some(params) = &def.params {
         input.expect_token("(")?;
 
         let mut args = Vec::new();
 
+        // For each macro argument
         loop
         {
             if input.eof() {
@@ -207,34 +274,7 @@ fn expand_macro(
                 break;
             }
 
-            // Read the argument
-            let mut arg = "".to_string();
-            let mut paren_level: usize = 0;
-            loop
-            {
-                if input.eof() {
-                    break;
-                }
-
-                let ch = input.peek_ch();
-
-                match ch {
-                    '(' => {
-                        paren_level += 1
-                    }
-                    ')' => {
-                        if paren_level == 0 { break; }
-                        paren_level -= 1;
-                    }
-                    ',' => {
-                        if paren_level == 0 { break; }
-                    }
-                    _ => {}
-                }
-
-                arg.push(input.eat_ch());
-            }
-            args.push(arg);
+            args.push(read_macro_arg(input, 0)?);
 
             if input.match_token(")")? {
                 break;
