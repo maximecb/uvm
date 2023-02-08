@@ -9,8 +9,9 @@ level of C compliance of NCC over time.
 Supported features:
 - Global variables
 - Global arrays
-- Integer arithmetic
-- Signed and unsigned integers
+- Integer arithmetic and bitwise operations
+- Signed and unsigned integers, `stdint.h`
+- The `bool` type
 - Pointers and pointer arithmetic
 - The ternary operator `a? b:c`
 - Functions and function calls
@@ -30,10 +31,12 @@ Not yet implemented (TODO):
 - `malloc()` / `free()`
 - Structs
 - Unions
+- Typedefs
 - Local arrays
+- Array initializers
 - Pointers to local variables
 
-# Usage
+## Usage
 
 Compiling a C program:
 ```sh
@@ -53,3 +56,11 @@ the UVM APIs. You can also consult the source code for the UVM
 headers in the [`include`](include) directory to see which
 standard library functions are currently available.
 Contributions welcome.
+
+## The Test Suite
+
+There is a set of C source files under the [`tests`](tests) directory.
+These are automatically compiled by NCC and executed by UVM when running `cargo test`.
+The tests use the `assert()` macro to check that the behavior of the compiler is
+as expected. The goal is to increase test coverage over time and gradually
+increase the level of C compliance of NCC.
