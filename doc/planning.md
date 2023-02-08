@@ -13,7 +13,7 @@ because it's easier to refactor, which allows us to quickly make design changes.
 
 ## C Compiler Development
 
-This repository includes [ncc](ncc/), which is a toy C compiler that targets UVM.
+This repository includes [ncc](/ncc/README.md), which is a toy C compiler that targets UVM.
 This compiler is currently incomplete, but still able to compile useful code.
 Eventually, we're probably going to want to have an LLVM backend targeting UVM,
 but it seems useful to have a small compiler that people can easily wrap their
@@ -36,7 +36,7 @@ same thing can't be said for binary files.
 
 ## JIT Compiler
 
-UVM has been [designed](doc/design.md) with JIT compilation in mind, that
+UVM has been [designed](/doc/design.md) with JIT compilation in mind, that
 is, we've made multiple design choices that we think will make it easier
 to generate efficient machine code from our bytecode instructions. We
 believe it should be possible to get good performance with a fairly
