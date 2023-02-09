@@ -62,7 +62,7 @@ LOOP_Y:
     push_u64 600;
     div_i64;
 
-    // Lshift red
+    # Lshift red
     push 16;
     lshift_u64;
 
@@ -74,10 +74,10 @@ LOOP_Y:
     push_u64 800;
     div_i64;
 
-    // R | B
+    # R | B
     or_u64;
 
-    // Store pixel color
+    # Store pixel color
     store_u32;
 
     # X = X + 1
