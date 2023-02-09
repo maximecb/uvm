@@ -57,17 +57,17 @@ pub struct Input
     // Input string to be parsed
     input_str: Vec<char>,
 
-    // Input source name
-    src_name: String,
-
     // Current position in the input string
     pos: usize,
 
+    // Input source name
+    pub src_name: String,
+
     // Current line number
-    line_no: u32,
+    pub line_no: u32,
 
     // Current column number
-    col_no: u32,
+    pub col_no: u32,
 }
 
 impl Input

@@ -470,6 +470,12 @@ fn process_input_rec(
                 let def = def.clone();
                 output += &expand_macro(input, defs, gen_output, &def)?;
             }
+            else if ident == "__LINE__" {
+                output += &format!("{}", input.line_no);
+            }
+            else if ident == "__FILE__" {
+                output += &format!("\"{}\"", input.src_name);
+            }
             else
             {
                 output += &ident;

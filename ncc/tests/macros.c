@@ -9,6 +9,9 @@
 
 void main()
 {
+    int l = __LINE__;
+    char* f = __FILE__;
+
     // Macro with zero arguments
     FOO();
     FOO ();
