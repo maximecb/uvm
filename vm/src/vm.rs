@@ -997,6 +997,7 @@ impl VM
 
                     let ret_val = self.pop();
 
+                    // If this is a top-level return
                     if self.frames.len() == 1 {
                         self.stack.clear();
                         self.frames.clear();
@@ -1005,14 +1006,14 @@ impl VM
 
                     assert!(self.frames.len() > 0);
                     let top_frame = self.frames.pop().unwrap();
+
+                    // Pop all local variables and arguments
+                    // We pop arguments in the callee so we can support tail calls
+                    assert!(self.stack.len() >= bp - top_frame.argc);
+                    self.stack.truncate(bp - top_frame.argc);
+
                     pc = top_frame.ret_addr;
                     bp = top_frame.prev_bp;
-
-                    // Pop the arguments
-                    // We do this in the callee so we can support tail calls
-                    for _ in 0..top_frame.argc {
-                        self.stack.pop();
-                    }
 
                     self.push(ret_val);
                 }
@@ -1122,6 +1123,9 @@ mod tests
 
         // Recursive decrement function
         eval_i64("push 10; call DEC, 1; exit; DEC: get_arg 0; dup; jz ZERO; push 1; sub_u64; call DEC, 1; ret; ZERO: ret;", 0);
+
+        // Regression: stack corruption
+        eval_i64("push 5; call foo, 0; pop; exit; foo: push 2; push 0; ret;", 5);
     }
 
     #[test]
