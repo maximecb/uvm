@@ -424,7 +424,7 @@ impl Expr
 
                 // Evaluate the then expression
                 then_expr.gen_code(sym, out)?;
-                out.push_str(&format!("jz {};\n", done_label));
+                out.push_str(&format!("jmp {};\n", done_label));
 
                 // Evaluate the else expression
                 out.push_str(&format!("{}:\n", false_label));
@@ -499,11 +499,11 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
         out.push_str(&format!("jz {};\n", false_label));
 
         // Both subexpressions are true
-        out.push_str("push 1;");
-        out.push_str(&format!("jz {};\n", done_label));
+        out.push_str("push 1;\n");
+        out.push_str(&format!("jmp {};\n", done_label));
 
         out.push_str(&format!("{}:\n", false_label));
-        out.push_str("push 0;");
+        out.push_str("push 0;\n");
 
         out.push_str(&format!("{}:\n", done_label));
 
@@ -524,11 +524,11 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
         out.push_str(&format!("jnz {};\n", true_label));
 
         // Both subexpressions are false
-        out.push_str("push 0;");
-        out.push_str(&format!("jz {};\n", done_label));
+        out.push_str("push 0;\n");
+        out.push_str(&format!("jmp {};\n", done_label));
 
         out.push_str(&format!("{}:\n", true_label));
-        out.push_str("push 1;");
+        out.push_str("push 1;\n");
 
         out.push_str(&format!("{}:\n", done_label));
 
