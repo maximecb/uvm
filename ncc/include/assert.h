@@ -6,11 +6,11 @@
 #define assert(test_val)\
 if (!(test_val))\
 {\
-    asm ("assertion failed in ") -> void { syscall 6; };\
-    asm (__FILE__) -> void { syscall 6; };\
-    asm ("@") -> void { syscall 6; };\
-    asm (__LINE__) -> void { syscall 5; };\
-    asm () -> void { syscall 7; };\
+    asm ("assertion failed in ") -> void { syscall print_str; };\
+    asm (__FILE__) -> void { syscall print_str; };\
+    asm ("@") -> void { syscall print_str; };\
+    asm (__LINE__) -> void { syscall print_i64; };\
+    asm () -> void { syscall print_endl; };\
     asm () -> void { panic; };\
 }
 #else

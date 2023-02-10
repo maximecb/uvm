@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #define FOO()
 #define BAR(x) x
 
@@ -37,10 +39,14 @@ void main()
         2  /* multi-line comment */
     );
 
+    // This macro isn't expanded because we supply no arguments
+    int MACRO2 = 3;
+    assert(MACRO2 == 3);
+
     // Regression: closing parens inside a string
     BAR(")");
     BAR("\")\"");
 
     // Recursive macro
-    //REC_MACRO;
+    REC_MACRO;
 }
