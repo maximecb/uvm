@@ -253,6 +253,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
             let fn_name = syscall.name.clone();
+            let const_idx = syscall.const_idx.unwrap();
             let c_sig_str = syscall.c_sig_string();
 
             let mut sys_arg_str = "".to_string();
@@ -276,7 +277,7 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
                 sys_arg_str,
                 sys_arg_str,
                 syscall.returns.0,
-                fn_name
+                const_idx,
             ).unwrap();
 
             /*

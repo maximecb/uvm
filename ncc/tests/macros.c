@@ -7,6 +7,10 @@
 
 #define MACRO2(a, b) (a+b)
 
+// Recursive macro
+#define REC_MACRO2 3
+#define REC_MACRO REC_MACRO2
+
 void main()
 {
     int l = __LINE__;
@@ -36,4 +40,7 @@ void main()
     // Regression: closing parens inside a string
     BAR(")");
     BAR("\")\"");
+
+    // Recursive macro
+    //REC_MACRO;
 }

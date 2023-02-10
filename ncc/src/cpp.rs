@@ -296,6 +296,22 @@ fn expand_macro(
         for (idx, param) in params.iter().enumerate() {
             text = text.replace(param, &args[idx]);
         }
+
+        // Process macros in text recursively
+        let mut input = Input::new(&text, &input.src_name);
+        let mut end_keyword = "".to_string();
+        let sub_input = process_input_rec(
+            &mut input,
+            defs,
+            gen_output,
+            &mut end_keyword
+        )?;
+
+        if end_keyword != "" {
+            return input.parse_error(&format!("unexpected #{}", end_keyword));
+        }
+
+        return Ok(sub_input);
     }
 
     Ok(text)
