@@ -129,53 +129,49 @@ fn process_ifndef(
     // If not defined
     if !is_defined {
         // Process the then branch normally
-        let mut end_keyword = "".to_string();
-        output += &process_input_rec(
+        let (sub_output, end_keyword) = process_input_rec(
             input,
             defs,
             gen_output,
-            &mut end_keyword
         )?;
 
         // If there is an else branch
         if end_keyword == "else" {
-            let mut end_keyword = "".to_string();
-            process_input_rec(
+            let (_, end_keyword) = process_input_rec(
                 input,
                 defs,
                 false,
-                &mut end_keyword
             )?;
 
             if end_keyword != "endif" {
                 return input.parse_error("expected #endif");
             }
         }
+
+        output += &sub_output;
     }
     else
     {
         // Name defined, we need to ignore the then branch
-        let mut end_keyword = "".to_string();
-        process_input_rec(
+        let (_, end_keyword) = process_input_rec(
             input,
             defs,
             false,
-            &mut end_keyword
         )?;
 
         // If there is an else branch
         if end_keyword == "else" {
-            let mut end_keyword = "".to_string();
-            output += &process_input_rec(
+            let (sub_output, end_keyword) = process_input_rec(
                 input,
                 defs,
                 gen_output,
-                &mut end_keyword
             )?;
 
             if end_keyword != "endif" {
                 return input.parse_error("expected #endif");
             }
+
+            output += &sub_output;
         }
     }
 
@@ -304,12 +300,10 @@ fn expand_macro(
 
     // Process macros in text recursively
     let mut input = Input::new(&text, &input.src_name);
-    let mut end_keyword = "".to_string();
-    let sub_input = process_input_rec(
+    let (sub_input, end_keyword) = process_input_rec(
         &mut input,
         defs,
         gen_output,
-        &mut end_keyword
     )?;
 
     if end_keyword != "" {
@@ -324,19 +318,17 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
     let mut defs = HashMap::new();
 
-    let mut end_keyword = "".to_string();
-    let result = process_input_rec(
+    let (output, end_keyword) = process_input_rec(
         input,
         &mut defs,
         true,
-        &mut end_keyword
-    );
+    )?;
 
     if end_keyword != "" {
         return input.parse_error(&format!("unexpected #{}", end_keyword));
     }
 
-    result
+    Ok(output)
 }
 
 /// Process the input and generate an output string recursively
@@ -344,8 +336,7 @@ fn process_input_rec(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
     gen_output: bool,
-    end_keyword: &mut String
-) -> Result<String, ParseError>
+) -> Result<(String, String), ParseError>
 {
     let mut output = String::new();
 
@@ -378,8 +369,7 @@ fn process_input_rec(
 
             // On #else or #endif, stop
             if directive == "else" || directive == "endif" {
-                *end_keyword = directive;
-                break;
+                return Ok((output, directive));
             }
 
             if gen_output && directive == "include" {
@@ -394,12 +384,10 @@ fn process_input_rec(
 
                 let mut input = Input::from_file(&file_path);
 
-                let mut end_keyword = "".to_string();
-                let include_output = process_input_rec(
+                let (include_output, end_keyword) = process_input_rec(
                     &mut input,
                     defs,
-                    gen_output,
-                    &mut end_keyword
+                    gen_output
                 )?;
 
                 if end_keyword != "" {
@@ -505,5 +493,5 @@ fn process_input_rec(
         output.push(input.eat_ch());
     }
 
-    Ok(output)
+    Ok((output, "".to_string()))
 }
