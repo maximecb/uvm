@@ -115,6 +115,23 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
     })
 }
 
+fn process_ifdef(
+    input: &mut Input,
+    defs: &mut HashMap<String, Def>,
+    gen_output: bool,
+) -> Result<String, ParseError>
+{
+    let ident = input.parse_ident()?;
+    let is_defined = defs.get(&ident).is_some();
+
+    process_branches(
+        input,
+        defs,
+        gen_output,
+        is_defined,
+    )
+}
+
 fn process_ifndef(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
@@ -124,10 +141,26 @@ fn process_ifndef(
     let ident = input.parse_ident()?;
     let is_defined = defs.get(&ident).is_some();
 
+    process_branches(
+        input,
+        defs,
+        gen_output,
+        !is_defined,
+    )
+}
+
+/// Process conditional branches for an if-else type of directive
+fn process_branches(
+    input: &mut Input,
+    defs: &mut HashMap<String, Def>,
+    gen_output: bool,
+    branch_cond: bool
+) -> Result<String, ParseError>
+{
     let mut output = String::new();
 
-    // If not defined
-    if !is_defined {
+    // If the condition is true
+    if branch_cond {
         // Process the then branch normally
         let (sub_output, end_keyword) = process_input_rec(
             input,
@@ -357,13 +390,15 @@ fn process_input_rec(
 
             //println!("{}", directive);
 
+            // If defined
+            if directive == "ifdef" {
+                output += &process_ifdef(input, defs, gen_output)?;
+                continue
+            }
+
             // If not defined
             if directive == "ifndef" {
-                output += &process_ifndef(
-                    input,
-                    defs,
-                    gen_output
-                )?;
+                output += &process_ifndef(input, defs, gen_output)?;
                 continue
             }
 

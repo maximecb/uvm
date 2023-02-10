@@ -21,9 +21,11 @@ void main()
     // Macro with zero arguments
     FOO();
     FOO ();
+    FOO( );
 
     // Macro with one argument
     BAR(1);
+    BAR( 1 );
     BAR((1));
     BAR((1, 2));
     BAR(3 + (1, 2));
@@ -46,7 +48,20 @@ void main()
     // Regression: closing parens inside a string
     BAR(")");
     BAR("\")\"");
+    BAR(",");
 
     // Recursive macro
     REC_MACRO;
+
+    #ifdef FOO
+    assert(true);
+    #else
+    assert(false);
+    #endif
+
+    #ifndef NOT_DEFINED_LOL
+    assert(true);
+    #else
+    assert(false);
+    #endif
 }

@@ -22,7 +22,10 @@ Supported features:
   - `#define` constants
   - `#define(a,b,c)` macros
   - `#undef`
-  - `#ifndef` / `#else` / `#endif`
+  - `#ifdef` / `#ifndef`
+- Headers for UVM bindings
+  - `#include <uvm/syscalls.h>`
+  - `#include <uvm/utils.h>`
 
 Not yet implemented (TODO):
 - Do-while loops

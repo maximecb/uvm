@@ -1,21 +1,13 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
-// TODO:
-/*
-#ifdef memcpy
-//#unset memcpy
-#define memcpy()
+#ifndef memcpy
+#define memcpy(dst, src, num_bytes) asm (dst, src, num_bytes) -> void { syscall memcpy; }
 #endif
-*/
 
-// void memcpy(u8* dst, const u8* src, u64 num_bytes)
-// Copy a block of memory in the heap from a source address to a destination address.
-//#define memcpy(dst, src, num_bytes) asm (dst, src, num_bytes) -> void { syscall memcpy; }
-
-// void memset(u8* dst, u8 value, u64 num_bytes)
-// Fill a block of bytes in the heap with a given value.
-//#define memset(dst, value, num_bytes) asm (dst, value, num_bytes) -> void { syscall memset; }
+#ifndef memset
+#define memset(dst, value, num_bytes) asm (dst, value, num_bytes) -> void { syscall memset; }
+#endif
 
 size_t strlen(char* p)
 {
