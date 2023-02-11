@@ -44,7 +44,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 
     let mut params = None;
 
-    // If there are macro arguments
+    // If there are macro parameters
     if input.match_chars(&['(']) {
         let mut param_vec = Vec::default();
 
@@ -55,7 +55,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
             }
 
             if input.eof() {
-                return input.parse_error("eof inside define directive");
+                return input.parse_error("eof inside #define macro parameters");
             }
 
             param_vec.push(input.parse_ident()?);
@@ -461,17 +461,19 @@ fn process_input_rec(
 
         // Eat single-line comments
         if input.match_chars(&['/', '/']) {
-            input.eat_comment();
-            // Do we want to copy over the content to the output to
-            // avoid messing up the source position?
+            // Copy the comment over to the output to preserve the source position
+            let comment_str = input.collect(|input| Ok(input.eat_comment()))?;
+            output += "//";
+            output += &comment_str;
             continue;
         }
 
         // Eat multi-line comment
         if input.match_chars(&['/', '*']) {
-            input.eat_multi_comment()?;
-            // Do we want to copy over the content to the output to
-            // avoid messing up the source position?
+            // Copy the comment over to the output to preserve the source position
+            let comment_str = input.collect(|input| input.eat_multi_comment())?;
+            output += "/*";
+            output += &comment_str;
             continue;
         }
 

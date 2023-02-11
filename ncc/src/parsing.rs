@@ -407,4 +407,28 @@ impl Input
 
         ret
     }
+
+    /// Try to parse something using a parsing function,
+    /// and collect the parsed input into a string representing,
+    /// all the characters that were read
+    pub fn collect<T, F>(&mut self, parse_fn: F) -> Result<String, ParseError>
+    where F : FnOnce(&mut Input) -> Result<T, ParseError>
+    {
+        let pre_pos = self.pos;
+
+        // Try to parse using the parsing function provided
+        let ret = parse_fn(self);
+
+        match ret {
+            Ok(v) => {
+                let post_pos = self.pos;
+                let chars = &self.input_str[pre_pos..post_pos];
+                let slice_str: String = chars.iter().collect();
+                Ok(slice_str)
+            }
+            Err(e) => {
+                Err(e)
+            }
+        }
+    }
 }
