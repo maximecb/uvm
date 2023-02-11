@@ -238,7 +238,6 @@ void main()
     start_time = time_current_ms();
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Counter", 0);
-    window_show(0);
 
     time_delay_cb(0, anim_callback);
     enable_event_loop();

@@ -183,22 +183,6 @@
         "description": "Create a new window with a frame buffer to draw into."
       },
       {
-        "name": "window_show",
-        "args": [
-          [
-            "u32",
-            "window_id"
-          ]
-        ],
-        "returns": [
-          "void",
-          ""
-        ],
-        "permission": "window_display",
-        "const_idx": 9,
-        "description": "Show a window, initially not visible when created."
-      },
-      {
         "name": "window_draw_frame",
         "args": [
           [

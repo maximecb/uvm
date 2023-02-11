@@ -91,6 +91,21 @@ fn normalize_description(text: &str) -> String
     text
 }
 
+fn alloc_syscall_idx(idx_to_name: &mut Vec<Option<String>>, name: &str) -> u16
+{
+    for idx in 0..idx_to_name.len() {
+        if idx_to_name[idx].is_none() {
+            let const_idx: u16 = idx.try_into().unwrap();
+            idx_to_name[idx] = Some(name.to_string());
+            return const_idx;
+        }
+    }
+
+    idx_to_name.push(Some(name.to_string()));
+    let const_idx: u16 = idx_to_name.len().try_into().unwrap();
+    return const_idx;
+}
+
 fn main()
 {
     let mut unique_names: HashSet<String> = HashSet::new();
@@ -145,24 +160,14 @@ fn main()
         }
     }
 
-    // Verify that there are no gaps in the syscall indices,
-    // that is, every syscall idx up to the maximun index is taken
-    for (idx, maybe_name) in idx_to_name.iter().enumerate() {
-        if maybe_name.is_none() {
-            panic!();
-        }
-    }
-
     // Allocate new indices to the syscalls that don't have indices yet
     for mut subsystem in &mut subsystems {
         for syscall in &mut subsystem.syscalls {
             if syscall.const_idx.is_none() {
-                let const_idx = idx_to_name.len() as u16;
+                let const_idx = alloc_syscall_idx(&mut idx_to_name, &syscall.name);
                 syscall.const_idx = Some(const_idx);
-                idx_to_name.push(Some(syscall.name.clone()));
                 println!("allocating const_idx={} to syscall \"{}\"", const_idx, syscall.name);
             }
-
         }
     }
 
@@ -171,21 +176,23 @@ fn main()
     let mut file = File::create("syscalls.json").unwrap();
     file.write_all(json_output.as_bytes()).unwrap();
 
-    gen_rust_bindings("../vm/src/sys/constants.rs", &subsystems);
+    gen_rust_bindings("../vm/src/sys/constants.rs", &subsystems, &idx_to_name);
     gen_c_bindings("../ncc/include/uvm/syscalls.h", &subsystems);
     gen_markdown("../doc/syscalls.md", &subsystems);
 }
 
-fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
+fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &Vec<Option<String>>)
 {
     // Generate an array of syscalls sorted by const_idx
-    let mut syscall_list: Vec<SysCall> = Vec::new();
+    let mut syscall_tbl: Vec<Option<SysCall>> = vec![None; idx_to_name.len()];
+
+    // Generate an array of syscalls sorted by const_idx
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
-            syscall_list.push(syscall.clone());
+            let idx = syscall.const_idx.unwrap() as usize;
+            syscall_tbl[idx] = Some(syscall.clone());
         }
     }
-    syscall_list.sort_by(|a, b| a.const_idx.unwrap().cmp(&b.const_idx.unwrap()));
 
     // Generate syscall constants in rust
     let mut file = File::create(out_file).unwrap();
@@ -194,18 +201,22 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     writeln!(&mut file, "//").unwrap();
     writeln!(&mut file).unwrap();
 
+    // Not all constants are going to be used by all programs importing this
     writeln!(&mut file, "#![allow(unused)]").unwrap();
     writeln!(&mut file).unwrap();
 
-    writeln!(&mut file, "pub const NUM_SYSCALLS: usize = {};", syscall_list.len()).unwrap();
+    writeln!(&mut file, "pub const SYSCALL_TBL_LEN: usize = {};", idx_to_name.len()).unwrap();
     writeln!(&mut file).unwrap();
 
     // Constants for each syscall index
-    for subsystem in subsystems {
-        for syscall in &subsystem.syscalls {
-            let name = syscall.name.to_uppercase();
-            let idx = syscall.const_idx.unwrap();
-            writeln!(&mut file, "pub const {}: u16 = {};", name, idx).unwrap();
+    for idx in 0..idx_to_name.len() {
+        if let Some(name) = &idx_to_name[idx] {
+            writeln!(
+                &mut file,
+                "pub const {}: u16 = {};",
+                name.to_uppercase(),
+                idx
+            ).unwrap();
         }
     }
 
@@ -222,17 +233,23 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
     )).unwrap();
     writeln!(&mut file).unwrap();
 
-    writeln!(&mut file, "pub const SYSCALL_DESCS: [SysCallDesc; NUM_SYSCALLS] = [").unwrap();
-    for syscall in syscall_list {
-        let has_ret = syscall.returns.0 != "void";
-        writeln!(
-            &mut file,
-            "    SysCallDesc {{ name: \"{}\", const_idx: {}, argc: {}, has_ret: {} }},",
-            syscall.name,
-            syscall.const_idx.unwrap(),
-            syscall.args.len(),
-            has_ret,
-        ).unwrap();
+    writeln!(&mut file, "pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [").unwrap();
+    for syscall in syscall_tbl {
+        if let Some(syscall) = syscall {
+            let has_ret = syscall.returns.0 != "void";
+            writeln!(
+                &mut file,
+                "    Some(SysCallDesc {{ name: \"{}\", const_idx: {}, argc: {}, has_ret: {} }}),",
+                syscall.name,
+                syscall.const_idx.unwrap(),
+                syscall.args.len(),
+                has_ret,
+            ).unwrap();
+        }
+        else
+        {
+            writeln!(&mut file, "    None,").unwrap();
+        }
     }
     writeln!(&mut file, "];").unwrap();
 }

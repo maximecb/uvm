@@ -24,9 +24,6 @@ push WINDOW_TITLE;
 push 0;
 syscall window_create;
 
-# Show the window
-syscall window_show;
-
 push 100;
 push ANIM_CALLBACK;
 syscall time_delay_cb;

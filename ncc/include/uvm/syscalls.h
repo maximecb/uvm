@@ -41,10 +41,6 @@
 // Create a new window with a frame buffer to draw into.
 #define window_create(__width, __height, __title, __flags) asm (__width, __height, __title, __flags) -> u32 { syscall window_create; }
 
-// void window_show(u32 window_id)
-// Show a window, initially not visible when created.
-#define window_show(__window_id) asm (__window_id) -> void { syscall window_show; }
-
 // void window_draw_frame(u32 window_id, const u8* pixel_data)
 // Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address.
 #define window_draw_frame(__window_id, __pixel_data) asm (__window_id, __pixel_data) -> void { syscall window_draw_frame; }

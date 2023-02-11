@@ -44,9 +44,7 @@ struct Window<'a>
 {
     width: u32,
     height: u32,
-
-    // TODO: we should support multiple windows
-    //window_id
+    window_id: u32,
 
     // SDL canvas to draw into
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -106,6 +104,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     let window = Window {
         width,
         height,
+        window_id: 0,
         canvas,
         texture_creator,
         texture: None,
@@ -118,6 +117,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
         WINDOW = Some(window)
     }
 
+    /*
     unsafe {
         let window = WINDOW.as_mut().unwrap();
 
@@ -129,16 +129,10 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
             height
         ).unwrap());
     }
+    */
 
     // TODO: return unique window id
     Value::from(0)
-}
-
-pub fn window_show(vm: &mut VM, window_id: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.canvas.window_mut().show();
-    window.canvas.window_mut().raise();
 }
 
 pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
@@ -146,25 +140,40 @@ pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
     // Get the address to copy pixel data from
     let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
 
-    unsafe {
-        let mut window = WINDOW.as_mut().unwrap();
+    let window = get_window(window_id.as_u32());
 
-        // Update the texture
-        let pitch = 4 * window.width as usize;
-        let data_len = (4 * window.width * window.height) as usize;
-        let pixel_slice = std::slice::from_raw_parts(data_ptr, data_len);
-        window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
+    // If no frame has been drawn yet
+    if window.texture.is_none() {
+        // Creat the texture to render into
+        // Pixels use the BGRA byte order (0xAA_RR_GG_BB on a little-endian machine)
+        window.texture = Some(window.texture_creator.create_texture(
+            PixelFormatEnum::BGRA32,
+            TextureAccess::Streaming,
+            window.width,
+            window.height
+        ).unwrap());
 
-        // Copy the texture into the canvas
-        window.canvas.copy(
-            &window.texture.as_ref().unwrap(),
-            None,
-            None
-        ).unwrap();
-
-        // Update the screen with any rendering performed since the previous call
-        window.canvas.present();
+        // We show and raise the window at the moment the first frame is drawn
+        // This avoids showing a blank window too early
+        window.canvas.window_mut().show();
+        window.canvas.window_mut().raise();
     }
+
+    // Update the texture
+    let pitch = 4 * window.width as usize;
+    let data_len = (4 * window.width * window.height) as usize;
+    let pixel_slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
+    window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
+
+    // Copy the texture into the canvas
+    window.canvas.copy(
+        &window.texture.as_ref().unwrap(),
+        None,
+        None
+    ).unwrap();
+
+    // Update the screen with any rendering performed since the previous call
+    window.canvas.present();
 }
 
 pub fn window_on_mousemove(vm: &mut VM, window_id: Value, cb: Value)

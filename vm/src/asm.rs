@@ -430,7 +430,9 @@ impl Assembler
         use crate::sys::constants::SYSCALL_DESCS;
         let mut syscall_map = HashMap::new();
         for syscall in SYSCALL_DESCS {
-            syscall_map.insert(syscall.name.to_string(), syscall.const_idx);
+            if let Some(syscall) = syscall {
+                syscall_map.insert(syscall.name.to_string(), syscall.const_idx);
+            }
         }
 
         Self {

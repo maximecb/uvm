@@ -104,14 +104,6 @@ u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 
 Create a new window with a frame buffer to draw into.
 
-## window_show
-
-```
-void window_show(u32 window_id)
-```
-
-Show a window, initially not visible when created.
-
 ## window_draw_frame
 
 ```

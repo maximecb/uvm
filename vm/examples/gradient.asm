@@ -24,7 +24,6 @@ get_local 1;
 push WINDOW_TITLE;
 push 0;
 syscall window_create;
-syscall window_show;
 
 # Local 2: Y=0
 push 0;

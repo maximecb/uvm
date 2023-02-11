@@ -82,7 +82,6 @@ void anim_callback()
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
-    window_show(0);
 
     time_delay_cb(0, anim_callback);
 

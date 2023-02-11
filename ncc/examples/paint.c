@@ -162,7 +162,6 @@ void mouseup(u64 window_id, u8 btn_id)
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "UVM Paint Program Example", 0);
-    window_show(0);
 
     // Initially fill the canvas with white
     fill_rect(

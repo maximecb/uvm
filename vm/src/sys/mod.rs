@@ -60,7 +60,7 @@ impl SysCallFn
 pub struct SysState
 {
     /// Map of indices to syscall functions
-    syscalls: [Option<SysCallFn>; NUM_SYSCALLS],
+    syscalls: [Option<SysCallFn>; SYSCALL_TBL_LEN],
 
     /// SDL context (used for UI and audio)
     sdl: Option<sdl2::Sdl>,
@@ -77,7 +77,7 @@ impl SysState
     pub fn new() -> Self
     {
         let mut sys_state = Self {
-            syscalls: [None; NUM_SYSCALLS],
+            syscalls: [None; SYSCALL_TBL_LEN],
             sdl: None,
             window_state: None,
             time_state: TimeState::new(),
@@ -100,7 +100,7 @@ impl SysState
 
     pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
     {
-        let desc = &SYSCALL_DESCS[const_idx as usize];
+        let desc = SYSCALL_DESCS[const_idx as usize].as_ref().unwrap();
 
         assert!(
             fun.argc() == desc.argc,
@@ -118,7 +118,6 @@ impl SysState
     /// Get the syscall with a given index
     pub fn get_syscall(&self, const_idx: u16) -> SysCallFn
     {
-
         if let Some(syscall_fn) = self.syscalls[const_idx as usize] {
             return syscall_fn;
         }
@@ -144,7 +143,6 @@ impl SysState
         self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
 
         self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
-        self.reg_syscall(WINDOW_SHOW, SysCallFn::Fn1_0(window_show));
         self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
         self.reg_syscall(WINDOW_ON_MOUSEMOVE, SysCallFn::Fn2_0(window_on_mousemove));
         self.reg_syscall(WINDOW_ON_MOUSEDOWN, SysCallFn::Fn2_0(window_on_mousedown));
