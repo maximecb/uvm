@@ -695,6 +695,10 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
 
         // Unsigned qualifier
         "unsigned" => {
+            if input.match_token("char")? {
+                return Ok(Type::UInt(8));
+            }
+
             let base_type = parse_type_atom(input)?;
 
             match base_type {
