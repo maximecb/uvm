@@ -263,6 +263,12 @@ impl Value
         let Value(val) = *self;
         val as i64
     }
+
+    pub fn as_f32(&self) -> f32 {
+        let Value(val) = *self;
+        let val = val as i32;
+        unsafe { transmute(val) }
+    }
 }
 
 impl From<u8> for Value {
@@ -303,6 +309,13 @@ impl From<i32> for Value {
 
 impl From<i64> for Value {
     fn from(val: i64) -> Self {
+        Value(val as u64)
+    }
+}
+
+impl From<f32> for Value {
+    fn from(val: f32) -> Self {
+        let val: u32 = unsafe { transmute(val) };
         Value(val as u64)
     }
 }
