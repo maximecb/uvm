@@ -185,6 +185,39 @@ pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
     window.cb_mouseup = cb.as_u64();
 }
 
+/// Process SDL events
+pub fn process_events(vm: &mut VM) -> bool
+{
+    let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
+
+    // Process all pending events
+    // See: https://docs.rs/sdl2/0.30.0/sdl2/event/enum.Event.html
+    // TODO: we probably want to process window/input related events in window.rs ?
+    for event in event_pump.poll_iter() {
+        match event {
+            Event::Quit {..} |
+            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                return true;
+            },
+
+            Event::MouseMotion { window_id, x, y, .. } => {
+                window_call_mousemove(vm, window_id, x, y);
+            }
+            Event::MouseButtonDown { window_id, which, mouse_btn, .. } => {
+                window_call_mousedown(vm, window_id, which, mouse_btn);
+            }
+            Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
+                window_call_mouseup(vm, window_id, which, mouse_btn);
+            }
+
+            _ => {}
+        }
+    }
+
+    // TODO: should this return an ExitReason? or Option<ExitReason>?
+    return false;
+}
+
 // TODO: functions to process window-related events
 // TODO: we should return the exit reason?
 // this is gonna be awkward if we have audio processing threads/processes and such?
@@ -192,7 +225,7 @@ pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
 
 // TODO: this is just for testing
 // we should handle window-related events here instead
-pub fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
+fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
 {
     let window = get_window(0);
     let cb = window.cb_mousemove;
@@ -220,7 +253,7 @@ MouseButtonDown {
     y: i32,
 },
 */
-pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
+fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
     let window = get_window(0);
     let cb = window.cb_mousedown;
@@ -253,7 +286,7 @@ pub fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_b
     }
 }
 
-pub fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
+fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
 {
     let window = get_window(0);
     let cb = window.cb_mouseup;

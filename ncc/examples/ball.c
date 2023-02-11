@@ -3,7 +3,6 @@
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
-size_t NUM_COLORS = 32;
 size_t BALL_RADIUS = 20;
 
 // RGBA pixels: 800 * 600
