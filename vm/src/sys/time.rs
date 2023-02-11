@@ -70,7 +70,7 @@ pub fn time_until_next_cb(vm: &VM) -> Option<u64>
         Some(cb) => {
             let cb_time = cb.time_ms;
             let cur_time = get_time_ms();
-            let time_to = if cur_time > cb_time { cur_time - cb_time } else { 0 };
+            let time_to = if cb_time > cur_time { cb_time - cur_time } else { 0 };
             return Some(time_to);
         }
     }

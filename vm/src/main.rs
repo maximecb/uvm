@@ -9,6 +9,8 @@ mod asm;
 
 extern crate sdl2;
 use std::env;
+use std::thread::sleep;
+use std::time::Duration;
 use crate::vm::{VM, Value, MemBlock, ExitReason};
 use crate::asm::{Assembler};
 
@@ -37,11 +39,11 @@ fn run_program(vm: &mut VM) -> Value
 
         // Sleep until the next callback
         if let Some(delay_ms) = next_cb_time {
-            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+            sleep(Duration::from_millis(delay_ms));
         }
         else
         {
-            std::thread::sleep(std::time::Duration::from_millis(10));
+            sleep(Duration::from_millis(10));
         }
 
         // For each callback to run
