@@ -530,3 +530,58 @@ fn process_input_rec(
 
     Ok((output, "".to_string()))
 }
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    fn process(src: &str) -> String
+    {
+        let mut input = Input::new(&src, "src");
+        process_input(&mut input).unwrap()
+    }
+
+    fn line_count(src: &str) -> usize
+    {
+        let mut input = Input::new(&src, "src");
+        process_input(&mut input).unwrap();
+        input.line_no as usize
+    }
+
+    /*
+    fn compile_file(file_name: &str)
+    {
+        use crate::parsing::Input;
+        use crate::parser::parse_unit;
+        use crate::cpp::process_input;
+
+        dbg!(file_name);
+        let mut input = Input::from_file(file_name);
+        let output = process_input(&mut input).unwrap();
+        //println!("{}", output);
+
+        let mut input = Input::new(&output, file_name);
+        let mut unit = parse_unit(&mut input).unwrap();
+        unit.resolve_syms().unwrap();
+        unit.check_types().unwrap();
+        unit.gen_code().unwrap();
+    }
+    */
+
+    #[test]
+    fn empty()
+    {
+        assert_eq!(process(""), "");
+        assert_eq!(process(" "), " ");
+        assert_eq!(process("\n"), "\n");
+    }
+
+    #[test]
+    fn lines()
+    {
+        assert_eq!(line_count("#define FOO 2\n"), 2);
+        assert_eq!(line_count("#define FOO 2\nFOO"), 2);
+        assert_eq!(line_count("#define FOO 2\nFOO\n"), 3);
+    }
+}
