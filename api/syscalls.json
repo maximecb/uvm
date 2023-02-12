@@ -264,6 +264,46 @@
         "permission": "window_display",
         "const_idx": 13,
         "description": "Register a callback for mouse button release events."
+      },
+      {
+        "name": "window_on_keydown",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 9,
+        "description": "Register a callback for key press event."
+      },
+      {
+        "name": "window_on_keyup",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 15,
+        "description": "Register a callback for key release event."
       }
     ],
     "constants": [

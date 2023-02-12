@@ -55,6 +55,10 @@ struct Window<'a>
     cb_mousemove: u64,
     cb_mousedown: u64,
     cb_mouseup: u64,
+
+    // Callbacks for keyboard events
+    cb_keydown: u64,
+    cb_keyup: u64,
 }
 
 // Note: we're leaving this global to avoid the Window lifetime
@@ -111,6 +115,8 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
         cb_mousemove: 0,
         cb_mousedown: 0,
         cb_mouseup: 0,
+        cb_keydown: 0,
+        cb_keyup: 0,
     };
 
     unsafe {
@@ -194,6 +200,18 @@ pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
     window.cb_mouseup = cb.as_u64();
 }
 
+pub fn window_on_keydown(vm: &mut VM, window_id: Value, cb: Value)
+{
+    let window = get_window(window_id.as_u32());
+    window.cb_keydown = cb.as_u64();
+}
+
+pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
+{
+    let window = get_window(window_id.as_u32());
+    window.cb_keyup = cb.as_u64();
+}
+
 /// Process SDL events
 pub fn process_events(vm: &mut VM) -> bool
 {
@@ -218,6 +236,13 @@ pub fn process_events(vm: &mut VM) -> bool
             Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
                 window_call_mouseup(vm, window_id, which, mouse_btn);
             }
+
+            Event::KeyDown { window_id, keycode: Some(keycode), .. } => {
+                window_call_keydown(vm, window_id, keycode);
+            },
+            Event::KeyUp { window_id, keycode: Some(keycode), .. } => {
+                window_call_keyup(vm, window_id, keycode);
+            },
 
             _ => {}
         }
@@ -319,11 +344,59 @@ fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: Mo
         MouseButton::Unknown => { panic!("wtf"); }
     };
 
-    // TODO: pass window id
-    match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
+    match vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
     {
         // TODO: we should return the exit reason?
         ExitReason::Exit(val) => {}
         ExitReason::Return(val) => {}
+    }
+}
+
+fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
+{
+    use crate::sys::constants::*;
+
+    match sdl_keycode {
+        Keycode::Left => Some(KEY_LEFT),
+        Keycode::Right => Some(KEY_RIGHT),
+        Keycode::Up => Some(KEY_UP),
+        Keycode::Down => Some(KEY_DOWN),
+        Keycode::Space => Some(KEY_SPACE),
+
+        _ => None
+    }
+}
+
+fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode)
+{
+    let window = get_window(0);
+    let cb = window.cb_keydown;
+
+    let keycode = translate_keycode(keycode);
+
+    if let Some(keycode) = keycode {
+        match vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
+        {
+            // TODO: we should return the exit reason?
+            ExitReason::Exit(val) => {}
+            ExitReason::Return(val) => {}
+        }
+    }
+}
+
+fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode)
+{
+    let window = get_window(0);
+    let cb = window.cb_keyup;
+
+    let keycode = translate_keycode(keycode);
+
+    if let Some(keycode) = keycode {
+        match vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
+        {
+            // TODO: we should return the exit reason?
+            ExitReason::Exit(val) => {}
+            ExitReason::Return(val) => {}
+        }
     }
 }
