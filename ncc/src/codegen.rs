@@ -343,7 +343,10 @@ impl Expr
                         match t {
                             Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
                             Type::Int(64) => out.push_str("load_u64;\n"),
-                            Type::Int(32) => out.push_str("load_u32;\n"),
+                            Type::Int(32) => {
+                                out.push_str("load_u32;\n");
+                                out.push_str("sx_i32_i64;\n");
+                            }
                             Type::Pointer(_) => {}
                             Type::Fun { .. } => {}
                             Type::Array { .. } => {}
@@ -709,8 +712,7 @@ fn gen_assign(
                     }
 
                     match t {
-                        Type::UInt(n) => out.push_str(&format!("store_u{};\n", n)),
-                        Type::Int(64) => out.push_str("store_u64;\n"),
+                        Type::UInt(n) | Type::Int(n) => out.push_str(&format!("store_u{};\n", n)),
                         _ => todo!()
                     }
                 }
