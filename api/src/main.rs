@@ -375,6 +375,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
             writeln!(&mut file).unwrap();
         }
 
+        // For each syscall
         for syscall in &subsystem.syscalls {
             writeln!(&mut file, "## {}", syscall.name).unwrap();
             writeln!(&mut file).unwrap();
@@ -394,6 +395,29 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
                 writeln!(&mut file, "{}", text).unwrap();
                 writeln!(&mut file).unwrap();
             }
+        }
+
+        // Write out the constants for this subsystem
+        if subsystem.constants.len() > 0 {
+            writeln!(&mut file, "## Constants").unwrap();
+            writeln!(
+                &mut file,
+                "These are the constants associated with the {} subsystem:",
+                subsystem.subsystem
+            ).unwrap();
+            writeln!(&mut file).unwrap();
+
+            for (name, type_name, value) in &subsystem.constants {
+                writeln!(
+                    &mut file,
+                    "`{} {} = {}`",
+                    type_name,
+                    name,
+                    value
+                ).unwrap();
+            }
+
+            writeln!(&mut file).unwrap();
         }
     }
 }
