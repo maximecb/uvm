@@ -67,7 +67,7 @@
 
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
-#define KEY_ENTER 10
+#define KEY_RETURN 10
 #define KEY_ESCAPE 27
 #define KEY_SPACE 32
 #define KEY_NUM0 48
@@ -81,5 +81,6 @@
 #define KEY_RIGHT 16002
 #define KEY_UP 16003
 #define KEY_DOWN 16004
+#define KEY_SHIFT 16005
 
 #endif

@@ -51,7 +51,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
 
 pub const KEY_BACKSPACE: u16 = 8;
 pub const KEY_TAB: u16 = 9;
-pub const KEY_ENTER: u16 = 10;
+pub const KEY_RETURN: u16 = 10;
 pub const KEY_ESCAPE: u16 = 27;
 pub const KEY_SPACE: u16 = 32;
 pub const KEY_NUM0: u16 = 48;
@@ -65,3 +65,4 @@ pub const KEY_LEFT: u16 = 16001;
 pub const KEY_RIGHT: u16 = 16002;
 pub const KEY_UP: u16 = 16003;
 pub const KEY_DOWN: u16 = 16004;
+pub const KEY_SHIFT: u16 = 16005;

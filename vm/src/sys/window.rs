@@ -356,12 +356,22 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {
     use crate::sys::constants::*;
 
+    // https://docs.rs/sdl2/0.30.0/sdl2/keyboard/enum.Keycode.html
     match sdl_keycode {
+        // This mapping is incomplete, but people need WASD!
+        Keycode::A => Some(KEY_A),
+        Keycode::D => Some(KEY_D),
+        Keycode::S => Some(KEY_S),
+        Keycode::W => Some(KEY_W),
+
         Keycode::Left => Some(KEY_LEFT),
         Keycode::Right => Some(KEY_RIGHT),
         Keycode::Up => Some(KEY_UP),
         Keycode::Down => Some(KEY_DOWN),
         Keycode::Space => Some(KEY_SPACE),
+        Keycode::Return => Some(KEY_RETURN),
+        Keycode::LShift => Some(KEY_SHIFT),
+        Keycode::RShift => Some(KEY_SHIFT),
 
         _ => None
     }
