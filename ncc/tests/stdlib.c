@@ -9,5 +9,6 @@ void main()
     srand(9000);
     rand();
 
+    // Test the exit function
     exit(0);
 }
