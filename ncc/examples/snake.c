@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define FRAME_WIDTH 600
-#define FRAME_HEIGHT 600
+#define FRAME_WIDTH 640
+#define FRAME_HEIGHT 640
 
-#define GRID_WIDTH 40
-#define GRID_HEIGHT 40
-#define TILE_SIZE 15
+#define GRID_WIDTH 32
+#define GRID_HEIGHT 32
+#define TILE_SIZE 20
 #define MAX_SNAKE_LEN 2048
 
 // RGBA pixels: 800 * 600
@@ -24,7 +24,7 @@ int dy = 1;
 
 int snake_len = 5;
 
-// Snake x/y cell positions, from tail to head
+// Snake x/y cell positions, from head to tail
 int snake_xs[MAX_SNAKE_LEN];
 int snake_ys[MAX_SNAKE_LEN];
 
@@ -83,8 +83,8 @@ void spawn_apple()
 {
     while (true)
     {
-        int nx = 2 + rand() % (GRID_WIDTH - 3);
-        int ny = 2 + rand() % (GRID_HEIGHT - 3);
+        int nx = 2 + rand() % (GRID_WIDTH - 4);
+        int ny = 2 + rand() % (GRID_HEIGHT - 4);
 
         if (snake_collision(nx, ny) == false)
         {
@@ -98,20 +98,25 @@ void spawn_apple()
 void anim_callback()
 {
     // Move the snake body forward
-    for (int i = 0; i < snake_len - 1; ++i)
+    // We do this from tail to head
+    for (int i = snake_len - 1; i > 0; i = i - 1)
     {
-        snake_xs[i] = snake_xs[i+1];
-        snake_ys[i] = snake_ys[i+1];
+        snake_xs[i] = snake_xs[i-1];
+        snake_ys[i] = snake_ys[i-1];
     }
 
-    int nx = snake_xs[snake_len - 1] + dx;
-    int ny = snake_ys[snake_len - 1] + dy;
+    int nx = snake_xs[0] + dx;
+    int ny = snake_ys[0] + dy;
 
     if (snake_collision(nx, ny))
     {
         puts("snake ran into itself\n");
         exit(0);
     }
+
+    // Move the head forward (after the collision check)
+    snake_xs[0] = nx;
+    snake_ys[0] = ny;
 
     if (nx == 0 || nx >= GRID_WIDTH - 1 || ny == 0 || ny == GRID_HEIGHT - 1)
     {
@@ -123,26 +128,10 @@ void anim_callback()
     {
         puts("got the apple\n");
 
-        snake_xs[snake_len] = apple_x;
-        snake_ys[snake_len] = apple_y;
         ++snake_len;
 
         spawn_apple();
     }
-
-    // Move the head forward
-    snake_xs[snake_len - 1] = nx;
-    snake_ys[snake_len - 1] = ny;
-
-
-
-
-
-
-
-
-
-
 
     // Clear the screen
     memset(FRAME_BUFFER, 0, 1_920_000);
@@ -163,7 +152,7 @@ void anim_callback()
     draw_circle(apple_x * TILE_SIZE, apple_y * TILE_SIZE, TILE_SIZE, 0xFF0000);
 
     // Draw the snake
-    for (int i = 0; i < snake_len - 1; ++i)
+    for (int i = 1; i < snake_len - 1; ++i)
     {
         draw_square(
             snake_xs[i] * TILE_SIZE,
@@ -175,18 +164,11 @@ void anim_callback()
 
     // Draw the head
     draw_square(
-        snake_xs[snake_len - 1] * TILE_SIZE,
-        snake_ys[snake_len - 1] * TILE_SIZE,
+        snake_xs[0] * TILE_SIZE,
+        snake_ys[0] * TILE_SIZE,
         TILE_SIZE,
         0xFF00FF
     );
-
-
-
-
-
-
-
 
     window_draw_frame(0, FRAME_BUFFER);
     time_delay_cb(100, anim_callback);
@@ -194,8 +176,8 @@ void anim_callback()
 
 void keydown(u64 window_id, u16 keycode)
 {
-    int sdx = snake_xs[snake_len - 2] - snake_xs[snake_len - 1];
-    int sdy = snake_ys[snake_len - 2] - snake_ys[snake_len - 1];
+    int sdx = snake_xs[1] - snake_xs[0];
+    int sdy = snake_ys[1] - snake_ys[0];
 
     if (keycode == KEY_LEFT && sdx != -1)
     {
@@ -227,7 +209,7 @@ void main()
     for (int i = 0; i < snake_len; ++i)
     {
         snake_xs[i] = GRID_WIDTH / 2;
-        snake_ys[i] = ((GRID_HEIGHT / 4) - snake_len) + i;
+        snake_ys[i] = (GRID_HEIGHT / 4) - i;
     }
 
     time_delay_cb(0, anim_callback);
