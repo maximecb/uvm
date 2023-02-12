@@ -343,6 +343,7 @@ impl Expr
                         match t {
                             Type::UInt(n) => out.push_str(&format!("load_u{};\n", n)),
                             Type::Int(64) => out.push_str("load_u64;\n"),
+                            Type::Int(32) => out.push_str("load_u32;\n"),
                             Type::Pointer(_) => {}
                             Type::Fun { .. } => {}
                             Type::Array { .. } => {}
@@ -799,10 +800,11 @@ mod tests
         gen_ok("u64 g = 5; u64 main() { return g; }");
         gen_ok("u64 g = 5; u64 main() { return g + 1; }");
         gen_ok("u8* p = null; u8* foo() { return p; }");
-        gen_ok("bool levar = true; bool foo() { return levar; }");
         gen_ok("u64 g = 0; void foo(u32 v) { g = v; }");
         gen_ok("i64 g = -77; i64 foo() { return g; }");
         gen_ok("i64 g = -77; void foo() { g = 1; }");
+        gen_ok("bool levar = true; bool foo() { return levar; }");
+        gen_ok("int g = 5; int f() { return g; }");
     }
 
     #[test]
