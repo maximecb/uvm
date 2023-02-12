@@ -436,7 +436,7 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
             // Get the operator at the top of the stack
             let top_op = &op_stack[op_stack.len() - 1];
 
-            if top_op.prec < new_op.prec {
+            if top_op.prec <= new_op.prec {
                 assert!(expr_stack.len() >= 2);
                 let rhs = expr_stack.pop().unwrap();
                 let lhs = expr_stack.pop().unwrap();

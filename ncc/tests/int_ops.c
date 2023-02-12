@@ -16,8 +16,12 @@ void main()
     assert(3 * 2 - 1 == 5);
     assert(1 + 1 + 1 + 1 == 4);
     assert(1 + 3 * 2 == 7);
-    // FIXME:
-    //assert(3 - 1 + 1 == 3);
+    assert(3 - 1 + 1 == 3);
+    assert(3 - 1 - 2 == 0);
+
+    // Unary minus
+    assert(3 - -1 == 4);
+    assert(4 + -1 == 3);
 
     int a = 1;
     int b = 2;
