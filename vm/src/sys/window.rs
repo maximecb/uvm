@@ -372,6 +372,10 @@ fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode)
     let window = get_window(0);
     let cb = window.cb_keydown;
 
+    if cb == 0 {
+        return;
+    }
+
     let keycode = translate_keycode(keycode);
 
     if let Some(keycode) = keycode {
@@ -388,6 +392,10 @@ fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode)
 {
     let window = get_window(0);
     let cb = window.cb_keyup;
+
+    if cb == 0 {
+        return;
+    }
 
     let keycode = translate_keycode(keycode);
 

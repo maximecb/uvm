@@ -136,6 +136,22 @@ void window_on_mouseup(u32 window_id, void* callback)
 
 Register a callback for mouse button release events.
 
+## window_on_keydown
+
+```
+void window_on_keydown(u32 window_id, void* callback)
+```
+
+Register a callback for key press event.
+
+## window_on_keyup
+
+```
+void window_on_keyup(u32 window_id, void* callback)
+```
+
+Register a callback for key release event.
+
 # audio
 
 Audio input and output.
