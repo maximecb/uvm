@@ -155,23 +155,23 @@ Register a callback for key release event.
 ## Constants
 These are the constants associated with the window subsystem:
 
-`u16 KEY_BACKSPACE = 8`
-`u16 KEY_TAB = 9`
-`u16 KEY_RETURN = 10`
-`u16 KEY_ESCAPE = 27`
-`u16 KEY_SPACE = 32`
-`u16 KEY_NUM0 = 48`
-`u16 KEY_A = 65`
-`u16 KEY_B = 66`
-`u16 KEY_C = 67`
-`u16 KEY_D = 68`
-`u16 KEY_S = 83`
-`u16 KEY_W = 87`
-`u16 KEY_LEFT = 16001`
-`u16 KEY_RIGHT = 16002`
-`u16 KEY_UP = 16003`
-`u16 KEY_DOWN = 16004`
-`u16 KEY_SHIFT = 16005`
+- `u16 KEY_BACKSPACE = 8`
+- `u16 KEY_TAB = 9`
+- `u16 KEY_RETURN = 10`
+- `u16 KEY_ESCAPE = 27`
+- `u16 KEY_SPACE = 32`
+- `u16 KEY_NUM0 = 48`
+- `u16 KEY_A = 65`
+- `u16 KEY_B = 66`
+- `u16 KEY_C = 67`
+- `u16 KEY_D = 68`
+- `u16 KEY_S = 83`
+- `u16 KEY_W = 87`
+- `u16 KEY_LEFT = 16001`
+- `u16 KEY_RIGHT = 16002`
+- `u16 KEY_UP = 16003`
+- `u16 KEY_DOWN = 16004`
+- `u16 KEY_SHIFT = 16005`
 
 # audio
 

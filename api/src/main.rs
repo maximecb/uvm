@@ -410,7 +410,7 @@ fn gen_markdown(out_file: &str, subsystems: &Vec<SubSystem>)
             for (name, type_name, value) in &subsystem.constants {
                 writeln!(
                     &mut file,
-                    "`{} {} = {}`",
+                    "- `{} {} = {}`",
                     type_name,
                     name,
                     value
