@@ -11,6 +11,14 @@ void main()
     assert(!0);
     assert(8);
 
+    // Infix operations
+    assert(3 - 1 == 2);
+    assert(3 * 2 - 1 == 5);
+    assert(1 + 1 + 1 + 1 == 4);
+    assert(1 + 3 * 2 == 7);
+    // FIXME:
+    //assert(3 - 1 + 1 == 3);
+
     int a = 1;
     int b = 2;
     int c = a + b;
@@ -19,6 +27,7 @@ void main()
     assert(2 > 1);
     assert(-2 < -1);
 
+    // Left and right shift
     assert(1 << 1 == 2);
     assert(2 >> 1 == 1);
 }
