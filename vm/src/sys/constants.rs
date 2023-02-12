@@ -44,3 +44,20 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "window_on_mousedown", const_idx: 12, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "window_on_mouseup", const_idx: 13, argc: 2, has_ret: false }),
 ];
+
+pub const KEY_BACKSPACE: u16 = 8;
+pub const KEY_TAB: u16 = 9;
+pub const KEY_ENTER: u16 = 10;
+pub const KEY_ESCAPE: u16 = 27;
+pub const KEY_SPACE: u16 = 32;
+pub const KEY_NUM0: u16 = 48;
+pub const KEY_A: u16 = 65;
+pub const KEY_B: u16 = 66;
+pub const KEY_C: u16 = 67;
+pub const KEY_D: u16 = 68;
+pub const KEY_S: u16 = 83;
+pub const KEY_W: u16 = 87;
+pub const KEY_LEFT: u16 = 16001;
+pub const KEY_RIGHT: u16 = 16002;
+pub const KEY_UP: u16 = 16003;
+pub const KEY_DOWN: u16 = 16004;

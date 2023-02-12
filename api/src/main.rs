@@ -20,6 +20,7 @@ struct SubSystem {
     subsystem: String,
     description: Option<String>,
     syscalls: Vec<SysCall>,
+    constants: Vec<(String, String, i128)>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -219,9 +220,9 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &
             ).unwrap();
         }
     }
+    writeln!(&mut file).unwrap();
 
     // Generate global array of syscall descriptors
-    writeln!(&mut file).unwrap();
     writeln!(&mut file, "{}", concat!(
         "pub struct SysCallDesc\n",
         "{\n",
@@ -252,6 +253,20 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &
         }
     }
     writeln!(&mut file, "];").unwrap();
+    writeln!(&mut file).unwrap();
+
+    // Write out the constants for each subsystem
+    for subsystem in subsystems {
+        for (name, type_name, value) in &subsystem.constants {
+            writeln!(
+                &mut file,
+                "pub const {}: {} = {};",
+                name,
+                type_name,
+                value
+            ).unwrap();
+        }
+    }
 }
 
 fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
@@ -315,6 +330,19 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
             */
         }
     }
+
+    // Write out the constants for each subsystem
+    for subsystem in subsystems {
+        for (name, type_name, value) in &subsystem.constants {
+            writeln!(
+                &mut file,
+                "#define {} {}",
+                name,
+                value
+            ).unwrap();
+        }
+    }
+    writeln!(&mut file).unwrap();
 
     writeln!(&mut file, "#endif").unwrap();
 }

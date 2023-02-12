@@ -51,7 +51,8 @@
         "const_idx": 4,
         "description": "Fill a block of bytes in the heap with a given value."
       }
-    ]
+    ],
+    "constants": []
   },
   {
     "subsystem": "io",
@@ -111,7 +112,8 @@
         "const_idx": 8,
         "description": "Read an i64 value from standard input."
       }
-    ]
+    ],
+    "constants": []
   },
   {
     "subsystem": "time",
@@ -148,7 +150,8 @@
         "const_idx": 2,
         "description": "Schedule a callback to be called once after a given delay."
       }
-    ]
+    ],
+    "constants": []
   },
   {
     "subsystem": "window",
@@ -262,21 +265,106 @@
         "const_idx": 13,
         "description": "Register a callback for mouse button release events."
       }
+    ],
+    "constants": [
+      [
+        "KEY_BACKSPACE",
+        "u16",
+        8
+      ],
+      [
+        "KEY_TAB",
+        "u16",
+        9
+      ],
+      [
+        "KEY_ENTER",
+        "u16",
+        10
+      ],
+      [
+        "KEY_ESCAPE",
+        "u16",
+        27
+      ],
+      [
+        "KEY_SPACE",
+        "u16",
+        32
+      ],
+      [
+        "KEY_NUM0",
+        "u16",
+        48
+      ],
+      [
+        "KEY_A",
+        "u16",
+        65
+      ],
+      [
+        "KEY_B",
+        "u16",
+        66
+      ],
+      [
+        "KEY_C",
+        "u16",
+        67
+      ],
+      [
+        "KEY_D",
+        "u16",
+        68
+      ],
+      [
+        "KEY_S",
+        "u16",
+        83
+      ],
+      [
+        "KEY_W",
+        "u16",
+        87
+      ],
+      [
+        "KEY_LEFT",
+        "u16",
+        16001
+      ],
+      [
+        "KEY_RIGHT",
+        "u16",
+        16002
+      ],
+      [
+        "KEY_UP",
+        "u16",
+        16003
+      ],
+      [
+        "KEY_DOWN",
+        "u16",
+        16004
+      ]
     ]
   },
   {
     "subsystem": "audio",
     "description": "Audio input and output.",
-    "syscalls": []
+    "syscalls": [],
+    "constants": []
   },
   {
     "subsystem": "fs",
     "description": "File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.",
-    "syscalls": []
+    "syscalls": [],
+    "constants": []
   },
   {
     "subsystem": "net",
     "description": "Network-related functionality.",
-    "syscalls": []
+    "syscalls": [],
+    "constants": []
   }
 ]

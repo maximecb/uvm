@@ -57,4 +57,21 @@
 // Register a callback for mouse button release events.
 #define window_on_mouseup(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mouseup; }
 
+#define KEY_BACKSPACE 8
+#define KEY_TAB 9
+#define KEY_ENTER 10
+#define KEY_ESCAPE 27
+#define KEY_SPACE 32
+#define KEY_NUM0 48
+#define KEY_A 65
+#define KEY_B 66
+#define KEY_C 67
+#define KEY_D 68
+#define KEY_S 83
+#define KEY_W 87
+#define KEY_LEFT 16001
+#define KEY_RIGHT 16002
+#define KEY_UP 16003
+#define KEY_DOWN 16004
+
 #endif
