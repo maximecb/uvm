@@ -126,11 +126,12 @@ void anim_callback()
 
     if (nx == apple_x && ny == apple_y)
     {
-        puts("got the apple\n");
-
+        spawn_apple();
         ++snake_len;
 
-        spawn_apple();
+        puts("got the apple, snake length is now ");
+        print_i64(snake_len);
+        puts("!\n");
     }
 
     // Clear the screen
