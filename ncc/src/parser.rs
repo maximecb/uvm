@@ -90,10 +90,80 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(expr);
     }
 
+    // Inline assembly expression
+    if input.match_token("asm")? {
+        return parse_asm_expr(input);
+    }
+
+    // Identifier (variable reference)
+    if is_ident_ch(ch) {
+        let ident = input.parse_ident()?;
+        return Ok(Expr::Ident(ident));
+    }
+
+    input.parse_error("unknown atomic expression")
+}
+
+/// Parse a function call expression
+fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
+{
+    let arg_exprs = parse_arg_exprs(input)?;
+
+    Ok(Expr::Call {
+        callee: Box::new(callee),
+        args: arg_exprs
+    })
+}
+
+/// Parse a postfix expression
+fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
+{
+    let mut base_expr = parse_atom(input)?;
+
+    loop
+    {
+        // If this is a function call
+        if input.match_token("(")? {
+            base_expr = parse_call_expr(input, base_expr)?;
+            continue;
+        }
+
+        // Array indexing
+        if input.match_token("[")? {
+            let index_expr = parse_expr(input)?;
+            input.expect_token("]")?;
+
+            // Transform into dereferencing and pointer addition
+            base_expr = Expr::Unary {
+                op: UnOp::Deref,
+                child: Box::new(Expr::Binary {
+                    op: BinOp::Add,
+                    lhs: Box::new(base_expr),
+                    rhs: Box::new(index_expr),
+                })
+            };
+
+            continue;
+        }
+
+        break;
+    }
+
+    Ok(base_expr)
+}
+
+/// Parse an prefix expression
+/// Note: this function should only call parse_postfix directly
+/// to respect the priority of operations in C
+fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
+{
+    input.eat_ws()?;
+    let ch = input.peek_ch();
+
     // Unary logical not expression
     if ch == '!' {
         input.eat_ch();
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         return Ok(Expr::Unary{
             op: UnOp::Not,
@@ -104,7 +174,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     // Unary negation expression
     if ch == '-' {
         input.eat_ch();
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         // If this is an integer value, negate it
         if let Expr::Int(int_val) = sub_expr {
@@ -120,7 +190,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     // Unary bitwise not expression
     if ch == '~' {
         input.eat_ch();
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         return Ok(Expr::Unary{
             op: UnOp::BitNot,
@@ -130,7 +200,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 
     // Pre-increment expression
     if input.match_token("++")? {
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         // Transform into i = i + 1
         return Ok(
@@ -149,7 +219,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     // Pointer dereference
     if ch == '*' {
         input.eat_ch();
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         return Ok(Expr::Unary{
             op: UnOp::Deref,
@@ -160,7 +230,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     // Address of operator
     if ch == '&' {
         input.eat_ch();
-        let sub_expr = parse_atom(input)?;
+        let sub_expr = parse_prefix(input)?;
 
         return Ok(Expr::Unary{
             op: UnOp::AddressOf,
@@ -168,18 +238,8 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
-    // Inline assembly expression
-    if input.match_token("asm")? {
-        return parse_asm_expr(input);
-    }
-
-    // Identifier (variable reference)
-    if is_ident_ch(ch) {
-        let ident = input.parse_ident()?;
-        return Ok(Expr::Ident(ident));
-    }
-
-    input.parse_error("unknown atomic expression")
+    // Try to parse this as a postfix expression
+    parse_postfix(input)
 }
 
 /// Parse a list of argument expressions
@@ -266,17 +326,6 @@ fn parse_asm_expr(input: &mut Input) -> Result<Expr, ParseError>
     })
 }
 
-/// Parse a function call expression
-fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
-{
-    let arg_exprs = parse_arg_exprs(input)?;
-
-    Ok(Expr::Call {
-        callee: Box::new(callee),
-        args: arg_exprs
-    })
-}
-
 struct OpInfo
 {
     op_str: &'static str,
@@ -353,40 +402,13 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
     // Expression stack
     let mut expr_stack: Vec<Expr> = Vec::default();
 
-    // Parse the first atomic expression
-    expr_stack.push(parse_atom(input)?);
+    // Parse the prefix sub-expression
+    expr_stack.push(parse_prefix(input)?);
 
     loop
     {
         if input.eof() {
             break;
-        }
-
-        // If this is a function call
-        if input.match_token("(")? {
-            let callee = expr_stack.pop().unwrap();
-            let call_expr = parse_call_expr(input, callee)?;
-            expr_stack.push(call_expr);
-            continue;
-        }
-
-        // Array indexing
-        if input.match_token("[")? {
-            let base_expr = expr_stack.pop().unwrap();
-            let index_expr = parse_expr(input)?;
-            input.expect_token("]")?;
-
-            // Transform into dereferencing and pointer addition
-            expr_stack.push(Expr::Unary {
-                op: UnOp::Deref,
-                child: Box::new(Expr::Binary {
-                    op: BinOp::Add,
-                    lhs: Box::new(base_expr),
-                    rhs: Box::new(index_expr),
-                })
-            });
-
-            continue;
         }
 
         // Ternary operator
@@ -455,8 +477,8 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
 
         op_stack.push(new_op);
 
-        // There must be another expression following
-        expr_stack.push(parse_atom(input)?);
+        // There must be another prefix sub-expression following
+        expr_stack.push(parse_prefix(input)?);
     }
 
     // Emit all operators remaining on the operator stack
