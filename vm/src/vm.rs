@@ -841,6 +841,38 @@ impl VM
                     self.push(Value::from(v.as_u32()));
                 }
 
+                Op::add_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_f32() + v1.as_f32()
+                    ));
+                }
+
+                Op::sub_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_f32() - v1.as_f32()
+                    ));
+                }
+
+                Op::mul_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_f32() * v1.as_f32()
+                    ));
+                }
+
+                Op::div_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_f32() / v1.as_f32()
+                    ));
+                }
+
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
