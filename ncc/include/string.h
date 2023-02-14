@@ -35,6 +35,21 @@ int strcmp(char* a, char* b)
     return 0;
 }
 
+// char* strchr(const char *str, int c)
+char* strchr(char *str, int c)
+{
+    while (*str)
+    {
+        if (*str == c)
+            return str;
+
+        ++str;
+    }
+
+    return NULL;
+}
+
+
 // TODO:
 // char* strncpy(char* destination, const char* source, size_t num)
 

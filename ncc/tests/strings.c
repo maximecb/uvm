@@ -21,6 +21,12 @@ void main()
     assert(strcmp("foo", "fooo") == -1);
     assert(strcmp("fooo", "foo") == 1);
 
+    // strchr
+    char* str = "lestring";
+    assert(strchr("", 'c') == null);
+    assert(strchr("c", 'c') != null);
+    assert(strchr(str, 's') == str + 2);
+
     // memset
     memset(arr, 177, 19);
     assert(arr[0] == 177);
