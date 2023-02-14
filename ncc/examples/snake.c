@@ -11,8 +11,8 @@
 #define TILE_SIZE 20
 #define MAX_SNAKE_LEN 2048
 
-// RGBA pixels: 800 * 600
-u32 FRAME_BUFFER[480_000];
+// RGBA pixels: 640 * 640
+u32 FRAME_BUFFER[409_600];
 
 // Apple position
 int apple_x = 10;
@@ -135,7 +135,7 @@ void anim_callback()
     }
 
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_920_000);
+    memset(FRAME_BUFFER, 0, 1_638_400);
 
     for (int i = 0; i < GRID_WIDTH; ++i)
     {
