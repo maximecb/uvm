@@ -379,7 +379,10 @@ impl Expr
                         out.push_str(&format!("trunc_u{};\n", m));
                     },
 
+                    // Pointer cast
                     (Pointer(_), Pointer(_)) => {},
+                    (UInt(64), Pointer(_)) => {},
+
                     _ => todo!()
                 }
             }
@@ -713,6 +716,8 @@ fn gen_assign(
 
                     match t {
                         Type::UInt(n) | Type::Int(n) => out.push_str(&format!("store_u{};\n", n)),
+                        Type::Pointer(_) => out.push_str(&format!("store_u64;\n")),
+
                         _ => todo!()
                     }
                 }
@@ -836,6 +841,9 @@ mod tests
         gen_ok("u64 foo(u64* a) { return *a; }");
         gen_ok("u64 foo(u64* a) { return *(a + 1); }");
         gen_ok("u8 foo(u8* p) { return *(p + 1); }");
+
+        // Assignment to a global pointer
+        gen_ok("char* s; void f() { s = \"str\"; }");
 
         gen_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
     }

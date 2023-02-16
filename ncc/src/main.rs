@@ -33,7 +33,7 @@ fn main()
 
         let mut input = Input::from_file(file_name);
         let output = process_input(&mut input).unwrap();
-        println!("{}", output);
+        //println!("{}", output);
 
         let mut input = Input::new(&output, file_name);
         let mut unit = parse_unit(&mut input).unwrap();
