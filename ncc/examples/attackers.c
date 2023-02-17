@@ -34,7 +34,7 @@ int enemy_j = 0;
 int enemy_di = 1;
 
 // Bit mask for live enemies
-u64 enemies_live = 0xFFFFFFFFFFFFFF;
+u64 enemies_live = 0x7FFFFFFFFFFFFF;
 
 // Ship position
 int ship_x = 400;
@@ -185,7 +185,7 @@ void anim_callback()
 
     if (bolt_y > 0)
     {
-        bolt_y = bolt_y - 14;
+        bolt_y = bolt_y - 16;
     }
 
     // Clear the screen
@@ -204,6 +204,12 @@ void anim_callback()
 
             int min_x = 50 + (10 * enemy_i) + (50 * i);
             int min_y = 100 + (10 * enemy_j) + (50 * j);
+
+            if (min_y > 500)
+            {
+                puts("GAME OVER!\n");
+                exit(0);
+            }
 
             int width = glyph_width(ENEMY_DOTS[0], DOT_SIZE);
 
@@ -257,6 +263,12 @@ void anim_callback()
 // Enemy movement update
 void enemy_callback()
 {
+    if (enemies_live == 0)
+    {
+        puts("VICTORY!\n");
+        exit(0);
+    }
+
     enemy_i = enemy_i + enemy_di;
 
     if (enemy_i > 17)
@@ -270,10 +282,9 @@ void enemy_callback()
         enemy_j = enemy_j + 1;
     }
 
-    print_i64(enemy_i);
-    print_endl();
-
-    time_delay_cb(750, enemy_callback);
+    int delay = 500 - 50 * enemy_j;
+    if (delay <= 0) delay = 50;
+    time_delay_cb(delay, enemy_callback);
 }
 
 void keydown(u64 window_id, u16 keycode)

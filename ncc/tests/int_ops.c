@@ -43,4 +43,7 @@ void main()
 
     // Toggling a bit
     assert((0xFFFF ^ 16) < 0xFFFF);
+
+    // Integer casting
+    assert(((int)(uint8_t)3) == 3);
 }

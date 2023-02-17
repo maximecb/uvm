@@ -171,6 +171,8 @@ impl Expr
                 match (&new_type, &child_type) {
                     (UInt(m), Int(n)) => Ok(new_type.clone()),
                     (Int(m), UInt(n)) => Ok(new_type.clone()),
+                    (UInt(m), UInt(n)) => Ok(new_type.clone()),
+                    (Int(m), Int(n)) => Ok(new_type.clone()),
                     (Pointer(_), Pointer(_)) => Ok(new_type.clone()),
                     (UInt(64), Pointer(_)) => Ok(new_type.clone()),
 
