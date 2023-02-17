@@ -1,7 +1,7 @@
 #include <assert.h>
 
 int arr[16];
-int arr33[3][3];
+int arr33[60][80];
 
 int foo()
 {
@@ -25,10 +25,8 @@ void main()
     // Ternary operator
     assert(0? 0:1);
     assert(1? 1:0);
-
-    // FIXME:
-    //assert(0? 1:3 == 3);
-    //assert(1? 1:3 == 1);
+    assert((0? 1:3) == 3);
+    assert((1? 1:3) == 1);
 
     assert(1 && 2);
     assert(!(1 && 0));
@@ -44,6 +42,7 @@ void main()
     assert(!!bar()[0]);
     assert(bar()[0] + 1 == 78);
 
-    // FIXME:
+    // Double array indexing
     //arr33[0][0] = 1;
+    //assert(arr33[0][0] == 1);
 }

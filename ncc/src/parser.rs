@@ -130,6 +130,9 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
 
         // Array indexing
         if input.match_token("[")? {
+
+
+
             let index_expr = parse_expr(input)?;
             input.expect_token("]")?;
 
@@ -756,30 +759,23 @@ fn parse_type(input: &mut Input) -> Result<Type, ParseError>
 }
 
 /// Parse an array type
-fn parse_array_type(input: &mut Input, elem_type: Type) -> Result<Type, ParseError>
+fn parse_array_type(input: &mut Input, base_type: Type) -> Result<Type, ParseError>
 {
-    input.eat_ws()?;
+    if input.match_token("[")? {
+        let size_expr = parse_atom(input)?;
+        input.expect_token("]")?;
 
-    let mut cur_type = elem_type;
+        let base_type = parse_array_type(input, base_type)?;
 
-    loop
-    {
-        if input.match_token("[")? {
-            let size_expr = parse_atom(input)?;
-            input.expect_token("]")?;
-
-            cur_type = Type::Array {
-                elem_type: Box::new(cur_type),
-                size_expr: Box::new(size_expr),
-            };
-
-            continue;
-        }
-
-        break;
+        Ok(Type::Array {
+            elem_type: Box::new(base_type),
+            size_expr: Box::new(size_expr),
+        })
     }
-
-    Ok(cur_type)
+    else
+    {
+        Ok(base_type)
+    }
 }
 
 /// Parse a function declaration
