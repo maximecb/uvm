@@ -55,7 +55,7 @@ pub fn time_delay_cb(vm: &mut VM, delay_ms: Value, callback_pc: Value)
     time_state.delay_cbs.push(cb_entry);
 
     // Sort the callbacks by decreasing trigger time
-    //time_state.delay_cbs.sort_by(|a, b| b.time_ms.cmp(&a.time_ms));
+    time_state.delay_cbs.sort_by(|a, b| b.time_ms.cmp(&a.time_ms));
 }
 
 /// Compute the time untl the next delay callback needs to run

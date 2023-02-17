@@ -34,4 +34,13 @@ void main()
     // Left and right shift
     assert(1 << 1 == 2);
     assert(2 >> 1 == 1);
+
+    assert((1 & 1) == 1);
+    assert((3 & 1) == 1);
+    assert((1 & 0) == 0);
+    assert((1 ^ 1) == 0);
+    assert((1 ^ 0) == 1);
+
+    // Toggling a bit
+    assert((0xFFFF ^ 16) < 0xFFFF);
 }
