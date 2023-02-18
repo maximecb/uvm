@@ -1,1 +1,1 @@
-cargo run $* && cd ../vm && cargo run ../ncc/out.asm && cd ../vm
+cargo run -- $* && cd ../vm && cargo run ../ncc/out.asm && cd ../vm

@@ -22,26 +22,83 @@ use symbols::*;
 use types::*;
 use codegen::*;
 
+#[derive(Debug, Clone)]
+struct Options
+{
+    // Print the preprocessor output
+    print_cpp_out: bool,
+
+    // Output file
+    out_file: String,
+
+    rest: Vec<String>,
+}
+
+fn parse_args(args: Vec<String>) -> Options
+{
+    let mut opts = Options {
+        print_cpp_out: false,
+        out_file: "out.asm".to_string(),
+        rest: Vec::default(),
+    };
+
+    // Start parsing at argument 1 because 0 is the current program name
+    let mut idx = 1;
+
+    while idx < args.len() {
+        let arg = &args[idx];
+        //println!("{}", arg);
+
+        // If this is the start of the rest arguments
+        if !arg.starts_with("-") {
+            opts.rest = args[idx..].to_vec();
+            break;
+        }
+
+        idx += 1;
+
+        // Try to match this argument as an option
+        match arg.as_str() {
+            "-E" => {
+                opts.print_cpp_out = true;
+            }
+
+            "-o" => {
+                opts.out_file = args[idx].clone();
+                idx += 1;
+            }
+
+            _ => panic!("unknown options {}", arg)
+        }
+    }
+
+    opts
+}
+
 fn main()
 {
-    let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
+    let opts = parse_args(env::args().collect());
+    //println!("{:?}", opts);
 
-    // If an input file was specified
-    if args.len() == 2 {
-        let file_name = &args[1];
-
-        let mut input = Input::from_file(file_name);
-        let output = process_input(&mut input).unwrap();
-        //println!("{}", output);
-
-        let mut input = Input::new(&output, file_name);
-        let mut unit = parse_unit(&mut input).unwrap();
-
-        unit.resolve_syms().unwrap();
-        unit.check_types().unwrap();
-        let out = unit.gen_code().unwrap();
-
-        std::fs::write("out.asm", out).unwrap();
+    if opts.rest.len() != 1 {
+        panic!("must specify exactly one input source file to compile");
     }
+
+    let file_name = &opts.rest[0];
+
+    let mut input = Input::from_file(file_name);
+    let output = process_input(&mut input).unwrap();
+
+    if opts.print_cpp_out {
+        println!("{}", output);
+    }
+
+    let mut input = Input::new(&output, file_name);
+    let mut unit = parse_unit(&mut input).unwrap();
+
+    unit.resolve_syms().unwrap();
+    unit.check_types().unwrap();
+    let out = unit.gen_code().unwrap();
+
+    std::fs::write(opts.out_file, out).unwrap();
 }
