@@ -55,6 +55,7 @@ fn parse_args(args: Vec<String>) -> Options
             break;
         }
 
+        // Move to the next argument
         idx += 1;
 
         // Try to match this argument as an option
@@ -68,7 +69,7 @@ fn parse_args(args: Vec<String>) -> Options
                 idx += 1;
             }
 
-            _ => panic!("unknown options {}", arg)
+            _ => panic!("unknown option {}", arg)
         }
     }
 

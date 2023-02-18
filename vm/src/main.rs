@@ -11,8 +11,59 @@ extern crate sdl2;
 use std::env;
 use std::thread::sleep;
 use std::time::Duration;
+use std::process::exit;
 use crate::vm::{VM, Value, MemBlock, ExitReason};
 use crate::asm::{Assembler};
+
+/// Command-line options
+#[derive(Debug, Clone)]
+struct Options
+{
+    // Only parse/validate the input, but don't run it
+    parse_only: bool,
+
+    rest: Vec<String>,
+}
+
+// TODO: parse permissions
+// --allow <permissions>
+// --deny <permissions>
+// --allow-all
+fn parse_args(args: Vec<String>) -> Options
+{
+    let mut opts = Options {
+        parse_only: false,
+        rest: Vec::default(),
+    };
+
+    // Start parsing at argument 1 because 0 is the current program name
+    let mut idx = 1;
+
+    while idx < args.len() {
+        let arg = &args[idx];
+        //println!("{}", arg);
+
+        // If this is the start of the rest arguments
+        if !arg.starts_with("-") {
+            opts.rest = args[idx..].to_vec();
+            break;
+        }
+
+        // Move to the next argument
+        idx += 1;
+
+        // Try to match this argument as an option
+        match arg.as_str() {
+            "--parse-only" => {
+                opts.parse_only = true;
+            }
+
+            _ => panic!("unknown option {}", arg)
+        }
+    }
+
+    opts
+}
 
 fn run_program(vm: &mut VM) -> Value
 {
@@ -65,20 +116,24 @@ fn run_program(vm: &mut VM) -> Value
 
 fn main()
 {
-    let args: Vec<String> = env::args().collect();
-    //println!("{:?}", args);
+    let opts = parse_args(env::args().collect());
+    //println!("{:?}", opts);
 
-    // TODO: command-line argument parsing
-    // --allow <permissions>
-    // --deny <permissions>
-    // --allow-all
-
-    if args.len() == 2 {
-        let asm = Assembler::new();
-        let mut vm = asm.parse_file(&args[1]).unwrap();
-        let ret_val = run_program(&mut vm);
-        std::process::exit(ret_val.as_i32());
+    if opts.rest.len() != 1 {
+        panic!("must specify exactly one input file to run");
     }
 
-    std::process::exit(0);
+    let file_name = &opts.rest[0];
+
+    // Parse/compile the program
+    let asm = Assembler::new();
+    let mut vm = asm.parse_file(file_name).unwrap();
+
+    // Run the program
+    if !opts.parse_only {
+        let ret_val = run_program(&mut vm);
+        exit(ret_val.as_i32());
+    }
+
+    exit(0);
 }
