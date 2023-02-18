@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::parsing::{ParseError};
 use crate::types::*;
+use Type::*;
 
 #[derive(Default)]
 struct SymGen
@@ -392,6 +393,16 @@ impl Expr
 
                 match op {
                     UnOp::Deref => {
+                        let child_type = child.eval_type()?;
+
+                        // If this is a pointer to an array, this is a noop
+                        // because a pointer to an array is the array itself
+                        if let Pointer(t) = child_type {
+                            if let Array { .. } = t.as_ref() {
+                                return Ok(())
+                            }
+                        }
+
                         let ptr_type = child.eval_type()?;
                         let elem_size = ptr_type.elem_type().sizeof();
                         let elem_bits = elem_size * 8;

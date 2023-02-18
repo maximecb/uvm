@@ -1,7 +1,6 @@
 #include <assert.h>
 
 int arr[16];
-int arr33[60][80];
 
 int foo()
 {
@@ -41,8 +40,4 @@ void main()
     assert(bar()[0] == 77);
     assert(!!bar()[0]);
     assert(bar()[0] + 1 == 78);
-
-    // Double array indexing
-    //arr33[0][0] = 1;
-    //assert(arr33[0][0] == 1);
 }
