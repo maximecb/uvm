@@ -125,20 +125,13 @@ impl Stmt
                 body_stmt.check_types(ret_type)?;
             }
 
-            // Local variable declaration
-            Stmt::VarDecl { var_type, var_name, init_expr } => {
-                let expr_type = init_expr.eval_type()?;
-
-                if !expr_type.eq(var_type) {
-                    panic!();
-                }
-            }
-
             Stmt::Block(stmts) => {
                 for stmt in stmts {
                     stmt.check_types(ret_type)?;
                 }
             }
+
+            _ => panic!()
         }
 
         Ok(())

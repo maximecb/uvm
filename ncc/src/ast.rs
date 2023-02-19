@@ -245,7 +245,7 @@ pub enum Stmt
     VarDecl {
         var_type: Type,
         var_name: String,
-        init_expr: Expr,
+        init_expr: Option<Expr>,
     }
 }
 

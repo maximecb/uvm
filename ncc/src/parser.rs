@@ -531,7 +531,7 @@ fn parse_block_stmt(input: &mut Input) -> Result<Stmt, ParseError>
 }
 
 /// Try to parse a variable declaration
-fn parse_decl(input: &mut Input) -> Result<(Type, String, Expr), ParseError>
+fn parse_decl(input: &mut Input) -> Result<(Type, String, Option<Expr>), ParseError>
 {
     let var_type = parse_type(input)?;
     let var_name = input.parse_ident()?;
@@ -540,8 +540,14 @@ fn parse_decl(input: &mut Input) -> Result<(Type, String, Expr), ParseError>
     // This would need alloca() to work
     //let var_type = parse_array_type(input, var_type)?;
 
-    input.expect_token("=")?;
-    let init_expr = parse_expr(input)?;
+    let init_expr = if input.match_token("=")? {
+        Some(parse_expr(input)?)
+    }
+    else
+    {
+        None
+    };
+
     Ok((var_type, var_name, init_expr))
 }
 
@@ -668,7 +674,6 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
     if input.peek_ch() == '{' {
         return parse_block_stmt(input);
     }
-
 
     // Try to parse this as a variable declaration
     let var_decl = input.with_backtracking(|input| parse_decl(input));

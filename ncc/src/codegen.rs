@@ -796,6 +796,7 @@ mod tests
         gen_ok("void main(u64 a) { u64 a = 0; }");
         gen_ok("void main(u64 a) { u64 b = a + 1; }");
         gen_ok("void main() { int a = 1; }");
+        gen_ok("void main() { int c; c = 1; }");
 
         // Infix expressions
         gen_ok("u64 foo(u64 a, u64 b) { return a + b * 2; }");

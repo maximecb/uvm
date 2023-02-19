@@ -4,7 +4,7 @@
 uint32_t sdbm(unsigned char* str)
 {
     uint32_t hash = 0;
-    int c = 0;
+    int c;
 
     while (c = *str)
     {

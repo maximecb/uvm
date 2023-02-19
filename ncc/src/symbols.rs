@@ -237,19 +237,27 @@ impl Stmt
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
-                init_expr.resolve_syms(env)?;
                 env.define_local(var_name, var_type.clone());
 
                 let decl = env.lookup(var_name).unwrap();
                 let ref_expr = Expr::Ref(decl);
 
-                let assign_expr = Expr::Binary {
-                    op: BinOp::Assign,
-                    lhs: Box::new(ref_expr),
-                    rhs: Box::new(init_expr.clone()),
-                };
+                // If there is an initiaization expression
+                if let Some(init_expr) = init_expr {
+                    init_expr.resolve_syms(env)?;
 
-                *self = Stmt::Expr(assign_expr);
+                    let assign_expr = Expr::Binary {
+                        op: BinOp::Assign,
+                        lhs: Box::new(ref_expr),
+                        rhs: Box::new(init_expr.clone()),
+                    };
+
+                    *self = Stmt::Expr(assign_expr);
+                }
+                else
+                {
+                    *self = Stmt::Expr(Expr::Int(0));
+                }
             }
 
             Stmt::Block(stmts) => {
