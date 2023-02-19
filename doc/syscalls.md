@@ -40,6 +40,14 @@ u64 vm_heap_size()
 
 Report the current heap size in bytes.
 
+## vm_resize_heap
+
+```
+void vm_resize_heap(u64 new_size)
+```
+
+Resize the heap to a new size.
+
 # io
 
 Stream I/O functionality.

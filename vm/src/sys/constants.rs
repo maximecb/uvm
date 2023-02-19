@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 16;
+pub const SYSCALL_TBL_LEN: usize = 18;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -22,6 +22,7 @@ pub const WINDOW_ON_MOUSEDOWN: u16 = 12;
 pub const WINDOW_ON_MOUSEUP: u16 = 13;
 pub const VM_HEAP_SIZE: u16 = 14;
 pub const WINDOW_ON_KEYUP: u16 = 15;
+pub const VM_RESIZE_HEAP: u16 = 17;
 
 pub struct SysCallDesc
 {
@@ -48,6 +49,8 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "window_on_mouseup", const_idx: 13, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "window_on_keyup", const_idx: 15, argc: 2, has_ret: false }),
+    None,
+    Some(SysCallDesc { name: "vm_resize_heap", const_idx: 17, argc: 1, has_ret: false }),
 ];
 
 pub const KEY_BACKSPACE: u16 = 8;

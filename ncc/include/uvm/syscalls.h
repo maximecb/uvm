@@ -17,6 +17,10 @@
 // Report the current heap size in bytes.
 #define vm_heap_size() asm () -> u64 { syscall vm_heap_size; }
 
+// void vm_resize_heap(u64 new_size)
+// Resize the heap to a new size.
+#define vm_resize_heap(__new_size) asm (__new_size) -> void { syscall vm_resize_heap; }
+
 // void print_i64(i64 val)
 // Print an i64 value to standard output.
 #define print_i64(__val) asm (__val) -> void { syscall print_i64; }
