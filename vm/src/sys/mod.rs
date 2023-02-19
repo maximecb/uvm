@@ -133,6 +133,8 @@ impl SysState
 
         self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
         self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
+        self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
+        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_0(vm_resize_heap));
 
         self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
         self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
@@ -150,6 +152,17 @@ impl SysState
         self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
         self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
     }
+}
+
+fn vm_heap_size(vm: &mut VM) -> Value
+{
+    Value::from(vm.heap_size())
+}
+
+fn vm_resize_heap(vm: &mut VM, num_bytes: Value)
+{
+    let num_bytes = num_bytes.as_usize();
+    vm.resize_heap(num_bytes);
 }
 
 fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)

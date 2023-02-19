@@ -67,7 +67,7 @@
         "args": [
           [
             "u64",
-            "new_size"
+            "num_bytes"
           ]
         ],
         "returns": [
@@ -76,7 +76,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 17,
-        "description": "Resize the heap to a new size."
+        "description": "Resize the heap to a new size given in bytes."
       }
     ],
     "constants": []

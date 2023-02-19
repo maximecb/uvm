@@ -43,10 +43,10 @@ Report the current heap size in bytes.
 ## vm_resize_heap
 
 ```
-void vm_resize_heap(u64 new_size)
+void vm_resize_heap(u64 num_bytes)
 ```
 
-Resize the heap to a new size.
+Resize the heap to a new size given in bytes.
 
 # io
 

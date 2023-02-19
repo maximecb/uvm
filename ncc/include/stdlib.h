@@ -40,10 +40,27 @@ void srand(unsigned int seed)
     __cur_rand__ = (seed << 1) + 1;
 }
 
-// TODO:
-//void* malloc(size_t size)
+#define align_ptr(ptr, n_bytes) (((u64)(ptr) + ((n_bytes) - 1)) & ~((n_bytes) - 1))
 
-// TODO:
-//void free(void* ptr)
+void* malloc(size_t size)
+{
+    u64 heap_size = asm () -> u64 { syscall vm_heap_size; };
+
+    u64 ptr = align_ptr(heap_size, 8);
+
+    // Resize the heap
+    u64 new_heap_size = ptr + size;
+    asm (new_heap_size) -> void { syscall vm_resize_heap; };
+
+    return (void*)ptr;
+}
+
+void free(void* ptr)
+{
+    // TODO: verify and clear the magic word
+
+
+
+}
 
 #endif

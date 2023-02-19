@@ -175,6 +175,7 @@ impl Expr
                     (Int(m), Int(n)) => Ok(new_type.clone()),
                     (Pointer(_), Pointer(_)) => Ok(new_type.clone()),
                     (UInt(64), Pointer(_)) => Ok(new_type.clone()),
+                    (Pointer(_), UInt(64)) => Ok(new_type.clone()),
 
                     _ => ParseError::msg_only(&format!(
                         "cannot cast type {} into {}",

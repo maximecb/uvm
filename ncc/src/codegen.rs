@@ -369,6 +369,7 @@ impl Expr
 
                 match (&new_type, &child_type) {
                     // Cast to a larger type
+                    (UInt(m), UInt(n)) => {},
                     (UInt(m), Int(n)) if m >= n => {},
                     (Int(m), UInt(n)) if m >= n => {},
 
@@ -383,8 +384,9 @@ impl Expr
                     // Pointer cast
                     (Pointer(_), Pointer(_)) => {},
                     (UInt(64), Pointer(_)) => {},
+                    (Pointer(_), UInt(64)) => {},
 
-                    _ => todo!()
+                    _ => panic!("cannot cast to {} from {}", new_type, child_type)
                 }
             }
 

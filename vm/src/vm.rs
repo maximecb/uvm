@@ -300,6 +300,12 @@ impl From<u64> for Value {
     }
 }
 
+impl From<usize> for Value {
+    fn from(val: usize) -> Self {
+        Value(val as u64)
+    }
+}
+
 impl From<i8> for Value {
     fn from(val: i8) -> Self {
         Value((val as i64) as u64)
@@ -343,6 +349,12 @@ impl MemBlock
     pub fn len(&self) -> usize
     {
         self.data.len()
+    }
+
+    /// Resize to a new size in bytes
+    pub fn resize(&mut self, num_bytes: usize)
+    {
+        self.data.resize(num_bytes, 0);
     }
 
     pub fn push_op(&mut self, op: Op)
@@ -486,6 +498,18 @@ impl VM
             Some(val) => val,
             None => panic!("tried to pop when the stack is empty")
         }
+    }
+
+    /// Get the current size of the heap in bytes
+    pub fn heap_size(&self) -> usize
+    {
+        self.heap.len()
+    }
+
+    /// Resize the heap to a new size in bytes
+    pub fn resize_heap(&mut self, num_bytes: usize)
+    {
+        self.heap.resize(num_bytes);
     }
 
     /// Get a pointer to an address/offset in the heap
