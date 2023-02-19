@@ -79,6 +79,15 @@
 #define KEY_ESCAPE 27
 #define KEY_SPACE 32
 #define KEY_NUM0 48
+#define KEY_NUM1 49
+#define KEY_NUM2 50
+#define KEY_NUM3 51
+#define KEY_NUM4 52
+#define KEY_NUM5 53
+#define KEY_NUM6 54
+#define KEY_NUM7 55
+#define KEY_NUM8 56
+#define KEY_NUM9 57
 #define KEY_A 65
 #define KEY_B 66
 #define KEY_C 67

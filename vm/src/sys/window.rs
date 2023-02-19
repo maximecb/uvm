@@ -364,6 +364,17 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::S => Some(KEY_S),
         Keycode::W => Some(KEY_W),
 
+        Keycode::Num0 => Some(KEY_NUM0),
+        Keycode::Num1 => Some(KEY_NUM1),
+        Keycode::Num2 => Some(KEY_NUM2),
+        Keycode::Num3 => Some(KEY_NUM3),
+        Keycode::Num4 => Some(KEY_NUM4),
+        Keycode::Num5 => Some(KEY_NUM5),
+        Keycode::Num6 => Some(KEY_NUM6),
+        Keycode::Num7 => Some(KEY_NUM7),
+        Keycode::Num8 => Some(KEY_NUM8),
+        Keycode::Num9 => Some(KEY_NUM9),
+
         Keycode::Left => Some(KEY_LEFT),
         Keycode::Right => Some(KEY_RIGHT),
         Keycode::Up => Some(KEY_UP),
@@ -372,6 +383,7 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::Return => Some(KEY_RETURN),
         Keycode::LShift => Some(KEY_SHIFT),
         Keycode::RShift => Some(KEY_SHIFT),
+        Keycode::Tab => Some(KEY_TAB),
 
         _ => None
     }
