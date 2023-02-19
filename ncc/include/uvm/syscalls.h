@@ -13,6 +13,10 @@
 // Fill a block of bytes in the heap with a given value.
 #define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
 
+// u64 vm_heap_size()
+// Report the current heap size in bytes.
+#define vm_heap_size() asm () -> u64 { syscall vm_heap_size; }
+
 // void print_i64(i64 val)
 // Print an i64 value to standard output.
 #define print_i64(__val) asm (__val) -> void { syscall print_i64; }

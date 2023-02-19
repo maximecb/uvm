@@ -50,6 +50,33 @@
         "permission": "default_allowed",
         "const_idx": 4,
         "description": "Fill a block of bytes in the heap with a given value."
+      },
+      {
+        "name": "vm_heap_size",
+        "args": [],
+        "returns": [
+          "u64",
+          "num_bytes"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 14,
+        "description": "Report the current heap size in bytes."
+      },
+      {
+        "name": "vm_resize_heap",
+        "args": [
+          [
+            "u64",
+            "new_size"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 17,
+        "description": "Resize the heap to a new size."
       }
     ],
     "constants": []

@@ -30,6 +30,16 @@ void memset(u8* dst, u8 value, u64 num_bytes)
 
 Fill a block of bytes in the heap with a given value.
 
+## vm_heap_size
+
+```
+u64 vm_heap_size()
+```
+
+**Returns:** `u64 num_bytes`
+
+Report the current heap size in bytes.
+
 # io
 
 Stream I/O functionality.

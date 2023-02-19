@@ -135,13 +135,18 @@ pub enum Op
     div_f32,
 
     // TODO:
-    // Do we want to provide sin, cos, sqrt as built-ins or not?
-    // sin_f32, cos_f32, sqrt_f32?
-
-    // TODO:
     // int/float conversion instructions
     //f32_to_i32,
     //i32_to_f32,
+
+    // TODO:
+    // Floating-point math functions
+    // these should probably be syscalls rather than instructions
+    //sin_f32,
+    //cos_f32,
+    //acos_f32,
+    //asin_f32,
+    //sqrt_f32,
 
     // Load a value at a given adress
     // store (addr)
