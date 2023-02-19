@@ -1,5 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <stdlib.h>
 
 size_t FRAME_WIDTH = 800;
 size_t FRAME_HEIGHT = 600;
@@ -119,15 +120,30 @@ void draw_palette()
 }
 
 // Mouve movement callback
-void mousemove(u64 window_id, u64 x, u64 y)
+void mousemove(u64 window_id, u64 new_x, u64 new_y)
 {
-    // Update the brush position
-    pos_x = x;
-    pos_y = y;
+    if (drawing)
+    {
+        i64 dx = new_x - pos_x;
+        i64 dy = new_y - pos_y;
 
-    if (drawing) {
-        draw_brush();
+        i64 num_steps = 1;
+        if (abs(dx) > 3)
+            num_steps = abs(dx) / 3;
+        if (abs(dy) > abs(dx))
+            num_steps = abs(dy) / 3;
+
+        for (i64 i = 0; i < num_steps; ++i)
+        {
+            pos_x = pos_x + (dx / num_steps);
+            pos_y = pos_y + (dy / num_steps);
+            draw_brush();
+        }
     }
+
+    // Update the brush position
+    pos_x = new_x;
+    pos_y = new_y;
 
     window_draw_frame(0, FRAME_BUFFER);
 }
