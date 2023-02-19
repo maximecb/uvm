@@ -8,9 +8,10 @@ level of C compliance of NCC over time.
 
 Supported features:
 - Global variables
-- Global arrays
+- Global arrays, two-dimensional arrays
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
+- Character strings and the `char` type
 - The `bool` type
 - Pointers and pointer arithmetic
 - The ternary operator `a? b:c`
@@ -31,7 +32,6 @@ Not yet implemented (TODO):
 - Do-while loops
 - Float and double types
 - The `const` qualifier
-- `malloc()` / `free()`
 - Structs
 - Unions
 - Typedefs
@@ -39,12 +39,17 @@ Not yet implemented (TODO):
 - Array initializers
 - Pointers to local variables
 
+Caveats:
+- At the moment `malloc()` / `free()` don't use a free list, they just leak memory
+
 ## Usage
 
 Compiling a C program:
 ```sh
 cargo run <your_c_file.c>
 ```
+
+By default, the compiled output is written to `out.asm`.
 
 Running tests:
 ```sh
