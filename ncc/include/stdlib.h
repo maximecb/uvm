@@ -46,21 +46,33 @@ void* malloc(size_t size)
 {
     u64 heap_size = asm () -> u64 { syscall vm_heap_size; };
 
-    u64 ptr = align_ptr(heap_size, 8);
+    u64 header_ptr = align_ptr(heap_size, 8);
+    u64 block_ptr = header_ptr + 8;
 
     // Resize the heap
-    u64 new_heap_size = ptr + size;
+    u64 new_heap_size = block_ptr + size;
     asm (new_heap_size) -> void { syscall vm_resize_heap; };
 
-    return (void*)ptr;
+    // Write a magic word at the beginning of the block for safety checks
+    u32* magic_ptr = (u32*)header_ptr;
+    *magic_ptr = 0x1337BAB3;
+
+    return (void*)block_ptr;
 }
 
 void free(void* ptr)
 {
-    // TODO: verify and clear the magic word
+    // Verify and clear the magic word
+    // This will help detect double-free errors
+    u8* header_ptr = ((u8*)ptr) - 8;
+    u32* magic_ptr = (u32*)header_ptr;
 
+    if (*magic_ptr != 0x1337BAB3)
+    {
+        asm () -> void { panic; };
+    }
 
-
+    *magic_ptr != 0x1111_1111;
 }
 
 #endif
