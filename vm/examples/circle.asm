@@ -9,6 +9,7 @@ WINDOW_TITLE:
 .stringz "UVM Circle Animation Example";
 
 # Global x coordinate variable
+.align 8;
 X_COORD:
 .u64 0;
 

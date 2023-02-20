@@ -20,6 +20,6 @@ void main()
     //assert(strlen(global_str) == 3);
 
     // Cast array to pointer
-    *(uint32_t*)block = 123;
-    assert(*(uint32_t*)block == 123);
+    *(uint8_t*)block = 123;
+    assert(*(uint8_t*)block == 123);
 }

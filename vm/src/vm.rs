@@ -515,9 +515,16 @@ impl VM
     /// Get a pointer to an address/offset in the heap
     pub fn get_heap_ptr<T>(&mut self, addr: usize) -> *mut T
     {
-        if addr + std::mem::size_of::<T>() > self.heap.len() {
+        if addr + size_of::<T>() > self.heap.len() {
             panic!(
                 "attempting to access data of type {} past end of heap",
+                std::any::type_name::<T>()
+            );
+        }
+
+        if addr & (size_of::<T>() - 1) != 0 {
+            panic!(
+                "attempting to access data of type {} at unaligned address",
                 std::any::type_name::<T>()
             );
         }
@@ -533,6 +540,13 @@ impl VM
     {
         if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
             panic!("attempting to access memory slice past end of heap");
+        }
+
+        if addr & (size_of::<T>() - 1) != 0 {
+            panic!(
+                "attempting to access unaligned memory slice of type {}",
+                std::any::type_name::<T>()
+            );
         }
 
         unsafe {
