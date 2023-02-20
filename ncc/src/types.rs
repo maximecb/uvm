@@ -162,20 +162,26 @@ impl Expr
                 let child_type = child.eval_type()?;
 
                 match (&new_type, &child_type) {
-                    (UInt(m), Int(n)) => Ok(new_type.clone()),
-                    (Int(m), UInt(n)) => Ok(new_type.clone()),
-                    (UInt(m), UInt(n)) => Ok(new_type.clone()),
-                    (Int(m), Int(n)) => Ok(new_type.clone()),
-                    (Pointer(_), Pointer(_)) => Ok(new_type.clone()),
-                    (UInt(64), Pointer(_)) => Ok(new_type.clone()),
-                    (Pointer(_), UInt(64)) => Ok(new_type.clone()),
+                    // Integer casts
+                    (UInt(m), Int(n)) => {},
+                    (Int(m), UInt(n)) => {},
+                    (UInt(m), UInt(n)) => {},
+                    (Int(m), Int(n)) => {},
 
-                    _ => ParseError::msg_only(&format!(
+                    // Pointer casts
+                    (Pointer(_), Pointer(_)) => {},
+                    (Pointer(_), Array{..}) => {},
+                    (UInt(64), Pointer(_)) => {},
+                    (Pointer(_), UInt(64)) => {},
+
+                    _ => return ParseError::msg_only(&format!(
                         "cannot cast type {} into {}",
                         child_type,
                         new_type
                     ))
                 }
+
+                Ok(new_type.clone())
             },
 
             Expr::Unary { op, child } => {

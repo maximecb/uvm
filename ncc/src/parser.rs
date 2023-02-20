@@ -76,7 +76,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         let new_type = input.with_backtracking(|input| parse_type(input));
         if let Ok(new_type) = new_type {
             input.expect_token(")")?;
-            let child_expr = parse_expr(input)?;
+            let child_expr = parse_prefix(input)?;
 
             return Ok(Expr::Cast {
                 new_type,

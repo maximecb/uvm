@@ -383,6 +383,7 @@ impl Expr
 
                     // Pointer cast
                     (Pointer(_), Pointer(_)) => {},
+                    (Pointer(_), Array{..}) => {},
                     (UInt(64), Pointer(_)) => {},
                     (Pointer(_), UInt(64)) => {},
 
