@@ -40,9 +40,16 @@ UVM has been [designed](/doc/design.md) with JIT compilation in mind, that
 is, we've made multiple design choices that we think will make it easier
 to generate efficient machine code from our bytecode instructions. We
 believe it should be possible to get good performance with a fairly
-simple JIT compiler. We don't want to stat working on the JIT
-compiler very early in the prototype stage, but experimentation with
+simple JIT compiler. A speedup of 20x or more over the interpreter
+should be expected, and hopefully near-native performance.
+
+We don't want to stat working on the JIT compiler very early in the
+prototype stage, because it's easier to quickly iterate over the design
+while working with an interpreter, but experimentation with
 JIT compilation needs to happen before we stabilize the current design.
+That being said, one advantage of working with just an interpreter is
+that it will motivate us to optimize code to perform better with the
+performance constraints of the interpreter.
 
 ## Stabilizing Near 1.0
 
