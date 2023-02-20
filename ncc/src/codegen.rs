@@ -47,6 +47,11 @@ impl Unit
 
         // Global variable initialization
         for global in &self.global_vars {
+            // Align the data
+            let align_bytes = global.var_type.align_bytes();
+            out.push_str(&format!(".align {};\n", align_bytes));
+
+            // Write a label
             out.push_str(&format!("{}:\n", global.name));
 
             match (&global.var_type, &global.init_expr) {

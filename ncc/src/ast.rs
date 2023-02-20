@@ -62,6 +62,18 @@ impl Type
         }
     }
 
+    /// Alignment for the type in bytes
+    pub fn align_bytes(&self) -> usize
+    {
+        use Type::*;
+        match self {
+            UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
+            Pointer(_) => 8,
+            Array { elem_type, .. } => elem_type.align_bytes(),
+            _ => panic!()
+        }
+    }
+
     pub fn elem_type(&self) -> Type
     {
         use Type::*;
