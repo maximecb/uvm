@@ -2,6 +2,7 @@ use std::fmt;
 use std::convert::{TryFrom};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::mem::transmute;
 use crate::vm::{VM, MemBlock, Op};
 
 #[derive(Debug)]
@@ -279,6 +280,57 @@ impl Input
         }
 
         return Ok(sign * val);
+    }
+
+    /// Parse a floating-point number
+    fn parse_float<FloatType: std::str::FromStr>(&mut self) -> Result<FloatType, ParseError>
+    {
+        fn read_digits(input: &mut Input)
+        {
+            loop
+            {
+                let ch = input.peek_ch();
+                if !ch.is_ascii_digit() {
+                    break;
+                }
+                input.eat_ch();
+            }
+        }
+
+        fn read_sign(input: &mut Input)
+        {
+            if input.match_str("+") {
+            }
+            else if input.match_str("-") {
+            }
+        }
+
+        let start_idx = self.idx;
+
+        // Read optional sign
+        read_sign(self);
+
+        // Read decimal part
+        read_digits(self);
+
+        // Fractional part
+        if self.match_str(".") {
+            read_digits(self);
+        }
+
+        // Exponent
+        if self.match_str("e") {
+            read_sign(self);
+            read_digits(self);
+        }
+
+        let end_idx = self.idx;
+        let number_str: String = self.input[start_idx..end_idx].iter().collect();
+
+        match number_str.parse::<FloatType>() {
+            Ok(float_val) => Ok(float_val),
+            Err(_) => self.parse_error("invalid floating-point value")
+        }
     }
 
     /// Parse a string literal
@@ -730,6 +782,13 @@ impl Assembler
                 self.mem().push_u64(val as u64);
             }
 
+            // 32-bit floating-point value
+            "f32" => {
+                let val: f32 = input.parse_float()?;
+                let val_u32: u32 = unsafe { transmute(val) };
+                self.mem().push_u32(val_u32);
+            }
+
             // Command to read an arbitrary number of bytes
             // with optional whitespace between bytes
             "hex" => {
@@ -1060,6 +1119,24 @@ mod tests
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
+    }
+
+    #[test]
+    fn test_floats()
+    {
+        parse_ok(".f32 123;");
+        parse_ok(".f32 +123;");
+        parse_ok(".f32 -123;");
+        parse_ok(".f32 -123.456;");
+        parse_ok(".f32 123e10;");
+        parse_ok(".f32 123.456e10;");
+        parse_ok(".f32 123.456e+10;");
+        parse_ok(".f32 123.456e-10;");
+
+        parse_fails(".f32 123e10.5;");
+        parse_fails(".f32 123e;");
+        parse_fails(".f32 ++123;");
+        parse_fails(".f32 123..456;");
     }
 
     #[test]
