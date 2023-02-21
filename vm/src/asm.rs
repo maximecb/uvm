@@ -920,6 +920,14 @@ impl Assembler
                 self.add_label_ref(input, label_name, LabelRefKind::Address32);
             }
 
+            // Push a 32-bit floating-point value
+            "push_f32" => {
+                let val: f32 = input.parse_float()?;
+                let val_u32: u32 = unsafe { transmute(val) };
+                self.code.push_op(Op::push_u32);
+                self.code.push_u32(val_u32);
+            }
+
             // Variable-size push
             "push" => {
                 self.gen_push(input)?;
@@ -1132,6 +1140,7 @@ mod tests
         parse_ok(".f32 123.456e10;");
         parse_ok(".f32 123.456e+10;");
         parse_ok(".f32 123.456e-10;");
+        parse_ok(".code; push_f32 3.5;");
 
         parse_fails(".f32 123e10.5;");
         parse_fails(".f32 123e;");
