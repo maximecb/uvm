@@ -134,14 +134,13 @@ pub enum Op
     mul_f32,
     div_f32,
 
-    // TODO:
     // 32-bit floating-point comparison instructions
-    //eq_f32,
-    //ne_f32,
-    //lt_f32,
-    //le_f32,
-    //gt_f32,
-    //ge_f32,
+    eq_f32,
+    ne_f32,
+    lt_f32,
+    le_f32,
+    gt_f32,
+    ge_f32,
 
     // TODO:
     // int/float conversion instructions
@@ -923,6 +922,42 @@ impl VM
                     self.push(Value::from(
                         v0.as_f32() / v1.as_f32()
                     ));
+                }
+
+                Op::eq_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() == v1.as_f32());
+                }
+
+                Op::ne_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() != v1.as_f32());
+                }
+
+                Op::lt_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() < v1.as_f32());
+                }
+
+                Op::le_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() <= v1.as_f32());
+                }
+
+                Op::gt_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() > v1.as_f32());
+                }
+
+                Op::ge_f32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push_bool(v0.as_f32() >= v1.as_f32());
                 }
 
                 Op::load_u8 => {

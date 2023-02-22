@@ -965,6 +965,13 @@ impl Assembler
             "mul_f32" => self.code.push_op(Op::mul_f32),
             "div_f32" => self.code.push_op(Op::div_f32),
 
+            "eq_f32" => self.code.push_op(Op::eq_f32),
+            "ne_f32" => self.code.push_op(Op::ne_f32),
+            "lt_f32" => self.code.push_op(Op::lt_f32),
+            "le_f32" => self.code.push_op(Op::le_f32),
+            "gt_f32" => self.code.push_op(Op::gt_f32),
+            "ge_f32" => self.code.push_op(Op::ge_f32),
+
             "load_u8" => self.code.push_op(Op::load_u8),
             "load_u16" => self.code.push_op(Op::load_u16),
             "load_u32" => self.code.push_op(Op::load_u32),
