@@ -135,6 +135,15 @@ pub enum Op
     div_f32,
 
     // TODO:
+    // 32-bit floating-point comparison instructions
+    //eq_f32,
+    //ne_f32,
+    //lt_f32,
+    //le_f32,
+    //gt_f32,
+    //ge_f32,
+
+    // TODO:
     // int/float conversion instructions
     //f32_to_i32,
     //i32_to_f32,
@@ -1181,6 +1190,12 @@ mod tests
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
         eval_i64("push_i8 11; push_i8 1; lt_i64; exit;", 0);
+    }
+
+    #[test]
+    fn test_floats()
+    {
+        eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; exit;", 1);
     }
 
     #[test]

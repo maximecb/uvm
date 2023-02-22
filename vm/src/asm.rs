@@ -299,10 +299,7 @@ impl Input
 
         fn read_sign(input: &mut Input)
         {
-            if input.match_str("+") {
-            }
-            else if input.match_str("-") {
-            }
+            let _ = input.match_str("+") || input.match_str("-");
         }
 
         let start_idx = self.idx;
@@ -319,7 +316,7 @@ impl Input
         }
 
         // Exponent
-        if self.match_str("e") {
+        if self.match_str("e") || self.match_str("E") {
             read_sign(self);
             read_digits(self);
         }
@@ -963,6 +960,11 @@ impl Assembler
             "trunc_u16" => self.code.push_op(Op::trunc_u16),
             "trunc_u32" => self.code.push_op(Op::trunc_u32),
 
+            "add_f32" => self.code.push_op(Op::add_f32),
+            "sub_f32" => self.code.push_op(Op::sub_f32),
+            "mul_f32" => self.code.push_op(Op::mul_f32),
+            "div_f32" => self.code.push_op(Op::div_f32),
+
             "load_u8" => self.code.push_op(Op::load_u8),
             "load_u16" => self.code.push_op(Op::load_u16),
             "load_u32" => self.code.push_op(Op::load_u32),
@@ -1137,12 +1139,14 @@ mod tests
         parse_ok(".f32 -123;");
         parse_ok(".f32 -123.456;");
         parse_ok(".f32 123e10;");
+        parse_ok(".f32 1E+10;");
         parse_ok(".f32 123.456e10;");
         parse_ok(".f32 123.456e+10;");
         parse_ok(".f32 123.456e-10;");
         parse_ok(".code; push_f32 3.5;");
 
         parse_fails(".f32 123e10.5;");
+        parse_fails(".f32 123 e10.5;");
         parse_fails(".f32 123e;");
         parse_fails(".f32 ++123;");
         parse_fails(".f32 123..456;");
