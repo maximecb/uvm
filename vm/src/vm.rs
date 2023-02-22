@@ -284,6 +284,12 @@ impl Value
     }
 }
 
+impl From<bool> for Value {
+    fn from(val: bool) -> Self {
+        Value(if val { 1 } else { 0 })
+    }
+}
+
 impl From<u8> for Value {
     fn from(val: u8) -> Self {
         Value(val as u64)
