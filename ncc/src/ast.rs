@@ -139,7 +139,8 @@ pub enum UnOp
 pub enum BinOp
 {
     // Struct member access
-    //Member,
+    Arrow,
+    Member,
 
     // Bitwise
     BitAnd,

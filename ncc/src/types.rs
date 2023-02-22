@@ -280,7 +280,7 @@ impl Expr
                         Ok(rhs_type)
                     }
 
-                    //_ => todo!(),
+                    _ => todo!(),
                 }
             }
 

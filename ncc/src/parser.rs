@@ -340,7 +340,10 @@ struct OpInfo
 /// Binary operators and their precedence level
 /// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 20] = [
+const BIN_OPS: [OpInfo; 22] = [
+    OpInfo { op_str: "->", prec: 1, op: BinOp::Arrow, rtl: false },
+    OpInfo { op_str: ".", prec: 1, op: BinOp::Member, rtl: false },
+
     OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
     OpInfo { op_str: "/", prec: 3, op: BinOp::Div, rtl: false },
     OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },
