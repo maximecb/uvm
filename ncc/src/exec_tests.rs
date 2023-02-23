@@ -46,6 +46,7 @@ fn exec_tests()
     parse_only.insert("ball.c");
     parse_only.insert("attackers.c");
     parse_only.insert("counter.c");
+    parse_only.insert("gameoflife.c");
     parse_only.insert("paint.c");
     parse_only.insert("snake.c");
 

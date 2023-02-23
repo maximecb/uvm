@@ -195,11 +195,11 @@ impl Expr
                     UnOp::Deref => {
                         match child_type {
                             Pointer(sub_type) => Ok(*sub_type.clone()),
-                            _ => panic!()
+                            _ => panic!("{:?}", child_type)
                         }
                     }
 
-                    _ => todo!()
+                    _ => todo!("{:?}", op)
                 }
             },
 
