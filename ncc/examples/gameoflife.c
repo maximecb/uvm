@@ -56,7 +56,7 @@ int count_neighbors(uint32_t board_idx, int row, int col)
     return count;
 }
 
-void anim_callback()
+void update()
 {
     // Clear the screen
     memset(FRAME_BUFFER, 0, 1_440_000);
@@ -101,6 +101,12 @@ void anim_callback()
     }
 
     window_draw_frame(0, FRAME_BUFFER);
+}
+
+void anim_callback()
+{
+    benchmark(update());
+
     time_delay_cb(250, anim_callback);
     //time_delay_cb(0, anim_callback);
 }
