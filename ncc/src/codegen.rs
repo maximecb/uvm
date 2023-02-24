@@ -396,6 +396,15 @@ impl Expr
                 }
             }
 
+            Expr::SizeofExpr { child } => {
+                let t = child.eval_type()?;
+                out.push_str(&format!("push {};\n", t.sizeof()));
+            }
+
+            Expr::SizeofType { t } => {
+                out.push_str(&format!("push {};\n", t.sizeof()));
+            }
+
             Expr::Unary { op, child } => {
                 child.gen_code(sym, out)?;
 

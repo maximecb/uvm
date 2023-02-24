@@ -90,6 +90,25 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(expr);
     }
 
+    // Sizeof expression
+    if input.match_token("sizeof")? {
+        input.expect_token("(")?;
+
+        // Try to parse this as sizeof(type)
+        let t = input.with_backtracking(|input| parse_type(input));
+        if let Ok(t) = t {
+            input.expect_token(")")?;
+            return Ok(Expr::SizeofType { t });
+        }
+
+        // Try parsing this as sizeof(expr)
+        let expr = parse_expr(input)?;
+        input.expect_token(")")?;
+        return Ok(Expr::SizeofExpr {
+            child: Box::new(expr)
+        });
+    }
+
     // Inline assembly expression
     if input.match_token("asm")? {
         return parse_asm_expr(input);

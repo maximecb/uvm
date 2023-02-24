@@ -205,6 +205,14 @@ pub enum Expr
         child: Box<Expr>
     },
 
+    SizeofExpr {
+        child: Box<Expr>
+    },
+
+    SizeofType {
+        t: Type
+    },
+
     Unary {
         op: UnOp,
         child: Box<Expr>,

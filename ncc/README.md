@@ -15,6 +15,7 @@ Supported features:
 - The `bool` type
 - Pointers and pointer arithmetic
 - The ternary operator `a? b:c`
+- `sizeof()` operator
 - Functions and function calls
 - If/else
 - For loops, while loops
@@ -29,7 +30,6 @@ Supported features:
   - `#include <uvm/utils.h>`
 
 Not yet implemented (TODO):
-- `sizeof()`
 - Do-while loops
 - Float and double types
 - The `const` qualifier

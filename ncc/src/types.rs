@@ -182,7 +182,15 @@ impl Expr
                 }
 
                 Ok(new_type.clone())
-            },
+            }
+
+            Expr::SizeofExpr { .. } => {
+                Ok(UInt(64))
+            }
+
+            Expr::SizeofType { .. } => {
+                Ok(UInt(64))
+            }
 
             Expr::Unary { op, child } => {
                 let child_type = child.eval_type()?;
@@ -201,7 +209,7 @@ impl Expr
 
                     _ => todo!("{:?}", op)
                 }
-            },
+            }
 
             Expr::Binary { op, lhs, rhs } => {
                 use BinOp::*;

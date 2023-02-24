@@ -304,11 +304,18 @@ impl Expr
 
             Expr::Cast { new_type, child } => {
                 child.as_mut().resolve_syms(env)?;
-            },
+            }
+
+            Expr::SizeofExpr { child } => {
+                child.as_mut().resolve_syms(env)?;
+            }
+
+            Expr::SizeofType { .. } => {
+            }
 
             Expr::Unary { op, child } => {
                 child.as_mut().resolve_syms(env)?;
-            },
+            }
 
             Expr::Binary { op, lhs, rhs } => {
                 lhs.as_mut().resolve_syms(env)?;
