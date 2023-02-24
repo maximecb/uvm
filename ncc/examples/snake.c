@@ -12,7 +12,7 @@
 #define MAX_SNAKE_LEN 2048
 
 // RGBA pixels: 640 * 640
-u32 FRAME_BUFFER[409_600];
+u32 frame_buffer[409_600];
 
 // Apple position
 int apple_x = 10;
@@ -34,7 +34,7 @@ void draw_square(int xmin, int ymin, int size, u32 color)
     {
         for (int i = 0; i < size; ++i)
         {
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
             *pix_ptr = color;
         }
     }
@@ -60,7 +60,7 @@ void draw_circle(int xmin, int ymin, int size, u32 color)
             if (dist_sqr > r2)
                 continue;
 
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = color;
         }
     }
@@ -135,7 +135,7 @@ void anim_callback()
     }
 
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_638_400);
+    memset(frame_buffer, 0, 1_638_400);
 
     for (int i = 0; i < GRID_WIDTH; ++i)
     {
@@ -171,7 +171,7 @@ void anim_callback()
         0xFF00FF
     );
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
     time_delay_cb(100, anim_callback);
 }
 

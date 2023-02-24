@@ -6,7 +6,7 @@ size_t FRAME_HEIGHT = 600;
 size_t BALL_RADIUS = 20;
 
 // RGBA pixels: 800 * 600
-u32 FRAME_BUFFER[480_000];
+u32 frame_buffer[480_000];
 
 // Current ball position
 u64 px = 200;
@@ -39,7 +39,7 @@ void draw_ball()
 
             if (dist_sqr <= BALL_RADIUS * BALL_RADIUS)
             {
-                u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+                u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
                 *pix_ptr = 0xFF_00_00;
             }
         }
@@ -49,7 +49,7 @@ void draw_ball()
 void anim_callback()
 {
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_920_000);
+    memset(frame_buffer, 0, 1_920_000);
 
     draw_ball();
 
@@ -74,7 +74,7 @@ void anim_callback()
         vy = -vy;
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
 
     time_delay_cb(10, anim_callback);
 }

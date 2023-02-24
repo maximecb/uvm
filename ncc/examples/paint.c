@@ -10,7 +10,7 @@ size_t BOX_HEIGHT = 25;
 size_t BRUSH_RADIUS = 4;
 
 // RGBA pixels: 800 * 600
-u32 FRAME_BUFFER[480_000];
+u32 frame_buffer[480_000];
 
 // Current mouse pointer position
 size_t pos_x = 200;
@@ -69,7 +69,7 @@ void draw_brush()
             if (dist_sqr > BRUSH_RADIUS * BRUSH_RADIUS)
                 continue;
 
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = brush_color;
         }
     }
@@ -107,7 +107,7 @@ void draw_palette()
         size_t ymin = FRAME_HEIGHT - BOX_HEIGHT;
 
         fill_rect(
-            FRAME_BUFFER,
+            frame_buffer,
             FRAME_WIDTH,
             FRAME_HEIGHT,
             xmin,
@@ -145,7 +145,7 @@ void mousemove(u64 window_id, u64 new_x, u64 new_y)
     pos_x = new_x;
     pos_y = new_y;
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
 }
 
 void mousedown(u64 window_id, u8 btn_id)
@@ -154,7 +154,7 @@ void mousedown(u64 window_id, u8 btn_id)
     {
         if (pos_y > FRAME_HEIGHT - BOX_HEIGHT)
         {
-            u32* pixel_ptr = get_pixel_ptr(FRAME_BUFFER, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
+            u32* pixel_ptr = get_pixel_ptr(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
             brush_color = *pixel_ptr;
         }
         else
@@ -164,7 +164,7 @@ void mousedown(u64 window_id, u8 btn_id)
         }
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
 }
 
 void mouseup(u64 window_id, u8 btn_id)
@@ -181,7 +181,7 @@ void main()
 
     // Initially fill the canvas with white
     fill_rect(
-        FRAME_BUFFER,
+        frame_buffer,
         FRAME_WIDTH,
         FRAME_HEIGHT,
         0,
@@ -198,7 +198,7 @@ void main()
     window_on_mousedown(0, mousedown);
     window_on_mouseup(0, mouseup);
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
 
     enable_event_loop();
 }

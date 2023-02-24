@@ -8,7 +8,7 @@ u32 CH_DOTS_X = 5;
 u32 CH_DOTS_Y = 7;
 
 // RGBA pixels: 800 * 600
-u32 FRAME_BUFFER[480_000];
+u32 frame_buffer[480_000];
 
 // Strings mapping the dots for each character
 char* CHAR_DOTS[256] = 0;
@@ -168,7 +168,7 @@ void draw_circle(int xmin, int ymin, int size)
             if (dist_sqr > r2)
                 continue;
 
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = 0xFF_00_00;
         }
     }
@@ -220,14 +220,14 @@ void draw_number(int xmax, int ymin, int dot_size, int number)
 void anim_callback()
 {
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_920_000);
+    memset(frame_buffer, 0, 1_920_000);
 
     u64 delta_time = time_current_ms() - start_time;
     u64 seconds = delta_time / 10;
 
     draw_number(500, 200, 10, (int)seconds);
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
     time_delay_cb(25, anim_callback);
 }
 
