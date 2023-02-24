@@ -31,6 +31,7 @@ Supported features:
 
 Not yet implemented (TODO):
 - Do-while loops
+- The `switch` statement
 - Float and double types
 - The `const` qualifier
 - Structs
