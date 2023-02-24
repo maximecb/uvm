@@ -29,6 +29,7 @@ Supported features:
   - `#include <uvm/utils.h>`
 
 Not yet implemented (TODO):
+- `sizeof()`
 - Do-while loops
 - Float and double types
 - The `const` qualifier
@@ -41,6 +42,8 @@ Not yet implemented (TODO):
 
 Caveats:
 - At the moment `malloc()` / `free()` don't use a free list, they just leak memory
+- Some error messages are currently fairly weak
+  - Line numbers are currently inaccurate because of the preprocessor. This is a known bug.
 
 ## Usage
 
