@@ -7,6 +7,7 @@ use crate::parsing::*;
 
 impl Input
 {
+    /// Eat whitespace characters, but stop at newlines
     fn eat_spaces(&mut self)
     {
         loop
@@ -25,6 +26,38 @@ impl Input
                 break;
             }
         }
+    }
+
+    /// Read a character string literal and pass it to the output as-is
+    fn read_string(&mut self) -> Result<String, ParseError>
+    {
+        let mut output = String::new();
+
+        // Read the opening character
+        output.push(self.eat_ch());
+
+        loop
+        {
+            if self.eof() {
+                return self.parse_error("end of input inside string");
+            }
+
+            let ch = self.eat_ch();
+            output.push(ch);
+
+            if ch == '"' {
+                break;
+            }
+
+            // Backslash character
+            if ch == '\\' {
+                let ch = self.eat_ch();
+                output.push(ch);
+                continue;
+            }
+        }
+
+        Ok(output)
     }
 }
 
@@ -70,7 +103,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
         params = Some(param_vec);
     }
 
-    // Read text until \n
+    // Read text until we hit a newline \n
     let mut text = "".to_string();
     loop
     {
@@ -82,6 +115,12 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 
         if ch == '\n' {
             break;
+        }
+
+        // If this is a character string
+        if ch == '"' {
+            text += &input.read_string()?;
+            continue;
         }
 
         // Backslash to keep reading on the next line
@@ -226,27 +265,7 @@ fn read_macro_arg(input: &mut Input, depth: usize) -> Result<String, ParseError>
 
         // If this is a character string
         if ch == '"' {
-            output.push(input.eat_ch());
-            loop
-            {
-                if input.eof() {
-                    return input.parse_error("end of input inside string");
-                }
-
-                let ch = input.eat_ch();
-                output.push(ch);
-
-                if ch == '"' {
-                    break;
-                }
-
-                if ch == '\\' {
-                    let ch = input.eat_ch();
-                    output.push(ch);
-                    continue;
-                }
-            }
-
+            output += &input.read_string()?;
             continue;
         }
 
@@ -459,6 +478,12 @@ fn process_input_rec(
             }
         }
 
+        // If this is a character string
+        if ch == '"' {
+            output += &input.read_string()?;
+            continue;
+        }
+
         // Eat single-line comments
         if input.match_chars(&['/', '/']) {
             // Copy the comment over to the output to preserve the source position
@@ -474,33 +499,6 @@ fn process_input_rec(
             let comment_str = input.collect(|input| input.eat_multi_comment())?;
             output += "/*";
             output += &comment_str;
-            continue;
-        }
-
-        // Keep track if we're inside of a string or not
-        // We don't want to preprocess things inside strings
-        if input.match_chars(&['"']) {
-            output.push('"');
-            loop
-            {
-                if input.eof() {
-                    return input.parse_error("unexpected end of input inside string");
-                }
-
-                let ch = input.eat_ch();
-                output.push(ch);
-
-                if ch == '"' {
-                    break;
-                }
-
-                if ch == '\\' {
-                    let ch = input.eat_ch();
-                    output.push(ch);
-                    continue;
-                }
-            }
-
             continue;
         }
 

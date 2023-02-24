@@ -13,6 +13,9 @@
 #define REC_MACRO2 3
 #define REC_MACRO REC_MACRO2
 
+// Regression: definition containing a \ character in a string
+#define newline_str "\n"
+
 void main()
 {
     int l = __LINE__;
@@ -52,6 +55,8 @@ void main()
 
     // Recursive macro
     REC_MACRO;
+
+    assert(newline_str[0] == '\n');
 
     #ifdef FOO
     assert(true);
