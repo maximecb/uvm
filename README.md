@@ -23,9 +23,10 @@ Current features:
 - Variable-length instructions for compactness
 - Untyped design for simplicity
 - Little-endian byte ordering (like x86, ARM & RISC-V)
+- 32-bit and 64-bit integer ops, 32-bit floating-point support
 - Separate flat, linear address spaces for code and data
 - Built-in, easy to use assembler with a simple syntax
-- Easily accessible frame buffer to draw RGB graphics
+- Easy to use frame buffer to draw RGB graphics with no boilerplate
 - Event-driven event execution model
 
 Planned future features:
