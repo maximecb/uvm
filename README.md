@@ -27,7 +27,7 @@ Current features:
 - Separate flat, linear address spaces for code and data
 - Built-in, easy to use assembler with a simple syntax
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
-- Event-driven event execution model
+- Event-driven event execution model compatible with async operations
 
 Planned future features:
 - Easy to use audio output API
