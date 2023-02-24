@@ -804,6 +804,7 @@ impl VM
                     ));
                 }
 
+                // Division by zero will cause a panic (this is intentional)
                 Op::div_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -812,6 +813,7 @@ impl VM
                     ));
                 }
 
+                // Division by zero will cause a panic (this is intentional)
                 Op::mod_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -820,7 +822,7 @@ impl VM
                     ));
                 }
 
-                // TODO: should we make sure that div panics on division by zero?
+                // Division by zero will cause a panic (this is intentional)
                 Op::div_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -829,7 +831,7 @@ impl VM
                     ));
                 }
 
-                // TODO: should we make sure that mod panics on division by zero?
+                // Division by zero will cause a panic (this is intentional)
                 Op::mod_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1292,6 +1294,13 @@ mod tests
     fn test_syscalls()
     {
         eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; exit;");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_div_zero()
+    {
+        eval_src("push 8; push 0; div_u64; exit;");
     }
 
     #[test]
