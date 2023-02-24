@@ -10,7 +10,7 @@
 #define NUM_COLS 150
 
 // RGBA pixels: 600 * 600
-uint32_t FRAME_BUFFER[360_000];
+uint32_t frame_buffer[360_000];
 
 // Current and next board
 bool board[2][NUM_ROWS][NUM_COLS];
@@ -24,7 +24,7 @@ void draw_rect(int xmin, int ymin, int width, int height, u32 color)
     {
         for (int i = 0; i < width; ++i)
         {
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
             *pix_ptr = color;
         }
     }
@@ -32,7 +32,7 @@ void draw_rect(int xmin, int ymin, int width, int height, u32 color)
 
 int get_cell(uint32_t board_idx, int row, int col)
 {
-    return (int)board[board_idx][row % NUM_ROWS][col % NUM_COLS];
+    return (int)board[board_idx][(uint32_t)row % NUM_ROWS][(uint32_t)col % NUM_COLS];
 }
 
 int count_neighbors(uint32_t board_idx, int row, int col)
@@ -59,7 +59,7 @@ int count_neighbors(uint32_t board_idx, int row, int col)
 void update()
 {
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_440_000);
+    memset(frame_buffer, 0, 1_440_000);
 
     uint32_t prev_board = gen_no % 2;
     uint32_t next_board = (gen_no + 1) % 2;
@@ -100,7 +100,7 @@ void update()
         }
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
 }
 
 void anim_callback()

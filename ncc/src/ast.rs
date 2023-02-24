@@ -82,6 +82,18 @@ impl Type
             _ => panic!()
         }
     }
+
+    pub fn is_signed(&self) -> bool
+    {
+        use Type::*;
+        match self {
+            Int(_) => true,
+            UInt(_) => false,
+            Pointer(_) => false,
+            Array{..} => false,
+            _ => panic!("{:?}", self)
+        }
+    }
 }
 
 impl fmt::Display for Type {

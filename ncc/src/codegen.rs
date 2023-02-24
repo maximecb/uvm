@@ -566,6 +566,7 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
 
     let lhs_type = lhs.eval_type()?;
     let rhs_type = rhs.eval_type()?;
+    let signed_op = lhs_type.is_signed() && rhs_type.is_signed();
 
     match op {
         BitAnd => {
@@ -618,11 +619,17 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
         }
 
         Div => {
-            out.push_str("div_i64;\n");
+            match signed_op {
+                true => out.push_str("div_i64;\n"),
+                false => out.push_str("div_u64;\n"),
+            }
         }
 
         Mod => {
-            out.push_str("mod_i64;\n");
+            match signed_op {
+                true => out.push_str("mod_i64;\n"),
+                false => out.push_str("mod_u64;\n"),
+            }
         }
 
         Eq => {

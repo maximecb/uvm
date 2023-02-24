@@ -940,6 +940,8 @@ impl Assembler
             "add_u64" => self.code.push_op(Op::add_u64),
             "sub_u64" => self.code.push_op(Op::sub_u64),
             "mul_u64" => self.code.push_op(Op::mul_u64),
+            "div_u64" => self.code.push_op(Op::div_u64),
+            "mod_u64" => self.code.push_op(Op::mod_u64),
             "div_i64" => self.code.push_op(Op::div_i64),
             "mod_i64" => self.code.push_op(Op::mod_i64),
 

@@ -804,6 +804,22 @@ impl VM
                     ));
                 }
 
+                Op::div_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_u64() / v1.as_u64()
+                    ));
+                }
+
+                Op::mod_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(Value::from(
+                        v0.as_u64() % v1.as_u64()
+                    ));
+                }
+
                 // TODO: should we make sure that div panics on division by zero?
                 Op::div_i64 => {
                     let v1 = self.pop();

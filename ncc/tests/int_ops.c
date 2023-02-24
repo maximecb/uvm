@@ -28,8 +28,13 @@ void main()
     int c = a + b;
     assert (c == 3);
 
+    // Signed vs unsigned comparison
     assert(2 > 1);
     assert(-2 < -1);
+
+    // Unsigned modulo
+    int i = -1;
+    assert((unsigned int)i % 5 == 0);
 
     // Left and right shift
     assert(1 << 1 == 2);
