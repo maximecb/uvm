@@ -649,6 +649,47 @@ fn parse_stmt(input: &mut Input) -> Result<Stmt, ParseError>
         });
     }
 
+    // Do-while loop
+    if input.match_keyword("do")? {
+        /*
+        while (1)
+        {
+            { body }
+            if (!cond) break;
+        }
+        */
+
+        // Parse the loop body
+        let body_stmt = parse_stmt(input)?;
+
+        // Parse the test expression
+        input.expect_token("while")?;
+        input.expect_token("(")?;
+        let test_expr = parse_expr(input)?;
+        input.expect_token(")")?;
+        input.expect_token(";")?;
+
+        // Wrap the loop body into a block so it has its own scope
+        let body_wrapper = Stmt::Block(vec![body_stmt]);
+
+        // if (!cond) break
+        let break_cond = Stmt::If {
+            test_expr: Expr::Unary { op: UnOp::Not, child: Box::new(test_expr) },
+            then_stmt: Box::new(Stmt::Break),
+            else_stmt: None,
+        };
+
+        let while_body = Stmt::Block(vec![
+            body_wrapper,
+            break_cond,
+        ]);
+
+        return Ok(Stmt::While {
+            test_expr: Expr::Int(1),
+            body_stmt: Box::new(while_body),
+        });
+    }
+
     // For loop
     if input.match_keyword("for")? {
         input.expect_token("(")?;
@@ -1112,6 +1153,13 @@ mod tests
     {
         parse_ok("void main() { while (1) { foo(); } }");
         parse_ok("void foo(u64 n) { u64 i = 0; while (i < n) { foo(); i = i + 1; } }");
+    }
+
+    #[test]
+    fn do_while_stmt()
+    {
+        parse_ok("void main() { do {} while (1); }");
+        parse_fails("void main() { do {} while (1) }");
     }
 
     #[test]
