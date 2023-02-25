@@ -22,7 +22,7 @@ char* SHIP_DOTS[1];
 char* ENEMY_DOTS[4];
 
 // RGBA pixels: 800 * 600
-u32 FRAME_BUFFER[480_000];
+u32 frame_buffer[480_000];
 
 // Left/right arrow currently pressed
 bool left_down = false;
@@ -127,7 +127,7 @@ void draw_rect(int xmin, int ymin, int width, int height, u32 color)
     {
         for (int i = 0; i < width; ++i)
         {
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
             *pix_ptr = color;
         }
     }
@@ -153,7 +153,7 @@ void draw_circle(int xmin, int ymin, int size, u32 color)
             if (dist_sqr > r2)
                 continue;
 
-            u32* pix_ptr = FRAME_BUFFER + (FRAME_WIDTH * y + x);
+            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = color;
         }
     }
@@ -189,7 +189,7 @@ void anim_callback()
     }
 
     // Clear the screen
-    memset(FRAME_BUFFER, 0, 1_920_000);
+    memset(frame_buffer, 0, sizeof(frame_buffer));
 
     for (int j = 0; j < ENEMY_ROWS; ++j)
     {
@@ -256,7 +256,7 @@ void anim_callback()
         );
     }
 
-    window_draw_frame(0, FRAME_BUFFER);
+    window_draw_frame(0, frame_buffer);
     time_delay_cb(20, anim_callback);
 }
 

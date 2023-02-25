@@ -59,7 +59,7 @@ int count_neighbors(uint32_t board_idx, int row, int col)
 void update()
 {
     // Clear the screen
-    memset(frame_buffer, 0, 1_440_000);
+    memset(frame_buffer, 0, sizeof(frame_buffer));
 
     uint32_t prev_board = gen_no % 2;
     uint32_t next_board = (gen_no + 1) % 2;

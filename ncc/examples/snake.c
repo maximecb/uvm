@@ -135,7 +135,7 @@ void anim_callback()
     }
 
     // Clear the screen
-    memset(frame_buffer, 0, 1_638_400);
+    memset(frame_buffer, 0, sizeof(frame_buffer));
 
     for (int i = 0; i < GRID_WIDTH; ++i)
     {

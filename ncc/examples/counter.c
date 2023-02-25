@@ -220,7 +220,7 @@ void draw_number(int xmax, int ymin, int dot_size, int number)
 void anim_callback()
 {
     // Clear the screen
-    memset(frame_buffer, 0, 1_920_000);
+    memset(frame_buffer, 0, sizeof(frame_buffer));
 
     u64 delta_time = time_current_ms() - start_time;
     u64 seconds = delta_time / 10;

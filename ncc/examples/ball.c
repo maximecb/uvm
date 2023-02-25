@@ -49,7 +49,7 @@ void draw_ball()
 void anim_callback()
 {
     // Clear the screen
-    memset(frame_buffer, 0, 1_920_000);
+    memset(frame_buffer, 0, sizeof(frame_buffer));
 
     draw_ball();
 
