@@ -115,6 +115,11 @@ impl Stmt
                 body_stmt.check_types(ret_type)?;
             }
 
+            Stmt::DoWhile { test_expr, body_stmt } => {
+                test_expr.eval_type()?;
+                body_stmt.check_types(ret_type)?;
+            }
+
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
                     init_stmt.as_mut().unwrap().check_types(ret_type)?;

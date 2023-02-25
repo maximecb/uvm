@@ -220,6 +220,11 @@ impl Stmt
                 body_stmt.resolve_syms(env)?;
             }
 
+            Stmt::DoWhile { test_expr, body_stmt } => {
+                test_expr.resolve_syms(env)?;
+                body_stmt.resolve_syms(env)?;
+            }
+
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 env.push_scope();
 

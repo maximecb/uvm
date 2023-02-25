@@ -13,12 +13,12 @@ Supported features:
 - Signed and unsigned integers, `stdint.h`
 - Character strings and the `char` type
 - The `bool` type
-- Pointers and pointer arithmetic
+- Pointers and pointer arithmetic, bitwise operations
 - The ternary operator `a? b:c`
 - `sizeof()` operator
 - Functions and function calls
-- If/else
-- For loops, while loops
+- If/else statements
+- For loops, while loops, do-while loops
 - C preprocessor
   - `#include`
   - `#define` constants
@@ -30,14 +30,13 @@ Supported features:
   - `#include <uvm/utils.h>`
 
 Not yet implemented (TODO):
-- Do-while loops
 - The `switch` statement
 - Float and double types
 - The `const` qualifier
 - Structs
 - Unions
 - Typedefs
-- Local arrays
+- Local arrays variables
 - Array initializers
 - Pointers to local variables
 

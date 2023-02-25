@@ -286,6 +286,27 @@ impl Stmt
                 out.push_str(&format!("{}:\n", break_label));
             }
 
+            Stmt::DoWhile { test_expr, body_stmt } => {
+                let loop_label = sym.gen_sym("dowhile_loop");
+                let cont_label = sym.gen_sym("dowhile_cont");
+                let break_label = sym.gen_sym("dowhile_break");
+
+                out.push_str(&format!("{}:\n", loop_label));
+                body_stmt.gen_code(
+                    &Some(break_label.clone()),
+                    &Some(cont_label.clone()),
+                    sym,
+                    out
+                )?;
+
+                out.push_str(&format!("{}:\n", cont_label));
+                test_expr.gen_code(sym, out)?;
+                out.push_str(&format!("jz {};\n", break_label));
+                out.push_str(&format!("jmp {};\n", loop_label));
+
+                out.push_str(&format!("{}:\n", break_label));
+            }
+
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
                     init_stmt.as_ref().unwrap().gen_code(break_label, cont_label, sym, out)?;

@@ -267,6 +267,11 @@ pub enum Stmt
         body_stmt: Box<Stmt>,
     },
 
+    DoWhile {
+        body_stmt: Box<Stmt>,
+        test_expr: Expr,
+    },
+
     For {
         init_stmt: Option<Box<Stmt>>,
         test_expr: Expr,
