@@ -48,52 +48,64 @@ Dependencies:
 - The [Rust toolchain](https://www.rust-lang.org/tools/install)
 - The [SDL2 libraries](https://wiki.libsdl.org/SDL2/Installation)
 
-### To install SDL2 on MacOS:
-```
+### Installing Rust and SDL2 on macOS
+
+Install the SDL2 package:
+```sh
 brew install sdl2
 ```
 
-On MacOS, add this to `~/.zprofile`:
-```
+Add this to your `~/.zprofile`:
+```sh
 export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
 ```
 
-### To install SDL2 on Debian/Ubuntu:
+Install the Rust toolchain:
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
+
+### Installing Rust and SDL2 on Debian/Ubuntu
+
+Install the SDL2 package:
+```sh
 sudo apt-get install libsdl2-dev
 ```
 
 Install the Rust toolchain:
-```
+```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### To install SDL2 on Windows:
+### Installing Rust and SDL2 on Windows
 
-[Install the Rust toolchain](https://www.rust-lang.org/tools/install)
+Follow the Windows-specific instructions to [install the Rust toolchain](https://www.rust-lang.org/tools/install).
 
-Get SDL2.dll from one of [SDL2 Releases](https://github.com/libsdl-org/SDL/releases)
-Copy `SDL2.dll` (unzip) to the `vm/` folder
+Get `SDL2.dll` from one of [SDL2 Releases](https://github.com/libsdl-org/SDL/releases).
 
-### Compile the project:
-```
+Copy `SDL2.dll` (unzip) to the `vm/` folder.
+
+### Compiling The Project
+
+```sh
 cd vm
 cargo build
 ```
 
 To run an asm file with UVM:
-```
+```sh
 cargo run examples/fizzbuzz.asm
 ```
 
 There is also a toy C compiler in the `ncc` directory, along with some example C programs:
-```
+```sh
 cd ncc
 ./build_and_run.sh examples/snake.c
 ```
 
-### To run the test suite:
-Run `cargo test` in `vm`, `ncc` and `test` directories
+### Running the Test Suite
+
+Run `cargo test` from the `vm`, and `ncc` directories.
 
 ## Codebase Organization
 
