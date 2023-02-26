@@ -947,8 +947,10 @@ mod tests
         // Make sure that we can compile all the examples
         for file in std::fs::read_dir("./examples").unwrap() {
             let file_path = file.unwrap().path().display().to_string();
-            println!("{}", file_path);
-            compile_file(&file_path);
+            if file_path.ends_with(".c") {
+                println!("{}", file_path);
+                compile_file(&file_path);
+            }
         }
     }
 }

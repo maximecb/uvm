@@ -521,15 +521,9 @@ impl VM
         self.stack.len()
     }
 
-    pub fn push(&mut self, val: Value)
+    pub fn push<T>(&mut self, val: T) where Value: From<T>
     {
-        self.stack.push(val);
-    }
-
-    pub fn push_bool(&mut self, val: bool)
-    {
-        let int_val: i64 = if val { 1 } else { 0 };
-        self.stack.push(int_val.into());
+        self.stack.push(Value::from(val));
     }
 
     pub fn pop(&mut self) -> Value
@@ -735,18 +729,18 @@ impl VM
                 }
 
                 Op::push_0 => {
-                    self.push(Value::from(0 as u64));
+                    self.push(0);
                 }
                 Op::push_1 => {
-                    self.push(Value::from(1 as u64));
+                    self.push(1);
                 }
                 Op::push_2 => {
-                    self.push(Value::from(2 as u64));
+                    self.push(2);
                 }
 
                 Op::push_i8 => {
                     let val = self.code.read_pc::<i8>(&mut pc);
-                    self.push(val.into());
+                    self.push(val);
                 }
 
                 Op::push_u32 => {
@@ -762,48 +756,40 @@ impl VM
                 Op::and_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_u64() & v1.as_u64()
-                    ));
+                    self.push(v0.as_u64() & v1.as_u64());
                 }
 
                 Op::or_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_u64() | v1.as_u64()
-                    ));
+                    self.push(v0.as_u64() | v1.as_u64());
                 }
 
                 Op::xor_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_u64() ^ v1.as_u64()
-                    ));
+                    self.push(v0.as_u64() ^ v1.as_u64());
                 }
 
                 Op::not_u64 => {
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        !v0.as_u64()
-                    ));
+                    self.push(!v0.as_u64());
                 }
 
                 Op::lshift_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64().wrapping_shl(v1.as_u32())
-                    ));
+                    );
                 }
 
                 Op::rshift_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64().wrapping_shr(v1.as_u32())
-                    ));
+                    );
                 }
 
                 Op::add_u64 => {
@@ -869,37 +855,37 @@ impl VM
                 Op::eq_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_u64() == v1.as_u64());
+                    self.push(v0.as_u64() == v1.as_u64());
                 }
 
                 Op::ne_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_u64() != v1.as_u64());
+                    self.push(v0.as_u64() != v1.as_u64());
                 }
 
                 Op::lt_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_i64() < v1.as_i64());
+                    self.push(v0.as_i64() < v1.as_i64());
                 }
 
                 Op::le_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_i64() <= v1.as_i64());
+                    self.push(v0.as_i64() <= v1.as_i64());
                 }
 
                 Op::gt_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_i64() > v1.as_i64());
+                    self.push(v0.as_i64() > v1.as_i64());
                 }
 
                 Op::ge_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_i64() >= v1.as_i64());
+                    self.push(v0.as_i64() >= v1.as_i64());
                 }
 
                 Op::sx_i8_i32 => {
@@ -977,37 +963,37 @@ impl VM
                 Op::eq_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() == v1.as_f32());
+                    self.push(v0.as_f32() == v1.as_f32());
                 }
 
                 Op::ne_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() != v1.as_f32());
+                    self.push(v0.as_f32() != v1.as_f32());
                 }
 
                 Op::lt_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() < v1.as_f32());
+                    self.push(v0.as_f32() < v1.as_f32());
                 }
 
                 Op::le_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() <= v1.as_f32());
+                    self.push(v0.as_f32() <= v1.as_f32());
                 }
 
                 Op::gt_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() > v1.as_f32());
+                    self.push(v0.as_f32() > v1.as_f32());
                 }
 
                 Op::ge_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push_bool(v0.as_f32() >= v1.as_f32());
+                    self.push(v0.as_f32() >= v1.as_f32());
                 }
 
                 Op::load_u8 => {

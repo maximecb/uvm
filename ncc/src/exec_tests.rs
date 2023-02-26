@@ -53,13 +53,17 @@ fn exec_tests()
     for file in fs::read_dir("./examples").unwrap() {
         let file_path = file.unwrap().path();
         let file_name = file_path.file_name().unwrap().to_str().unwrap();
-        let parse_only = parse_only.get(file_name).is_some();
-        let file_path = file_path.display().to_string();
-        compile_and_run(&file_path, parse_only);
+        if file_name.ends_with(".c") {
+            let parse_only = parse_only.get(file_name).is_some();
+            let file_path = file_path.display().to_string();
+            compile_and_run(&file_path, parse_only);
+        }
     }
 
     for file in fs::read_dir("./tests").unwrap() {
         let file_path = file.unwrap().path().display().to_string();
-        compile_and_run(&file_path, false);
+        if file_path.ends_with(".c") {
+            compile_and_run(&file_path, false);
+        }
     }
 }
