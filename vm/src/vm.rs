@@ -65,6 +65,36 @@ pub enum Op
     // set_local <idx:u8> (value)
     set_local,
 
+    // 32-bit bitwise operations
+    and_u32,
+    or_u32,
+    xor_u32,
+    not_u32,
+    lshift_u32,
+    rshift_u32,
+    rshift_i32,
+
+    // 32-bit integer arithmetic
+    add_u32,
+    sub_u32,
+    mul_u32,
+    div_u32,
+    mod_u32,
+    div_i32,
+    mod_i32,
+
+    // 32-bit integer comparisons
+    eq_u32,
+    ne_u32,
+    lt_u32,
+    le_u32,
+    gt_u32,
+    ge_u32,
+    lt_i32,
+    le_i32,
+    gt_i32,
+    ge_i32,
+
     // 64-bit bitwise operations
     and_u64,
     or_u64,
@@ -142,19 +172,14 @@ pub enum Op
     gt_f32,
     ge_f32,
 
-    // TODO:
-    // int/float conversion instructions
-    //f32_to_i32,
-    //i32_to_f32,
-
-    // TODO:
     // Floating-point math functions
-    // these should probably be syscalls rather than instructions
-    //sin_f32,
-    //cos_f32,
-    //acos_f32,
-    //asin_f32,
-    //sqrt_f32,
+    cos_f32,
+    sin_f32,
+    tan_f32,
+    acos_f32,
+    asin_f32,
+    atan_f32,
+    sqrt_f32,
 
     // Load a value at a given adress
     // store (addr)
@@ -171,11 +196,12 @@ pub enum Op
     store_u64,
 
     /*
-    /// Load from heap at fixed address
-    /// This is used for reading global variables
-    /// The address is multiplied by the data size (x 4 or x8)
-    /// If we save 24 bits for the offset, then that gives us quite a lot
-    load_static_u64 <address>
+    // TODO:
+    // Load from heap at fixed address
+    // This is used for reading global variables
+    // The address is multiplied by the data size (x 4 or x8)
+    // If we save 24 bits for the offset, then that gives us quite a lot
+    load_global_u64 <addr:u24>
     */
 
     // TODO: we should probably have 8-bit offset versions of jump insns
@@ -1215,7 +1241,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 80);
+        assert!(Op::exit as usize <= 110);
     }
 
     #[test]
