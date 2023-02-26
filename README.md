@@ -85,7 +85,7 @@ Get `SDL2.dll` from one of [SDL2 Releases](https://github.com/libsdl-org/SDL/rel
 
 Copy `SDL2.dll` (unzip) to the `vm/` folder.
 
-### Compiling The Project
+### Compiling the Project
 
 ```sh
 cd vm
