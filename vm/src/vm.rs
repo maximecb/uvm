@@ -800,9 +800,101 @@ impl VM
                     );
                 }
 
-                // TODO: 32-bit integer arithmetic ops
+                Op::add_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32().wrapping_add(v1.as_u32())
+                    );
+                }
 
-                // TODO: 32-bit integer comparison ops
+                Op::sub_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32().wrapping_sub(v1.as_u32())
+                    );
+                }
+
+                Op::mul_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32().wrapping_mul(v1.as_u32())
+                    );
+                }
+
+                // Division by zero will cause a panic (this is intentional)
+                Op::div_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32() / v1.as_u32()
+                    );
+                }
+
+                // Division by zero will cause a panic (this is intentional)
+                Op::mod_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32() % v1.as_u32()
+                    );
+                }
+
+                // Division by zero will cause a panic (this is intentional)
+                Op::div_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_i32() / v1.as_i32()
+                    );
+                }
+
+                // Division by zero will cause a panic (this is intentional)
+                Op::mod_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_i32() % v1.as_i32()
+                    );
+                }
+
+                Op::eq_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() == v1.as_u32());
+                }
+
+                Op::ne_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() != v1.as_u32());
+                }
+
+                Op::lt_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_i32() < v1.as_i32());
+                }
+
+                Op::le_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_i32() <= v1.as_i32());
+                }
+
+                Op::gt_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_i32() > v1.as_i32());
+                }
+
+                Op::ge_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_i32() >= v1.as_i32());
+                }
 
                 Op::and_u64 => {
                     let v1 = self.pop();
