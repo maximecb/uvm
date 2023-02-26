@@ -1,2 +1,4 @@
 target
 *.DS_Store
+.vscode
+vm/SDL2.dll
