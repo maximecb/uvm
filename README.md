@@ -126,3 +126,9 @@ time, the `ncc` compiler will be improved. Despite its limitations, it is still 
 The `api` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
 code that automatically generates [markdown documentation](doc/syscalls.md), Rust constants and [C definitions](ncc/include/uvm/syscalls.h) for system calls.
+
+## Open Source License
+
+The code for UVM, NCC and associated tools is shared under the [Apache-2.0 license](https://github.com/maximecb/uvm/blob/main/LICENSE).
+
+The examples under the `vm/examples` and `ncc/examples` directories are shared under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) license.
