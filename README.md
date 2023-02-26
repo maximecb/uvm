@@ -74,9 +74,9 @@ cd vm
 cargo build
 ```
 
-To run the compiled UVM binary:
+To run the an ASM file with UVM:
 ```
-cargo run <input_file>
+cargo run examples/fizzbuzz.asm
 ```
 
 ## Codebase Organization
