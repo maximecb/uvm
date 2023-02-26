@@ -79,6 +79,12 @@ To run an asm file with UVM:
 cargo run examples/fizzbuzz.asm
 ```
 
+There is also a toy C compiler in the `ncc` directory, along with some example C programs:
+```
+cd ncc
+./build_and_run.sh examples/snake.c
+```
+
 ## Codebase Organization
 
 The repository is organized into a 3 different subprojects, each of which is a Rust codebase which can be compiled with `cargo`:
