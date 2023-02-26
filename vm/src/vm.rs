@@ -745,12 +745,12 @@ impl VM
 
                 Op::push_u32 => {
                     let val = self.code.read_pc::<u32>(&mut pc);
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::push_u64 => {
                     let val = self.code.read_pc::<u64>(&mut pc);
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::and_u64 => {
@@ -795,61 +795,61 @@ impl VM
                 Op::add_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64().wrapping_add(v1.as_u64())
-                    ));
+                    );
                 }
 
                 Op::sub_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64().wrapping_sub(v1.as_u64())
-                    ));
+                    );
                 }
 
                 Op::mul_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64().wrapping_mul(v1.as_u64())
-                    ));
+                    );
                 }
 
                 // Division by zero will cause a panic (this is intentional)
                 Op::div_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64() / v1.as_u64()
-                    ));
+                    );
                 }
 
                 // Division by zero will cause a panic (this is intentional)
                 Op::mod_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_u64() % v1.as_u64()
-                    ));
+                    );
                 }
 
                 // Division by zero will cause a panic (this is intentional)
                 Op::div_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_i64() / v1.as_i64()
-                    ));
+                    );
                 }
 
                 // Division by zero will cause a panic (this is intentional)
                 Op::mod_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
+                    self.push(
                         v0.as_i64() % v1.as_i64()
-                    ));
+                    );
                 }
 
                 Op::eq_u64 => {
@@ -890,74 +890,66 @@ impl VM
 
                 Op::sx_i8_i32 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_i8() as i32));
+                    self.push(v.as_i8() as i32);
                 }
 
                 Op::sx_i8_i64 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_i8() as i64));
+                    self.push(v.as_i8() as i64);
                 }
 
                 Op::sx_i16_i32 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_i16() as i32));
+                    self.push(v.as_i16() as i32);
                 }
 
                 Op::sx_i16_i64 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_i16() as i64));
+                    self.push(v.as_i16() as i64);
                 }
 
                 Op::sx_i32_i64 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_i32() as i64));
+                    self.push(v.as_i32() as i64);
                 }
 
                 Op::trunc_u8 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_u8()));
+                    self.push(v.as_u8());
                 }
 
                 Op::trunc_u16 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_u16()));
+                    self.push(v.as_u16());
                 }
 
                 Op::trunc_u32 => {
                     let v = self.pop();
-                    self.push(Value::from(v.as_u32()));
+                    self.push(v.as_u32());
                 }
 
                 Op::add_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_f32() + v1.as_f32()
-                    ));
+                    self.push(v0.as_f32() + v1.as_f32());
                 }
 
                 Op::sub_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_f32() - v1.as_f32()
-                    ));
+                    self.push(v0.as_f32() - v1.as_f32());
                 }
 
                 Op::mul_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_f32() * v1.as_f32()
-                    ));
+                    self.push(v0.as_f32() * v1.as_f32());
                 }
 
                 Op::div_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
-                    self.push(Value::from(
-                        v0.as_f32() / v1.as_f32()
-                    ));
+                    self.push(v0.as_f32() / v1.as_f32());
                 }
 
                 Op::eq_f32 => {
@@ -1000,28 +992,28 @@ impl VM
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     let val: u8 = unsafe { *heap_ptr };
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::load_u16 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     let val: u16 = unsafe { *heap_ptr };
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     let val: u32 = unsafe { *heap_ptr };
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::load_u64 => {
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr(addr);
                     let val: u64 = unsafe { *heap_ptr };
-                    self.push(Value::from(val));
+                    self.push(val);
                 }
 
                 Op::store_u8 => {
