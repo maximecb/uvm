@@ -23,6 +23,7 @@ stable over time, and easy to target and develop for. I hope that this platform 
 of programming for many.
 
 If you'd like to read more about the philosophy behind UVM's design, here are some relevant blog posts:
+- [Building a Minimalistic Virtual Machine](https://pointersgonewild.com/2023/02/24/building-a-minimalistic-virtual-machine/)
 - [Code that Doesn't Rot](https://pointersgonewild.com/2022/02/11/code-that-doesnt-rot/)
 - [Typed vs Untyped Virtual Machines](https://pointersgonewild.com/2022/06/08/typed-vs-untyped-virtual-machines/)
 - [The Need for Stable Foundations in Software Development](https://pointersgonewild.com/2020/09/22/the-need-for-stable-foundations-in-software-development/)
