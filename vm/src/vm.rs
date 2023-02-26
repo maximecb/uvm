@@ -753,6 +753,57 @@ impl VM
                     self.push(val);
                 }
 
+                Op::and_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() & v1.as_u32());
+                }
+
+                Op::or_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() | v1.as_u32());
+                }
+
+                Op::xor_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() ^ v1.as_u32());
+                }
+
+                Op::not_u32 => {
+                    let v0 = self.pop();
+                    self.push(!v0.as_u32());
+                }
+
+                Op::lshift_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32().wrapping_shl(v1.as_u32())
+                    );
+                }
+
+                Op::rshift_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_u32().wrapping_shr(v1.as_u32())
+                    );
+                }
+
+                Op::rshift_i32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_i32().wrapping_shr(v1.as_u32())
+                    );
+                }
+
+                // TODO: 32-bit integer arithmetic ops
+
+                // TODO: 32-bit integer comparison ops
+
                 Op::and_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -789,6 +840,14 @@ impl VM
                     let v0 = self.pop();
                     self.push(
                         v0.as_u64().wrapping_shr(v1.as_u32())
+                    );
+                }
+
+                Op::rshift_i64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(
+                        v0.as_i64().wrapping_shr(v1.as_u32())
                     );
                 }
 

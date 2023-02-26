@@ -930,12 +930,36 @@ impl Assembler
                 self.gen_push(input)?;
             }
 
+            "and_u32" => self.code.push_op(Op::and_u32),
+            "or_u32" => self.code.push_op(Op::or_u32),
+            "xor_u32" => self.code.push_op(Op::xor_u32),
+            "not_u32" => self.code.push_op(Op::not_u32),
+            "lshift_u32" => self.code.push_op(Op::lshift_u32),
+            "rshift_u32" => self.code.push_op(Op::rshift_u32),
+            "rshift_i32" => self.code.push_op(Op::rshift_i32),
+
+            "add_u32" => self.code.push_op(Op::add_u32),
+            "sub_u32" => self.code.push_op(Op::sub_u32),
+            "mul_u32" => self.code.push_op(Op::mul_u32),
+            "div_u32" => self.code.push_op(Op::div_u32),
+            "mod_u32" => self.code.push_op(Op::mod_u32),
+            "div_i32" => self.code.push_op(Op::div_i32),
+            "mod_i32" => self.code.push_op(Op::mod_i32),
+
+            "eq_u32" => self.code.push_op(Op::eq_u32),
+            "ne_u32" => self.code.push_op(Op::ne_u32),
+            "lt_i32" => self.code.push_op(Op::lt_i32),
+            "le_i32" => self.code.push_op(Op::le_i32),
+            "gt_i32" => self.code.push_op(Op::gt_i32),
+            "ge_i32" => self.code.push_op(Op::ge_i32),
+
             "and_u64" => self.code.push_op(Op::and_u64),
             "or_u64" => self.code.push_op(Op::or_u64),
             "xor_u64" => self.code.push_op(Op::xor_u64),
             "not_u64" => self.code.push_op(Op::not_u64),
             "lshift_u64" => self.code.push_op(Op::lshift_u64),
             "rshift_u64" => self.code.push_op(Op::rshift_u64),
+            "rshift_i64" => self.code.push_op(Op::rshift_i64),
 
             "add_u64" => self.code.push_op(Op::add_u64),
             "sub_u64" => self.code.push_op(Op::sub_u64),
