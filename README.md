@@ -48,7 +48,7 @@ Dependencies:
 - The [Rust toolchain](https://www.rust-lang.org/tools/install)
 - The [SDL2 libraries](https://wiki.libsdl.org/SDL2/Installation)
 
-To install SDL2 on MacOS:
+### To install SDL2 on MacOS:
 ```
 brew install sdl2
 ```
@@ -58,7 +58,7 @@ On MacOS, add this to `~/.zprofile`:
 export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
 ```
 
-To install SDL2 on Debian/Ubuntu
+### To install SDL2 on Debian/Ubuntu:
 ```
 sudo apt-get install libsdl2-dev
 ```
@@ -68,7 +68,14 @@ Install the Rust toolchain:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Compile the project:
+### To install SDL2 on Windows:
+
+[Install the Rust toolchain](https://www.rust-lang.org/tools/install)
+
+Get SDL2.dll from one of [SDL2 Releases](https://github.com/libsdl-org/SDL/releases)
+Copy `SDL2.dll` (unzip) to the `vm/` folder
+
+### Compile the project:
 ```
 cd vm
 cargo build
@@ -84,6 +91,9 @@ There is also a toy C compiler in the `ncc` directory, along with some example C
 cd ncc
 ./build_and_run.sh examples/snake.c
 ```
+
+### To run the test suite:
+Run `cargo test` in `vm`, `ncc` and `test` directories
 
 ## Codebase Organization
 

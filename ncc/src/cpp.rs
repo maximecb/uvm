@@ -515,7 +515,11 @@ fn process_input_rec(
                 output += &format!("{}", input.line_no);
             }
             else if ident == "__FILE__" {
-                output += &format!("\"{}\"", input.src_name);
+                let mut filename: String = format!("\"{}\"", input.src_name);
+                if cfg!(windows) {
+                    filename = str::replace(&filename, "\\", "/");
+                }
+                output += &filename;
             }
             else
             {
