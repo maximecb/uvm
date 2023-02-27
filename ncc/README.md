@@ -30,12 +30,13 @@ Supported features:
   - `#include <uvm/utils.h>`
 
 Not yet implemented (TODO):
-- The `switch` statement
-- Float and double types
-- The `const` qualifier
 - Structs
 - Unions
+- Enums
 - Typedefs
+- The `const` qualifier
+- Float and double types
+- The `switch` statement
 - Local arrays variables
 - Array initializers
 - Pointers to local variables
