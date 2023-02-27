@@ -948,6 +948,10 @@ impl Assembler
 
             "eq_u32" => self.code.push_op(Op::eq_u32),
             "ne_u32" => self.code.push_op(Op::ne_u32),
+            "lt_u32" => self.code.push_op(Op::lt_u32),
+            "le_u32" => self.code.push_op(Op::le_u32),
+            "gt_u32" => self.code.push_op(Op::gt_u32),
+            "ge_u32" => self.code.push_op(Op::ge_u32),
             "lt_i32" => self.code.push_op(Op::lt_i32),
             "le_i32" => self.code.push_op(Op::le_i32),
             "gt_i32" => self.code.push_op(Op::gt_i32),
@@ -971,6 +975,10 @@ impl Assembler
 
             "eq_u64" => self.code.push_op(Op::eq_u64),
             "ne_u64" => self.code.push_op(Op::ne_u64),
+            "lt_u64" => self.code.push_op(Op::lt_u64),
+            "le_u64" => self.code.push_op(Op::le_u64),
+            "gt_u64" => self.code.push_op(Op::gt_u64),
+            "ge_u64" => self.code.push_op(Op::ge_u64),
             "lt_i64" => self.code.push_op(Op::lt_i64),
             "le_i64" => self.code.push_op(Op::le_i64),
             "gt_i64" => self.code.push_op(Op::gt_i64),

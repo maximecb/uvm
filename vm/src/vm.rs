@@ -872,6 +872,30 @@ impl VM
                     self.push(v0.as_u32() != v1.as_u32());
                 }
 
+                Op::lt_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() < v1.as_u32());
+                }
+
+                Op::le_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() <= v1.as_u32());
+                }
+
+                Op::gt_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() > v1.as_u32());
+                }
+
+                Op::ge_u32 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u32() >= v1.as_u32());
+                }
+
                 Op::lt_i32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1013,6 +1037,30 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(v0.as_u64() != v1.as_u64());
+                }
+
+                Op::lt_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u64() < v1.as_u64());
+                }
+
+                Op::le_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u64() <= v1.as_u64());
+                }
+
+                Op::gt_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u64() > v1.as_u64());
+                }
+
+                Op::ge_u64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_u64() >= v1.as_u64());
                 }
 
                 Op::lt_i64 => {
