@@ -1,3 +1,4 @@
+use std::cmp::max;
 use crate::ast::*;
 use crate::parsing::{ParseError};
 use crate::types::*;
@@ -468,7 +469,8 @@ impl Expr
             },
 
             Expr::Binary { op, lhs, rhs } => {
-                gen_bin_op(op, lhs, rhs, sym, out)?;
+                let out_type = self.eval_type()?;
+                gen_bin_op(op, lhs, rhs, &out_type, sym, out)?;
             }
 
             Expr::Ternary { test_expr, then_expr, else_expr } => {
@@ -521,7 +523,32 @@ impl Expr
     }
 }
 
-fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut String) -> Result<(), ParseError>
+/// Emit code for a bitwise integer operation
+fn emit_bit_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+{
+    // Type checking should have caught type errors
+    let out_bits = out_type.sizeof() * 8;
+    assert!(out_bits <= 64);
+
+    //println!("{} {}", signed_op, out_type);
+
+    let op_bits = if out_bits == 64 { 64 } else { 32 };
+    let op = if out_type.is_signed() { signed_op } else { unsigned_op };
+    out.push_str(&format!("{}{};\n", op, op_bits));
+
+    if out_bits < 32 {
+        out.push_str(&format!("trunc_u{};\n", out_bits));
+    }
+}
+
+fn gen_bin_op(
+    op: &BinOp,
+    lhs: &Expr,
+    rhs: &Expr,
+    out_type: &Type,
+    sym: &mut SymGen,
+    out: &mut String
+) -> Result<(), ParseError>
 {
     use BinOp::*;
     use Type::*;
@@ -600,23 +627,23 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
 
     match op {
         BitAnd => {
-            out.push_str("and_u64;\n");
+            emit_bit_op(out_type, "and_u", "and_u", out);
         }
 
         BitOr => {
-            out.push_str("or_u64;\n");
+            emit_bit_op(out_type, "or_u", "or_u", out);
         }
 
         BitXor => {
-            out.push_str("xor_u64;\n");
+            emit_bit_op(out_type, "xor_u", "xor_u", out);
         }
 
         LShift => {
-            out.push_str("lshift_u64;\n");
+            emit_bit_op(out_type, "lshift_u", "lshift_u", out);
         }
 
         RShift => {
-            out.push_str("rshift_u64;\n");
+            emit_bit_op(out_type, "rshift_i", "rshift_u", out);
         }
 
         // For now we're ignoring the type
@@ -636,12 +663,29 @@ fn gen_bin_op(op: &BinOp, lhs: &Expr, rhs: &Expr, sym: &mut SymGen, out: &mut St
                     out.push_str("add_u64;\n");
                 }
 
-                _ => out.push_str("add_u64;\n")
+                (Int(m), UInt(n)) |  (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    emit_bit_op(out_type, "add_u", "add_u", out);
+                }
+
+                _ => todo!()
             }
         }
 
         Sub => {
-            out.push_str("sub_u64;\n");
+            match (&lhs_type, &rhs_type) {
+                (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("sub_u64;\n");
+                }
+
+                (Int(m), UInt(n)) |  (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    emit_bit_op(out_type, "sub_u", "sub_u", out);
+                }
+
+                _ => todo!("{:?} - {:?}", lhs, rhs)
+            }
         }
 
         Mul => {

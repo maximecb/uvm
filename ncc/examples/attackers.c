@@ -183,9 +183,10 @@ void anim_callback()
             ship_x = ship_x + 7;
     }
 
+    // If our bolt is active, make it move up
     if (bolt_y > 0)
     {
-        bolt_y = bolt_y - 16;
+        bolt_y = bolt_y - 18;
     }
 
     // Clear the screen
