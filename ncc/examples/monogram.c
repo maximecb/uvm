@@ -1,7 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
 
-
 // Monogram 12x7 pixel font
 
 // > # CREDITS
@@ -20,17 +19,18 @@
 // > thanks to Éric Araujo (@merwok_) for the inital port of monogram to PICO-8:
 // > https://itch.io/post/2625522
 
-u64 font_monogram_number_of_characters = 390;
-u64 font_monogram_height = 12;
-u64 font_monogram_width = 7;
+#define FONT_MONOGRAM_NUMBER_OF_CHARACTERS 390
+#define FONT_MONOGRAM_HEIGHT 12
+#define FONT_MONOGRAM_WIDTH 7
 
+// This is 12 bytes of data per char, as in 12 rows, and each byte
+// represents the pixels in that row.
 u8 font_monogram_data[390][12];
 
 // Map from ord(ch) to index of ch's data in font_monogram_data.
 // This is for when you know the character that you want to draw but not
 // its index in the font_monogram_data array.
 u16 font_monogram_chars[8595];
-
 
 void
 init_monogram_font_data()
@@ -3476,7 +3476,7 @@ void
 draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
 {
     u32* d = dest + dest_x + dest_w * dest_y;
-    for (u64 y = 0; y < font_monogram_height; ++y) {
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {
         u8 pixel_bits = font_monogram_data[ch][y];
         u64 x = 0;
         while (pixel_bits) {
@@ -3494,8 +3494,8 @@ draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 
 }
 
 
-size_t FRAME_WIDTH = 202;  // 20 + 26 * font_monogram_width;
-size_t FRAME_HEIGHT = 200; // 20 + (font_monogram_number_of_characters / 26) * font_monogram_height;
+size_t FRAME_WIDTH = 202;  // 20 + 26 * FONT_MONOGRAM_WIDTH;
+size_t FRAME_HEIGHT = 200; // 20 + (FONT_MONOGRAM_NUMBER_OF_CHARACTERS / 26) * FONT_MONOGRAM_HEIGHT;
 
 // RGBA pixels: 202 * 200
 u32 frame_buffer[40400];
@@ -3506,9 +3506,9 @@ void anim_callback()
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
-    for (size_t ch = 0; ch < font_monogram_number_of_characters; ++ch) {
-        u64 x = ch % 26 * font_monogram_width;
-        u64 y = ch / 26 * font_monogram_height;
+    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {
+        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH;
+        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT;
         // Drop shadow.
         draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 11 + x, 11 + y, 0x00000000);
         // Foreground font glyphs.
