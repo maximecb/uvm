@@ -12,10 +12,7 @@ uint32_t sdbm(unsigned char* str)
         ++str;
     }
 
-    // NOTE: the bitwise AND here should not be necessary, but
-    // UVM currently uses uint64 internally when doing uint32 additions,
-    // so we add this to make sure we get a valid uint32 value out
-    return hash & 0xFFFFFFFF;
+    return hash;
 }
 
 void main()

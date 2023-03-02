@@ -31,7 +31,7 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
         // Assigning an integer to a pointer
         // Note: in C, this works but only for the value 0
         (Pointer(base_type), UInt(_)) => true,
-        (Pointer(base_type), Int(64)) => true,
+        (Pointer(base_type), Int(_)) => true,
 
         // Assigning an array to a pointer
         (Pointer(base_type), Array { elem_type, .. }) => base_type.eq(&elem_type),
@@ -148,8 +148,16 @@ impl Expr
     pub fn eval_type(&self) -> Result<Type, ParseError>
     {
         match self {
-            Expr::Int(_) => {
-                Ok(Int(64))
+            Expr::Int(val) => {
+                // In C, if a value can fit inside an int, it has int type,
+                // otherwise it has type long int
+                if *val >= (i32::MIN as i128) && *val <= (i32::MAX as i128) {
+                    Ok(Int(32))
+                }
+                else
+                {
+                    Ok(Int(64))
+                }
             }
 
             Expr::String(_) => {
