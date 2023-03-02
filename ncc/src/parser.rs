@@ -190,6 +190,42 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
         });
     }
 
+    // Pre-increment expression
+    if input.match_token("++")? {
+        let sub_expr = parse_prefix(input)?;
+
+        // Transform into i = i + 1
+        return Ok(
+            Expr::Binary{
+                op: BinOp::Assign,
+                lhs: Box::new(sub_expr.clone()),
+                rhs: Box::new(Expr::Binary{
+                    op: BinOp::Add,
+                    lhs: Box::new(sub_expr.clone()),
+                    rhs: Box::new(Expr::Int(1))
+                })
+            }
+        );
+    }
+
+    // Pre-decrement expression
+    if input.match_token("--")? {
+        let sub_expr = parse_prefix(input)?;
+
+        // Transform into i = i - 1
+        return Ok(
+            Expr::Binary{
+                op: BinOp::Assign,
+                lhs: Box::new(sub_expr.clone()),
+                rhs: Box::new(Expr::Binary{
+                    op: BinOp::Sub,
+                    lhs: Box::new(sub_expr.clone()),
+                    rhs: Box::new(Expr::Int(1))
+                })
+            }
+        );
+    }
+
     // Unary negation expression
     if ch == '-' {
         input.eat_ch();
@@ -215,24 +251,6 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
             op: UnOp::BitNot,
             child: Box::new(sub_expr)
         });
-    }
-
-    // Pre-increment expression
-    if input.match_token("++")? {
-        let sub_expr = parse_prefix(input)?;
-
-        // Transform into i = i + 1
-        return Ok(
-            Expr::Binary{
-                op: BinOp::Assign,
-                lhs: Box::new(sub_expr.clone()),
-                rhs: Box::new(Expr::Binary{
-                    op: BinOp::Add,
-                    lhs: Box::new(sub_expr.clone()),
-                    rhs: Box::new(Expr::Int(1))
-                })
-            }
-        );
     }
 
     // Pointer dereference
