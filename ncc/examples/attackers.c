@@ -196,7 +196,7 @@ void anim_callback()
     {
         for (int i = 0; i < ENEMY_COLS; ++i)
         {
-            int enemy_bit = 1 << (ENEMY_COLS * j + i);
+            u64 enemy_bit = (u64)1 << (ENEMY_COLS * j + i);
 
             if ((enemies_live & enemy_bit) == 0)
             {

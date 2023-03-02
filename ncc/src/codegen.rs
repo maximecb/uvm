@@ -523,14 +523,12 @@ impl Expr
     }
 }
 
-/// Emit code for a bitwise integer operation
-fn emit_bit_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+/// Emit code for an integer operation
+fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
 {
-    // Type checking should have caught type errors
+    // Type checking should have caught invalid types before this point
     let out_bits = out_type.sizeof() * 8;
     assert!(out_bits <= 64);
-
-    //println!("{} {}", signed_op, out_type);
 
     let op_bits = if out_bits == 64 { 64 } else { 32 };
     let op = if out_type.is_signed() { signed_op } else { unsigned_op };
@@ -627,23 +625,23 @@ fn gen_bin_op(
 
     match op {
         BitAnd => {
-            emit_bit_op(out_type, "and_u", "and_u", out);
+            emit_int_op(out_type, "and_u", "and_u", out);
         }
 
         BitOr => {
-            emit_bit_op(out_type, "or_u", "or_u", out);
+            emit_int_op(out_type, "or_u", "or_u", out);
         }
 
         BitXor => {
-            emit_bit_op(out_type, "xor_u", "xor_u", out);
+            emit_int_op(out_type, "xor_u", "xor_u", out);
         }
 
         LShift => {
-            emit_bit_op(out_type, "lshift_u", "lshift_u", out);
+            emit_int_op(out_type, "lshift_u", "lshift_u", out);
         }
 
         RShift => {
-            emit_bit_op(out_type, "rshift_i", "rshift_u", out);
+            emit_int_op(out_type, "rshift_i", "rshift_u", out);
         }
 
         // For now we're ignoring the type
@@ -663,8 +661,8 @@ fn gen_bin_op(
                     out.push_str("add_u64;\n");
                 }
 
-                (Int(m), UInt(n)) |  (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    emit_bit_op(out_type, "add_u", "add_u", out);
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    emit_int_op(out_type, "add_u", "add_u", out);
                 }
 
                 _ => todo!()
@@ -680,8 +678,8 @@ fn gen_bin_op(
                     out.push_str("sub_u64;\n");
                 }
 
-                (Int(m), UInt(n)) |  (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    emit_bit_op(out_type, "sub_u", "sub_u", out);
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    emit_int_op(out_type, "sub_u", "sub_u", out);
                 }
 
                 _ => todo!("{:?} - {:?}", lhs, rhs)
@@ -707,15 +705,65 @@ fn gen_bin_op(
         }
 
         Eq => {
-            out.push_str("eq_u64;\n");
+            match (lhs_type, rhs_type) {
+                (Pointer(_), _) | (_, Pointer(_)) => {
+                    out.push_str("eq_u64;\n");
+                }
+
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    if m <= 32 && n <= 32 {
+                        out.push_str("eq_u32;\n");
+                    } else {
+                        out.push_str("eq_u64;\n");
+                    }
+                }
+
+                _ => todo!()
+            }
         }
 
         Ne => {
-            out.push_str("ne_u64;\n");
+            match (lhs_type, rhs_type) {
+                (Pointer(_), _) | (_, Pointer(_)) => {
+                    out.push_str("ne_u64;\n");
+                }
+
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    if m <= 32 && n <= 32 {
+                        out.push_str("ne_u32;\n");
+                    } else {
+                        out.push_str("ne_u64;\n");
+                    }
+                }
+
+                _ => todo!()
+            }
         }
 
         Lt => {
-            out.push_str("lt_i64;\n");
+            match (lhs_type, rhs_type) {
+                (Pointer(_), _) | (_, Pointer(_)) => {
+                    out.push_str("lt_u64;\n");
+                }
+
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    if m <= 32 && n <= 32 {
+                        if signed_op {
+                            out.push_str("lt_i32;\n");
+                        } else {
+                            out.push_str("lt_u32;\n");
+                        }
+                    } else {
+                        if signed_op {
+                            out.push_str("lt_i64;\n");
+                        } else {
+                            out.push_str("lt_u64;\n");
+                        }
+                    }
+                }
+
+                _ => todo!()
+            }
         }
 
         Le => {
@@ -723,7 +771,29 @@ fn gen_bin_op(
         }
 
         Gt => {
-            out.push_str("gt_i64;\n");
+            match (lhs_type, rhs_type) {
+                (Pointer(_), _) | (_, Pointer(_)) => {
+                    out.push_str("gt_u64;\n");
+                }
+
+                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
+                    if m <= 32 && n <= 32 {
+                        if signed_op {
+                            out.push_str("gt_i32;\n");
+                        } else {
+                            out.push_str("gt_u32;\n");
+                        }
+                    } else {
+                        if signed_op {
+                            out.push_str("gt_i64;\n");
+                        } else {
+                            out.push_str("gt_u64;\n");
+                        }
+                    }
+                }
+
+                _ => todo!()
+            }
         }
 
         Ge => {
