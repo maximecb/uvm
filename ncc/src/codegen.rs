@@ -455,7 +455,14 @@ impl Expr
                     }
 
                     UnOp::BitNot => {
-                        out.push_str("not_u64;\n");
+                        let child_type = child.eval_type()?;
+                        let num_bits = child_type.sizeof() * 8;
+                        let op_bits = if num_bits <= 32 { 32 } else { 64 };
+                        out.push_str(&format!("not_u{};\n", op_bits));
+
+                        if num_bits < 32 {
+                            out.push_str(&format!("trunc_u{};\n", num_bits));
+                        }
                     }
 
                     // Logical negation
