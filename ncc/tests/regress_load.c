@@ -1,7 +1,7 @@
 #include <assert.h>
 
 u8 FRAME_BUFFER[1000];
-char* CHAR_DOTS[128] = 0;
+char* CHAR_DOTS[128];
 
 void main()
 {

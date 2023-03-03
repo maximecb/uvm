@@ -56,25 +56,31 @@ impl Unit
             out.push_str(&format!("{}:\n", global.name));
 
             match (&global.var_type, &global.init_expr) {
-                (Type::UInt(n), Expr::Int(v)) => {
+                (_, None) => {
+                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
+                }
+
+                (Type::UInt(n), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".u{} {};\n", n, v))
                 }
 
-                (Type::Int(n), Expr::Int(v)) => {
+                (Type::Int(n), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".i{} {};\n", n, v))
                 }
 
-                (Type::Pointer(_), Expr::Int(v)) => {
+                (Type::Pointer(_), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
 
-                (Type::Pointer(_), Expr::String(s)) => {
+                (Type::Pointer(_), Some(Expr::String(s))) => {
                     out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
                 }
 
+                /*
                 (Type::Array {..}, Expr::Int(0)) => {
                     out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
                 }
+                */
 
                 _ => todo!()
             }

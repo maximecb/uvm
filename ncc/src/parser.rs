@@ -579,9 +579,7 @@ fn parse_decl(input: &mut Input) -> Result<(Type, String, Option<Expr>), ParseEr
 
     let init_expr = if input.match_token("=")? {
         Some(parse_expr(input)?)
-    }
-    else
-    {
+    } else {
         None
     };
 
@@ -923,11 +921,11 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 
         // Global variable initialization
         let init_expr = if input.match_token("=")? {
-            parse_expr(input)?
+            Some(parse_expr(input)?)
         }
         else
         {
-            Expr::Int(0)
+            None
         };
 
         // This must be a global variable declaration

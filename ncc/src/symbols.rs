@@ -150,7 +150,7 @@ impl Unit
                 self.global_vars.push(Global {
                     name: name.clone(),
                     var_type: t.clone(),
-                    init_expr: Expr::String(str_const.clone())
+                    init_expr: Some(Expr::String(str_const.clone()))
                 });
             }
         }

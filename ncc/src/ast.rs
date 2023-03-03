@@ -333,7 +333,7 @@ pub struct Global
     pub var_type: Type,
 
     // Initialization expression
-    pub init_expr: Expr,
+    pub init_expr: Option<Expr>,
 }
 
 /// Top-level unit (e.g. source file)
