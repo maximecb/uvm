@@ -23,6 +23,59 @@ impl SymGen
 // FIXME: ideally, all error checking should be done before we get to the
 // codegen, so that codegen can't return an error?
 
+fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Result<(), ParseError>
+{
+    // Get the type of the initializer expression
+    let init_expr_type = init_expr.eval_type()?;
+
+    let (array_elem_t, array_size_expr) = match array_type {
+        Type::Array { elem_type, size_expr } => (elem_type.as_ref().clone(), size_expr),
+        _ => panic!()
+    };
+
+    let (init_elem_t, init_size_expr) = match init_expr_type {
+        Type::Array { elem_type, size_expr } => (elem_type.as_ref().clone(), size_expr),
+        _ => panic!()
+    };
+
+    let elem_exprs = match init_expr {
+        Expr::Array(elem_exprs) => elem_exprs,
+        _ => return ParseError::msg_only("invalid initializer for global array variable")
+    };
+
+    match array_elem_t {
+        // Initializing an array of signed integers
+        Type::Int(n) => {
+            for expr in elem_exprs {
+                match expr {
+                    Expr::Int(v) => out.push_str(&format!(".i{} {};\n", n, v)),
+                    _ => panic!()
+                }
+            }
+        }
+
+        // Initializing an array of unsigned integers
+        Type::UInt(n) => {
+            for expr in elem_exprs {
+                match expr {
+                    Expr::Int(v) => out.push_str(&format!(".u{} {};\n", n, v)),
+                    _ => panic!()
+                }
+            }
+        }
+
+        Type::Array {..} => {
+            for expr in elem_exprs {
+                gen_array_init(&array_elem_t, expr, out)?;
+            }
+        }
+
+        _ => panic!()
+    }
+
+    Ok(())
+}
+
 impl Unit
 {
     pub fn gen_code(&self) -> Result<String, ParseError>
@@ -76,11 +129,9 @@ impl Unit
                     out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
                 }
 
-                /*
-                (Type::Array {..}, Expr::Int(0)) => {
-                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
+                (Type::Array {..}, Some(init_expr)) => {
+                    gen_array_init(&global.var_type, &init_expr, &mut out)?;
                 }
-                */
 
                 _ => todo!()
             }

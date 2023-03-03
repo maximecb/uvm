@@ -1,10 +1,23 @@
 #include <assert.h>
 #include <stdint.h>
 
+int int_array[3] = { 0, 1, 2 };
+
+uint8_t bytes2d[2][2] = { {0, 1}, {2, 3} };
+
 uint8_t array2d[600][800];
 
 int main()
 {
+    assert(int_array[0] == 0);
+    assert(int_array[1] == 1);
+    assert(int_array[2] == 2);
+
+    assert(bytes2d[0][0] == 0);
+    assert(bytes2d[0][1] == 1);
+    assert(bytes2d[1][0] == 2);
+    assert(bytes2d[1][1] == 3);
+
     /*
     assert(sizeof(array[0][0]) == 1);
     assert(sizeof(array[0]) == 800);
@@ -24,4 +37,6 @@ int main()
     // Double array indexing
     array2d[0][0] = 1;
     assert(array2d[0][0] == 1);
+
+    return 0;
 }

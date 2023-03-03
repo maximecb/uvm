@@ -9,6 +9,7 @@ level of C compliance of NCC over time.
 Supported features:
 - Global variables
 - Global arrays, two-dimensional arrays
+  - Array initializer syntax
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
 - Character strings and the `char` type
@@ -38,7 +39,6 @@ Not yet implemented (TODO):
 - Float and double types
 - The `switch` statement
 - Local arrays variables
-- Array initializers
 - Pointers to local variables
 
 Caveats:
