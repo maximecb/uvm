@@ -293,6 +293,12 @@ impl Expr
                 *self = Expr::Ref(decl);
             }
 
+            Expr::Array(exprs) => {
+                for expr in exprs {
+                    expr.resolve_syms(env)?;
+                }
+            }
+
             Expr::Ident(name) => {
                 //dbg!(&name);
 

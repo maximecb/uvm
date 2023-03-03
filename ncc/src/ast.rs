@@ -194,6 +194,9 @@ pub enum Expr
     Int(i128),
     String(String),
 
+    // Array literal
+    Array(Vec<Expr>),
+
     Ident(String),
 
     // Reference to a variable/function declaration
@@ -235,6 +238,7 @@ pub enum Expr
         args: Vec<Expr>,
     },
 
+    // Inline assembly
     Asm {
         text: String,
         args: Vec<Expr>,
