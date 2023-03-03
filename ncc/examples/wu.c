@@ -39,7 +39,7 @@ carefree_alpha_blend_plot_pixel(u32* dest, size_t dest_stride, u64 x, u64 y, u32
 #define LIMIT 0xffff
 
 // Draw a line using Wu's algorithm
-void draw_Wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     if (x1 == x0)
     {
@@ -71,17 +71,17 @@ void draw_Wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 if (dx > dy)
                 {
                     if (x1 > x0) {
-                        draw_Wu_line_first_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
+                        draw_wu_line_first_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
                     } else {
-                        draw_Wu_line_first_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
+                        draw_wu_line_first_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
                     }
                 }
                 else // if (dy > dx)
                 {
                     if (x1 > x0) {
-                        draw_Wu_line_second_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
+                        draw_wu_line_second_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
                     } else {
-                        draw_Wu_line_second_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
+                        draw_wu_line_second_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
                     }
                 }
             }
@@ -90,17 +90,17 @@ void draw_Wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 if (dx > dy)
                 {
                     if (x1 > x0) {
-                        draw_Wu_line_third_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
+                        draw_wu_line_third_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
                     } else {
-                        draw_Wu_line_third_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
+                        draw_wu_line_third_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
                     }
                 }
                 else // if (dy > dx)
                 {
                     if (x1 > x0) {
-                        draw_Wu_line_fourth_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
+                        draw_wu_line_fourth_octant(fb, fb_width, fb_height, x1, y1, x0, y0, color);
                     } else {
-                        draw_Wu_line_fourth_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
+                        draw_wu_line_fourth_octant(fb, fb_width, fb_height, x0, y0, x1, y1, color);
                     }
                 }
             }
@@ -108,7 +108,7 @@ void draw_Wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
     }
 }
 
-void draw_Wu_line_first_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_wu_line_first_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     int dx = x1 - x0;
     int dy = y1 - y0;
@@ -134,7 +134,7 @@ void draw_Wu_line_first_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32
     }
 }
 
-void draw_Wu_line_second_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_wu_line_second_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     int dx = x1 - x0;
     int dy = y1 - y0;
@@ -161,7 +161,7 @@ void draw_Wu_line_second_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
 }
 
 
-void draw_Wu_line_third_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_wu_line_third_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     int dx = x1 - x0;
     int dy = y0 - y1;
@@ -187,7 +187,7 @@ void draw_Wu_line_third_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32
     }
 }
 
-void draw_Wu_line_fourth_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_wu_line_fourth_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     int dx = x0 - x1;
     int dy = y1 - y0;
@@ -230,14 +230,14 @@ void anim_callback()
 
     u32 w = FRAME_WIDTH - 1;
     u32 h = FRAME_HEIGHT - 1;
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, 0, 0, COLOR_RED);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, w, h, COLOR_GREEN);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, 0, h, COLOR_YELLOW);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, w, 0, COLOR_BLUE);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, 0, 0,  COLOR_GREEN);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, w, h,COLOR_RED );
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, 0, h, COLOR_BLUE);
-    draw_Wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, w, 0, COLOR_YELLOW );
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, 0, 0, COLOR_RED);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, w, h, COLOR_GREEN);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, 0, h, COLOR_YELLOW);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y, w, 0, COLOR_BLUE);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, 0, 0,  COLOR_GREEN);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, w, h,COLOR_RED );
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, 0, h, COLOR_BLUE);
+    draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, w, 0, COLOR_YELLOW );
 
     window_draw_frame(0, frame_buffer);
 
