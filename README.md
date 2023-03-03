@@ -97,7 +97,7 @@ To run an asm file with UVM:
 cargo run examples/fizzbuzz.asm
 ```
 
-There is also a toy C compiler in the `ncc` directory, along with some example C programs:
+There is also a toy C compiler in the `ncc` directory, along with many [example C programs](ncc/examples) that run on UVM:
 ```sh
 cd ncc
 ./build_and_run.sh examples/snake.c
