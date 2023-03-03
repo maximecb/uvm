@@ -90,6 +90,13 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(expr);
     }
 
+    // Array literal
+    if ch == '{' {
+        input.eat_ch();
+        let elem_exprs = parse_expr_list(input, "}")?;
+        return Ok(Expr::Array(elem_exprs));
+    }
+
     // Sizeof expression
     if input.match_token("sizeof")? {
         input.expect_token("(")?;
@@ -126,7 +133,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 /// Parse a function call expression
 fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
 {
-    let arg_exprs = parse_arg_exprs(input)?;
+    let arg_exprs = parse_expr_list(input, ")")?;
 
     Ok(Expr::Call {
         callee: Box::new(callee),
@@ -280,7 +287,7 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
 }
 
 /// Parse a list of argument expressions
-fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
+fn parse_expr_list(input: &mut Input, end_token: &str) -> Result<Vec<Expr>, ParseError>
 {
     let mut arg_exprs = Vec::default();
 
@@ -291,14 +298,14 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
             return input.parse_error("unexpected end of input in call expression");
         }
 
-        if input.match_token(")")? {
+        if input.match_token(end_token)? {
             break;
         }
 
         // Parse one argument
         arg_exprs.push(parse_infix_expr(input, true)?);
 
-        if input.match_token(")")? {
+        if input.match_token(end_token)? {
             break;
         }
 
@@ -314,7 +321,7 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
 fn parse_asm_expr(input: &mut Input) -> Result<Expr, ParseError>
 {
     input.expect_token("(")?;
-    let arg_exprs = parse_arg_exprs(input)?;
+    let arg_exprs = parse_expr_list(input, ")")?;
     input.expect_token("->")?;
     let out_type = parse_type(input)?;
     input.expect_token("{")?;
@@ -1054,6 +1061,13 @@ mod tests
 
         // Should fail
         parse_fails("u64x;");
+    }
+
+    #[test]
+    fn arrays()
+    {
+        parse_ok("u8 array[3] = {};");
+        parse_ok("u8 array[3] = { 0, 1, 2 };");
     }
 
     #[test]
