@@ -1,20 +1,20 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
 
-size_t FRAME_WIDTH = 800;
-size_t FRAME_HEIGHT = 600;
-size_t BALL_RADIUS = 20;
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
+#define BALL_RADIUS 20
 
 // RGBA pixels: 800 * 600
 u32 frame_buffer[480_000];
 
 // Current ball position
-u64 px = 200;
-u64 py = 200;
+int px = 200;
+int py = 200;
 
 // Velocity
-u64 vx = 5;
-u64 vy = 7;
+int vx = 5;
+int vy = 7;
 
 // Draw the ball at the current x,y position
 void draw_ball()

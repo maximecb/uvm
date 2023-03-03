@@ -539,6 +539,31 @@ fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut St
     }
 }
 
+/// Emit code for a comparison operation
+fn emit_cmp_op(lhs_type: &Type, rhs_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+{
+    let is_signed = lhs_type.is_signed() && rhs_type.is_signed();
+
+    let num_bits = match (lhs_type, rhs_type) {
+        (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => *max(m, n),
+        _ => 64
+    };
+
+    if num_bits <= 32 {
+        if is_signed {
+            out.push_str(&format!("{}32;\n", signed_op));
+        } else {
+            out.push_str(&format!("{}32;\n", unsigned_op));
+        }
+    } else {
+        if is_signed {
+            out.push_str(&format!("{}64;\n", signed_op));
+        } else {
+            out.push_str(&format!("{}64;\n", unsigned_op));
+        }
+    }
+}
+
 fn gen_bin_op(
     op: &BinOp,
     lhs: &Expr,
@@ -705,99 +730,27 @@ fn gen_bin_op(
         }
 
         Eq => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("eq_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        out.push_str("eq_u32;\n");
-                    } else {
-                        out.push_str("eq_u64;\n");
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "eq_u", "eq_u", out);
         }
 
         Ne => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("ne_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        out.push_str("ne_u32;\n");
-                    } else {
-                        out.push_str("ne_u64;\n");
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "ne_u", "ne_u", out);
         }
 
         Lt => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("lt_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        if signed_op {
-                            out.push_str("lt_i32;\n");
-                        } else {
-                            out.push_str("lt_u32;\n");
-                        }
-                    } else {
-                        if signed_op {
-                            out.push_str("lt_i64;\n");
-                        } else {
-                            out.push_str("lt_u64;\n");
-                        }
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "lt_i", "lt_u", out);
         }
 
         Le => {
-            out.push_str("le_i64;\n");
+            emit_cmp_op(&lhs_type, &rhs_type, "le_i", "le_u", out);
         }
 
         Gt => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("gt_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        if signed_op {
-                            out.push_str("gt_i32;\n");
-                        } else {
-                            out.push_str("gt_u32;\n");
-                        }
-                    } else {
-                        if signed_op {
-                            out.push_str("gt_i64;\n");
-                        } else {
-                            out.push_str("gt_u64;\n");
-                        }
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "gt_i", "gt_u", out);
         }
 
         Ge => {
-            out.push_str("ge_i64;\n");
+            emit_cmp_op(&lhs_type, &rhs_type, "ge_i", "ge_u", out);
         }
 
         _ => todo!("{:?}", op),

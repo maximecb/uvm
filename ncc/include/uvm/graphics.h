@@ -13,6 +13,9 @@
 // Draw a line using Bresenham's algorithm
 void draw_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
+    assert(x0 < fb_width && y0 < fb_height);
+    assert(x1 < fb_width && y1 < fb_height);
+
     int dx;
     int sx;
     if (x0 < x1)
@@ -30,38 +33,43 @@ void draw_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32
     int sy;
     if (y0 < y1)
     {
-        dy = y1 - y0;
+        dy = y0 - y1;
         sy = 1;
     }
     else
     {
-        dy = y0 - y1;
+        dy = y1 - y0;
         sy = -1;
     }
+    assert(dy <= 0);
 
     int err = dx + dy;
 
     for (;;)
     {
-        if (x0 < fb_width && y0 < fb_height)
-        {
-            u32* pix_ptr = fb + y0 * fb_width + x0;
-            *pix_ptr = color;
-        }
+        // Plot one pixel
+        u32* pix_ptr = fb + (y0 * fb_width) + x0;
+        *pix_ptr = color;
 
         if(x0 == x1 && y0 == y1)
             break;
 
         int e2 = 2 * err;
 
-        if(e2 >= dy)
+        if (e2 >= dy)
         {
+            if (x0 == x1)
+                break;
+
             err = err + dy;
             x0 = x0 + sx;
         }
 
-        if(e2 <= dx)
+        if (e2 <= dx)
         {
+            if (y0 == y1)
+                break;
+
             err = err + dx;
             y0 = y0 + sy;
         }
