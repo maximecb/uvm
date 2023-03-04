@@ -48,8 +48,8 @@ void draw_ball()
 
 void anim_callback()
 {
-    // Clear the screen
-    memset(frame_buffer, 0, sizeof(frame_buffer));
+    // Clear the frame buffer, set all pixels to black
+    memset32(frame_buffer, 0, 800 * 600);
 
     draw_ball();
 

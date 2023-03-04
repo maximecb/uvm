@@ -13,6 +13,10 @@
 // Fill a block of bytes in the heap with a given value.
 #define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
 
+// void memset32(u32* dst, u32 word, u64 num_words)
+// Fill a region of memory with 32-bit values. This is useful for some graphics operations.
+#define memset32(__dst, __word, __num_words) asm (__dst, __word, __num_words) -> void { syscall memset32; }
+
 // u64 vm_heap_size()
 // Report the current heap size in bytes.
 #define vm_heap_size() asm () -> u64 { syscall vm_heap_size; }

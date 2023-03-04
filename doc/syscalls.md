@@ -30,6 +30,14 @@ void memset(u8* dst, u8 value, u64 num_bytes)
 
 Fill a block of bytes in the heap with a given value.
 
+## memset32
+
+```
+void memset32(u32* dst, u32 word, u64 num_words)
+```
+
+Fill a region of memory with 32-bit values. This is useful for some graphics operations.
+
 ## vm_heap_size
 
 ```

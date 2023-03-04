@@ -52,6 +52,30 @@
         "description": "Fill a block of bytes in the heap with a given value."
       },
       {
+        "name": "memset32",
+        "args": [
+          [
+            "u32*",
+            "dst"
+          ],
+          [
+            "u32",
+            "word"
+          ],
+          [
+            "u64",
+            "num_words"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 16,
+        "description": "Fill a region of memory with 32-bit values. This is useful for some graphics operations."
+      },
+      {
         "name": "vm_heap_size",
         "args": [],
         "returns": [
