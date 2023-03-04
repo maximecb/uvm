@@ -5,7 +5,8 @@ into bugs and missing features, but I am looking for collaborators who share the
 
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
-with and approachable to newcomers. There is a short 4-minute [overview of UVM](https://www.youtube.com/watch?v=q9-o45B_qsA)
+with and approachable to newcomers. May also be valuable as a teaching tool. There is a short
+4-minute [overview of UVM](https://www.youtube.com/watch?v=q9-o45B_qsA)
 on YouTube if you'd like to see a quick survey.
 
 Contents:
