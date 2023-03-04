@@ -267,8 +267,7 @@ int X(int w, int c, int h, int e, int S, int s)
         a = -x;
     else
         a = x;
-    y = y ^ 8;      // y ^= 8 unsupported
-    //    d=w||s&&s>=h&&X(0,0,0,21, 0,0)>M; unsupported
+    y = y ^ 8;
     d = 0;
     if (w != 0)
         d = w;
@@ -303,7 +302,7 @@ int X(int w, int c, int h, int e, int S, int s)
                 } else
                     C = 42;
                 while (1) {
-                    p = p + l[C] - 64;  // Unsupported +=
+                    p = p + l[C] - 64;
                     r = I[p];
                     if (!w || p == w) {
                         if (q | p + a - S)
@@ -322,7 +321,7 @@ int X(int w, int c, int h, int e, int S, int s)
                             if (q | E - 7)
                                 t = n;
                             else {
-                                n = n + 2;  // Unsupported +=
+                                n = n + 2;
                                 t = 6 ^ y;
                             }
 
@@ -429,8 +428,6 @@ int X(int w, int c, int h, int e, int S, int s)
                                             }
                                         }
                                     } else {
-                                        // m = g + 2; Doubt
-                                        // m[O - p]; Doubt
                                         m = g;
                                         ++m;
                                         if (*m) {
@@ -542,8 +539,6 @@ void anim_callback()
             int min_y = 44 + j * 64;
             int color;
 
-            // Doesn't work !!!
-//            color = ((j ^ i) & 1) != 0 ? SQUARE_BLACK : SQUARE_WHITE;
             if (((j ^ i) & 1) != 0)
                 color = SQUARE_BLACK;
             else
