@@ -179,30 +179,6 @@ void draw_dots(int xmin, int ymin, int dot_size, char* dots, u32 color)
     }
 }
 
-int glyph_width(char* dots, int dot_size)
-{
-    size_t row_len = (size_t)strchr(dots, '\n') - (size_t)dots;
-    return dot_size * (int)row_len;
-}
-
-int glyph_height(char* dots, int dot_size)
-{
-    int num_rows = 1;
-
-    for (int i = 0;; ++i)
-    {
-        char ch = dots[i];
-
-        if (ch == '\n')
-            ++num_rows;
-
-        if (ch == '\0')
-            break;
-    }
-
-    return dot_size * num_rows;
-}
-
 void draw_rect(int xmin, int ymin, int width, int height, u32 color)
 {
     for (int j = 0; j < height; ++j)
@@ -210,32 +186,6 @@ void draw_rect(int xmin, int ymin, int width, int height, u32 color)
         for (int i = 0; i < width; ++i)
         {
             u32* pix_ptr = frame_buffer + (FRAME_WIDTH) * (ymin + j) + (xmin + i);
-            *pix_ptr = color;
-        }
-    }
-}
-
-void draw_circle(int xmin, int ymin, int size, u32 color)
-{
-    int xmax = xmin + size;
-    int ymax = ymin + size;
-    int radius = size / 2;
-    int cx = xmin + radius;
-    int cy = ymin + radius;
-    int r2 = (radius - 1) * (radius - 1);
-
-    for (int y = ymin; y < ymax; ++y)
-    {
-        for (int x = xmin; x < xmax; ++x)
-        {
-            int dx = x - cx;
-            int dy = y - cy;
-            int dist_sqr = (dx * dx) + (dy * dy);
-
-            if (dist_sqr > r2)
-                continue;
-
-            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = color;
         }
     }
