@@ -12,7 +12,7 @@ int* bar()
     return arr;
 }
 
-void main()
+int main()
 {
     // Logical negation
     assert(!0);
@@ -26,13 +26,16 @@ void main()
     assert(1? 1:0);
     assert((0? 1:3) == 3);
     assert((1? 1:3) == 1);
+    int a = 2 & 2? 8:4;
+    assert(a == 8);
 
+    // Logical AND, OR, NOT
     assert(1 && 2);
     assert(!(1 && 0));
     assert(1 || 0);
     assert(!(0 || 0));
 
-    // Negation of call
+    // Negation of a call
     assert(!foo());
 
     // Prefix and postfix operator precedence
@@ -40,4 +43,6 @@ void main()
     assert(bar()[0] == 77);
     assert(!!bar()[0]);
     assert(bar()[0] + 1 == 78);
+
+    return 0;
 }

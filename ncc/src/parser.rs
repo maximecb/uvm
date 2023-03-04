@@ -437,6 +437,9 @@ const BIN_OPS: [OpInfo; 22] = [
     OpInfo { op_str: ",", prec: 15, op: BinOp::Comma, rtl: false },
 ];
 
+/// Precedence level of the ternary operator (a? b:c)
+const TERNARY_PREC: usize = 13;
+
 /// Try to match a binary operator in the input
 fn match_bin_op(input: &mut Input, no_comma: bool) -> Result<Option<OpInfo>, ParseError>
 {
@@ -472,6 +475,32 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
     // Parse the prefix sub-expression
     expr_stack.push(parse_prefix(input)?);
 
+    // Evaluate the operators on the stack with lower
+    // precedence than a new operator we just read
+    fn eval_lower_prec(op_stack: &mut Vec<OpInfo>, expr_stack: &mut Vec<Expr>, new_op_prec: usize)
+    {
+        while op_stack.len() > 0 {
+            // Get the operator at the top of the stack
+            let top_op = &op_stack[op_stack.len() - 1];
+
+            if top_op.prec <= new_op_prec {
+                assert!(expr_stack.len() >= 2);
+                let rhs = expr_stack.pop().unwrap();
+                let lhs = expr_stack.pop().unwrap();
+                let top_op = op_stack.pop().unwrap();
+
+                expr_stack.push(Expr::Binary {
+                    op: top_op.op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs)
+                });
+            }
+            else {
+                break;
+            }
+        }
+    }
+
     loop
     {
         if input.eof() {
@@ -480,6 +509,10 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
 
         // Ternary operator
         if input.match_token("?")? {
+            // We have to evaluate lower-precedence operators now
+            // in order to use the resulting value for the boolean test
+            eval_lower_prec(&mut op_stack, &mut expr_stack, TERNARY_PREC);
+
             let test_expr = expr_stack.pop().unwrap();
             let then_expr = parse_expr(input)?;
             input.expect_token(":")?;
@@ -520,26 +553,9 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
             break;
         }
 
-        while op_stack.len() > 0 {
-            // Get the operator at the top of the stack
-            let top_op = &op_stack[op_stack.len() - 1];
-
-            if top_op.prec <= new_op.prec {
-                assert!(expr_stack.len() >= 2);
-                let rhs = expr_stack.pop().unwrap();
-                let lhs = expr_stack.pop().unwrap();
-                let top_op = op_stack.pop().unwrap();
-
-                expr_stack.push(Expr::Binary {
-                    op: top_op.op,
-                    lhs: Box::new(lhs),
-                    rhs: Box::new(rhs)
-                });
-            }
-            else {
-                break;
-            }
-        }
+        // Evaluate the operators with lower precedence than
+        // the new operator we just read
+        eval_lower_prec(&mut op_stack, &mut expr_stack, new_op.prec);
 
         op_stack.push(new_op);
 
