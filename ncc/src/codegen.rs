@@ -163,9 +163,10 @@ impl Unit
         }
         else
         {
-            // If there is no main function, the unit should exit
+            // If there is no main function, the unit should exit (do nothing)
             out.push_str("push 0;\n");
             out.push_str("exit;\n");
+            out.push_str("\n");
         }
 
         // Generate code for all the functions

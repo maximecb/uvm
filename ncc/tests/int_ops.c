@@ -56,6 +56,7 @@ int main()
     assert(1 << 1 == 2);
     assert(2 >> 1 == 1);
 
+    assert((1 | 2) == 3);
     assert((1 & 1) == 1);
     assert((3 & 1) == 1);
     assert((1 & 0) == 0);

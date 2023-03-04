@@ -500,7 +500,6 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
         if new_op.is_none() {
             break;
         }
-
         let new_op = new_op.unwrap();
 
         // If this operator evaluates right-to-left,
