@@ -172,6 +172,26 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
             continue;
         }
 
+        // Postfix increment expression
+        if input.match_token("++")? {
+            // Let users know this is not supported. We use panic!() because
+            // backtracking may override our error message.
+            panic!(concat!(
+                "the postfix increment operator (i.e. i++) is not supported, ",
+                "use prefix increment (i.e. ++i) instead."
+            ));
+        }
+
+        // Postfix decrement expression
+        if input.match_token("--")? {
+            // Let users know this is not supported. We use panic!() because
+            // backtracking may override our error message.
+            panic!(concat!(
+                "the postfix increment operator (i.e. i--) is not supported, ",
+                "use prefix increment (i.e. --i) instead."
+            ));
+        }
+
         break;
     }
 
