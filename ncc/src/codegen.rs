@@ -737,8 +737,26 @@ fn gen_bin_op(
         // For now we're ignoring the type
         Add => {
             match (lhs_type, rhs_type) {
+                // Small signed indices need to be sign-extended
+                (Pointer(b), Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
+                }
+
                 (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
                     let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
+                }
+
+                // Small signed indices need to be sign-extended
+                (Array{ elem_type , ..}, Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = elem_type.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
                     out.push_str("add_u64;\n");
@@ -760,7 +778,16 @@ fn gen_bin_op(
         }
 
         Sub => {
-            match (&lhs_type, &rhs_type) {
+            match (lhs_type, rhs_type) {
+                // Small signed indices need to be sign-extended
+                (Pointer(b), Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("sub_u64;\n");
+                }
+
                 (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
                     let elem_sizeof = b.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
@@ -772,7 +799,7 @@ fn gen_bin_op(
                     emit_int_op(out_type, "sub_u", "sub_u", out);
                 }
 
-                _ => todo!("{:?} - {:?}", lhs, rhs)
+                _ => todo!()
             }
         }
 
