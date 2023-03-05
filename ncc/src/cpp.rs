@@ -78,7 +78,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
     let mut params = None;
 
     // If there are macro parameters
-    if input.match_chars(&['(']) {
+    if input.match_char('(') {
         let mut param_vec = Vec::default();
 
         loop
