@@ -11,9 +11,10 @@ pub struct SrcPos
 #[derive(Debug, Clone)]
 pub struct ParseError
 {
-    msg: String,
-    line_no: u32,
-    col_no: u32,
+    pub msg: String,
+    pub src_name: String,
+    pub line_no: u32,
+    pub col_no: u32,
 }
 
 impl ParseError
@@ -22,6 +23,7 @@ impl ParseError
     {
         ParseError {
             msg: msg.to_string(),
+            src_name: input.src_name.clone(),
             line_no: input.line_no,
             col_no: input.col_no
         }
@@ -32,6 +34,7 @@ impl ParseError
     {
         Err(ParseError {
             msg: msg.to_string(),
+            src_name: String::new(),
             line_no: 0,
             col_no: 0,
         })
@@ -55,10 +58,10 @@ pub fn is_ident_ch(ch: char) -> bool
 pub struct Input
 {
     // Input string to be parsed
-    input_str: Vec<char>,
+    input: Vec<char>,
 
-    // Current position in the input string
-    pos: usize,
+    // Current index in the input string
+    idx: usize,
 
     // Input source name
     pub src_name: String,
@@ -82,9 +85,9 @@ impl Input
     pub fn new(input_str: &str, src_name: &str) -> Self
     {
         Input {
-            input_str: input_str.chars().collect(),
+            input: input_str.chars().collect(),
             src_name: src_name.to_string(),
-            pos: 0,
+            idx: 0,
             line_no: 1,
             col_no: 1
         }
@@ -93,18 +96,18 @@ impl Input
     /// Test if the end of the input has been reached
     pub fn eof(&self) -> bool
     {
-        return self.pos >= self.input_str.len();
+        return self.idx >= self.input.len();
     }
 
     /// Peek at a character from the input
     pub fn peek_ch(&self) -> char
     {
-        if self.pos >= self.input_str.len()
+        if self.idx >= self.input.len()
         {
             return '\0';
         }
 
-        return self.input_str[self.pos];
+        return self.input[self.idx];
     }
 
     /// Consume a character from the input
@@ -113,7 +116,7 @@ impl Input
         let ch = self.peek_ch();
 
         // Move to the next char
-        self.pos += 1;
+        self.idx += 1;
 
         if ch == '\n'
         {
@@ -128,18 +131,29 @@ impl Input
         return ch;
     }
 
+    /// Match a single character in the input, no preceding whitespace allowed
+    pub fn match_char(&mut self, ch: char) -> bool
+    {
+        if self.peek_ch() == ch {
+            self.eat_ch();
+            return true;
+        }
+
+        return false;
+    }
+
     /// Match characters in the input, no preceding whitespace allowed
     pub fn match_chars(&mut self, chars: &[char]) -> bool
     {
-        let end_pos = self.pos + chars.len();
+        let end_pos = self.idx + chars.len();
 
-        if end_pos > self.input_str.len() {
+        if end_pos > self.input.len() {
             return false;
         }
 
         // Compare the characters to match
         for i in 0..chars.len() {
-            if chars[i] != self.input_str[self.pos + i] {
+            if chars[i] != self.input[self.idx + i] {
                 return false;
             }
         }
@@ -255,11 +269,11 @@ impl Input
         self.eat_ws()?;
 
         let chars: Vec<char> = keyword.chars().collect();
-        let end_pos = self.pos + chars.len();
+        let end_pos = self.idx + chars.len();
 
         // We can't match as a keyword if the next chars are
         // valid identifier characters
-        if end_pos < self.input_str.len() && is_ident_ch(self.input_str[end_pos]) {
+        if end_pos < self.input.len() && is_ident_ch(self.input[end_pos]) {
             return Ok(false);
         }
 
@@ -316,6 +330,54 @@ impl Input
         }
 
         return Ok(int_val);
+    }
+
+    /// Parse a floating-point number
+    fn parse_float<FloatType: std::str::FromStr>(&mut self) -> Result<FloatType, ParseError>
+    {
+        fn read_digits(input: &mut Input)
+        {
+            loop
+            {
+                let ch = input.peek_ch();
+                if !ch.is_ascii_digit() {
+                    break;
+                }
+                input.eat_ch();
+            }
+        }
+
+        fn read_sign(input: &mut Input)
+        {
+            let _ = input.match_char('+') || input.match_char('-');
+        }
+
+        let start_idx = self.idx;
+
+        // Read optional sign
+        read_sign(self);
+
+        // Read decimal part
+        read_digits(self);
+
+        // Fractional part
+        if self.match_char('.') {
+            read_digits(self);
+        }
+
+        // Exponent
+        if self.match_char('e') || self.match_char('E') {
+            read_sign(self);
+            read_digits(self);
+        }
+
+        let end_idx = self.idx;
+        let number_str: String = self.input[start_idx..end_idx].iter().collect();
+
+        match number_str.parse::<FloatType>() {
+            Ok(float_val) => Ok(float_val),
+            Err(_) => self.parse_error("invalid floating-point value")
+        }
     }
 
     /// Parse a string literal
@@ -391,7 +453,7 @@ impl Input
     pub fn with_backtracking<T, F>(&mut self, parse_fn: F) -> Result<T, ParseError>
     where F : FnOnce(&mut Input) -> Result<T, ParseError>
     {
-        let pos = self.pos;
+        let pos = self.idx;
         let line_no = self.line_no;
         let col_no = self.col_no;
 
@@ -400,7 +462,7 @@ impl Input
 
         if ret.is_err() {
             // Backtrack
-            self.pos = pos;
+            self.idx = pos;
             self.line_no = line_no;
             self.col_no = col_no;
         }
@@ -414,15 +476,15 @@ impl Input
     pub fn collect<T, F>(&mut self, parse_fn: F) -> Result<String, ParseError>
     where F : FnOnce(&mut Input) -> Result<T, ParseError>
     {
-        let pre_pos = self.pos;
+        let pre_pos = self.idx;
 
         // Try to parse using the parsing function provided
         let ret = parse_fn(self);
 
         match ret {
             Ok(v) => {
-                let post_pos = self.pos;
-                let chars = &self.input_str[pre_pos..post_pos];
+                let post_pos = self.idx;
+                let chars = &self.input[pre_pos..post_pos];
                 let slice_str: String = chars.iter().collect();
                 Ok(slice_str)
             }

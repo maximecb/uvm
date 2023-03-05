@@ -150,7 +150,7 @@ impl Unit
                 self.global_vars.push(Global {
                     name: name.clone(),
                     var_type: t.clone(),
-                    init_expr: Expr::String(str_const.clone())
+                    init_expr: Some(Expr::String(str_const.clone()))
                 });
             }
         }
@@ -286,11 +286,18 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {}
+            Expr::Float32(_) => {}
 
             Expr::String(str_const) => {
                 // Get a global symbol for the string constant
                 let decl = env.get_string(str_const);
                 *self = Expr::Ref(decl);
+            }
+
+            Expr::Array(exprs) => {
+                for expr in exprs {
+                    expr.resolve_syms(env)?;
+                }
             }
 
             Expr::Ident(name) => {

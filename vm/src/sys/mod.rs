@@ -132,6 +132,7 @@ impl SysState
         let mut syscalls = HashMap::<String, SysCallFn>::new();
 
         self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
+        self.reg_syscall(MEMSET32, SysCallFn::Fn3_0(memset32));
         self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
         self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
         self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_0(vm_resize_heap));
@@ -173,6 +174,16 @@ fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)
 
     let mem_slice: &mut [u8] = vm.get_heap_slice(dst_ptr, num_bytes);
     mem_slice.fill(val);
+}
+
+fn memset32(vm: &mut VM, dst_ptr: Value, word: Value, num_words: Value)
+{
+    let dst_ptr = dst_ptr.as_usize();
+    let word = word.as_u32();
+    let num_words = num_words.as_usize();
+
+    let mem_slice: &mut [u32] = vm.get_heap_slice(dst_ptr, num_words);
+    mem_slice.fill(word);
 }
 
 fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)

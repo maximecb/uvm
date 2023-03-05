@@ -90,6 +90,13 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(expr);
     }
 
+    // Array literal
+    if ch == '{' {
+        input.eat_ch();
+        let elem_exprs = parse_expr_list(input, "}")?;
+        return Ok(Expr::Array(elem_exprs));
+    }
+
     // Sizeof expression
     if input.match_token("sizeof")? {
         input.expect_token("(")?;
@@ -126,7 +133,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
 /// Parse a function call expression
 fn parse_call_expr(input: &mut Input, callee: Expr) -> Result<Expr, ParseError>
 {
-    let arg_exprs = parse_arg_exprs(input)?;
+    let arg_exprs = parse_expr_list(input, ")")?;
 
     Ok(Expr::Call {
         callee: Box::new(callee),
@@ -163,6 +170,26 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
             };
 
             continue;
+        }
+
+        // Postfix increment expression
+        if input.match_token("++")? {
+            // Let users know this is not supported. We use panic!() because
+            // backtracking may override our error message.
+            panic!(concat!(
+                "the postfix increment operator (i.e. i++) is not supported, ",
+                "use prefix increment (i.e. ++i) instead."
+            ));
+        }
+
+        // Postfix decrement expression
+        if input.match_token("--")? {
+            // Let users know this is not supported. We use panic!() because
+            // backtracking may override our error message.
+            panic!(concat!(
+                "the postfix increment operator (i.e. i--) is not supported, ",
+                "use prefix increment (i.e. --i) instead."
+            ));
         }
 
         break;
@@ -280,7 +307,7 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
 }
 
 /// Parse a list of argument expressions
-fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
+fn parse_expr_list(input: &mut Input, end_token: &str) -> Result<Vec<Expr>, ParseError>
 {
     let mut arg_exprs = Vec::default();
 
@@ -291,14 +318,14 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
             return input.parse_error("unexpected end of input in call expression");
         }
 
-        if input.match_token(")")? {
+        if input.match_token(end_token)? {
             break;
         }
 
         // Parse one argument
         arg_exprs.push(parse_infix_expr(input, true)?);
 
-        if input.match_token(")")? {
+        if input.match_token(end_token)? {
             break;
         }
 
@@ -314,7 +341,7 @@ fn parse_arg_exprs(input: &mut Input) -> Result<Vec<Expr>, ParseError>
 fn parse_asm_expr(input: &mut Input) -> Result<Expr, ParseError>
 {
     input.expect_token("(")?;
-    let arg_exprs = parse_arg_exprs(input)?;
+    let arg_exprs = parse_expr_list(input, ")")?;
     input.expect_token("->")?;
     let out_type = parse_type(input)?;
     input.expect_token("{")?;
@@ -410,6 +437,9 @@ const BIN_OPS: [OpInfo; 22] = [
     OpInfo { op_str: ",", prec: 15, op: BinOp::Comma, rtl: false },
 ];
 
+/// Precedence level of the ternary operator (a? b:c)
+const TERNARY_PREC: usize = 13;
+
 /// Try to match a binary operator in the input
 fn match_bin_op(input: &mut Input, no_comma: bool) -> Result<Option<OpInfo>, ParseError>
 {
@@ -445,6 +475,32 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
     // Parse the prefix sub-expression
     expr_stack.push(parse_prefix(input)?);
 
+    // Evaluate the operators on the stack with lower
+    // precedence than a new operator we just read
+    fn eval_lower_prec(op_stack: &mut Vec<OpInfo>, expr_stack: &mut Vec<Expr>, new_op_prec: usize)
+    {
+        while op_stack.len() > 0 {
+            // Get the operator at the top of the stack
+            let top_op = &op_stack[op_stack.len() - 1];
+
+            if top_op.prec <= new_op_prec {
+                assert!(expr_stack.len() >= 2);
+                let rhs = expr_stack.pop().unwrap();
+                let lhs = expr_stack.pop().unwrap();
+                let top_op = op_stack.pop().unwrap();
+
+                expr_stack.push(Expr::Binary {
+                    op: top_op.op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs)
+                });
+            }
+            else {
+                break;
+            }
+        }
+    }
+
     loop
     {
         if input.eof() {
@@ -453,6 +509,10 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
 
         // Ternary operator
         if input.match_token("?")? {
+            // We have to evaluate lower-precedence operators now
+            // in order to use the resulting value for the boolean test
+            eval_lower_prec(&mut op_stack, &mut expr_stack, TERNARY_PREC);
+
             let test_expr = expr_stack.pop().unwrap();
             let then_expr = parse_expr(input)?;
             input.expect_token(":")?;
@@ -473,7 +533,6 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
         if new_op.is_none() {
             break;
         }
-
         let new_op = new_op.unwrap();
 
         // If this operator evaluates right-to-left,
@@ -494,26 +553,9 @@ fn parse_infix_expr(input: &mut Input, no_comma: bool) -> Result<Expr, ParseErro
             break;
         }
 
-        while op_stack.len() > 0 {
-            // Get the operator at the top of the stack
-            let top_op = &op_stack[op_stack.len() - 1];
-
-            if top_op.prec <= new_op.prec {
-                assert!(expr_stack.len() >= 2);
-                let rhs = expr_stack.pop().unwrap();
-                let lhs = expr_stack.pop().unwrap();
-                let top_op = op_stack.pop().unwrap();
-
-                expr_stack.push(Expr::Binary {
-                    op: top_op.op,
-                    lhs: Box::new(lhs),
-                    rhs: Box::new(rhs)
-                });
-            }
-            else {
-                break;
-            }
-        }
+        // Evaluate the operators with lower precedence than
+        // the new operator we just read
+        eval_lower_prec(&mut op_stack, &mut expr_stack, new_op.prec);
 
         op_stack.push(new_op);
 
@@ -579,9 +621,7 @@ fn parse_decl(input: &mut Input) -> Result<(Type, String, Option<Expr>), ParseEr
 
     let init_expr = if input.match_token("=")? {
         Some(parse_expr(input)?)
-    }
-    else
-    {
+    } else {
         None
     };
 
@@ -793,6 +833,8 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
             }
         }
 
+        "float" => Ok(Type::Float(32)),
+
         _ => input.parse_error(&format!("unknown type {}", keyword))
     }
 
@@ -923,11 +965,11 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
 
         // Global variable initialization
         let init_expr = if input.match_token("=")? {
-            parse_expr(input)?
+            Some(parse_expr(input)?)
         }
         else
         {
-            Expr::Int(0)
+            None
         };
 
         // This must be a global variable declaration
@@ -1056,6 +1098,13 @@ mod tests
 
         // Should fail
         parse_fails("u64x;");
+    }
+
+    #[test]
+    fn arrays()
+    {
+        parse_ok("u8 array[3] = {};");
+        parse_ok("u8 array[3] = { 0, 1, 2 };");
     }
 
     #[test]

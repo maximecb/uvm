@@ -1,3 +1,9 @@
+/*
+A string hashing function with a good distribution.
+Created for the sdbm public domain database library,
+used in Berkeley DB and elsewhere.
+*/
+
 #include <stdint.h>
 #include <assert.h>
 

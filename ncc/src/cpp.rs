@@ -29,7 +29,7 @@ impl Input
     }
 
     /// Read a character string literal and pass it to the output as-is
-    fn read_string(&mut self) -> Result<String, ParseError>
+    fn read_string(&mut self, close_ch: char) -> Result<String, ParseError>
     {
         let mut output = String::new();
 
@@ -45,7 +45,7 @@ impl Input
             let ch = self.eat_ch();
             output.push(ch);
 
-            if ch == '"' {
+            if ch == close_ch {
                 break;
             }
 
@@ -78,7 +78,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
     let mut params = None;
 
     // If there are macro parameters
-    if input.match_chars(&['(']) {
+    if input.match_char('(') {
         let mut param_vec = Vec::default();
 
         loop
@@ -117,9 +117,9 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
             break;
         }
 
-        // If this is a character string
-        if ch == '"' {
-            text += &input.read_string()?;
+        // If this is a character string or character literal
+        if ch == '"' || ch == '\'' {
+            text += &input.read_string(ch)?;
             continue;
         }
 
@@ -263,9 +263,9 @@ fn read_macro_arg(input: &mut Input, depth: usize) -> Result<String, ParseError>
 
         let ch = input.peek_ch();
 
-        // If this is a character string
-        if ch == '"' {
-            output += &input.read_string()?;
+        // If this is a character string or character literal
+        if ch == '"' || ch == '\'' {
+            output += &input.read_string(ch)?;
             continue;
         }
 
@@ -478,9 +478,9 @@ fn process_input_rec(
             }
         }
 
-        // If this is a character string
-        if ch == '"' {
-            output += &input.read_string()?;
+        // If this is a character string or character literal
+        if ch == '"' || ch == '\'' {
+            output += &input.read_string(ch)?;
             continue;
         }
 

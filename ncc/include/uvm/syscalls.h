@@ -13,6 +13,10 @@
 // Fill a block of bytes in the heap with a given value.
 #define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
 
+// void memset32(u32* dst, u32 word, u64 num_words)
+// Fill a region of memory with 32-bit values. This is useful for some graphics operations.
+#define memset32(__dst, __word, __num_words) asm (__dst, __word, __num_words) -> void { syscall memset32; }
+
 // u64 vm_heap_size()
 // Report the current heap size in bytes.
 #define vm_heap_size() asm () -> u64 { syscall vm_heap_size; }
@@ -78,6 +82,9 @@
 #define KEY_RETURN 10
 #define KEY_ESCAPE 27
 #define KEY_SPACE 32
+#define KEY_COMMA 44
+#define KEY_PERIOD 46
+#define KEY_SLASH 47
 #define KEY_NUM0 48
 #define KEY_NUM1 49
 #define KEY_NUM2 50
@@ -88,12 +95,35 @@
 #define KEY_NUM7 55
 #define KEY_NUM8 56
 #define KEY_NUM9 57
+#define KEY_COLON 58
+#define KEY_SEMICOLON 59
+#define KEY_EQUALS 61
 #define KEY_A 65
 #define KEY_B 66
 #define KEY_C 67
 #define KEY_D 68
+#define KEY_E 69
+#define KEY_F 70
+#define KEY_G 71
+#define KEY_H 72
+#define KEY_I 73
+#define KEY_J 74
+#define KEY_K 75
+#define KEY_L 76
+#define KEY_M 77
+#define KEY_N 78
+#define KEY_O 79
+#define KEY_P 80
+#define KEY_Q 81
+#define KEY_R 82
 #define KEY_S 83
+#define KEY_T 84
+#define KEY_U 85
+#define KEY_V 86
 #define KEY_W 87
+#define KEY_X 88
+#define KEY_Y 89
+#define KEY_Z 90
 #define KEY_LEFT 16001
 #define KEY_RIGHT 16002
 #define KEY_UP 16003

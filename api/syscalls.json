@@ -52,6 +52,30 @@
         "description": "Fill a block of bytes in the heap with a given value."
       },
       {
+        "name": "memset32",
+        "args": [
+          [
+            "u32*",
+            "dst"
+          ],
+          [
+            "u32",
+            "word"
+          ],
+          [
+            "u64",
+            "num_words"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 16,
+        "description": "Fill a region of memory with 32-bit values. This is useful for some graphics operations."
+      },
+      {
         "name": "vm_heap_size",
         "args": [],
         "returns": [
@@ -360,6 +384,21 @@
         32
       ],
       [
+        "KEY_COMMA",
+        "u16",
+        44
+      ],
+      [
+        "KEY_PERIOD",
+        "u16",
+        46
+      ],
+      [
+        "KEY_SLASH",
+        "u16",
+        47
+      ],
+      [
         "KEY_NUM0",
         "u16",
         48
@@ -410,6 +449,21 @@
         57
       ],
       [
+        "KEY_COLON",
+        "u16",
+        58
+      ],
+      [
+        "KEY_SEMICOLON",
+        "u16",
+        59
+      ],
+      [
+        "KEY_EQUALS",
+        "u16",
+        61
+      ],
+      [
         "KEY_A",
         "u16",
         65
@@ -430,14 +484,114 @@
         68
       ],
       [
+        "KEY_E",
+        "u16",
+        69
+      ],
+      [
+        "KEY_F",
+        "u16",
+        70
+      ],
+      [
+        "KEY_G",
+        "u16",
+        71
+      ],
+      [
+        "KEY_H",
+        "u16",
+        72
+      ],
+      [
+        "KEY_I",
+        "u16",
+        73
+      ],
+      [
+        "KEY_J",
+        "u16",
+        74
+      ],
+      [
+        "KEY_K",
+        "u16",
+        75
+      ],
+      [
+        "KEY_L",
+        "u16",
+        76
+      ],
+      [
+        "KEY_M",
+        "u16",
+        77
+      ],
+      [
+        "KEY_N",
+        "u16",
+        78
+      ],
+      [
+        "KEY_O",
+        "u16",
+        79
+      ],
+      [
+        "KEY_P",
+        "u16",
+        80
+      ],
+      [
+        "KEY_Q",
+        "u16",
+        81
+      ],
+      [
+        "KEY_R",
+        "u16",
+        82
+      ],
+      [
         "KEY_S",
         "u16",
         83
       ],
       [
+        "KEY_T",
+        "u16",
+        84
+      ],
+      [
+        "KEY_U",
+        "u16",
+        85
+      ],
+      [
+        "KEY_V",
+        "u16",
+        86
+      ],
+      [
         "KEY_W",
         "u16",
         87
+      ],
+      [
+        "KEY_X",
+        "u16",
+        88
+      ],
+      [
+        "KEY_Y",
+        "u16",
+        89
+      ],
+      [
+        "KEY_Z",
+        "u16",
+        90
       ],
       [
         "KEY_LEFT",

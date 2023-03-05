@@ -206,6 +206,17 @@ impl Input
         Ok(())
     }
 
+    /// Match a single character in the input, no preceding whitespace allowed
+    pub fn match_char(&mut self, ch: char) -> bool
+    {
+        if self.peek_ch() == ch {
+            self.eat_ch();
+            return true;
+        }
+
+        return false;
+    }
+
     /// Check if the input matches a given string
     fn match_str(&mut self, token: &str) -> bool
     {
@@ -299,7 +310,7 @@ impl Input
 
         fn read_sign(input: &mut Input)
         {
-            let _ = input.match_str("+") || input.match_str("-");
+            let _ = input.match_char('+') || input.match_char('-');
         }
 
         let start_idx = self.idx;
@@ -311,12 +322,12 @@ impl Input
         read_digits(self);
 
         // Fractional part
-        if self.match_str(".") {
+        if self.match_char('.') {
             read_digits(self);
         }
 
         // Exponent
-        if self.match_str("e") || self.match_str("E") {
+        if self.match_char('e') || self.match_char('E') {
             read_sign(self);
             read_digits(self);
         }
@@ -998,6 +1009,14 @@ impl Assembler
             "sub_f32" => self.code.push_op(Op::sub_f32),
             "mul_f32" => self.code.push_op(Op::mul_f32),
             "div_f32" => self.code.push_op(Op::div_f32),
+
+            "sin_f32" => self.code.push_op(Op::sin_f32),
+            "cos_f32" => self.code.push_op(Op::cos_f32),
+            "tan_f32" => self.code.push_op(Op::tan_f32),
+            "asin_f32" => self.code.push_op(Op::asin_f32),
+            "acos_f32" => self.code.push_op(Op::acos_f32),
+            "atan_f32" => self.code.push_op(Op::atan_f32),
+            "sqrt_f32" => self.code.push_op(Op::sqrt_f32),
 
             "eq_f32" => self.code.push_op(Op::eq_f32),
             "ne_f32" => self.code.push_op(Op::ne_f32),

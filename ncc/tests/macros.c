@@ -52,6 +52,8 @@ void main()
     BAR(")");
     BAR("\")\"");
     BAR(",");
+    BAR(',');
+    BAR('"');
 
     // Recursive macro
     REC_MACRO;

@@ -114,8 +114,10 @@ pub enum Op
     mod_i64,
 
     // TODO: arithmetic with overflow
-    // I think these instructions shouldn't jump directly?
-    // depends. We don't need to worry about compactness.
+    // These instructions probably shouldn't jump directly,
+    // as this would add more branch instructions to the
+    // instruction set.
+    // We don't need to worry about compactness.
     // add_u64_ovf,
     // sub_u64_ovf,
     // mul_i64_ovf, // produces two 64-bit words of output
@@ -132,10 +134,6 @@ pub enum Op
     gt_i64,
     ge_i64,
 
-    //
-    // TODO: 32-bit integer bitwise, arithmetic & comparison operations
-    //
-
     // Integer sign extension
     sx_i8_i32,
     sx_i8_i64,
@@ -148,21 +146,20 @@ pub enum Op
     trunc_u16,
     trunc_u32,
 
-    // NOTE: may want to wait for this because it's not RISC,
-    //       but it could help reduce code flag
-    // NOTE: should this insn have a jump offset built in?
-    // - no, for consistency, let jz/jnz handle that
-    // Test flag bits (logical and) with a constant
-    // This can be used for tag bit tests (e.g. fixnum test)
-    // Do we want to test just one specific bit, bit_idx:u8?
-    // test_bit_z <bit_idx:u8>
-    // test_bit_nz <bit_idx:u8>
-
     // 32-bit floating-point arithmetic
     add_f32,
     sub_f32,
     mul_f32,
     div_f32,
+
+    // Floating-point math functions
+    sin_f32,
+    cos_f32,
+    tan_f32,
+    asin_f32,
+    acos_f32,
+    atan_f32,
+    sqrt_f32,
 
     // 32-bit floating-point comparison instructions
     eq_f32,
@@ -171,15 +168,6 @@ pub enum Op
     le_f32,
     gt_f32,
     ge_f32,
-
-    // Floating-point math functions
-    cos_f32,
-    sin_f32,
-    tan_f32,
-    acos_f32,
-    asin_f32,
-    atan_f32,
-    sqrt_f32,
 
     // Load a value at a given adress
     // store (addr)
@@ -203,6 +191,16 @@ pub enum Op
     // If we save 24 bits for the offset, then that gives us quite a lot
     load_global_u64 <addr:u24>
     */
+
+    // NOTE: may want to wait for this because it's not RISC,
+    //       but it could help reduce code flag
+    // NOTE: should this insn have a jump offset built in?
+    // - no, for consistency, let jz/jnz handle that
+    // Test flag bits (logical and) with a constant
+    // This can be used for tag bit tests (e.g. fixnum test)
+    // Do we want to test just one specific bit, bit_idx:u8?
+    // test_bit_z <bit_idx:u8>
+    // test_bit_nz <bit_idx:u8>
 
     // TODO: we should probably have 8-bit offset versions of jump insns
     // However, this can wait. Premature optimization.
@@ -1145,10 +1143,50 @@ impl VM
                     self.push(v0.as_f32() * v1.as_f32());
                 }
 
+                // Should return NaN for invalid inputs
                 Op::div_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(v0.as_f32() / v1.as_f32());
+                }
+
+                Op::sin_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.sin());
+                }
+
+                Op::cos_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.cos());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::tan_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.tan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::asin_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.asin());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::acos_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.acos());
+                }
+
+                Op::atan_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.atan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::sqrt_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.sqrt());
                 }
 
                 Op::eq_f32 => {

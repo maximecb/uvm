@@ -11,7 +11,7 @@ u32 CH_DOTS_Y = 7;
 u32 frame_buffer[480_000];
 
 // Strings mapping the dots for each character
-char* CHAR_DOTS[256] = 0;
+char* CHAR_DOTS[256];
 
 u64 start_time = 0;
 

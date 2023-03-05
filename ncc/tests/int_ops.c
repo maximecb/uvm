@@ -35,16 +35,18 @@ int main()
     int c = a + b;
     assert (c == 3);
 
-    int x = 2;
-    int y = 3;
-    assert(x - y == -1);
-
     // Signed vs unsigned comparison
     assert(2 > 1);
     assert(-2 < -1);
     assert(-1 < 3);
     assert((uint64_t)-1 == -1);
     assert(2 - 3 == -1);
+    int x = 2;
+    int y = 3;
+    assert(x - y == -1);
+    int z = x - y;
+    assert(z < 0);
+    assert(z <= 0);
 
     // Unsigned modulo
     int i = -1;
@@ -54,6 +56,7 @@ int main()
     assert(1 << 1 == 2);
     assert(2 >> 1 == 1);
 
+    assert((1 | 2) == 3);
     assert((1 & 1) == 1);
     assert((3 & 1) == 1);
     assert((1 & 0) == 0);

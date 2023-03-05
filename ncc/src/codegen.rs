@@ -23,6 +23,59 @@ impl SymGen
 // FIXME: ideally, all error checking should be done before we get to the
 // codegen, so that codegen can't return an error?
 
+fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Result<(), ParseError>
+{
+    // Get the type of the initializer expression
+    let init_expr_type = init_expr.eval_type()?;
+
+    let (array_elem_t, array_size_expr) = match array_type {
+        Type::Array { elem_type, size_expr } => (elem_type.as_ref().clone(), size_expr),
+        _ => panic!()
+    };
+
+    let (init_elem_t, init_size_expr) = match init_expr_type {
+        Type::Array { elem_type, size_expr } => (elem_type.as_ref().clone(), size_expr),
+        _ => panic!()
+    };
+
+    let elem_exprs = match init_expr {
+        Expr::Array(elem_exprs) => elem_exprs,
+        _ => return ParseError::msg_only("invalid initializer for global array variable")
+    };
+
+    match array_elem_t {
+        // Initializing an array of signed integers
+        Type::Int(n) => {
+            for expr in elem_exprs {
+                match expr {
+                    Expr::Int(v) => out.push_str(&format!(".i{} {};\n", n, v)),
+                    _ => panic!()
+                }
+            }
+        }
+
+        // Initializing an array of unsigned integers
+        Type::UInt(n) => {
+            for expr in elem_exprs {
+                match expr {
+                    Expr::Int(v) => out.push_str(&format!(".u{} {};\n", n, v)),
+                    _ => panic!()
+                }
+            }
+        }
+
+        Type::Array {..} => {
+            for expr in elem_exprs {
+                gen_array_init(&array_elem_t, expr, out)?;
+            }
+        }
+
+        _ => panic!()
+    }
+
+    Ok(())
+}
+
 impl Unit
 {
     pub fn gen_code(&self) -> Result<String, ParseError>
@@ -56,24 +109,28 @@ impl Unit
             out.push_str(&format!("{}:\n", global.name));
 
             match (&global.var_type, &global.init_expr) {
-                (Type::UInt(n), Expr::Int(v)) => {
+                (_, None) => {
+                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
+                }
+
+                (Type::UInt(n), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".u{} {};\n", n, v))
                 }
 
-                (Type::Int(n), Expr::Int(v)) => {
+                (Type::Int(n), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".i{} {};\n", n, v))
                 }
 
-                (Type::Pointer(_), Expr::Int(v)) => {
+                (Type::Pointer(_), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
 
-                (Type::Pointer(_), Expr::String(s)) => {
+                (Type::Pointer(_), Some(Expr::String(s))) => {
                     out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
                 }
 
-                (Type::Array {..}, Expr::Int(0)) => {
-                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
+                (Type::Array {..}, Some(init_expr)) => {
+                    gen_array_init(&global.var_type, &init_expr, &mut out)?;
                 }
 
                 _ => todo!()
@@ -106,9 +163,10 @@ impl Unit
         }
         else
         {
-            // If there is no main function, the unit should exit
+            // If there is no main function, the unit should exit (do nothing)
             out.push_str("push 0;\n");
             out.push_str("exit;\n");
+            out.push_str("\n");
         }
 
         // Generate code for all the functions
@@ -434,7 +492,7 @@ impl Expr
                     UnOp::Deref => {
                         let child_type = child.eval_type()?;
 
-                        // If this is a pointer to an array, this is a noop
+                        // If this is a pointer to an array, this is a no-op
                         // because a pointer to an array is the array itself
                         if let Pointer(t) = child_type {
                             if let Array { .. } = t.as_ref() {
@@ -443,19 +501,35 @@ impl Expr
                         }
 
                         let ptr_type = child.eval_type()?;
-                        let elem_size = ptr_type.elem_type().sizeof();
-                        let elem_bits = elem_size * 8;
+                        let elem_bits = ptr_type.elem_type().num_bits();
                         out.push_str(&format!("load_u{};\n", elem_bits));
                     }
 
                     UnOp::Minus => {
-                        out.push_str(&format!("push 0;\n"));
-                        out.push_str(&format!("swap;\n"));
-                        out.push_str(&format!("sub_u64;\n"));
+                        let child_type = child.eval_type()?;
+                        let num_bits = child_type.num_bits();
+
+                        if num_bits <= 32 {
+                            if child_type.is_signed() && num_bits < 32 {
+                                out.push_str(&format!("sx_i{}_i32;\n", num_bits));
+                            }
+                            out.push_str(&format!("push -1;\n"));
+                            out.push_str(&format!("mul_u32;\n"));
+                        } else {
+                            out.push_str(&format!("push -1;\n"));
+                            out.push_str(&format!("mul_u64;\n"));
+                        }
                     }
 
                     UnOp::BitNot => {
-                        out.push_str("not_u64;\n");
+                        let child_type = child.eval_type()?;
+                        let num_bits = child_type.num_bits();
+                        let op_bits = if num_bits <= 32 { 32 } else { 64 };
+                        out.push_str(&format!("not_u{};\n", op_bits));
+
+                        if num_bits < 32 {
+                            out.push_str(&format!("trunc_u{};\n", num_bits));
+                        }
                     }
 
                     // Logical negation
@@ -527,7 +601,7 @@ impl Expr
 fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
 {
     // Type checking should have caught invalid types before this point
-    let out_bits = out_type.sizeof() * 8;
+    let out_bits = out_type.num_bits();
     assert!(out_bits <= 64);
 
     let op_bits = if out_bits == 64 { 64 } else { 32 };
@@ -536,6 +610,31 @@ fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut St
 
     if out_bits < 32 {
         out.push_str(&format!("trunc_u{};\n", out_bits));
+    }
+}
+
+/// Emit code for a comparison operation
+fn emit_cmp_op(lhs_type: &Type, rhs_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+{
+    let is_signed = lhs_type.is_signed() && rhs_type.is_signed();
+
+    let num_bits = match (lhs_type, rhs_type) {
+        (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => *max(m, n),
+        _ => 64
+    };
+
+    if num_bits <= 32 {
+        if is_signed {
+            out.push_str(&format!("{}32;\n", signed_op));
+        } else {
+            out.push_str(&format!("{}32;\n", unsigned_op));
+        }
+    } else {
+        if is_signed {
+            out.push_str(&format!("{}64;\n", signed_op));
+        } else {
+            out.push_str(&format!("{}64;\n", unsigned_op));
+        }
     }
 }
 
@@ -647,8 +746,26 @@ fn gen_bin_op(
         // For now we're ignoring the type
         Add => {
             match (lhs_type, rhs_type) {
+                // Small signed indices need to be sign-extended
+                (Pointer(b), Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
+                }
+
                 (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
                     let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("add_u64;\n");
+                }
+
+                // Small signed indices need to be sign-extended
+                (Array{ elem_type , ..}, Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = elem_type.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
                     out.push_str("mul_u64;\n");
                     out.push_str("add_u64;\n");
@@ -670,7 +787,16 @@ fn gen_bin_op(
         }
 
         Sub => {
-            match (&lhs_type, &rhs_type) {
+            match (lhs_type, rhs_type) {
+                // Small signed indices need to be sign-extended
+                (Pointer(b), Int(n)) if n <= 32 => {
+                    out.push_str(&format!("sx_i{}_i64;\n", n));
+                    let elem_sizeof = b.sizeof();
+                    out.push_str(&format!("push {};\n", elem_sizeof));
+                    out.push_str("mul_u64;\n");
+                    out.push_str("sub_u64;\n");
+                }
+
                 (Pointer(b), UInt(n)) | (Pointer(b), Int(n)) => {
                     let elem_sizeof = b.sizeof();
                     out.push_str(&format!("push {};\n", elem_sizeof));
@@ -682,7 +808,7 @@ fn gen_bin_op(
                     emit_int_op(out_type, "sub_u", "sub_u", out);
                 }
 
-                _ => todo!("{:?} - {:?}", lhs, rhs)
+                _ => todo!()
             }
         }
 
@@ -705,99 +831,27 @@ fn gen_bin_op(
         }
 
         Eq => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("eq_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        out.push_str("eq_u32;\n");
-                    } else {
-                        out.push_str("eq_u64;\n");
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "eq_u", "eq_u", out);
         }
 
         Ne => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("ne_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        out.push_str("ne_u32;\n");
-                    } else {
-                        out.push_str("ne_u64;\n");
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "ne_u", "ne_u", out);
         }
 
         Lt => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("lt_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        if signed_op {
-                            out.push_str("lt_i32;\n");
-                        } else {
-                            out.push_str("lt_u32;\n");
-                        }
-                    } else {
-                        if signed_op {
-                            out.push_str("lt_i64;\n");
-                        } else {
-                            out.push_str("lt_u64;\n");
-                        }
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "lt_i", "lt_u", out);
         }
 
         Le => {
-            out.push_str("le_i64;\n");
+            emit_cmp_op(&lhs_type, &rhs_type, "le_i", "le_u", out);
         }
 
         Gt => {
-            match (lhs_type, rhs_type) {
-                (Pointer(_), _) | (_, Pointer(_)) => {
-                    out.push_str("gt_u64;\n");
-                }
-
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    if m <= 32 && n <= 32 {
-                        if signed_op {
-                            out.push_str("gt_i32;\n");
-                        } else {
-                            out.push_str("gt_u32;\n");
-                        }
-                    } else {
-                        if signed_op {
-                            out.push_str("gt_i64;\n");
-                        } else {
-                            out.push_str("gt_u64;\n");
-                        }
-                    }
-                }
-
-                _ => todo!()
-            }
+            emit_cmp_op(&lhs_type, &rhs_type, "gt_i", "gt_u", out);
         }
 
         Ge => {
-            out.push_str("ge_i64;\n");
+            emit_cmp_op(&lhs_type, &rhs_type, "ge_i", "ge_u", out);
         }
 
         _ => todo!("{:?}", op),
@@ -822,8 +876,7 @@ fn gen_assign(
             match op {
                 UnOp::Deref => {
                     let ptr_type = child.eval_type()?;
-                    let elem_size = ptr_type.elem_type().sizeof();
-                    let elem_bits = elem_size * 8;
+                    let elem_bits = ptr_type.elem_type().num_bits();
 
                     // If the output value is needed
                     if need_value {

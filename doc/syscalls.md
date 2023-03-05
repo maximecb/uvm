@@ -30,6 +30,14 @@ void memset(u8* dst, u8 value, u64 num_bytes)
 
 Fill a block of bytes in the heap with a given value.
 
+## memset32
+
+```
+void memset32(u32* dst, u32 word, u64 num_words)
+```
+
+Fill a region of memory with 32-bit values. This is useful for some graphics operations.
+
 ## vm_heap_size
 
 ```
@@ -178,6 +186,9 @@ These are the constants associated with the window subsystem:
 - `u16 KEY_RETURN = 10`
 - `u16 KEY_ESCAPE = 27`
 - `u16 KEY_SPACE = 32`
+- `u16 KEY_COMMA = 44`
+- `u16 KEY_PERIOD = 46`
+- `u16 KEY_SLASH = 47`
 - `u16 KEY_NUM0 = 48`
 - `u16 KEY_NUM1 = 49`
 - `u16 KEY_NUM2 = 50`
@@ -188,12 +199,35 @@ These are the constants associated with the window subsystem:
 - `u16 KEY_NUM7 = 55`
 - `u16 KEY_NUM8 = 56`
 - `u16 KEY_NUM9 = 57`
+- `u16 KEY_COLON = 58`
+- `u16 KEY_SEMICOLON = 59`
+- `u16 KEY_EQUALS = 61`
 - `u16 KEY_A = 65`
 - `u16 KEY_B = 66`
 - `u16 KEY_C = 67`
 - `u16 KEY_D = 68`
+- `u16 KEY_E = 69`
+- `u16 KEY_F = 70`
+- `u16 KEY_G = 71`
+- `u16 KEY_H = 72`
+- `u16 KEY_I = 73`
+- `u16 KEY_J = 74`
+- `u16 KEY_K = 75`
+- `u16 KEY_L = 76`
+- `u16 KEY_M = 77`
+- `u16 KEY_N = 78`
+- `u16 KEY_O = 79`
+- `u16 KEY_P = 80`
+- `u16 KEY_Q = 81`
+- `u16 KEY_R = 82`
 - `u16 KEY_S = 83`
+- `u16 KEY_T = 84`
+- `u16 KEY_U = 85`
+- `u16 KEY_V = 86`
 - `u16 KEY_W = 87`
+- `u16 KEY_X = 88`
+- `u16 KEY_Y = 89`
+- `u16 KEY_Z = 90`
 - `u16 KEY_LEFT = 16001`
 - `u16 KEY_RIGHT = 16002`
 - `u16 KEY_UP = 16003`

@@ -38,7 +38,31 @@ impl Type
             (Int(m), Int(n)) if m == n => true,
             (Float(m), Float(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
+
+            (Array { elem_type: elem_ta, size_expr: size_a }, Array { elem_type: elem_tb, size_expr: size_b } )  => {
+                if !elem_ta.eq(elem_tb) {
+                    false
+                } else {
+                    match (size_a.as_ref(), size_b.as_ref()) {
+                        (Expr::Int(a), Expr::Int(b)) => a == b,
+                        _ => panic!()
+                    }
+                }
+            }
+
             _ => false
+        }
+    }
+
+    /// Produce the size of this type in bits
+    /// Valid for pointer/integer/float types only
+    pub fn num_bits(&self) -> usize
+    {
+        use Type::*;
+        match self {
+            UInt(num_bits) | Int(num_bits) | Float(num_bits) => *num_bits,
+            Pointer(_) => 64,
+            _ => panic!()
         }
     }
 
@@ -193,6 +217,10 @@ pub enum Expr
 {
     Int(i128),
     String(String),
+    Float32(f32),
+
+    // Array literal
+    Array(Vec<Expr>),
 
     Ident(String),
 
@@ -235,6 +263,7 @@ pub enum Expr
         args: Vec<Expr>,
     },
 
+    // Inline assembly
     Asm {
         text: String,
         args: Vec<Expr>,
@@ -333,7 +362,7 @@ pub struct Global
     pub var_type: Type,
 
     // Initialization expression
-    pub init_expr: Expr,
+    pub init_expr: Option<Expr>,
 }
 
 /// Top-level unit (e.g. source file)

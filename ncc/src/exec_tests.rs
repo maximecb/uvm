@@ -45,8 +45,10 @@ fn exec_tests()
     let mut parse_only = HashSet::new();
     parse_only.insert("ball.c");
     parse_only.insert("attackers.c");
+    parse_only.insert("chess.c");
     parse_only.insert("counter.c");
     parse_only.insert("gameoflife.c");
+    parse_only.insert("monogram.c");
     parse_only.insert("paint.c");
     parse_only.insert("snake.c");
 

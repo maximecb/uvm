@@ -360,6 +360,8 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
     match sdl_keycode {
         // This mapping is incomplete, but people need WASD!
         Keycode::A => Some(KEY_A),
+        Keycode::B => Some(KEY_B),
+        Keycode::C => Some(KEY_C),
         Keycode::D => Some(KEY_D),
         Keycode::S => Some(KEY_S),
         Keycode::W => Some(KEY_W),
@@ -374,6 +376,13 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::Num7 => Some(KEY_NUM7),
         Keycode::Num8 => Some(KEY_NUM8),
         Keycode::Num9 => Some(KEY_NUM9),
+
+        Keycode::Comma => Some(KEY_COMMA),
+        Keycode::Period => Some(KEY_PERIOD),
+        Keycode::Slash => Some(KEY_SLASH),
+        Keycode::Colon => Some(KEY_COLON),
+        Keycode::Semicolon => Some(KEY_SEMICOLON),
+        Keycode::Equals => Some(KEY_EQUALS),
 
         Keycode::Left => Some(KEY_LEFT),
         Keycode::Right => Some(KEY_RIGHT),

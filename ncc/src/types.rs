@@ -160,9 +160,39 @@ impl Expr
                 }
             }
 
+            Expr::Float32(val) => {
+                Ok(Float(32))
+            }
+
             Expr::String(_) => {
                 // TODO: this type should be const char
                 Ok(Pointer(Box::new(UInt(8))))
+            }
+
+            // Array literal
+            Expr::Array(exprs) => {
+                if exprs.len() == 0 {
+                    Ok(Array {
+                        elem_type: Box::new(Int(32)),
+                        size_expr: Box::new(Expr::Int(0))
+                    })
+                }
+                else
+                {
+                    let first_type = exprs[0].eval_type()?;
+
+                    for expr in &exprs[1..] {
+                        let expr_type = expr.eval_type()?;
+                        if !first_type.eq(&expr_type) {
+                            return ParseError::msg_only("array element types do not match");
+                        }
+                    }
+
+                    Ok(Array {
+                        elem_type: Box::new(first_type),
+                        size_expr: Box::new(Expr::Int(exprs.len() as i128))
+                    })
+                }
             }
 
             Expr::Ident(_) => panic!("IdentExpr made it past symbol resolution"),

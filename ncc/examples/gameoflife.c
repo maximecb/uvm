@@ -107,7 +107,7 @@ void anim_callback()
 {
     benchmark(update());
 
-    time_delay_cb(250, anim_callback);
+    time_delay_cb(100, anim_callback);
     //time_delay_cb(0, anim_callback);
 }
 
