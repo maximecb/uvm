@@ -164,6 +164,15 @@ pub enum Op
     mul_f32,
     div_f32,
 
+    // Floating-point math functions
+    sin_f32,
+    cos_f32,
+    tan_f32,
+    asin_f32,
+    acos_f32,
+    atan_f32,
+    sqrt_f32,
+
     // 32-bit floating-point comparison instructions
     eq_f32,
     ne_f32,
@@ -171,15 +180,6 @@ pub enum Op
     le_f32,
     gt_f32,
     ge_f32,
-
-    // Floating-point math functions
-    cos_f32,
-    sin_f32,
-    tan_f32,
-    acos_f32,
-    asin_f32,
-    atan_f32,
-    sqrt_f32,
 
     // Load a value at a given adress
     // store (addr)
@@ -1145,10 +1145,50 @@ impl VM
                     self.push(v0.as_f32() * v1.as_f32());
                 }
 
+                // Should return NaN for invalid inputs
                 Op::div_f32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(v0.as_f32() / v1.as_f32());
+                }
+
+                Op::sin_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.sin());
+                }
+
+                Op::cos_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.cos());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::tan_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.tan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::asin_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.asin());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::acos_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.acos());
+                }
+
+                Op::atan_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.atan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::sqrt_f32 => {
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.sqrt());
                 }
 
                 Op::eq_f32 => {
