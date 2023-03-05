@@ -112,7 +112,7 @@ fn main()
 
     if let Err(error) = result {
         if error.line_no != 0 {
-            println!("Error @{}:{}: {}", error.line_no, error.col_no, error.msg);
+            println!("Error {}@{}:{}: {}", error.src_name, error.line_no, error.col_no, error.msg);
         } else
         {
             println!("Error: {}", error.msg);

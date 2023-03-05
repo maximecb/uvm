@@ -12,6 +12,7 @@ pub struct SrcPos
 pub struct ParseError
 {
     pub msg: String,
+    pub src_name: String,
     pub line_no: u32,
     pub col_no: u32,
 }
@@ -22,6 +23,7 @@ impl ParseError
     {
         ParseError {
             msg: msg.to_string(),
+            src_name: input.src_name.clone(),
             line_no: input.line_no,
             col_no: input.col_no
         }
@@ -32,6 +34,7 @@ impl ParseError
     {
         Err(ParseError {
             msg: msg.to_string(),
+            src_name: String::new(),
             line_no: 0,
             col_no: 0,
         })
