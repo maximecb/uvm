@@ -82,6 +82,9 @@
 #define KEY_RETURN 10
 #define KEY_ESCAPE 27
 #define KEY_SPACE 32
+#define KEY_COMMA 44
+#define KEY_PERIOD 46
+#define KEY_SLASH 47
 #define KEY_NUM0 48
 #define KEY_NUM1 49
 #define KEY_NUM2 50
@@ -92,6 +95,9 @@
 #define KEY_NUM7 55
 #define KEY_NUM8 56
 #define KEY_NUM9 57
+#define KEY_COLON 58
+#define KEY_SEMICOLON 59
+#define KEY_EQUALS 61
 #define KEY_A 65
 #define KEY_B 66
 #define KEY_C 67

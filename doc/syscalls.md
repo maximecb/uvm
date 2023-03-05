@@ -186,6 +186,9 @@ These are the constants associated with the window subsystem:
 - `u16 KEY_RETURN = 10`
 - `u16 KEY_ESCAPE = 27`
 - `u16 KEY_SPACE = 32`
+- `u16 KEY_COMMA = 44`
+- `u16 KEY_PERIOD = 46`
+- `u16 KEY_SLASH = 47`
 - `u16 KEY_NUM0 = 48`
 - `u16 KEY_NUM1 = 49`
 - `u16 KEY_NUM2 = 50`
@@ -196,6 +199,9 @@ These are the constants associated with the window subsystem:
 - `u16 KEY_NUM7 = 55`
 - `u16 KEY_NUM8 = 56`
 - `u16 KEY_NUM9 = 57`
+- `u16 KEY_COLON = 58`
+- `u16 KEY_SEMICOLON = 59`
+- `u16 KEY_EQUALS = 61`
 - `u16 KEY_A = 65`
 - `u16 KEY_B = 66`
 - `u16 KEY_C = 67`
