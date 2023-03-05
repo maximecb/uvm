@@ -44,6 +44,9 @@ int ship_y = 540;
 int bolt_x = 0;
 int bolt_y = 0;
 
+// Enemy update step counter
+unsigned int enemy_steps = 0;
+
 void init()
 {
     SHIP_DOTS[0] = (
@@ -62,6 +65,15 @@ void init()
         " * ** * \n"
         " ****** \n"
         "*      *"
+    );
+
+    ENEMY_DOTS[1] = (
+        " *    * \n"
+        "  *  *  \n"
+        "  ****  \n"
+        " * ** * \n"
+        " ****** \n"
+        " *    * "
     );
 }
 
@@ -212,11 +224,12 @@ void anim_callback()
                 exit(0);
             }
 
-            int width = glyph_width(ENEMY_DOTS[0], DOT_SIZE);
+            char* enemy_glyph = ENEMY_DOTS[enemy_steps % 2];
+            int width = glyph_width(enemy_glyph, DOT_SIZE);
 
             if (bolt_x > min_x && bolt_x < min_x + width)
             {
-                int height = glyph_height(ENEMY_DOTS[0], DOT_SIZE);
+                int height = glyph_height(enemy_glyph, DOT_SIZE);
 
                 if (bolt_y > min_y && bolt_y < min_y + height)
                 {
@@ -230,7 +243,7 @@ void anim_callback()
                 min_x,
                 min_y,
                 DOT_SIZE,
-                ENEMY_DOTS[0],
+                enemy_glyph,
                 0xFF_FF_FF
             );
         }
@@ -283,9 +296,13 @@ void enemy_callback()
         enemy_j = enemy_j + 1;
     }
 
+    // Schedule the next update
     int delay = 500 - 50 * enemy_j;
     if (delay <= 0) delay = 50;
     time_delay_cb(delay, enemy_callback);
+
+    // Update the step count
+    enemy_steps = enemy_steps + 1;
 }
 
 void keydown(u64 window_id, u16 keycode)
