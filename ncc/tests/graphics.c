@@ -1,5 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/graphics.h>
+#include <uvm/utils.h>
 #include <assert.h>
 
 // Frame buffer
@@ -15,12 +16,25 @@ int main()
 
     memset32(fb, COLOR_GREY, 800 * 600);
 
+    fill_rect(
+        (u32*)fb, 800, 600,
+        200, 100,
+        200, 80,
+        COLOR_BLUE
+    );
+
     draw_line(
         (u32*)fb, 800, 600,
-        0, 0,
-        250, 222,
+        50, 50,
+        700, 522,
         rgb32(255, 255, 255)
     );
+
+    /*
+    window_create(800, 600, "Graphics Test", 0);
+    window_draw_frame(0, fb);
+    enable_event_loop();
+    */
 
     return 0;
 }

@@ -18,8 +18,48 @@
 // Convert RGB values in the range [0, 255] to a u32 encoding
 #define rgb32(r, g, b) ((u32)0xFF_00_00_00 | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
 
+// Fill a rectangle area with a given color
+void fill_rect(
+    u32* fb,
+    u32 fb_width,
+    u32 fb_height,
+    u32 xmin,
+    u32 ymin,
+    u32 width,
+    u32 height,
+    u32 color
+)
+{
+    if (xmin >= fb_width || ymin >= fb_height)
+        return;
+
+    if (xmin + width > fb_width)
+        width = fb_width - xmin;
+
+    if (ymin + height > fb_height)
+        height = fb_height - ymin;
+
+    for (u32 j = 0; j < height; ++j)
+    {
+        for (u32 i = 0; i < width; ++i)
+        {
+            u32* pix_ptr = fb + (fb_width) * (ymin + j) + (xmin + i);
+            *pix_ptr = color;
+        }
+    }
+}
+
 // Draw a line using Bresenham's algorithm
-void draw_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
+void draw_line(
+    u32* fb,
+    u32 fb_width,
+    u32 fb_height,
+    u32 x0,
+    u32 y0,
+    u32 x1,
+    u32 y1,
+    u32 color
+)
 {
     assert(x0 < fb_width && y0 < fb_height);
     assert(x1 < fb_width && y1 < fb_height);
