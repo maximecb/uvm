@@ -492,7 +492,7 @@ impl Expr
                     UnOp::Deref => {
                         let child_type = child.eval_type()?;
 
-                        // If this is a pointer to an array, this is a noop
+                        // If this is a pointer to an array, this is a no-op
                         // because a pointer to an array is the array itself
                         if let Pointer(t) = child_type {
                             if let Array { .. } = t.as_ref() {
@@ -501,20 +501,29 @@ impl Expr
                         }
 
                         let ptr_type = child.eval_type()?;
-                        let elem_size = ptr_type.elem_type().sizeof();
-                        let elem_bits = elem_size * 8;
+                        let elem_bits = ptr_type.elem_type().num_bits();
                         out.push_str(&format!("load_u{};\n", elem_bits));
                     }
 
                     UnOp::Minus => {
-                        out.push_str(&format!("push 0;\n"));
-                        out.push_str(&format!("swap;\n"));
-                        out.push_str(&format!("sub_u64;\n"));
+                        let child_type = child.eval_type()?;
+                        let num_bits = child_type.num_bits();
+
+                        if num_bits <= 32 {
+                            if child_type.is_signed() && num_bits < 32 {
+                                out.push_str(&format!("sx_i{}_i32;\n", num_bits));
+                            }
+                            out.push_str(&format!("push -1;\n"));
+                            out.push_str(&format!("mul_u32;\n"));
+                        } else {
+                            out.push_str(&format!("push -1;\n"));
+                            out.push_str(&format!("mul_u64;\n"));
+                        }
                     }
 
                     UnOp::BitNot => {
                         let child_type = child.eval_type()?;
-                        let num_bits = child_type.sizeof() * 8;
+                        let num_bits = child_type.num_bits();
                         let op_bits = if num_bits <= 32 { 32 } else { 64 };
                         out.push_str(&format!("not_u{};\n", op_bits));
 
@@ -592,7 +601,7 @@ impl Expr
 fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
 {
     // Type checking should have caught invalid types before this point
-    let out_bits = out_type.sizeof() * 8;
+    let out_bits = out_type.num_bits();
     assert!(out_bits <= 64);
 
     let op_bits = if out_bits == 64 { 64 } else { 32 };
@@ -867,8 +876,7 @@ fn gen_assign(
             match op {
                 UnOp::Deref => {
                     let ptr_type = child.eval_type()?;
-                    let elem_size = ptr_type.elem_type().sizeof();
-                    let elem_bits = elem_size * 8;
+                    let elem_bits = ptr_type.elem_type().num_bits();
 
                     // If the output value is needed
                     if need_value {

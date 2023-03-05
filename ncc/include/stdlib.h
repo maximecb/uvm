@@ -69,10 +69,14 @@ void free(void* ptr)
 
     if (*magic_ptr != 0x1337BAB3)
     {
-        asm () -> void { panic; };
+        asm ("magic word does not match in free()\n") -> void {
+            syscall print_str;
+            panic;
+        };
     }
 
-    *magic_ptr != 0x1111_1111;
+    // Corrupt the magic word to detect double-free errors
+    *magic_ptr = 0x1111_1111;
 }
 
 #endif

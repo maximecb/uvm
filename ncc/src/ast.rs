@@ -54,6 +54,18 @@ impl Type
         }
     }
 
+    /// Produce the size of this type in bits
+    /// Valid for pointer/integer/float types only
+    pub fn num_bits(&self) -> usize
+    {
+        use Type::*;
+        match self {
+            UInt(num_bits) | Int(num_bits) | Float(num_bits) => *num_bits,
+            Pointer(_) => 64,
+            _ => panic!()
+        }
+    }
+
     /// Produce the size of this type in bytes
     pub fn sizeof(&self) -> usize
     {
