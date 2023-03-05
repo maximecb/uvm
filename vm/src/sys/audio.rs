@@ -10,9 +10,11 @@ pub fn test_play_sound()
     }
 
     impl AudioCallback for SquareWave {
-        type Channel = f32;
+        // This is the type of individual audio samples
+        type Channel = i16;
 
-        fn callback(&mut self, out: &mut [f32]) {
+        fn callback(&mut self, out: &mut [i16]) {
+            /*
             // Generate a square wave
             for x in out.iter_mut() {
                 *x = if self.phase <= 0.5 {
@@ -22,6 +24,7 @@ pub fn test_play_sound()
                 };
                 self.phase = (self.phase + self.phase_inc) % 1.0;
             }
+            */
         }
     }
 
