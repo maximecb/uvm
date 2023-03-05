@@ -11,9 +11,9 @@ pub struct SrcPos
 #[derive(Debug, Clone)]
 pub struct ParseError
 {
-    msg: String,
-    line_no: u32,
-    col_no: u32,
+    pub msg: String,
+    pub line_no: u32,
+    pub col_no: u32,
 }
 
 impl ParseError

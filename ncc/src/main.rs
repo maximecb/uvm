@@ -76,30 +76,48 @@ fn parse_args(args: Vec<String>) -> Options
     opts
 }
 
-fn main()
+fn compile_file(file_name: &str, opts: &Options) -> Result<(), ParseError>
 {
-    let opts = parse_args(env::args().collect());
-    //println!("{:?}", opts);
-
-    if opts.rest.len() != 1 {
-        panic!("must specify exactly one input source file to compile");
-    }
-
-    let file_name = &opts.rest[0];
-
     let mut input = Input::from_file(file_name);
-    let output = process_input(&mut input).unwrap();
+
+    let output = process_input(&mut input)?;
 
     if opts.print_cpp_out {
         println!("{}", output);
     }
 
     let mut input = Input::new(&output, file_name);
-    let mut unit = parse_unit(&mut input).unwrap();
+    let mut unit = parse_unit(&mut input)?;
 
-    unit.resolve_syms().unwrap();
-    unit.check_types().unwrap();
-    let out = unit.gen_code().unwrap();
+    unit.resolve_syms()?;
+    unit.check_types()?;
+    let out = unit.gen_code()?;
 
-    std::fs::write(opts.out_file, out).unwrap();
+    std::fs::write(&opts.out_file, out).unwrap();
+
+    Ok(())
+}
+
+fn main()
+{
+    let opts = parse_args(env::args().collect());
+    //println!("{:?}", opts);
+
+    if opts.rest.len() != 1 {
+        panic!("Must specify exactly one input source file to compile.");
+    }
+
+    let file_name = &opts.rest[0];
+    let result = compile_file(file_name, &opts);
+
+    if let Err(error) = result {
+        if error.line_no != 0 {
+            println!("Error @{}:{}: {}", error.line_no, error.col_no, error.msg);
+        } else
+        {
+            println!("Error: {}", error.msg);
+        }
+
+        std::process::exit(-1);
+    }
 }
