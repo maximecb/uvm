@@ -833,6 +833,8 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
             }
         }
 
+        "float" => Ok(Type::Float(32)),
+
         _ => input.parse_error(&format!("unknown type {}", keyword))
     }
 

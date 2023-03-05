@@ -999,6 +999,14 @@ impl Assembler
             "mul_f32" => self.code.push_op(Op::mul_f32),
             "div_f32" => self.code.push_op(Op::div_f32),
 
+            "sin_f32" => self.code.push_op(Op::sin_f32),
+            "cos_f32" => self.code.push_op(Op::cos_f32),
+            "tan_f32" => self.code.push_op(Op::tan_f32),
+            "asin_f32" => self.code.push_op(Op::asin_f32),
+            "acos_f32" => self.code.push_op(Op::acos_f32),
+            "atan_f32" => self.code.push_op(Op::atan_f32),
+            "sqrt_f32" => self.code.push_op(Op::sqrt_f32),
+
             "eq_f32" => self.code.push_op(Op::eq_f32),
             "ne_f32" => self.code.push_op(Op::ne_f32),
             "lt_f32" => self.code.push_op(Op::lt_f32),
