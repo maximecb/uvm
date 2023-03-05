@@ -114,8 +114,10 @@ pub enum Op
     mod_i64,
 
     // TODO: arithmetic with overflow
-    // I think these instructions shouldn't jump directly?
-    // depends. We don't need to worry about compactness.
+    // These instructions probably shouldn't jump directly,
+    // as this would add more branch instructions to the
+    // instruction set.
+    // We don't need to worry about compactness.
     // add_u64_ovf,
     // sub_u64_ovf,
     // mul_i64_ovf, // produces two 64-bit words of output
@@ -132,10 +134,6 @@ pub enum Op
     gt_i64,
     ge_i64,
 
-    //
-    // TODO: 32-bit integer bitwise, arithmetic & comparison operations
-    //
-
     // Integer sign extension
     sx_i8_i32,
     sx_i8_i64,
@@ -147,16 +145,6 @@ pub enum Op
     trunc_u8,
     trunc_u16,
     trunc_u32,
-
-    // NOTE: may want to wait for this because it's not RISC,
-    //       but it could help reduce code flag
-    // NOTE: should this insn have a jump offset built in?
-    // - no, for consistency, let jz/jnz handle that
-    // Test flag bits (logical and) with a constant
-    // This can be used for tag bit tests (e.g. fixnum test)
-    // Do we want to test just one specific bit, bit_idx:u8?
-    // test_bit_z <bit_idx:u8>
-    // test_bit_nz <bit_idx:u8>
 
     // 32-bit floating-point arithmetic
     add_f32,
@@ -203,6 +191,16 @@ pub enum Op
     // If we save 24 bits for the offset, then that gives us quite a lot
     load_global_u64 <addr:u24>
     */
+
+    // NOTE: may want to wait for this because it's not RISC,
+    //       but it could help reduce code flag
+    // NOTE: should this insn have a jump offset built in?
+    // - no, for consistency, let jz/jnz handle that
+    // Test flag bits (logical and) with a constant
+    // This can be used for tag bit tests (e.g. fixnum test)
+    // Do we want to test just one specific bit, bit_idx:u8?
+    // test_bit_z <bit_idx:u8>
+    // test_bit_nz <bit_idx:u8>
 
     // TODO: we should probably have 8-bit offset versions of jump insns
     // However, this can wait. Premature optimization.
