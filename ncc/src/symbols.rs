@@ -286,6 +286,7 @@ impl Expr
     {
         match self {
             Expr::Int(_) => {}
+            Expr::Float32(_) => {}
 
             Expr::String(str_const) => {
                 // Get a global symbol for the string constant

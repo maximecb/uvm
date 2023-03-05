@@ -160,6 +160,10 @@ impl Expr
                 }
             }
 
+            Expr::Float32(val) => {
+                Ok(Float(32))
+            }
+
             Expr::String(_) => {
                 // TODO: this type should be const char
                 Ok(Pointer(Box::new(UInt(8))))

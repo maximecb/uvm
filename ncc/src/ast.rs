@@ -217,6 +217,7 @@ pub enum Expr
 {
     Int(i128),
     String(String),
+    Float32(f32),
 
     // Array literal
     Array(Vec<Expr>),
