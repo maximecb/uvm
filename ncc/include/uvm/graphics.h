@@ -1,14 +1,22 @@
 #ifndef __UVM_GRAPHICS__
 #define __UVM_GRAPHICS__
 
+#include <assert.h>
+
 #define COLOR_BLACK     0xFF_00_00_00
 #define COLOR_WHITE     0xFF_FF_FF_FF
+#define COLOR_GREY      0xFF_80_80_80
 #define COLOR_RED       0xFF_FF_00_00
 #define COLOR_GREEN     0xFF_00_FF_00
 #define COLOR_BLUE      0xFF_00_00_FF
 #define COLOR_ORANGE    0xFF_FF_A5_00
 #define COLOR_YELLOW    0xFF_FF_FF_00
 #define COLOR_MAGENTA   0xFF_FF_00_FF
+#define COLOR_PURPLE    0xFF_CC_88_99
+#define COLOR_TURQUOISE 0xFF_40_E0_D0
+
+// Convert RGB values in the range [0, 255] to a u32 encoding
+#define rgb32(r, g, b) ((u32)0xFF_00_00_00 | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
 
 // Draw a line using Bresenham's algorithm
 void draw_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
