@@ -28,7 +28,7 @@
 
 // This is 12 bytes of data per char, as in 12 rows, and each byte
 // represents the pixels in that row.
-u8 font_monogram_data[390][12] = {
+u8 font_monogram_data[FONT_MONOGRAM_NUMBER_OF_CHARACTERS][FONT_MONOGRAM_HEIGHT] = {
 	{  // '0'
 		0b00000000,
 		0b00000000,
@@ -5492,10 +5492,7 @@ u8 font_monogram_data[390][12] = {
 };
 
 
-
-
-void
-draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
+void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
 {
     u32* d = dest + dest_x + dest_w * dest_y;
     for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {
@@ -5516,25 +5513,60 @@ draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 
 }
 
 
-size_t FRAME_WIDTH = 202;  // 20 + 26 * FONT_MONOGRAM_WIDTH;
-size_t FRAME_HEIGHT = 200; // 20 + (FONT_MONOGRAM_NUMBER_OF_CHARACTERS / 26) * FONT_MONOGRAM_HEIGHT;
+void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 dest_x, u64 dest_y, u32 color)
+{
+    u32* d = dest + dest_x + dest_w * dest_y;
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {
+        u8 pixel_bits = font_monogram_data[ch][y];
+        for (u8 i = 0; i < scale; ++i) {
+            u64 x = 0;
+            u8 pb = pixel_bits;
+            while (pb) {
+                if (pb & 1) memset32(d + x, color, scale);
+                x = x + scale;
+                pb = pb >> 1;
+            }
+            d = d + dest_w;
+        }
+    }
+}
 
-// RGBA pixels: 202 * 200
-u32 frame_buffer[40400];
+
+size_t FRAME_WIDTH = 600;
+size_t FRAME_HEIGHT = 600;
+
+u32 frame_buffer[363600];
 
 
 void anim_callback()
 {
+    u8 scale = 3;
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
     for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {
-        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH;
-        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT;
+        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
+        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
         // Drop shadow.
-        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 11 + x, 11 + y, 0x00000000);
+        draw_monogram_scaled_char(
+            ch,
+            frame_buffer,
+            FRAME_WIDTH,
+            scale,
+            scale * 11 + x,
+            scale * 11 + y,
+            0x00000000
+        );
         // Foreground font glyphs.
-        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 10 + x, 10 + y, 0x00FFFFFF);
+        draw_monogram_scaled_char(
+            ch,
+            frame_buffer,
+            FRAME_WIDTH,
+            scale,
+            scale * 10 + x,
+            scale * 10 + y,
+            0x00FFFFFF
+        );
     }
     window_draw_frame(0, frame_buffer);
 
@@ -5550,3 +5582,4 @@ void main()
 
     enable_event_loop();
 }
+

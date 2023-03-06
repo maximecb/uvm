@@ -452,7 +452,7 @@ print(f'''\
 
 // This is 12 bytes of data per char, as in 12 rows, and each byte
 // represents the pixels in that row.
-u8 font_monogram_data[{NUM_CHARS}][12] = {{''')
+u8 font_monogram_data[FONT_MONOGRAM_NUMBER_OF_CHARACTERS][FONT_MONOGRAM_HEIGHT] = {{''')
 
 for i, ch in enumerate(monogram):
     make_bytes(ch)
@@ -465,65 +465,100 @@ print(f'''\
 ##    print(f'\tfont_monogram_chars[{hex(ord(ch))}] = {i};')
 ##print('}')
 
-print('''
+SCALE = 3
 
-
-void
-draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
-{
+print(f'''
+void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
+{{
     u32* d = dest + dest_x + dest_w * dest_y;
-    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
         u8 pixel_bits = font_monogram_data[ch][y];
         u64 x = 0;
-        while (pixel_bits) {
-            if (pixel_bits & 1) {
+        while (pixel_bits) {{
+            if (pixel_bits & 1) {{
                 *(d+x) = color;
-            }
+            }}
             ++x;
             pixel_bits = pixel_bits >> 1;
             // This is why the bits in the data are stored in reverse order.
             // We draw the pixels left-to-right, but shift them and pick
             // them off the byte right-to-left.
-        }
+        }}
         d = d + dest_w;
-    }
-}
+    }}
+}}
 
 
-size_t FRAME_WIDTH = 202;  // 20 + 26 * FONT_MONOGRAM_WIDTH;
-size_t FRAME_HEIGHT = 200; // 20 + (FONT_MONOGRAM_NUMBER_OF_CHARACTERS / 26) * FONT_MONOGRAM_HEIGHT;
+void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 dest_x, u64 dest_y, u32 color)
+{{
+    u32* d = dest + dest_x + dest_w * dest_y;
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
+        u8 pixel_bits = font_monogram_data[ch][y];
+        for (u8 i = 0; i < scale; ++i) {{
+            u64 x = 0;
+            u8 pb = pixel_bits;
+            while (pb) {{
+                if (pb & 1) memset32(d + x, color, scale);
+                x = x + scale;
+                pb = pb >> 1;
+            }}
+            d = d + dest_w;
+        }}
+    }}
+}}
 
-// RGBA pixels: 202 * 200
-u32 frame_buffer[40400];
+
+size_t FRAME_WIDTH = {200 * SCALE};
+size_t FRAME_HEIGHT = {200 * SCALE};
+
+u32 frame_buffer[{202 * 200 * SCALE * SCALE}];
 
 
 void anim_callback()
-{
+{{
+    u8 scale = {SCALE};
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
-    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {
-        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH;
-        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT;
+    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {{
+        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
+        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
         // Drop shadow.
-        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 11 + x, 11 + y, 0x00000000);
+        draw_monogram_scaled_char(
+            ch,
+            frame_buffer,
+            FRAME_WIDTH,
+            scale,
+            scale * 11 + x,
+            scale * 11 + y,
+            0x00000000
+        );
         // Foreground font glyphs.
-        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 10 + x, 10 + y, 0x00FFFFFF);
-    }
+        draw_monogram_scaled_char(
+            ch,
+            frame_buffer,
+            FRAME_WIDTH,
+            scale,
+            scale * 10 + x,
+            scale * 10 + y,
+            0x00FFFFFF
+        );
+    }}
     window_draw_frame(0, frame_buffer);
 
     time_delay_cb(10, anim_callback);
-}
+}}
 
 
 void main()
-{
+{{
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
 
     time_delay_cb(0, anim_callback);
 
     enable_event_loop();
-}''')
+}}
+''')
 
 
 ##
