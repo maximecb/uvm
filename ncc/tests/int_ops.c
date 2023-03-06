@@ -56,6 +56,11 @@ int main()
     assert(1 << 1 == 2);
     assert(2 >> 1 == 1);
 
+    // Left shift bit outside of i16 range
+    short si = 1;
+    si = si << 16;
+    assert(si == 0);
+
     assert((1 | 2) == 3);
     assert((1 & 1) == 1);
     assert((3 & 1) == 1);
