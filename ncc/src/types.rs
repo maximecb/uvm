@@ -298,8 +298,7 @@ impl Expr
                         }
                     }
 
-                    BitAnd | BitOr | BitXor | LShift | RShift |
-                    Mul | Div | Mod => {
+                    BitAnd | BitOr | BitXor | Mul | Div | Mod => {
                         match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
@@ -308,6 +307,21 @@ impl Expr
                             // we could do it in the backend, but it might be better/simpler
                             // to insert an explicit cast operation
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
+
+                            _ => ParseError::msg_only(&format!(
+                                "incompatible types in arithmetic op {}, {}",
+                                lhs_type,
+                                rhs_type
+                            ))
+                        }
+                    }
+
+                    LShift | RShift => {
+                        match (lhs_type.clone(), rhs_type.clone()) {
+                            (UInt(m), UInt(n)) => Ok(UInt(m)),
+                            (Int(m), Int(n)) => Ok(UInt(m)),
+                            (Int(m), UInt(n)) => Ok(UInt(m)),
+                            (UInt(m), Int(n)) => Ok(UInt(m)),
 
                             _ => ParseError::msg_only(&format!(
                                 "incompatible types in arithmetic op {}, {}",
