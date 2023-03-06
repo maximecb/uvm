@@ -1,6 +1,10 @@
 # This script generates the top part of the monogram.c file
 '''
 // Monogram 12x7 pixel font
+
+#include <uvm/syscalls.h>
+#include <uvm/utils.h>
+
 '''
 
 CREDITS = '\n'.join(
@@ -427,11 +431,13 @@ monogram = {
 def make_bytes(ch):
     rows = monogram[ch]
     index = list(monogram).index(ch)  # ordered dict comes in handy
-    print('\t//', repr(ch))
-    for i, byte in enumerate(rows):
-        if not byte: continue
-        a = f'{byte:07b}'  # convert byte to zero-left-padded str
-        print(f'\tfont_monogram_data[{index}][{i:2}] = 0b{a};');
+    print('\t{  //', repr(ch))
+    for byte in rows:
+        if not byte:
+            print('\t\t0b00000000,')
+            continue
+        print(f'\t\t0b{byte:08b},');
+    print('\t},')
     
 
 NUM_CHARS = len(monogram)
@@ -446,23 +452,96 @@ print(f'''\
 
 // This is 12 bytes of data per char, as in 12 rows, and each byte
 // represents the pixels in that row.
-u8 font_monogram_data[{NUM_CHARS}][12];
+u8 font_monogram_data[{NUM_CHARS}][12] = {{''')
 
-// Map from ord(ch) to index of ch's data in font_monogram_data.
-// This is for when you know the character that you want to draw but not
-// its index in the font_monogram_data array.
-u16 font_monogram_chars[{MAX_ORD}];
-
-void
-init_monogram_font_data()
-{{
-\tmemset(font_monogram_data, 0, sizeof(font_monogram_data));
-
-\t// Empty slots initialized to -1.
-\tmemset(font_monogram_chars, 0xFF, sizeof(font_monogram_chars));
-''')
 for i, ch in enumerate(monogram):
     make_bytes(ch)
-    print(f'\tfont_monogram_chars[{hex(ord(ch))}] = {i};')
-print('}')
 
+print(f'''\
+}};
+''')
+
+##for i, ch in enumerate(monogram):
+##    print(f'\tfont_monogram_chars[{hex(ord(ch))}] = {i};')
+##print('}')
+
+print('''
+
+
+void
+draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
+{
+    u32* d = dest + dest_x + dest_w * dest_y;
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {
+        u8 pixel_bits = font_monogram_data[ch][y];
+        u64 x = 0;
+        while (pixel_bits) {
+            if (pixel_bits & 1) {
+                *(d+x) = color;
+            }
+            ++x;
+            pixel_bits = pixel_bits >> 1;
+            // This is why the bits in the data are stored in reverse order.
+            // We draw the pixels left-to-right, but shift them and pick
+            // them off the byte right-to-left.
+        }
+        d = d + dest_w;
+    }
+}
+
+
+size_t FRAME_WIDTH = 202;  // 20 + 26 * FONT_MONOGRAM_WIDTH;
+size_t FRAME_HEIGHT = 200; // 20 + (FONT_MONOGRAM_NUMBER_OF_CHARACTERS / 26) * FONT_MONOGRAM_HEIGHT;
+
+// RGBA pixels: 202 * 200
+u32 frame_buffer[40400];
+
+
+void anim_callback()
+{
+    // Grey background.
+    memset(frame_buffer, 0x7f, sizeof(frame_buffer));
+
+    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {
+        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH;
+        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT;
+        // Drop shadow.
+        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 11 + x, 11 + y, 0x00000000);
+        // Foreground font glyphs.
+        draw_monogram_char(ch, frame_buffer, FRAME_WIDTH, 10 + x, 10 + y, 0x00FFFFFF);
+    }
+    window_draw_frame(0, frame_buffer);
+
+    time_delay_cb(10, anim_callback);
+}
+
+
+void main()
+{
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
+
+    time_delay_cb(0, anim_callback);
+
+    enable_event_loop();
+}''')
+
+
+##
+##    //print_i64(font_monogram_data[0][0]); print_endl();  // prints '0'...
+##    init_monogram_font_data();  // buggy!
+##    //print_i64(font_monogram_data[0][0]); print_endl();  // prints '132' (T_T)
+##    // at this point font_monogram_data[0][0] is 132 aka 0b10000100
+##    // this should not be the case
+##
+##
+##// Map from ord(ch) to index of ch's data in font_monogram_data.
+##// This is for when you know the character that you want to draw but not
+##// its index in the font_monogram_data array.
+##u16 font_monogram_chars[{MAX_ORD}];
+##
+##void
+##init_monogram_font_data()
+##{{
+##
+##\t// Empty slots initialized to -1.
+##\tmemset(font_monogram_chars, 0xFF, sizeof(font_monogram_chars));
