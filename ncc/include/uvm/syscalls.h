@@ -50,7 +50,7 @@
 #define time_delay_cb(__delay_ms, __callback) asm (__delay_ms, __callback) -> void { syscall time_delay_cb; }
 
 // u32 window_create(u32 width, u32 height, const char* title, u64 flags)
-// Create a new window with a frame buffer to draw into.
+// Create a new window with a frame buffer to draw into. The window is initially hidden when created, and will appear as soon as the first frame of image data is drawn.
 #define window_create(__width, __height, __title, __flags) asm (__width, __height, __title, __flags) -> u32 { syscall window_create; }
 
 // void window_draw_frame(u32 window_id, const u8* pixel_data)
@@ -98,6 +98,7 @@
 #define KEY_COLON 58
 #define KEY_SEMICOLON 59
 #define KEY_EQUALS 61
+#define KEY_QUESTION 63
 #define KEY_A 65
 #define KEY_B 66
 #define KEY_C 67

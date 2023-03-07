@@ -358,13 +358,32 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 
     // https://docs.rs/sdl2/0.30.0/sdl2/keyboard/enum.Keycode.html
     match sdl_keycode {
-        // This mapping is incomplete, but people need WASD!
         Keycode::A => Some(KEY_A),
         Keycode::B => Some(KEY_B),
         Keycode::C => Some(KEY_C),
         Keycode::D => Some(KEY_D),
+        Keycode::E => Some(KEY_E),
+        Keycode::F => Some(KEY_F),
+        Keycode::G => Some(KEY_G),
+        Keycode::H => Some(KEY_H),
+        Keycode::I => Some(KEY_I),
+        Keycode::J => Some(KEY_J),
+        Keycode::K => Some(KEY_K),
+        Keycode::L => Some(KEY_L),
+        Keycode::M => Some(KEY_M),
+        Keycode::N => Some(KEY_N),
+        Keycode::O => Some(KEY_O),
+        Keycode::P => Some(KEY_P),
+        Keycode::Q => Some(KEY_Q),
+        Keycode::R => Some(KEY_R),
         Keycode::S => Some(KEY_S),
+        Keycode::T => Some(KEY_T),
+        Keycode::U => Some(KEY_U),
+        Keycode::V => Some(KEY_V),
         Keycode::W => Some(KEY_W),
+        Keycode::X => Some(KEY_X),
+        Keycode::Y => Some(KEY_Y),
+        Keycode::Z => Some(KEY_Z),
 
         Keycode::Num0 => Some(KEY_NUM0),
         Keycode::Num1 => Some(KEY_NUM1),
@@ -383,7 +402,9 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::Colon => Some(KEY_COLON),
         Keycode::Semicolon => Some(KEY_SEMICOLON),
         Keycode::Equals => Some(KEY_EQUALS),
+        Keycode::Question => Some(KEY_QUESTION),
 
+        Keycode::Backspace => Some(KEY_BACKSPACE),
         Keycode::Left => Some(KEY_LEFT),
         Keycode::Right => Some(KEY_RIGHT),
         Keycode::Up => Some(KEY_UP),

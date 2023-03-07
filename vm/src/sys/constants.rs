@@ -75,6 +75,7 @@ pub const KEY_NUM9: u16 = 57;
 pub const KEY_COLON: u16 = 58;
 pub const KEY_SEMICOLON: u16 = 59;
 pub const KEY_EQUALS: u16 = 61;
+pub const KEY_QUESTION: u16 = 63;
 pub const KEY_A: u16 = 65;
 pub const KEY_B: u16 = 66;
 pub const KEY_C: u16 = 67;

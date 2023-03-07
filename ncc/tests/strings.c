@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
@@ -6,7 +7,7 @@
 uint8_t arr[19];
 uint8_t arr2[19];
 
-void main()
+int main()
 {
     assert(strlen("") == 0);
     assert(strlen("foo") == 3);
@@ -36,4 +37,12 @@ void main()
     memcpy(arr2, arr, 19);
     assert(arr2[0] == 177);
     assert(arr2[18] == 177);
+
+    // From ctype.h
+    assert(isprint(' '));
+    assert(isprint('A'));
+    assert(isupper('A'));
+    assert(!isupper('a'));
+
+    return 0;
 }

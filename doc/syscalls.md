@@ -128,7 +128,7 @@ u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 
 **Returns:** `u32 window_id`
 
-Create a new window with a frame buffer to draw into.
+Create a new window with a frame buffer to draw into. The window is initially hidden when created, and will appear as soon as the first frame of image data is drawn.
 
 ## window_draw_frame
 
@@ -202,6 +202,7 @@ These are the constants associated with the window subsystem:
 - `u16 KEY_COLON = 58`
 - `u16 KEY_SEMICOLON = 59`
 - `u16 KEY_EQUALS = 61`
+- `u16 KEY_QUESTION = 63`
 - `u16 KEY_A = 65`
 - `u16 KEY_B = 66`
 - `u16 KEY_C = 67`

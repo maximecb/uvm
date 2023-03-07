@@ -234,7 +234,7 @@
         ],
         "permission": "window_display",
         "const_idx": 1,
-        "description": "Create a new window with a frame buffer to draw into."
+        "description": "Create a new window with a frame buffer to draw into. The window is initially hidden when created, and will appear as soon as the first frame of image data is drawn."
       },
       {
         "name": "window_draw_frame",
@@ -462,6 +462,11 @@
         "KEY_EQUALS",
         "u16",
         61
+      ],
+      [
+        "KEY_QUESTION",
+        "u16",
+        63
       ],
       [
         "KEY_A",
