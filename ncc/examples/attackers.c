@@ -307,6 +307,11 @@ void enemy_callback()
 
 void keydown(u64 window_id, u16 keycode)
 {
+    if (keycode == KEY_ESCAPE)
+    {
+        exit(0);
+    }
+
     if (keycode == KEY_LEFT)
     {
         left_down = true;

@@ -479,6 +479,13 @@ pub enum ExitReason
     //Panic,
 }
 
+impl Default for ExitReason
+{
+    fn default() -> ExitReason {
+        ExitReason::Return(Value::from(0))
+    }
+}
+
 pub struct VM
 {
     // Host system state

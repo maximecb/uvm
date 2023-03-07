@@ -1,18 +1,21 @@
 # This script generates the top part of the monogram.c file
 '''
 // Monogram 12x7 pixel font
+
+#include <uvm/syscalls.h>
+#include <uvm/utils.h>
+
 '''
 
 CREDITS = '\n'.join(
     '// > ' + line
     for line in '''\
-# CREDITS
+# MONOGRAM FONT
 
 Monogram is a free and Creative Commons Zero pixel font,
 made by Vinícius Menézio (@vmenezio).
 
 https://datagoblin.itch.io/monogram
-
 
 # SPECIAL THANKS
 
@@ -24,10 +27,8 @@ https://itch.io/post/2625522
 '''.splitlines()
 )
 
-
 print(__doc__)
 print(CREDITS)
-
 
 monogram = {
     "0": [0, 0, 0, 14, 17, 25, 21, 19, 17, 14, 0, 0],
@@ -422,23 +423,21 @@ monogram = {
     " ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 }
 
-
-
 def make_bytes(ch):
     rows = monogram[ch]
     index = list(monogram).index(ch)  # ordered dict comes in handy
-    print('\t//', repr(ch))
-    for i, byte in enumerate(rows):
-        if not byte: continue
-        a = f'{byte:07b}'  # convert byte to zero-left-padded str
-        print(f'\tfont_monogram_data[{index}][{i:2}] = 0b{a};');
-    
+    print('    {', end="")
+    for byte in rows:
+        if not byte:
+            print(' 0x00,', end="")
+            continue
+        print(f' 0x{byte:02x},', end="")
+    print(' }, //', repr(ch))
 
 NUM_CHARS = len(monogram)
 MAX_ORD = max(map(ord, monogram))
 
 print(f'''\
-
 
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS {NUM_CHARS}
 #define FONT_MONOGRAM_HEIGHT 12
@@ -446,23 +445,82 @@ print(f'''\
 
 // This is 12 bytes of data per char, as in 12 rows, and each byte
 // represents the pixels in that row.
-u8 font_monogram_data[{NUM_CHARS}][12];
+u8 font_monogram_data[FONT_MONOGRAM_NUMBER_OF_CHARACTERS][FONT_MONOGRAM_HEIGHT] = {{''')
 
-// Map from ord(ch) to index of ch's data in font_monogram_data.
-// This is for when you know the character that you want to draw but not
-// its index in the font_monogram_data array.
-u16 font_monogram_chars[{MAX_ORD}];
-
-void
-init_monogram_font_data()
-{{
-\tmemset(font_monogram_data, 0, sizeof(font_monogram_data));
-
-\t// Empty slots initialized to -1.
-\tmemset(font_monogram_chars, 0xFF, sizeof(font_monogram_chars));
-''')
 for i, ch in enumerate(monogram):
     make_bytes(ch)
-    print(f'\tfont_monogram_chars[{hex(ord(ch))}] = {i};')
-print('}')
 
+print('};')
+
+SCALE = 2
+
+print(f'''
+void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_y, u8 scale, u32 color)
+{{
+    u32* d = dest + dest_x + dest_w * dest_y;
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
+        u8 pixel_bits = font_monogram_data[ch][y];
+        for (u8 i = 0; i < scale; ++i) {{
+            u64 x = 0;
+            u8 pb = pixel_bits;
+            while (pb) {{
+                if (pb & 1) memset32(d + x, color, scale);
+                x = x + scale;
+                pb = pb >> 1;
+            }}
+            d = d + dest_w;
+        }}
+    }}
+}}
+
+size_t FRAME_WIDTH = {200 * SCALE};
+size_t FRAME_HEIGHT = {200 * SCALE};
+
+u32 frame_buffer[{202 * 200 * SCALE * SCALE}];
+
+void anim_callback()
+{{
+    u8 scale = {SCALE};
+    // Grey background.
+    memset(frame_buffer, 0x7f, sizeof(frame_buffer));
+
+    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {{
+        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
+        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
+
+        // Drop shadow.
+        draw_monogram_char(
+            frame_buffer,
+            FRAME_WIDTH,
+            ch,
+            scale * 11 + x,
+            scale * 11 + y,
+            scale,
+            0x00000000
+        );
+
+        // Foreground font glyphs.
+        draw_monogram_char(
+            frame_buffer,
+            FRAME_WIDTH,
+            ch,
+            scale * 10 + x,
+            scale * 10 + y,
+            scale,
+            0x00FFFFFF
+        );
+    }}
+    window_draw_frame(0, frame_buffer);
+
+    time_delay_cb(10, anim_callback);
+}}
+
+void main()
+{{
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
+
+    time_delay_cb(0, anim_callback);
+
+    enable_event_loop();
+}}
+''')

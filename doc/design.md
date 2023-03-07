@@ -35,6 +35,7 @@ choosing to implement new features.
 statically linked. This makes software easier to distribute and less likely to break.
 
 **Easy to target**: UVM aims to be well-documented and easy to target. Its minimalistic philosophy and simple APIs make this easier to achieve.
+The architecture is designed to be easy to understand and straightforward. We avoid architectural decisions that are quirky and surprising.
 
 **Performance**: although untyped, UVM is designed so that its bytecode can be easily JIT-compiled using dynamic binary translation techniques
 so that it can provide a good performance level that will be adequate for most applications.
