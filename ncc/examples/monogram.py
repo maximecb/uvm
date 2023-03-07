@@ -444,7 +444,7 @@ ascii_tbl_str += "u32 monogram_ascii_to_idx[127] = {\n"
 for (ascii_val, monogram_idx) in enumerate(monogram_ascii_to_idx):
     if ascii_val > 31:
         char = list(monogram)[monogram_idx]
-        ascii_tbl_str += "    {}, // '{}'\n".format(monogram_idx, char)
+        ascii_tbl_str += "    {}, // 0x{:02x} '{}'\n".format(monogram_idx, ascii_val, char)
     else:
         ascii_tbl_str += "    0xFFFF,\n"
 ascii_tbl_str += "};"
