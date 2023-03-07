@@ -12,7 +12,6 @@
 // > 
 // > https://datagoblin.itch.io/monogram
 // > 
-// > 
 // > # SPECIAL THANKS
 // > 
 // > thanks to Ateş Göral (@atesgoral) for creating the bitmap font converter:
@@ -20,7 +19,6 @@
 // > 
 // > thanks to Éric Araujo (@merwok_) for the inital port of monogram to PICO-8:
 // > https://itch.io/post/2625522
-
 
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS 390
 #define FONT_MONOGRAM_HEIGHT 12
@@ -5491,7 +5489,6 @@ u8 font_monogram_data[FONT_MONOGRAM_NUMBER_OF_CHARACTERS][FONT_MONOGRAM_HEIGHT] 
 	},
 };
 
-
 void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
 {
     u32* d = dest + dest_x + dest_w * dest_y;
@@ -5512,7 +5509,6 @@ void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y,
     }
 }
 
-
 void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 dest_x, u64 dest_y, u32 color)
 {
     u32* d = dest + dest_x + dest_w * dest_y;
@@ -5531,16 +5527,14 @@ void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 de
     }
 }
 
+size_t FRAME_WIDTH = 400;
+size_t FRAME_HEIGHT = 400;
 
-size_t FRAME_WIDTH = 600;
-size_t FRAME_HEIGHT = 600;
-
-u32 frame_buffer[363600];
-
+u32 frame_buffer[161600];
 
 void anim_callback()
 {
-    u8 scale = 3;
+    u8 scale = 2;
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
@@ -5572,7 +5566,6 @@ void anim_callback()
 
     time_delay_cb(10, anim_callback);
 }
-
 
 void main()
 {

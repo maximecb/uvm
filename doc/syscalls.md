@@ -178,6 +178,14 @@ void window_on_keyup(u32 window_id, void* callback)
 
 Register a callback for key release event.
 
+## window_on_textinput
+
+```
+void window_on_textinput(u32 window_id, void* callback)
+```
+
+Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input.
+
 ## Constants
 These are the constants associated with the window subsystem:
 

@@ -17,7 +17,6 @@ made by Vinícius Menézio (@vmenezio).
 
 https://datagoblin.itch.io/monogram
 
-
 # SPECIAL THANKS
 
 thanks to Ateş Göral (@atesgoral) for creating the bitmap font converter:
@@ -28,10 +27,8 @@ https://itch.io/post/2625522
 '''.splitlines()
 )
 
-
 print(__doc__)
 print(CREDITS)
-
 
 monogram = {
     "0": [0, 0, 0, 14, 17, 25, 21, 19, 17, 14, 0, 0],
@@ -426,8 +423,6 @@ monogram = {
     " ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 }
 
-
-
 def make_bytes(ch):
     rows = monogram[ch]
     index = list(monogram).index(ch)  # ordered dict comes in handy
@@ -438,13 +433,11 @@ def make_bytes(ch):
             continue
         print(f'\t\t0b{byte:08b},');
     print('\t},')
-    
 
 NUM_CHARS = len(monogram)
 MAX_ORD = max(map(ord, monogram))
 
 print(f'''\
-
 
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS {NUM_CHARS}
 #define FONT_MONOGRAM_HEIGHT 12
@@ -457,15 +450,9 @@ u8 font_monogram_data[FONT_MONOGRAM_NUMBER_OF_CHARACTERS][FONT_MONOGRAM_HEIGHT] 
 for i, ch in enumerate(monogram):
     make_bytes(ch)
 
-print(f'''\
-}};
-''')
+print('};')
 
-##for i, ch in enumerate(monogram):
-##    print(f'\tfont_monogram_chars[{hex(ord(ch))}] = {i};')
-##print('}')
-
-SCALE = 3
+SCALE = 2
 
 print(f'''
 void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
@@ -488,7 +475,6 @@ void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y,
     }}
 }}
 
-
 void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 dest_x, u64 dest_y, u32 color)
 {{
     u32* d = dest + dest_x + dest_w * dest_y;
@@ -507,12 +493,10 @@ void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 de
     }}
 }}
 
-
 size_t FRAME_WIDTH = {200 * SCALE};
 size_t FRAME_HEIGHT = {200 * SCALE};
 
 u32 frame_buffer[{202 * 200 * SCALE * SCALE}];
-
 
 void anim_callback()
 {{
@@ -549,7 +533,6 @@ void anim_callback()
     time_delay_cb(10, anim_callback);
 }}
 
-
 void main()
 {{
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
@@ -559,24 +542,3 @@ void main()
     enable_event_loop();
 }}
 ''')
-
-
-##
-##    //print_i64(font_monogram_data[0][0]); print_endl();  // prints '0'...
-##    init_monogram_font_data();  // buggy!
-##    //print_i64(font_monogram_data[0][0]); print_endl();  // prints '132' (T_T)
-##    // at this point font_monogram_data[0][0] is 132 aka 0b10000100
-##    // this should not be the case
-##
-##
-##// Map from ord(ch) to index of ch's data in font_monogram_data.
-##// This is for when you know the character that you want to draw but not
-##// its index in the font_monogram_data array.
-##u16 font_monogram_chars[{MAX_ORD}];
-##
-##void
-##init_monogram_font_data()
-##{{
-##
-##\t// Empty slots initialized to -1.
-##\tmemset(font_monogram_chars, 0xFF, sizeof(font_monogram_chars));

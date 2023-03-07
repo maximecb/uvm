@@ -355,6 +355,26 @@
         "permission": "window_display",
         "const_idx": 15,
         "description": "Register a callback for key release event."
+      },
+      {
+        "name": "window_on_textinput",
+        "args": [
+          [
+            "u32",
+            "window_id"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 19,
+        "description": "Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input."
       }
     ],
     "constants": [

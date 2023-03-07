@@ -59,6 +59,7 @@ struct Window<'a>
     // Callbacks for keyboard events
     cb_keydown: u64,
     cb_keyup: u64,
+    cb_textinput: u64,
 }
 
 // Note: we're leaving this global to avoid the Window lifetime
@@ -117,6 +118,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
         cb_mouseup: 0,
         cb_keydown: 0,
         cb_keyup: 0,
+        cb_textinput: 0,
     };
 
     unsafe {
@@ -212,6 +214,14 @@ pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
     window.cb_keyup = cb.as_u64();
 }
 
+pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
+{
+    let window = get_window(window_id.as_u32());
+    let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
+    video_subsystem.text_input().start();
+    window.cb_textinput = cb.as_u64();
+}
+
 /// Process SDL events
 pub fn process_events(vm: &mut VM) -> ExitReason
 {
@@ -224,7 +234,7 @@ pub fn process_events(vm: &mut VM) -> ExitReason
         match event {
             Event::Quit { .. } => {
                 return ExitReason::Exit(Value::from(0));
-            },
+            }
 
             Event::MouseMotion { window_id, x, y, .. } => {
                 if let ExitReason::Exit(val) = window_call_mousemove(vm, window_id, x, y) {
@@ -248,13 +258,22 @@ pub fn process_events(vm: &mut VM) -> ExitReason
                 if let ExitReason::Exit(val) = window_call_keydown(vm, window_id, keycode) {
                     return ExitReason::Exit(val);
                 }
-            },
+            }
 
             Event::KeyUp { window_id, keycode: Some(keycode), .. } => {
                 if let ExitReason::Exit(val) = window_call_keyup(vm, window_id, keycode) {
                     return ExitReason::Exit(val);
                 }
-            },
+            }
+
+            Event::TextInput { window_id, text, .. } => {
+                // For each UTF-8 byte of input
+                for ch in text.bytes() {
+                    if let ExitReason::Exit(val) = window_call_textinput(vm, window_id, ch) {
+                        return ExitReason::Exit(val);
+                    }
+                }
+            }
 
             _ => {}
         }
@@ -450,4 +469,16 @@ fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReaso
     } else {
         ExitReason::default()
     }
+}
+
+fn window_call_textinput(vm: &mut VM, window_id: u32, utf8_byte: u8) -> ExitReason
+{
+    let window = get_window(0);
+    let cb = window.cb_textinput;
+
+    if cb == 0 {
+        return ExitReason::default();
+    }
+
+    vm.call(cb, &[Value::from(window.window_id), Value::from(utf8_byte)])
 }

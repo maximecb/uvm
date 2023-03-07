@@ -77,6 +77,10 @@
 // Register a callback for key release event.
 #define window_on_keyup(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_keyup; }
 
+// void window_on_textinput(u32 window_id, void* callback)
+// Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input.
+#define window_on_textinput(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_textinput; }
+
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10

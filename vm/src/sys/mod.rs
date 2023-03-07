@@ -152,6 +152,7 @@ impl SysState
         self.reg_syscall(WINDOW_ON_MOUSEUP, SysCallFn::Fn2_0(window_on_mouseup));
         self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
         self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
+        self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
     }
 }
 
