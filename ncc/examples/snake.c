@@ -180,6 +180,11 @@ void keydown(u64 window_id, u16 keycode)
     int sdx = snake_xs[1] - snake_xs[0];
     int sdy = snake_ys[1] - snake_ys[0];
 
+    if (keycode == KEY_ESCAPE)
+    {
+        exit(0);
+    }
+
     if (keycode == KEY_LEFT && sdx != -1)
     {
         dx = -1;

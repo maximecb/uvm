@@ -213,7 +213,7 @@ pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
 }
 
 /// Process SDL events
-pub fn process_events(vm: &mut VM) -> bool
+pub fn process_events(vm: &mut VM) -> ExitReason
 {
     let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
 
@@ -222,34 +222,45 @@ pub fn process_events(vm: &mut VM) -> bool
     // TODO: we probably want to process window/input related events in window.rs ?
     for event in event_pump.poll_iter() {
         match event {
-            Event::Quit {..} |
-            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                return true;
+            Event::Quit { .. } => {
+                return ExitReason::Exit(Value::from(0));
             },
 
             Event::MouseMotion { window_id, x, y, .. } => {
-                window_call_mousemove(vm, window_id, x, y);
+                if let ExitReason::Exit(val) = window_call_mousemove(vm, window_id, x, y) {
+                    return ExitReason::Exit(val);
+                }
             }
+
             Event::MouseButtonDown { window_id, which, mouse_btn, .. } => {
-                window_call_mousedown(vm, window_id, which, mouse_btn);
+                if let ExitReason::Exit(val) = window_call_mousedown(vm, window_id, which, mouse_btn) {
+                    return ExitReason::Exit(val);
+                }
             }
+
             Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
-                window_call_mouseup(vm, window_id, which, mouse_btn);
+                if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, which, mouse_btn) {
+                    return ExitReason::Exit(val);
+                }
             }
 
             Event::KeyDown { window_id, keycode: Some(keycode), .. } => {
-                window_call_keydown(vm, window_id, keycode);
+                if let ExitReason::Exit(val) = window_call_keydown(vm, window_id, keycode) {
+                    return ExitReason::Exit(val);
+                }
             },
+
             Event::KeyUp { window_id, keycode: Some(keycode), .. } => {
-                window_call_keyup(vm, window_id, keycode);
+                if let ExitReason::Exit(val) = window_call_keyup(vm, window_id, keycode) {
+                    return ExitReason::Exit(val);
+                }
             },
 
             _ => {}
         }
     }
 
-    // TODO: should this return an ExitReason? or Option<ExitReason>?
-    return false;
+    return ExitReason::default();
 }
 
 // TODO: functions to process window-related events
@@ -259,22 +270,16 @@ pub fn process_events(vm: &mut VM) -> bool
 
 // TODO: this is just for testing
 // we should handle window-related events here instead
-fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32)
+fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_mousemove;
 
     if cb == 0 {
-        return;
+        return ExitReason::default();
     }
 
-    // TODO: pass window id
-    match vm.call(cb, &[Value::from(0), Value::from(x), Value::from(y)])
-    {
-        // TODO: we should return the exit reason?
-        ExitReason::Exit(val) => {}
-        ExitReason::Return(val) => {}
-    }
+    vm.call(cb, &[Value::from(window.window_id), Value::from(x), Value::from(y)])
 }
 
 /*
@@ -287,13 +292,13 @@ MouseButtonDown {
     y: i32,
 },
 */
-fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
+fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_mousedown;
 
     if cb == 0 {
-        return;
+        return ExitReason::default();
     }
 
     // TODO: ignore SDL_TOUCH_MOUSEID
@@ -307,26 +312,21 @@ fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: 
         MouseButton::Right => 2,
         MouseButton::X1 => 3,
         MouseButton::X2 => 4,
-        // TODO: just don't fire an event for these?
-        MouseButton::Unknown => { panic!("wtf"); }
+        MouseButton::Unknown => {
+            return ExitReason::default();
+        }
     };
 
-    // TODO: pass window id
-    match vm.call(cb, &[Value::from(0), Value::from(btn_id)])
-    {
-        // TODO: we should return the exit reason?
-        ExitReason::Exit(val) => {}
-        ExitReason::Return(val) => {}
-    }
+    vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
 }
 
-fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton)
+fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_mouseup;
 
     if cb == 0 {
-        return;
+        return ExitReason::default();
     }
 
     // TODO: ignore SDL_TOUCH_MOUSEID
@@ -340,16 +340,12 @@ fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: Mo
         MouseButton::Right => 2,
         MouseButton::X1 => 3,
         MouseButton::X2 => 4,
-        // TODO: just don't fire an event for these?
-        MouseButton::Unknown => { panic!("wtf"); }
+        MouseButton::Unknown => {
+            return ExitReason::default();
+        }
     };
 
-    match vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
-    {
-        // TODO: we should return the exit reason?
-        ExitReason::Exit(val) => {}
-        ExitReason::Return(val) => {}
-    }
+    vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
 }
 
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
@@ -404,6 +400,7 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::Equals => Some(KEY_EQUALS),
         Keycode::Question => Some(KEY_QUESTION),
 
+        Keycode::Escape => Some(KEY_ESCAPE),
         Keycode::Backspace => Some(KEY_BACKSPACE),
         Keycode::Left => Some(KEY_LEFT),
         Keycode::Right => Some(KEY_RIGHT),
@@ -419,44 +416,38 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
     }
 }
 
-fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode)
+fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_keydown;
 
     if cb == 0 {
-        return;
+        return ExitReason::default();
     }
 
     let keycode = translate_keycode(keycode);
 
     if let Some(keycode) = keycode {
-        match vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
-        {
-            // TODO: we should return the exit reason?
-            ExitReason::Exit(val) => {}
-            ExitReason::Return(val) => {}
-        }
+        vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
+    } else {
+        ExitReason::default()
     }
 }
 
-fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode)
+fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_keyup;
 
     if cb == 0 {
-        return;
+        return ExitReason::default();
     }
 
     let keycode = translate_keycode(keycode);
 
     if let Some(keycode) = keycode {
-        match vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
-        {
-            // TODO: we should return the exit reason?
-            ExitReason::Exit(val) => {}
-            ExitReason::Return(val) => {}
-        }
+        vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
+    } else {
+        ExitReason::default()
     }
 }

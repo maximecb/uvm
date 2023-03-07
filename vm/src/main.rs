@@ -78,12 +78,10 @@ fn run_program(vm: &mut VM) -> Value
         }
     }
 
-    let mut i = 0;
-    'main_loop: loop
+    loop
     {
-        let quit = sys::window::process_events(vm);
-        if quit {
-            break 'main_loop;
+        if let ExitReason::Exit(val) = sys::window::process_events(vm) {
+            return val;
         }
 
         let next_cb_time = sys::time::time_until_next_cb(&vm);
@@ -110,8 +108,6 @@ fn run_program(vm: &mut VM) -> Value
             }
         }
     }
-
-    Value::from(0 as u32)
 }
 
 fn main()
