@@ -10,7 +10,7 @@
 CREDITS = '\n'.join(
     '// > ' + line
     for line in '''\
-# CREDITS
+# MONOGRAM FONT
 
 Monogram is a free and Creative Commons Zero pixel font,
 made by Vinícius Menézio (@vmenezio).
@@ -426,13 +426,13 @@ monogram = {
 def make_bytes(ch):
     rows = monogram[ch]
     index = list(monogram).index(ch)  # ordered dict comes in handy
-    print('\t{  //', repr(ch))
+    print('    {', end="")
     for byte in rows:
         if not byte:
-            print('\t\t0b00000000,')
+            print(' 0x00,', end="")
             continue
-        print(f'\t\t0b{byte:08b},');
-    print('\t},')
+        print(f' 0x{byte:02x},', end="")
+    print(' }, //', repr(ch))
 
 NUM_CHARS = len(monogram)
 MAX_ORD = max(map(ord, monogram))
@@ -455,27 +455,7 @@ print('};')
 SCALE = 2
 
 print(f'''
-void draw_monogram_char(u8 ch, u32* dest, size_t dest_w, u64 dest_x, u64 dest_y, u32 color)
-{{
-    u32* d = dest + dest_x + dest_w * dest_y;
-    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
-        u8 pixel_bits = font_monogram_data[ch][y];
-        u64 x = 0;
-        while (pixel_bits) {{
-            if (pixel_bits & 1) {{
-                *(d+x) = color;
-            }}
-            ++x;
-            pixel_bits = pixel_bits >> 1;
-            // This is why the bits in the data are stored in reverse order.
-            // We draw the pixels left-to-right, but shift them and pick
-            // them off the byte right-to-left.
-        }}
-        d = d + dest_w;
-    }}
-}}
-
-void draw_monogram_scaled_char(u8 ch, u32* dest, size_t dest_w, u8 scale, u64 dest_x, u64 dest_y, u32 color)
+void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_y, u8 scale, u32 color)
 {{
     u32* d = dest + dest_x + dest_w * dest_y;
     for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
@@ -507,24 +487,26 @@ void anim_callback()
     for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {{
         u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
         u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
+
         // Drop shadow.
-        draw_monogram_scaled_char(
-            ch,
+        draw_monogram_char(
             frame_buffer,
             FRAME_WIDTH,
-            scale,
+            ch,
             scale * 11 + x,
             scale * 11 + y,
+            scale,
             0x00000000
         );
+
         // Foreground font glyphs.
-        draw_monogram_scaled_char(
-            ch,
+        draw_monogram_char(
             frame_buffer,
             FRAME_WIDTH,
-            scale,
+            ch,
             scale * 10 + x,
             scale * 10 + y,
+            scale,
             0x00FFFFFF
         );
     }}
