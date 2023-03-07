@@ -453,18 +453,16 @@ impl Expr
                 child.gen_code(sym, out)?;
 
                 match (&new_type, &child_type) {
-                    // Cast to a larger type
-                    (UInt(m), UInt(n)) => {},
+                    // These int casts are no-ops
                     (UInt(m), Int(n)) if m >= n => {},
                     (Int(m), UInt(n)) if m >= n => {},
+                    (Int(m), Int(n)) => if m == n {},
+                    (UInt(m), UInt(n)) => {},
 
-                    (UInt(m), Int(n)) if m < n => {
+                    // These int casts require truncation
+                    (UInt(m), Int(n)) | (Int(m), UInt(n)) if m < n => {
                         out.push_str(&format!("trunc_u{};\n", m));
-                    },
-
-                    (Int(m), UInt(n)) if m < n => {
-                        out.push_str(&format!("trunc_u{};\n", m));
-                    },
+                    }
 
                     // Pointer cast
                     (Pointer(_), Pointer(_)) => {},

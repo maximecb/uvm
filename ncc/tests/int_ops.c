@@ -73,6 +73,8 @@ int main()
 
     // Integer casting
     assert(((int)(uint8_t)3) == 3);
+    assert((int)'A' == 0x41);
+    assert((short)'A' == 0x41);
 
     return 0;
 }
