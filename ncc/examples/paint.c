@@ -98,9 +98,9 @@ void draw_palette()
         // G color = ((i/9) % 3) * 127
         // Add an offset so that black doesn't end up right at the end
         size_t color_idx = i + 3;
-        u8 r = (color_idx % 3) * 127;
-        u8 g = ((color_idx/3) % 3) * 127;
-        u8 b = ((color_idx/9) % 3) * 127;
+        u32 r = (color_idx % 3) * 127;
+        u32 g = ((color_idx/3) % 3) * 127;
+        u32 b = ((color_idx/9) % 3) * 127;
         u32 color = (r << 16) | (g << 8) | b;
 
         size_t xmin = i * BOX_WIDTH;
