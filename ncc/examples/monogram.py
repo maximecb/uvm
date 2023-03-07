@@ -425,7 +425,6 @@ monogram = {
 
 def make_bytes(ch):
     rows = monogram[ch]
-    index = list(monogram).index(ch)  # ordered dict comes in handy
     print('    {', end="")
     for byte in rows:
         if not byte:
@@ -434,8 +433,23 @@ def make_bytes(ch):
         print(f' 0x{byte:02x},', end="")
     print(' }, //', repr(ch))
 
+monogram_ascii_to_idx = [0xFF_FF_FF_FF] * 127
+for (monogram_idx, char) in enumerate(monogram):
+    ascii_val = ord(char)
+    if ascii_val < 127:
+        monogram_ascii_to_idx[ascii_val] = monogram_idx
+
+ascii_tbl_str = ""
+ascii_tbl_str += "u32 monogram_ascii_to_idx[127] = {\n"
+for (ascii_val, monogram_idx) in enumerate(monogram_ascii_to_idx):
+    if ascii_val > 31:
+        char = list(monogram)[monogram_idx]
+        ascii_tbl_str += "    {}, // '{}'\n".format(monogram_idx, char)
+    else:
+        ascii_tbl_str += "    0xFFFF,\n"
+ascii_tbl_str += "};"
+
 NUM_CHARS = len(monogram)
-MAX_ORD = max(map(ord, monogram))
 
 print(f'''\
 
@@ -451,23 +465,39 @@ for i, ch in enumerate(monogram):
     make_bytes(ch)
 
 print('};')
+print()
+
+print(ascii_tbl_str)
 
 SCALE = 2
 
 print(f'''
 void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_y, u8 scale, u32 color)
 {{
+    u32 char_idx = monogram_ascii_to_idx[ch];
+
+    //print_i64(ch);
+    //print_endl();
+    //print_i64(char_idx);
+    //print_endl();
+
     u32* d = dest + dest_x + dest_w * dest_y;
-    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y) {{
-        u8 pixel_bits = font_monogram_data[ch][y];
-        for (u8 i = 0; i < scale; ++i) {{
+
+    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y)
+    {{
+        u8 pixel_bits = font_monogram_data[char_idx][y];
+        for (u8 i = 0; i < scale; ++i)
+        {{
             u64 x = 0;
             u8 pb = pixel_bits;
-            while (pb) {{
+
+            while (pb)
+            {{
                 if (pb & 1) memset32(d + x, color, scale);
                 x = x + scale;
                 pb = pb >> 1;
             }}
+
             d = d + dest_w;
         }}
     }}
@@ -481,10 +511,11 @@ u32 frame_buffer[{202 * 200 * SCALE * SCALE}];
 void anim_callback()
 {{
     u8 scale = {SCALE};
+
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
-    for (size_t ch = 0; ch < FONT_MONOGRAM_NUMBER_OF_CHARACTERS; ++ch) {{
+    for (size_t ch = 32; ch < 127; ++ch) {{
         u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
         u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
 
@@ -510,8 +541,8 @@ void anim_callback()
             0x00FFFFFF
         );
     }}
-    window_draw_frame(0, frame_buffer);
 
+    window_draw_frame(0, frame_buffer);
     time_delay_cb(10, anim_callback);
 }}
 
