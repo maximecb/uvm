@@ -88,7 +88,8 @@ fn run_program(vm: &mut VM) -> Value
 
         // Sleep until the next callback
         if let Some(delay_ms) = next_cb_time {
-            sleep(Duration::from_millis(delay_ms));
+            let min_delay = std::cmp::min(delay_ms, 10);
+            sleep(Duration::from_millis(min_delay));
         }
         else
         {
