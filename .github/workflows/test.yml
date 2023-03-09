@@ -1,0 +1,18 @@
+name: Run tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+
+    - name: Build API
+      working-directory: ./api
+      run: cargo build
+
+  # TODO: build VM. May require SDL2.
