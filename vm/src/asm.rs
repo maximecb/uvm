@@ -23,12 +23,25 @@ impl ParseError
             col_no: input.col_no
         }
     }
+
+    pub fn msg_only<T>(msg: &str) -> Result<T, ParseError>
+    {
+        Err(ParseError {
+            msg: msg.to_string(),
+            line_no: 0,
+            col_no: 0,
+        })
+    }
 }
 
 impl fmt::Display for ParseError
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "parse error")
+        if self.line_no != 0 {
+            write!(f, "@{}:{}: {}", self.line_no, self.col_no, self.msg)
+        } else {
+            write!(f, "{}", self.msg)
+        }
     }
 }
 
@@ -564,9 +577,15 @@ impl Assembler
 
     pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
     {
-        let input_str = std::fs::read_to_string(file_name).unwrap();
-        let mut input = Input::new(input_str);
-        return self.parse_input(&mut input);
+        match std::fs::read_to_string(file_name) {
+            Err(_) => {
+                ParseError::msg_only(&format!("could not open asm file \"{}\"", file_name))
+            }
+            Ok(input_str) => {
+                let mut input = Input::new(input_str);
+                self.parse_input(&mut input)
+            }
+        }
     }
 
     /// Parse a string of source code

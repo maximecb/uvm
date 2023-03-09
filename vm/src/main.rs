@@ -124,10 +124,16 @@ fn main()
 
     // Parse/compile the program
     let asm = Assembler::new();
-    let mut vm = asm.parse_file(file_name).unwrap();
+    let result = asm.parse_file(file_name);
+
+    if let Err(error) = &result {
+        println!("Error: {}", error);
+        exit(-1);
+    }
 
     // Run the program
     if !opts.parse_only {
+        let mut vm = result.unwrap();
         let ret_val = run_program(&mut vm);
         exit(ret_val.as_i32());
     }
