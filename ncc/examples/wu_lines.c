@@ -46,10 +46,26 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
         if (y1 == y0)
         {
             //draw_point
+            *(fb + x0 + y0 * fb_width) = color;
         }
         else
         {
             //draw_vertical_line
+            if (y0 > y1)
+            {
+                // swap values
+                //u32 tmp = y1; y1 = y0; y0 = tmp;
+                // Use the xor trick!
+                y1 = y1 ^ y0;
+                y0 = y0 ^ y1;
+                y1 = y1 ^ y0;
+            }
+            u32 *point = fb + x0;
+            for (; y1 >= y0; ++y0)
+            {
+                *point = color;
+                point = point + fb_width;
+            }
         }
     }
     else if (y1 == y0)  // and we know x1 != x0
@@ -159,7 +175,6 @@ void draw_wu_line_second_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
         }
     }
 }
-
 
 void draw_wu_line_third_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
