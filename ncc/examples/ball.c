@@ -48,6 +48,8 @@ void draw_ball()
 
 void anim_callback()
 {
+    u64 start_time = time_current_ms();
+
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, 800 * 600);
 
@@ -76,7 +78,8 @@ void anim_callback()
 
     window_draw_frame(0, frame_buffer);
 
-    time_delay_cb(10, anim_callback);
+    // Schedule a fixed rate update for the next frame
+    fixed_rate_update(start_time, 60, anim_callback);
 }
 
 void main()
