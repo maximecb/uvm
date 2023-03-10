@@ -184,6 +184,8 @@ void fire_bolt()
 
 void anim_callback()
 {
+    u64 start_time = time_current_ms();
+
     if (left_down && !right_down)
     {
         if (ship_x > 20)
@@ -198,7 +200,7 @@ void anim_callback()
     // If our bolt is active, make it move up
     if (bolt_y > 0)
     {
-        bolt_y = bolt_y - 18;
+        bolt_y = bolt_y - 14;
     }
 
     // Clear the screen
@@ -271,7 +273,9 @@ void anim_callback()
     }
 
     window_draw_frame(0, frame_buffer);
-    time_delay_cb(20, anim_callback);
+
+    // Schedule a fixed rate update for the next frame
+    fixed_rate_update(start_time, 40, anim_callback);
 }
 
 // Enemy movement update

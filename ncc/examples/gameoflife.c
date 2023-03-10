@@ -105,10 +105,12 @@ void update()
 
 void anim_callback()
 {
+    u64 start_time = time_current_ms();
+
     benchmark(update());
 
-    time_delay_cb(100, anim_callback);
-    //time_delay_cb(0, anim_callback);
+    // Schedule a fixed rate update for the next frame
+    fixed_rate_update(start_time, 20, anim_callback);
 }
 
 void main()

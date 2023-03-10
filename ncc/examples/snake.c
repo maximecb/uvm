@@ -97,6 +97,8 @@ void spawn_apple()
 
 void anim_callback()
 {
+    u64 start_time = time_current_ms();
+
     // Move the snake body forward
     // We do this from tail to head
     for (int i = snake_len - 1; i > 0; i = i - 1)
@@ -172,7 +174,9 @@ void anim_callback()
     );
 
     window_draw_frame(0, frame_buffer);
-    time_delay_cb(100, anim_callback);
+
+    // Schedule a fixed rate update for the next frame
+    fixed_rate_update(start_time, 10, anim_callback);
 }
 
 void keydown(u64 window_id, u16 keycode)
