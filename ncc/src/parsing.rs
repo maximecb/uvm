@@ -332,15 +332,22 @@ impl Input
         return Ok(int_val);
     }
 
-    /// Parse a floating-point number
-    fn parse_float<FloatType: std::str::FromStr>(&mut self) -> Result<FloatType, ParseError>
+    /// Read the characters of a numeric value into a string
+    pub fn read_numeric(&mut self) -> String
     {
         fn read_digits(input: &mut Input)
         {
+            let ch = input.peek_ch();
+
+            // The first char must be a digit
+            if !ch.is_ascii_digit() {
+                return;
+            }
+
             loop
             {
                 let ch = input.peek_ch();
-                if !ch.is_ascii_digit() {
+                if !ch.is_ascii_digit() && ch != '_' {
                     break;
                 }
                 input.eat_ch();
@@ -372,12 +379,12 @@ impl Input
         }
 
         let end_idx = self.idx;
-        let number_str: String = self.input[start_idx..end_idx].iter().collect();
+        let num_str: String = self.input[start_idx..end_idx].iter().collect();
 
-        match number_str.parse::<FloatType>() {
-            Ok(float_val) => Ok(float_val),
-            Err(_) => self.parse_error("invalid floating-point value")
-        }
+        // Remove any underscore separators
+        let num_str = num_str.replace("_", "");
+
+        return num_str;
     }
 
     /// Parse a string literal

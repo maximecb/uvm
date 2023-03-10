@@ -23,10 +23,27 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
-    // Decimal integer literal
+    // Decimal numeric value
     if ch.is_digit(10) {
-        let val = input.parse_int(10)?;
-        return Ok(Expr::Int(val));
+        let num_str = input.read_numeric();
+        //println!("{}", num_str);
+
+        // If we can parse this value as an integer
+        if let Ok(int_val) = num_str.parse::<i128>() {
+            return Ok(Expr::Int(int_val));
+        }
+
+        // Parse this value as a floating-point number
+        let float_val: f32 = num_str.parse().unwrap();
+
+        if !input.match_char('f') {
+            return input.parse_error(&concat!("
+                only floats are supported for now, ",
+                "e.g. 3.5f (float), not 3.5 (double)"
+            ));
+        }
+
+        return Ok(Expr::Float32(float_val));
     }
 
     if input.match_keyword("NULL")? || input.match_keyword("null")? {
@@ -1098,6 +1115,19 @@ mod tests
 
         // Should fail
         parse_fails("u64x;");
+    }
+
+    #[test]
+    fn numeric_literals()
+    {
+        parse_ok("int g = 400_000;");
+        parse_ok("int g = 400_000_;");
+        parse_ok("int f = 0.2f;");
+        parse_ok("int f = 4.567f;");
+        parse_ok("int f = 4.56e78f;");
+        parse_ok("int f = 4.5_6e8_f;");
+
+        parse_fails("int f = 4..5f;");
     }
 
     #[test]
