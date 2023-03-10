@@ -7,6 +7,9 @@ uint8_t bytes2d[2][2] = { {0, 1}, {2, 3} };
 
 uint8_t array2d[600][800];
 
+// Integer literals of type long and int in the same array literal
+u64 arr_int_long[2] = { 0x7fff8beb, 0x8000e82a };
+
 int main()
 {
     assert(int_array[0] == 7);

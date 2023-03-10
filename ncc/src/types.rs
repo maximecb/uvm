@@ -179,17 +179,27 @@ impl Expr
                 }
                 else
                 {
-                    let first_type = exprs[0].eval_type()?;
+                    let mut elem_type = exprs[0].eval_type()?;
 
                     for expr in &exprs[1..] {
                         let expr_type = expr.eval_type()?;
-                        if !first_type.eq(&expr_type) {
-                            return ParseError::msg_only("array element types do not match");
+
+                        match (&elem_type, &expr_type) {
+                            (Int(m), Int(n)) => {
+                                elem_type = Type::Int(max(*m, *n))
+                            }
+
+                            _ => {
+                                if !elem_type.eq(&expr_type) {
+                                    return ParseError::msg_only("array element types do not match");
+                                }
+                            }
                         }
+
                     }
 
                     Ok(Array {
-                        elem_type: Box::new(first_type),
+                        elem_type: Box::new(elem_type),
                         size_expr: Box::new(Expr::Int(exprs.len() as i128))
                     })
                 }
