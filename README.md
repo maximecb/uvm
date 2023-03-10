@@ -3,6 +3,13 @@
 **NOTE: this project is very much a work in progress and not ready for prime time at this point. You're likely to run
 into bugs and missing features, but I am looking for collaborators who share the vision.**
 
+<p align="center">
+    <img src="media/attackers.png" height=180>
+    <img src="media/paint_program.png" height=180>
+    <img src="media/chess.png" height=180>
+    <img src="media/pirate_ship.png" height=180>
+</p>
+
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
 with and approachable to newcomers. May also be valuable as a teaching tool. There is a short
