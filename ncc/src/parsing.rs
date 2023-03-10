@@ -219,6 +219,26 @@ impl Input
                 break;
             }
 
+            // If this is a # linenum filename directive
+            if self.match_chars(&['#', ' '])
+            {
+                let linenum = self.parse_int(10)?;
+
+                if !self.match_char(' ') {
+                    return self.parse_error("expected space in linenum directive");
+                }
+
+                let file_name = self.parse_str('"')?;
+
+                if !self.match_char('\n') {
+                    return self.parse_error("expected newline after linenum directive");
+                }
+
+                // Update the source position
+                self.line_no = linenum.try_into().unwrap();
+                self.src_name = file_name;
+            }
+
             // Single-line comment
             if self.match_chars(&['/', '/'])
             {
@@ -390,6 +410,7 @@ impl Input
     /// Parse a string literal
     pub fn parse_str(&mut self, end_ch: char) -> Result<String, ParseError>
     {
+        // Eat the opening character
         self.eat_ch();
 
         let mut out = String::new();
