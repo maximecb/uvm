@@ -16,6 +16,10 @@
 // Regression: definition containing a \ character in a string
 #define newline_str "\n"
 
+// Regression: macro replacement should not happen within a string
+#define SUB_STR_MACRO "foo"
+#define STR_MACRO "macro SUB_STR_MACRO"
+
 // Regression: argument names contain parameter name
 #define rgba32(b, a) (b | a)
 int regress_rgba(int chroma, int alpha)
