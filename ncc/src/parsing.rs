@@ -75,11 +75,21 @@ pub struct Input
 
 impl Input
 {
-    pub fn from_file(file_name: &str) -> Self
+    pub fn from_file(file_name: &str) -> Result<Self, ParseError>
     {
-        let data = fs::read_to_string(file_name)
-            .expect(&format!("could not read input file {}", file_name));
-        Input::new(&data, file_name)
+        let data = match fs::read_to_string(file_name) {
+            Ok(data) => data,
+            Err(_) => {
+                return Err(ParseError {
+                    msg: format!("could not read input file \"{}\"", file_name),
+                    src_name: String::new(),
+                    line_no: 0,
+                    col_no: 0,
+                })
+            }
+        };
+
+        Ok(Input::new(&data, file_name))
     }
 
     pub fn new(input_str: &str, src_name: &str) -> Self

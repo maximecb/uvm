@@ -488,8 +488,7 @@ fn process_input_rec(
                     input.parse_str('"')?
                 };
 
-                let mut include_input = Input::from_file(&file_path);
-
+                let mut include_input = Input::from_file(&file_path)?;
                 let (include_output, end_keyword) = process_input_rec(
                     &mut include_input,
                     defs,
@@ -613,7 +612,7 @@ mod tests
         use crate::cpp::process_input;
 
         dbg!(file_name);
-        let mut input = Input::from_file(file_name);
+        let mut input = Input::from_file(file_name)?;
         let output = process_input(&mut input)?;
 
         let mut input = Input::new(&output, file_name);

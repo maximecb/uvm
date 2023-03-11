@@ -78,7 +78,7 @@ fn parse_args(args: Vec<String>) -> Options
 
 fn compile_file(file_name: &str, opts: &Options) -> Result<(), ParseError>
 {
-    let mut input = Input::from_file(file_name);
+    let mut input = Input::from_file(file_name)?;
 
     let output = process_input(&mut input)?;
 

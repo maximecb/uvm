@@ -1010,7 +1010,7 @@ pub fn parse_str(src: &str) -> Result<Unit, ParseError>
 
 pub fn parse_file(file_name: &str) -> Result<Unit, ParseError>
 {
-    let mut input = Input::from_file(file_name);
+    let mut input = Input::from_file(file_name)?;
     parse_unit(&mut input)
 }
 

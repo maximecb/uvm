@@ -978,7 +978,7 @@ mod tests
         use crate::cpp::process_input;
 
         dbg!(file_name);
-        let mut input = Input::from_file(file_name);
+        let mut input = Input::from_file(file_name).unwrap();
         let output = process_input(&mut input).unwrap();
         //println!("{}", output);
 
