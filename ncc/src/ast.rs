@@ -329,6 +329,9 @@ pub struct Function
     /// Parameter list
     pub params: Vec<(Type, String)>,
 
+    /// Variadic function, variable argument count
+    pub var_arg: bool,
+
     /// Inline attribute
     pub inline: bool,
 

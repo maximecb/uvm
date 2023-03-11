@@ -902,6 +902,7 @@ fn parse_array_type(input: &mut Input, base_type: Type) -> Result<Type, ParseErr
 fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool) -> Result<Function, ParseError>
 {
     let mut params = Vec::default();
+    let mut var_arg = false;
 
     loop
     {
@@ -912,6 +913,13 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool)
         }
 
         if input.match_token(")")? {
+            break;
+        }
+
+        // If this is a variable argument count function
+        if input.match_token("...")? {
+            input.expect_token(")")?;
+            var_arg = true;
             break;
         }
 
@@ -938,6 +946,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool)
         name,
         ret_type,
         params,
+        var_arg,
         inline,
         body,
         num_locals: 0,
@@ -1082,6 +1091,14 @@ mod tests
         parse_fails("void* f foo();");
         parse_fails("voidfoo() {}");
         parse_fails("void foo(u64 a, u64 b) { a = a b; }");
+    }
+
+    #[test]
+    fn var_arg()
+    {
+        parse_ok("void foo(...) {}");
+        parse_ok("void foo(int x, int y, ...) {}");
+        parse_fails("void foo(..., int x);");
     }
 
     #[test]
