@@ -488,23 +488,24 @@ fn process_input_rec(
                     input.parse_str('"')?
                 };
 
-                let mut input = Input::from_file(&file_path);
+                let mut include_input = Input::from_file(&file_path);
 
                 let (include_output, end_keyword) = process_input_rec(
-                    &mut input,
+                    &mut include_input,
                     defs,
                     gen_output
                 )?;
 
                 if end_keyword != "" {
-                    return input.parse_error(&format!("unexpected #{}", end_keyword));
+                    return include_input.parse_error(&format!("unexpected #{}", end_keyword));
                 }
 
                 // TODO: emit linenum directive
 
                 output += &include_output;
 
-                // TODO: emit linenum directive
+                // Emit # linenum filename directive
+                output += &format!("# {} \"{}\"\n", input.line_no, input.src_name);
 
                 continue;
             }
@@ -605,8 +606,7 @@ mod tests
         input.line_no as usize
     }
 
-    /*
-    fn compile_file(file_name: &str)
+    fn compile(file_name: &str) -> Result<(), ParseError>
     {
         use crate::parsing::Input;
         use crate::parser::parse_unit;
@@ -614,16 +614,24 @@ mod tests
 
         dbg!(file_name);
         let mut input = Input::from_file(file_name);
-        let output = process_input(&mut input).unwrap();
-        //println!("{}", output);
+        let output = process_input(&mut input)?;
 
         let mut input = Input::new(&output, file_name);
-        let mut unit = parse_unit(&mut input).unwrap();
-        unit.resolve_syms().unwrap();
-        unit.check_types().unwrap();
-        unit.gen_code().unwrap();
+        let mut unit = parse_unit(&mut input)?;
+        //unit.resolve_syms().unwrap();
+        //unit.check_types().unwrap();
+        //unit.gen_code().unwrap();
+
+        Ok(())
     }
-    */
+
+    fn error_line(file_name: & str) -> usize
+    {
+        match compile(file_name) {
+            Ok(_) => panic!(),
+            Err(error) => error.line_no as usize
+        }
+    }
 
     #[test]
     fn empty()
@@ -639,5 +647,16 @@ mod tests
         assert_eq!(line_count("#define FOO 2\n"), 2);
         assert_eq!(line_count("#define FOO 2\nFOO"), 2);
         assert_eq!(line_count("#define FOO 2\nFOO\n"), 3);
+    }
+
+    #[test]
+    fn error_lines()
+    {
+        assert_eq!(error_line("tests/line_nums/err_line_1.c"), 1);
+        assert_eq!(error_line("tests/line_nums/err_line_2.c"), 2);
+        assert_eq!(error_line("tests/line_nums/err_after_include.c"), 6);
+        assert_eq!(error_line("tests/line_nums/err_after_include2.c"), 7);
+
+        // TODO: test for errors line numbers inside of include files
     }
 }
