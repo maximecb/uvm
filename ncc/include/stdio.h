@@ -22,7 +22,7 @@ void __write_char(char c)
 int printf(char* format, ...)
 {
     unsigned int ch_written = 0;
-    unsigned int var_arg_idx = 0;
+    unsigned int var_arg_idx = 1;
 
     // For each character of the format string
     for (unsigned int i = 0;; ++i)
@@ -51,10 +51,10 @@ int printf(char* format, ...)
                 ++i;
 
                 // Get the integer argument and print it
-                /*asm (var_arg_idx) -> void {
+                asm (var_arg_idx) -> void {
                     get_var_arg;
-                    print_i64;
-                };*/
+                    syscall print_i64;
+                };
                 ++var_arg_idx;
 
                 continue;
