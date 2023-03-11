@@ -16,6 +16,13 @@
 // Regression: definition containing a \ character in a string
 #define newline_str "\n"
 
+// Regression: argument names contain parameter name
+#define rgba32(b, a) (b | a)
+int regress_rgba(int chroma, int alpha)
+{
+    return rgba32(alpha, chroma);
+}
+
 void main()
 {
     int l = __LINE__;

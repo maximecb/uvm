@@ -344,10 +344,62 @@ fn expand_macro(
             ));
         }
 
-        // Replace the parameters by their value
+        // Map parameter names to argument values
+        let mut param_to_arg = HashMap::new();
         for (idx, param) in params.iter().enumerate() {
-            text = text.replace(param, &args[idx]);
+            param_to_arg.insert(param, &args[idx]);
         }
+
+        // TODO: use the src name/loc from the macro definition
+        let mut input = Input::new(&text, &input.src_name);
+        let mut output = String::new();
+
+        loop
+        {
+            if input.eof() {
+                break;
+            }
+
+            let ch = input.peek_ch();
+
+            // If this is a character string or character literal
+            if ch == '"' || ch == '\'' {
+                output += &input.read_string(ch)?;
+                continue;
+            }
+
+            // Eat single-line comments
+            if input.match_chars(&['/', '/']) {
+                input.eat_comment();
+                output += " ";
+                continue;
+            }
+
+            // Eat multi-line comments
+            if input.match_chars(&['/', '*']) {
+                input.eat_multi_comment()?;
+                output += " ";
+                continue;
+            }
+
+            // If this is an identifier
+            if is_ident_ch(ch) {
+                let ident = input.parse_ident()?;
+
+                // If we have a definition for this identifier
+                if let Some(arg_val) = param_to_arg.get(&ident) {
+                    output += arg_val;
+                } else {
+                    output += &ident;
+                }
+
+                continue;
+            }
+
+            output.push(input.eat_ch());
+        }
+
+        text = output;
     }
 
     // Process macros in text recursively
