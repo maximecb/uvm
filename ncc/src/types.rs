@@ -377,17 +377,25 @@ impl Expr
                 let fn_type = callee.eval_type()?;
 
                 match fn_type {
-                    Type::Fun { ret_type, param_types } => {
-                        if args.len() != param_types.len() {
-                            return ParseError::msg_only("argument count doesn't match function parameter count")
+                    Type::Fun { ret_type, param_types, var_arg } => {
+                        if args.len() < param_types.len() {
+                            return ParseError::msg_only("argument count is less than function parameter count")
+                        }
+                        else if args.len() > param_types.len() && !var_arg {
+                            return ParseError::msg_only("argument count is greater than function parameter count")
                         }
 
-                        for (idx, arg) in args.iter().enumerate() {
-                            let arg_type = arg.eval_type()?;
+                        for (idx, param_type) in param_types.iter().enumerate() {
+                            let arg_type = args[idx].eval_type()?;
 
-                            if !assign_compat(&param_types[idx], &arg_type) {
+                            if !assign_compat(&param_type, &arg_type) {
                                 return ParseError::msg_only("argument type not compatible with parameter type")
                             }
+                        }
+
+                        // Evaluate the type of variadic arguments
+                        for (idx, arg_expr) in args[param_types.len()..].iter().enumerate() {
+                            arg_expr.eval_type()?;
                         }
 
                         Ok(*ret_type)

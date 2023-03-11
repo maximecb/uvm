@@ -1045,6 +1045,13 @@ mod tests
     }
 
     #[test]
+    fn var_arg()
+    {
+        gen_ok("void foo(int x, ...) {} void bar() { foo(1); }");
+        gen_ok("void foo(int x, ...) {} void bar() { foo(1, 2); }");
+    }
+
+    #[test]
     fn pointers()
     {
         // Void pointers
