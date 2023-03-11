@@ -894,6 +894,10 @@ impl Assembler
                 self.code.push_u8(idx);
             }
 
+            "get_var_arg" => {
+                self.code.push_op(Op::get_var_arg);
+            }
+
             "set_arg" => {
                 let idx: u8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::set_arg);

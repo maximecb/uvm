@@ -53,6 +53,10 @@ pub enum Op
     // get_arg <idx:u8>
     get_arg,
 
+    // Get a variadic argument with a dynamic index variable
+    // get_arg (idx)
+    get_var_arg,
+
     // Set the function argument at a given index
     // set_arg <idx:u8> (value)
     set_arg,
@@ -687,6 +691,19 @@ impl VM
 
                 Op::get_arg => {
                     let idx = self.code.read_pc::<u8>(&mut pc) as usize;
+
+                    let argc = self.frames[self.frames.len() - 1].argc;
+                    if idx >= argc {
+                        panic!("invalid index in get_arg, idx={}, argc={}", idx, argc);
+                    }
+
+                    // Last argument is at bp - 1 (if there are arguments)
+                    let stack_idx = (bp - argc) + idx;
+                    self.push(self.stack[stack_idx]);
+                }
+
+                Op::get_var_arg => {
+                    let idx = self.pop().as_usize();
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
