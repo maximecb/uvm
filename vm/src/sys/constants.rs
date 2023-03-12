@@ -52,7 +52,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "window_on_keyup", const_idx: 15, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "memset32", const_idx: 16, argc: 3, has_ret: false }),
-    Some(SysCallDesc { name: "vm_resize_heap", const_idx: 17, argc: 1, has_ret: false }),
+    Some(SysCallDesc { name: "vm_resize_heap", const_idx: 17, argc: 1, has_ret: true }),
     None,
     Some(SysCallDesc { name: "window_on_textinput", const_idx: 19, argc: 2, has_ret: false }),
 ];
