@@ -485,7 +485,11 @@ fn process_input_rec(
                 }
                 else
                 {
-                    input.parse_str('"')?
+                    // Compute the include path based on the
+                    // current file's directory
+                    let rel_include_path = input.parse_str('"')?;
+                    let mut src_path = Path::new(&input.src_name).parent().unwrap();
+                    src_path.join(rel_include_path).display().to_string()
                 };
 
                 let mut include_input = Input::from_file(&file_path)?;
@@ -499,11 +503,10 @@ fn process_input_rec(
                     return include_input.parse_error(&format!("unexpected #{}", end_keyword));
                 }
 
-                // TODO: emit linenum directive
-
                 output += &include_output;
 
                 // Emit # linenum filename directive
+                // since we are returning to the parent file
                 output += &format!("# {} \"{}\"\n", input.line_no, input.src_name);
 
                 continue;
@@ -656,6 +659,7 @@ mod tests
         assert_eq!(error_line("tests/line_nums/err_after_include.c"), 6);
         assert_eq!(error_line("tests/line_nums/err_after_include2.c"), 7);
 
-        // TODO: test for errors line numbers inside of include files
+        // Test error line numbers inside of include files
+        assert_eq!(error_line("tests/line_nums/err_include_ln3.c"), 3);
     }
 }
