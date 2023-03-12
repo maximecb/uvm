@@ -45,6 +45,21 @@ int printf(char* format, ...)
                 continue;
             }
 
+            // String
+            if (format[i+1] == 's')
+            {
+                ++i;
+
+                // Get the integer argument and print it
+                asm (var_arg_idx) -> void {
+                    get_var_arg;
+                    syscall print_str;
+                };
+                ++var_arg_idx;
+
+                continue;
+            }
+
             // Decimal integer
             if (format[i+1] == 'd' || format[i+1] == 'i')
             {
