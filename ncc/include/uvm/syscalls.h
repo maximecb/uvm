@@ -81,6 +81,10 @@
 // Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input.
 #define window_on_textinput(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_textinput; }
 
+// u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+// Open an audio output device.
+#define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
+
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10
@@ -134,5 +138,6 @@
 #define KEY_UP 16003
 #define KEY_DOWN 16004
 #define KEY_SHIFT 16005
+#define AUDIO_FORMAT_I16 0
 
 #endif

@@ -249,6 +249,21 @@ These are the constants associated with the window subsystem:
 
 Audio input and output.
 
+## audio_open_output
+
+```
+u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+```
+
+**Returns:** `u32 device_id`
+
+Open an audio output device.
+
+## Constants
+These are the constants associated with the audio subsystem:
+
+- `u16 AUDIO_FORMAT_I16 = 0`
+
 # fs
 
 File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.

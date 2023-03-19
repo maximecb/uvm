@@ -12,8 +12,10 @@ use std::env;
 use std::thread::sleep;
 use std::time::Duration;
 use std::process::exit;
+use std::sync::{Arc, Mutex};
 use crate::vm::{VM, Value, MemBlock, ExitReason};
 use crate::asm::{Assembler};
+use crate::sys::{SysState};
 
 /// Command-line options
 #[derive(Debug, Clone)]
@@ -65,8 +67,10 @@ fn parse_args(args: Vec<String>) -> Options
     opts
 }
 
-fn run_program(vm: &mut VM) -> Value
+fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
 {
+    let mut vm = mutex.lock().unwrap();
+
     match vm.call(0, &[])
     {
         ExitReason::Exit(val) => {
@@ -78,13 +82,21 @@ fn run_program(vm: &mut VM) -> Value
         }
     }
 
+    drop(vm);
+
     loop
     {
-        if let ExitReason::Exit(val) = sys::window::process_events(vm) {
+        let mut vm = mutex.lock().unwrap();
+
+        if let ExitReason::Exit(val) = sys::window::process_events(&mut vm) {
             return val;
         }
 
-        let next_cb_time = sys::time::time_until_next_cb(&vm);
+        let next_cb_time = sys::time::time_until_next_cb(&mut vm);
+
+        // Unlock the VM mutex before going to sleep, so that other threads,
+        // such as the audio thread, may use the VM
+        drop(vm);
 
         // Sleep until the next callback
         if let Some(delay_ms) = next_cb_time {
@@ -96,8 +108,10 @@ fn run_program(vm: &mut VM) -> Value
             sleep(Duration::from_millis(10));
         }
 
+        let mut vm = mutex.lock().unwrap();
+
         // For each callback to run
-        for pc in sys::time::get_cbs_to_run(vm)
+        for pc in sys::time::get_cbs_to_run(&mut vm)
         {
             match vm.call(pc, &[])
             {
@@ -132,11 +146,13 @@ fn main()
     }
 
     // Run the program
-    if !opts.parse_only {
-        let mut vm = result.unwrap();
-        let ret_val = run_program(&mut vm);
-        exit(ret_val.as_i32());
+    if opts.parse_only {
+        exit(0);
     }
 
-    exit(0);
+    let vm = result.unwrap();
+    let mut mutex = SysState::get_mutex(vm);
+    let ret_val = run_program(&mut mutex);
+
+    exit(ret_val.as_i32());
 }

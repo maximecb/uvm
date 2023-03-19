@@ -7,6 +7,7 @@ extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdout, stdin};
+use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM};
 use window::*;
 use audio::*;
@@ -60,18 +61,33 @@ impl SysCallFn
     }
 }
 
+/// SDL context (used for UI and audio)
+/// This is a global variable because it doesn't implement
+/// the Send trait, and so can't be referenced from another thread
+static mut SDL: Option<sdl2::Sdl> = None;
+
+pub fn get_sdl_context() -> &'static mut sdl2::Sdl
+{
+    unsafe
+    {
+        // Lazily initialize the SDL context
+        if SDL.is_none() {
+            SDL = Some(sdl2::init().unwrap());
+        }
+
+        SDL.as_mut().unwrap()
+    }
+}
+
 pub struct SysState
 {
     /// Map of indices to syscall functions
     syscalls: [Option<SysCallFn>; SYSCALL_TBL_LEN],
 
-    /// SDL context (used for UI and audio)
-    sdl: Option<sdl2::Sdl>,
+    /// Weak reference to a mutex for the VM
+    mutex: Weak<Mutex<VM>>,
 
-    /// Window module state
-    pub window_state: Option<WindowState>,
-
-    // Time module state
+    /// Time module state
     pub time_state: TimeState,
 }
 
@@ -81,8 +97,7 @@ impl SysState
     {
         let mut sys_state = Self {
             syscalls: [None; SYSCALL_TBL_LEN],
-            sdl: None,
-            window_state: None,
+            mutex: Weak::new(),
             time_state: TimeState::new(),
         };
 
@@ -91,14 +106,15 @@ impl SysState
         sys_state
     }
 
-    pub fn get_sdl_context(&mut self) -> &mut sdl2::Sdl
+    pub fn get_mutex(vm: VM) -> Arc<Mutex<VM>>
     {
-        // Lazily initialize the SDL context
-        if self.sdl.is_none() {
-            self.sdl = Some(sdl2::init().unwrap());
-        }
+        // Move the VM into a mutex
+        let vm_arc = Arc::new(Mutex::new(vm));
 
-        self.sdl.as_mut().unwrap()
+        // Store a weak reference to the mutex into the sys state
+        vm_arc.lock().unwrap().sys_state.mutex = Arc::downgrade(&vm_arc);
+
+        vm_arc
     }
 
     pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
@@ -156,6 +172,8 @@ impl SysState
         self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
         self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
         self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
+
+        self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
     }
 }
 
