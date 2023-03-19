@@ -424,7 +424,7 @@ impl Input
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum Section
 {
     Code,
@@ -444,11 +444,13 @@ struct LabelDef
 enum LabelRefKind
 {
     Address32,
+    Address64,
     Offset32(usize),
 }
 
 struct LabelRef
 {
+    section: Section,
     name: String,
     pos: usize,
     line_no: usize,
@@ -561,13 +563,30 @@ impl Assembler
                         });
                     }
 
-                    self.code.write(label_ref.pos, ptr32.unwrap());
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, ptr32.unwrap()),
+                        Section::Data => self.data.write(label_ref.pos, ptr32.unwrap()),
+                    }
+                }
+
+                LabelRefKind::Address64 => {
+                    let ptr64 = def.pos as u64;
+
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, ptr64),
+                        Section::Data => self.data.write(label_ref.pos, ptr64),
+                    }
                 }
 
                 LabelRefKind::Offset32(end_offset) => {
                     assert!(def.section == Section::Code);
+                    assert!(def.section == label_ref.section);
                     let offs32 = (def.pos as i32) - ((label_ref.pos + end_offset) as i32 + 4);
-                    self.code.write(label_ref.pos, offs32);
+
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, offs32),
+                        Section::Data => self.data.write(label_ref.pos, offs32),
+                    }
                 }
             }
         }
@@ -644,12 +663,13 @@ impl Assembler
     /// Add a new label reference at the current position
     fn add_label_ref(&mut self, input: &Input, name: String, kind: LabelRefKind)
     {
-        assert!(self.section == Section::Code);
+        let label_ref_pos = self.mem().len();
 
         self.label_refs.push(
-            LabelRef{
+            LabelRef {
+                section: self.section,
                 name: name,
-                pos: self.code.len(),
+                pos: label_ref_pos,
                 line_no: input.line_no,
                 col_no: input.line_no,
                 kind: kind
@@ -657,8 +677,9 @@ impl Assembler
         );
 
         match kind {
-            LabelRefKind::Address32 => self.code.push_u32(0),
-            LabelRefKind::Offset32(_) => self.code.push_u32(0),
+            LabelRefKind::Address32 => self.mem().push_u32(0),
+            LabelRefKind::Address64 => self.mem().push_u64(0),
+            LabelRefKind::Offset32(_) => self.mem().push_u32(0),
         }
     }
 
@@ -859,6 +880,12 @@ impl Assembler
 
                 // Write a null terminator byte
                 mem.push_u8(0);
+            }
+
+            // Absolute 64-bit address of a label
+            "addr64" => {
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Address64);
             }
 
             _ => {

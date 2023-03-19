@@ -90,9 +90,15 @@ impl Env
         // Generate a unique global symbol
         let sym_name = format!("__CONST_STR_{}__", self.string_tbl.len());
 
+        // String constants are global arrays of characters
+        let str_num_bytes = str_const.bytes().len() + 1;
         let new_decl = Decl::Global {
             name: sym_name.clone(),
-            t: Type::Pointer(Box::new(Type::UInt(8))) // FIXME: should be const char type
+            // FIXME: should be const char type once we support const
+            t: Type::Array {
+                elem_type: Box::new(Type::UInt(8)),
+                size_expr: Box::new(Expr::Int(str_num_bytes as i128))
+            }
         };
 
         self.string_tbl.insert(str_const.to_string(), new_decl.clone());
@@ -129,6 +135,19 @@ impl Unit
                 name: global.name.clone(),
                 t: global.var_type.clone(),
             });
+
+            // If this is a global pointer to a string constant
+            match (&global.var_type, &global.init_expr) {
+                (Type::Pointer(_), Some(Expr::String(str_const))) => {
+                    // Get a global symbol for the string constant
+                    let decl = env.get_string(&str_const);
+
+                    // Replace the init expr by a reference to the string constant
+                    global.init_expr = Some(Expr::Ref(decl));
+                }
+
+                _ => {}
+            }
         }
 
         // Add definitions for all functions

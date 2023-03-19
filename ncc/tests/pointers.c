@@ -14,10 +14,9 @@ void main()
     char* dots = CHAR_DOTS['0'];
     assert(dots);
 
-    // FIXME:
-    //assert(strlen(global_str) == 6);
-    //global_str = "bar";
-    //assert(strlen(global_str) == 3);
+    assert(strlen(global_str) == 6);
+    global_str = "bar";
+    assert(strlen(global_str) == 3);
 
     // Cast array to pointer
     *(uint8_t*)block = 123;
