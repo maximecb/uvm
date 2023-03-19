@@ -133,7 +133,7 @@ impl Unit
                     gen_array_init(&global.var_type, &init_expr, &mut out)?;
                 }
 
-                _ => todo!()
+                _ => todo!("{:?} {:?}", global.var_type, global.init_expr)
             }
 
             out.push_str("\n");
