@@ -16,6 +16,9 @@
 // Regression: definition containing a \ character in a string
 #define newline_str "\n"
 
+// Regression: quote in comment inside definition
+#define K 1 // '
+
 // Regression: macro replacement should not happen within a string
 #define SUB_STR_MACRO "foo"
 #define STR_MACRO "macro SUB_STR_MACRO"

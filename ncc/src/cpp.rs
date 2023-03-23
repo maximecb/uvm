@@ -117,6 +117,20 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
             break;
         }
 
+        // Eat single-line comments
+        if input.match_chars(&['/', '/']) {
+            input.eat_comment();
+            text += " ";
+            continue;
+        }
+
+        // Eat multi-line comments
+        if input.match_chars(&['/', '*']) {
+            input.eat_multi_comment()?;
+            text += " ";
+            continue;
+        }
+
         // If this is a character string or character literal
         if ch == '"' || ch == '\'' {
             text += &input.read_string(ch)?;
