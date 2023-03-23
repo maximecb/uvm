@@ -383,6 +383,21 @@ impl Input
                     'r' => out.push('\r'),
                     'n' => out.push('\n'),
                     '0' => out.push('\0'),
+
+                    // Hexadecimal escape sequence
+                    'x' => {
+                        let digit0 = self.eat_ch().to_digit(16);
+                        let digit1 = self.eat_ch().to_digit(16);
+
+                        match (digit0, digit1) {
+                            (Some(d0), Some(d1)) => {
+                                let byte_val = ((d0 << 4) + d1) as u8;
+                                out.push(byte_val as char);
+                            }
+                            _ => return self.parse_error("invalid hexadecimal escape sequence")
+                        }
+                    }
+
                     _ => return self.parse_error("unknown escape sequence")
                 }
 
@@ -1289,6 +1304,14 @@ mod tests
 
         // Callback label
         parse_ok("CB: ret; push_p32 CB; exit;");
+    }
+
+    #[test]
+    fn test_strings()
+    {
+        parse_ok(".data; .stringz \"foo\";");
+        parse_ok(".data; .stringz \"foo\\nbar\";");
+        parse_ok(".data; .stringz \"foo\\nbar\\xAA\";");
     }
 
     #[test]

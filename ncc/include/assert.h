@@ -17,10 +17,18 @@ if (!(test_val))\
 #define assert(test_val) {}
 #endif
 
+// TODO: add line numbers
 // todo() macro for unimplemented features
 #define todo()\
 {\
     asm ("not yet implemented") -> void { syscall 6; };\
+}
+
+// TODO: add line numbers
+// panic(msg) macro
+#define panic(msg)\
+{\
+    asm (msg) -> void { syscall 6; panic; };\
 }
 
 #endif
