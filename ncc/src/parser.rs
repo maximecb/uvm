@@ -23,10 +23,27 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         return Ok(Expr::Int(val));
     }
 
-    // Decimal integer literal
+    // Decimal numeric value
     if ch.is_digit(10) {
-        let val = input.parse_int(10)?;
-        return Ok(Expr::Int(val));
+        let num_str = input.read_numeric();
+        //println!("{}", num_str);
+
+        // If we can parse this value as an integer
+        if let Ok(int_val) = num_str.parse::<i128>() {
+            return Ok(Expr::Int(int_val));
+        }
+
+        // Parse this value as a floating-point number
+        let float_val: f32 = num_str.parse().unwrap();
+
+        if !input.match_char('f') {
+            return input.parse_error(&concat!("
+                only floats are supported for now, ",
+                "e.g. 3.5f (float), not 3.5 (double)"
+            ));
+        }
+
+        return Ok(Expr::Float32(float_val));
     }
 
     if input.match_keyword("NULL")? || input.match_keyword("null")? {
@@ -819,21 +836,28 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         "int" => Ok(Type::Int(32)),
         "long" => Ok(Type::Int(64)),
 
+        "float" => Ok(Type::Float(32)),
+
         // Unsigned qualifier
         "unsigned" => {
             if input.match_token("char")? {
                 return Ok(Type::UInt(8));
             }
 
-            let base_type = parse_type_atom(input)?;
-
-            match base_type {
-                Type::Int(n) => Ok(Type::UInt(n)),
-                _ => input.parse_error("invalid type after unsigned qualifier")
+            if input.match_token("short")? {
+                return Ok(Type::UInt(16));
             }
-        }
 
-        "float" => Ok(Type::Float(32)),
+            if input.match_token("int")? {
+                return Ok(Type::UInt(32));
+            }
+
+            if input.match_token("long")? {
+                return Ok(Type::UInt(64));
+            }
+
+            return Ok(Type::UInt(32));
+        }
 
         _ => input.parse_error(&format!("unknown type {}", keyword))
     }
@@ -885,6 +909,7 @@ fn parse_array_type(input: &mut Input, base_type: Type) -> Result<Type, ParseErr
 fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool) -> Result<Function, ParseError>
 {
     let mut params = Vec::default();
+    let mut var_arg = false;
 
     loop
     {
@@ -895,6 +920,13 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool)
         }
 
         if input.match_token(")")? {
+            break;
+        }
+
+        // If this is a variable argument count function
+        if input.match_token("...")? {
+            input.expect_token(")")?;
+            var_arg = true;
             break;
         }
 
@@ -921,6 +953,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool)
         name,
         ret_type,
         params,
+        var_arg,
         inline,
         body,
         num_locals: 0,
@@ -993,7 +1026,7 @@ pub fn parse_str(src: &str) -> Result<Unit, ParseError>
 
 pub fn parse_file(file_name: &str) -> Result<Unit, ParseError>
 {
-    let mut input = Input::from_file(file_name);
+    let mut input = Input::from_file(file_name)?;
     parse_unit(&mut input)
 }
 
@@ -1068,6 +1101,14 @@ mod tests
     }
 
     #[test]
+    fn var_arg()
+    {
+        parse_ok("void foo(...) {}");
+        parse_ok("void foo(int x, int y, ...) {}");
+        parse_fails("void foo(..., int x);");
+    }
+
+    #[test]
     fn empty_stmt()
     {
         parse_ok("void foo() { ; }");
@@ -1085,6 +1126,7 @@ mod tests
         parse_ok("u64 v = -1;");
         parse_ok("unsigned int v = 1;");
         parse_ok("unsigned long v = 1;");
+        parse_ok("unsigned n = 1;");
 
         parse_ok("char* str = \"FOO\n\";");
 
@@ -1098,6 +1140,19 @@ mod tests
 
         // Should fail
         parse_fails("u64x;");
+    }
+
+    #[test]
+    fn numeric_literals()
+    {
+        parse_ok("int g = 400_000;");
+        parse_ok("int g = 400_000_;");
+        parse_ok("int f = 0.2f;");
+        parse_ok("int f = 4.567f;");
+        parse_ok("int f = 4.56e78f;");
+        parse_ok("int f = 4.5_6e8_f;");
+
+        parse_fails("int f = 4..5f;");
     }
 
     #[test]

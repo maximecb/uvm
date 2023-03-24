@@ -1,24 +1,158 @@
-
-// Monogram 12x7 pixel font
-
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
 
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
+#define NUM_COLS 40
+#define NUM_ROWS 18
 
-// > # MONOGRAM FONT
-// > 
-// > Monogram is a free and Creative Commons Zero pixel font,
-// > made by Vinícius Menézio (@vmenezio).
-// > 
-// > https://datagoblin.itch.io/monogram
-// > 
-// > # SPECIAL THANKS
-// > 
-// > thanks to Ateş Göral (@atesgoral) for creating the bitmap font converter:
-// > https://codepen.io/atesgoral/details/RwGOvPZ
-// > 
-// > thanks to Éric Araujo (@merwok_) for the inital port of monogram to PICO-8:
-// > https://itch.io/post/2625522
+u32 frame_buffer[600][800];
+
+char text[NUM_ROWS][NUM_COLS];
+
+// Position of the cursor
+size_t line_idx = 0;
+size_t col_idx = 0;
+
+size_t row_len(size_t row_idx)
+{
+    for (int i = 0; i < NUM_COLS; ++i)
+    {
+        if (text[row_idx][i] == 0)
+        {
+            return i;
+        }
+    }
+
+    return NUM_COLS;
+}
+
+void textinput(u64 window_id, char ch)
+{
+    //print_i64(ch);
+    //print_endl();
+
+    text[line_idx][col_idx] = ch;
+
+    if (col_idx + 1 < NUM_COLS)
+    {
+        col_idx = col_idx + 1;
+    }
+    else if (line_idx + 1 < NUM_ROWS)
+    {
+        line_idx = line_idx + 1;
+        col_idx = 0;
+    }
+
+    redraw();
+}
+
+void keydown(u64 window_id, u16 keycode)
+{
+    if (keycode == KEY_ESCAPE)
+    {
+        exit(0);
+    }
+    else if (keycode == KEY_BACKSPACE)
+    {
+        if (col_idx > 0)
+        {
+            col_idx = col_idx - 1;
+        }
+        else if (line_idx > 0)
+        {
+            line_idx = line_idx - 1;
+            col_idx = row_len(line_idx);
+        }
+
+        text[line_idx][col_idx] = 0;
+
+        redraw();
+    }
+    else if (keycode == KEY_RETURN)
+    {
+        if (line_idx + 1 < NUM_ROWS)
+        {
+            line_idx = line_idx + 1;
+            col_idx = 0;
+
+            //print_i64(line_idx);
+            //print_endl();
+        }
+
+        redraw();
+    }
+}
+
+void redraw()
+{
+    memset32(frame_buffer, 0x0247fe, sizeof(frame_buffer) / sizeof(u32));
+
+    for (int j = 0; j < NUM_ROWS; ++j)
+    {
+        for (int i = 0; i < NUM_COLS; ++i)
+        {
+            char ch = text[j][i];
+
+            if (ch == 0)
+                continue;
+
+            draw_monogram_char(
+                (u32*)frame_buffer,
+                FRAME_WIDTH,
+                ch,
+                10 + 18 * i, // x
+                10 + 32 * j, // y
+                3,
+                0x00FFFFFF
+            );
+        }
+    }
+
+    u64 t = time_current_ms();
+    bool cursor_on = (t / 400) % 2;
+
+    if (cursor_on)
+    {
+        draw_monogram_char(
+            (u32*)frame_buffer,
+            FRAME_WIDTH,
+            '_',
+            10 + 18 * col_idx, // x
+            10 + 32 * line_idx, // y
+            3,
+            0x00FFFFFF
+        );
+    }
+
+    window_draw_frame(0, frame_buffer);
+}
+
+void anim_callback()
+{
+    benchmark(redraw());
+
+    time_delay_cb(400, anim_callback);
+}
+
+void main()
+{
+    window_create(800, 600, "Text Editor Demo", 0);
+
+    redraw();
+
+    window_on_keydown(0, keydown);
+    window_on_textinput(0, textinput);
+
+    time_delay_cb(0, anim_callback);
+
+    enable_event_loop();
+}
+
+//===========================================================================
 
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS 390
 #define FONT_MONOGRAM_HEIGHT 12
@@ -579,56 +713,3 @@ void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_
         }
     }
 }
-
-size_t FRAME_WIDTH = 400;
-size_t FRAME_HEIGHT = 400;
-
-u32 frame_buffer[161600];
-
-void anim_callback()
-{
-    u8 scale = 2;
-
-    // Grey background.
-    memset(frame_buffer, 0x7f, sizeof(frame_buffer));
-
-    for (size_t ch = 32; ch < 127; ++ch) {
-        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
-        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
-
-        // Drop shadow.
-        draw_monogram_char(
-            frame_buffer,
-            FRAME_WIDTH,
-            ch,
-            scale * 11 + x,
-            scale * 11 + y,
-            scale,
-            0x00000000
-        );
-
-        // Foreground font glyphs.
-        draw_monogram_char(
-            frame_buffer,
-            FRAME_WIDTH,
-            ch,
-            scale * 10 + x,
-            scale * 10 + y,
-            scale,
-            0x00FFFFFF
-        );
-    }
-
-    window_draw_frame(0, frame_buffer);
-    time_delay_cb(10, anim_callback);
-}
-
-void main()
-{
-    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
-
-    time_delay_cb(0, anim_callback);
-
-    enable_event_loop();
-}
-

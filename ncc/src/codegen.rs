@@ -125,15 +125,27 @@ impl Unit
                     out.push_str(&format!(".u64 {};\n", v))
                 }
 
-                (Type::Pointer(_), Some(Expr::String(s))) => {
-                    out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
+                // Pointer to a global array
+                (Type::Pointer(_), Some(Expr::Ref(Decl::Global { name, t: Array { .. } } ))) => {
+                    out.push_str(&format!(".addr64 {};\n", name))
+                }
+
+                // Global string constant
+                (Type::Array { elem_type, size_expr }, Some(Expr::String(s))) => {
+                    match (elem_type.as_ref(), size_expr.as_ref()) {
+                        (Type::UInt(8), Expr::Int(n)) => {
+                            assert!(*n as usize == s.bytes().len() + 1);
+                            out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
+                        }
+                        _ => panic!()
+                    }
                 }
 
                 (Type::Array {..}, Some(init_expr)) => {
                     gen_array_init(&global.var_type, &init_expr, &mut out)?;
                 }
 
-                _ => todo!()
+                _ => todo!("{:?} {:?}", global.var_type, global.init_expr)
             }
 
             out.push_str("\n");
@@ -433,7 +445,9 @@ impl Expr
                                 out.push_str("load_u32;\n");
                                 out.push_str("sx_i32_i64;\n");
                             }
-                            Type::Pointer(_) => {}
+                            Type::Pointer(t) => {
+                                out.push_str("load_u64;\n");
+                            }
                             Type::Fun { .. } => {}
                             Type::Array { .. } => {}
                             _ => todo!()
@@ -978,7 +992,7 @@ mod tests
         use crate::cpp::process_input;
 
         dbg!(file_name);
-        let mut input = Input::from_file(file_name);
+        let mut input = Input::from_file(file_name).unwrap();
         let output = process_input(&mut input).unwrap();
         //println!("{}", output);
 
@@ -1042,6 +1056,13 @@ mod tests
         gen_ok("void foo() {} void bar() {}");
         gen_ok("void foo() {} void bar() { return foo(); } ");
         gen_ok("void print_i64(i64 v) {} void bar(u64 v) { print_i64(v); }");
+    }
+
+    #[test]
+    fn var_arg()
+    {
+        gen_ok("void foo(int x, ...) {} void bar() { foo(1); }");
+        gen_ok("void foo(int x, ...) {} void bar() { foo(1, 2); }");
     }
 
     #[test]

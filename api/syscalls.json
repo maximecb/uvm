@@ -95,12 +95,12 @@
           ]
         ],
         "returns": [
-          "void",
-          ""
+          "bool",
+          "success"
         ],
         "permission": "default_allowed",
         "const_idx": 17,
-        "description": "Resize the heap to a new size given in bytes."
+        "description": "Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Returns `true` if successful, `false` otherwise."
       }
     ],
     "constants": []
@@ -648,8 +648,43 @@
   {
     "subsystem": "audio",
     "description": "Audio input and output.",
-    "syscalls": [],
-    "constants": []
+    "syscalls": [
+      {
+        "name": "audio_open_output",
+        "args": [
+          [
+            "u32",
+            "sample_rate"
+          ],
+          [
+            "u16",
+            "num_channels"
+          ],
+          [
+            "u16",
+            "format"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "u32",
+          "device_id"
+        ],
+        "permission": "audio_output",
+        "const_idx": 18,
+        "description": "Open an audio output device."
+      }
+    ],
+    "constants": [
+      [
+        "AUDIO_FORMAT_I16",
+        "u16",
+        0
+      ]
+    ]
   },
   {
     "subsystem": "fs",

@@ -23,12 +23,25 @@ impl ParseError
             col_no: input.col_no
         }
     }
+
+    pub fn msg_only<T>(msg: &str) -> Result<T, ParseError>
+    {
+        Err(ParseError {
+            msg: msg.to_string(),
+            line_no: 0,
+            col_no: 0,
+        })
+    }
 }
 
 impl fmt::Display for ParseError
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "parse error")
+        if self.line_no != 0 {
+            write!(f, "@{}:{}: {}", self.line_no, self.col_no, self.msg)
+        } else {
+            write!(f, "{}", self.msg)
+        }
     }
 }
 
@@ -370,6 +383,21 @@ impl Input
                     'r' => out.push('\r'),
                     'n' => out.push('\n'),
                     '0' => out.push('\0'),
+
+                    // Hexadecimal escape sequence
+                    'x' => {
+                        let digit0 = self.eat_ch().to_digit(16);
+                        let digit1 = self.eat_ch().to_digit(16);
+
+                        match (digit0, digit1) {
+                            (Some(d0), Some(d1)) => {
+                                let byte_val = ((d0 << 4) + d1) as u8;
+                                out.push(byte_val as char);
+                            }
+                            _ => return self.parse_error("invalid hexadecimal escape sequence")
+                        }
+                    }
+
                     _ => return self.parse_error("unknown escape sequence")
                 }
 
@@ -411,7 +439,7 @@ impl Input
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum Section
 {
     Code,
@@ -431,11 +459,13 @@ struct LabelDef
 enum LabelRefKind
 {
     Address32,
+    Address64,
     Offset32(usize),
 }
 
 struct LabelRef
 {
+    section: Section,
     name: String,
     pos: usize,
     line_no: usize,
@@ -548,13 +578,30 @@ impl Assembler
                         });
                     }
 
-                    self.code.write(label_ref.pos, ptr32.unwrap());
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, ptr32.unwrap()),
+                        Section::Data => self.data.write(label_ref.pos, ptr32.unwrap()),
+                    }
+                }
+
+                LabelRefKind::Address64 => {
+                    let ptr64 = def.pos as u64;
+
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, ptr64),
+                        Section::Data => self.data.write(label_ref.pos, ptr64),
+                    }
                 }
 
                 LabelRefKind::Offset32(end_offset) => {
                     assert!(def.section == Section::Code);
+                    assert!(def.section == label_ref.section);
                     let offs32 = (def.pos as i32) - ((label_ref.pos + end_offset) as i32 + 4);
-                    self.code.write(label_ref.pos, offs32);
+
+                    match label_ref.section {
+                        Section::Code => self.code.write(label_ref.pos, offs32),
+                        Section::Data => self.data.write(label_ref.pos, offs32),
+                    }
                 }
             }
         }
@@ -564,9 +611,15 @@ impl Assembler
 
     pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
     {
-        let input_str = std::fs::read_to_string(file_name).unwrap();
-        let mut input = Input::new(input_str);
-        return self.parse_input(&mut input);
+        match std::fs::read_to_string(file_name) {
+            Err(_) => {
+                ParseError::msg_only(&format!("could not open asm file \"{}\"", file_name))
+            }
+            Ok(input_str) => {
+                let mut input = Input::new(input_str);
+                self.parse_input(&mut input)
+            }
+        }
     }
 
     /// Parse a string of source code
@@ -625,12 +678,13 @@ impl Assembler
     /// Add a new label reference at the current position
     fn add_label_ref(&mut self, input: &Input, name: String, kind: LabelRefKind)
     {
-        assert!(self.section == Section::Code);
+        let label_ref_pos = self.mem().len();
 
         self.label_refs.push(
-            LabelRef{
+            LabelRef {
+                section: self.section,
                 name: name,
-                pos: self.code.len(),
+                pos: label_ref_pos,
                 line_no: input.line_no,
                 col_no: input.line_no,
                 kind: kind
@@ -638,8 +692,9 @@ impl Assembler
         );
 
         match kind {
-            LabelRefKind::Address32 => self.code.push_u32(0),
-            LabelRefKind::Offset32(_) => self.code.push_u32(0),
+            LabelRefKind::Address32 => self.mem().push_u32(0),
+            LabelRefKind::Address64 => self.mem().push_u64(0),
+            LabelRefKind::Offset32(_) => self.mem().push_u32(0),
         }
     }
 
@@ -842,6 +897,12 @@ impl Assembler
                 mem.push_u8(0);
             }
 
+            // Absolute 64-bit address of a label
+            "addr64" => {
+                let label_name = input.parse_ident()?;
+                self.add_label_ref(input, label_name, LabelRefKind::Address64);
+            }
+
             _ => {
                 return input.parse_error(&format!("unknown assembler command \"{}\"", cmd))
             }
@@ -873,6 +934,10 @@ impl Assembler
                 let idx: u8 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::get_arg);
                 self.code.push_u8(idx);
+            }
+
+            "get_var_arg" => {
+                self.code.push_op(Op::get_var_arg);
             }
 
             "set_arg" => {
@@ -1239,6 +1304,14 @@ mod tests
 
         // Callback label
         parse_ok("CB: ret; push_p32 CB; exit;");
+    }
+
+    #[test]
+    fn test_strings()
+    {
+        parse_ok(".data; .stringz \"foo\";");
+        parse_ok(".data; .stringz \"foo\\nbar\";");
+        parse_ok(".data; .stringz \"foo\\nbar\\xAA\";");
     }
 
     #[test]

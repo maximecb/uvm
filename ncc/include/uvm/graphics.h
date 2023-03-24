@@ -17,6 +17,7 @@
 
 // Convert RGB values in the range [0, 255] to a u32 encoding
 #define rgb32(r, g, b) ((u32)0xFF_00_00_00 | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
+#define rgba32(r, g, b, a) (((u32)a << 24) | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
 
 // Fill a rectangle area with a given color
 void fill_rect(

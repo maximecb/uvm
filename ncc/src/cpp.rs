@@ -117,6 +117,20 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
             break;
         }
 
+        // Eat single-line comments
+        if input.match_chars(&['/', '/']) {
+            input.eat_comment();
+            text += " ";
+            continue;
+        }
+
+        // Eat multi-line comments
+        if input.match_chars(&['/', '*']) {
+            input.eat_multi_comment()?;
+            text += " ";
+            continue;
+        }
+
         // If this is a character string or character literal
         if ch == '"' || ch == '\'' {
             text += &input.read_string(ch)?;
@@ -344,10 +358,62 @@ fn expand_macro(
             ));
         }
 
-        // Replace the parameters by their value
+        // Map parameter names to argument values
+        let mut param_to_arg = HashMap::new();
         for (idx, param) in params.iter().enumerate() {
-            text = text.replace(param, &args[idx]);
+            param_to_arg.insert(param, &args[idx]);
         }
+
+        // TODO: use the src name/loc from the macro definition
+        let mut input = Input::new(&text, &input.src_name);
+        let mut output = String::new();
+
+        loop
+        {
+            if input.eof() {
+                break;
+            }
+
+            let ch = input.peek_ch();
+
+            // If this is a character string or character literal
+            if ch == '"' || ch == '\'' {
+                output += &input.read_string(ch)?;
+                continue;
+            }
+
+            // Eat single-line comments
+            if input.match_chars(&['/', '/']) {
+                input.eat_comment();
+                output += " ";
+                continue;
+            }
+
+            // Eat multi-line comments
+            if input.match_chars(&['/', '*']) {
+                input.eat_multi_comment()?;
+                output += " ";
+                continue;
+            }
+
+            // If this is an identifier
+            if is_ident_ch(ch) {
+                let ident = input.parse_ident()?;
+
+                // If we have a definition for this identifier
+                if let Some(arg_val) = param_to_arg.get(&ident) {
+                    output += arg_val;
+                } else {
+                    output += &ident;
+                }
+
+                continue;
+            }
+
+            output.push(input.eat_ch());
+        }
+
+        text = output;
     }
 
     // Process macros in text recursively
@@ -433,26 +499,29 @@ fn process_input_rec(
                 }
                 else
                 {
-                    input.parse_str('"')?
+                    // Compute the include path based on the
+                    // current file's directory
+                    let rel_include_path = input.parse_str('"')?;
+                    let mut src_path = Path::new(&input.src_name).parent().unwrap();
+                    src_path.join(rel_include_path).display().to_string()
                 };
 
-                let mut input = Input::from_file(&file_path);
-
+                let mut include_input = Input::from_file(&file_path)?;
                 let (include_output, end_keyword) = process_input_rec(
-                    &mut input,
+                    &mut include_input,
                     defs,
                     gen_output
                 )?;
 
                 if end_keyword != "" {
-                    return input.parse_error(&format!("unexpected #{}", end_keyword));
+                    return include_input.parse_error(&format!("unexpected #{}", end_keyword));
                 }
-
-                // TODO: emit linenum directive
 
                 output += &include_output;
 
-                // TODO: emit linenum directive
+                // Emit # linenum filename directive
+                // since we are returning to the parent file
+                output += &format!("# {} \"{}\"\n", input.line_no, input.src_name);
 
                 continue;
             }
@@ -553,25 +622,32 @@ mod tests
         input.line_no as usize
     }
 
-    /*
-    fn compile_file(file_name: &str)
+    fn compile(file_name: &str) -> Result<(), ParseError>
     {
         use crate::parsing::Input;
         use crate::parser::parse_unit;
         use crate::cpp::process_input;
 
         dbg!(file_name);
-        let mut input = Input::from_file(file_name);
-        let output = process_input(&mut input).unwrap();
-        //println!("{}", output);
+        let mut input = Input::from_file(file_name)?;
+        let output = process_input(&mut input)?;
 
         let mut input = Input::new(&output, file_name);
-        let mut unit = parse_unit(&mut input).unwrap();
-        unit.resolve_syms().unwrap();
-        unit.check_types().unwrap();
-        unit.gen_code().unwrap();
+        let mut unit = parse_unit(&mut input)?;
+        //unit.resolve_syms().unwrap();
+        //unit.check_types().unwrap();
+        //unit.gen_code().unwrap();
+
+        Ok(())
     }
-    */
+
+    fn error_line(file_name: & str) -> usize
+    {
+        match compile(file_name) {
+            Ok(_) => panic!(),
+            Err(error) => error.line_no as usize
+        }
+    }
 
     #[test]
     fn empty()
@@ -587,5 +663,17 @@ mod tests
         assert_eq!(line_count("#define FOO 2\n"), 2);
         assert_eq!(line_count("#define FOO 2\nFOO"), 2);
         assert_eq!(line_count("#define FOO 2\nFOO\n"), 3);
+    }
+
+    #[test]
+    fn error_lines()
+    {
+        assert_eq!(error_line("tests/line_nums/err_line_1.c"), 1);
+        assert_eq!(error_line("tests/line_nums/err_line_2.c"), 2);
+        assert_eq!(error_line("tests/line_nums/err_after_include.c"), 6);
+        assert_eq!(error_line("tests/line_nums/err_after_include2.c"), 7);
+
+        // Test error line numbers inside of include files
+        assert_eq!(error_line("tests/line_nums/err_include_ln3.c"), 3);
     }
 }

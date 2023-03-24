@@ -20,6 +20,7 @@ pub enum Type
     Fun {
         ret_type: Box<Type>,
         param_types: Vec<Type>,
+        var_arg: bool,
     },
 
     Struct {
@@ -329,6 +330,9 @@ pub struct Function
     /// Parameter list
     pub params: Vec<(Type, String)>,
 
+    /// Variadic function, variable argument count
+    pub var_arg: bool,
+
     /// Inline attribute
     pub inline: bool,
 
@@ -346,7 +350,8 @@ impl Function
     {
         Type::Fun {
             ret_type: Box::new(self.ret_type.clone()),
-            param_types: self.params.iter().map(|p| p.0.clone()).collect()
+            param_types: self.params.iter().map(|p| p.0.clone()).collect(),
+            var_arg: self.var_arg,
         }
     }
 }
