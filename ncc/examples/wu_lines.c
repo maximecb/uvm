@@ -14,6 +14,10 @@ u32 frame_buffer[160000];
 size_t pos_x = 200;
 size_t pos_y = 200;
 
+#define RED_OF(color) ((color >> 16) & 255)
+#define GREEN_OF(color) ((color >> 8) & 255)
+#define BLUE_OF(color) (color & 255)
+
 void
 carefree_alpha_blend_plot_pixel(u32* dest, size_t dest_stride, u64 x, u64 y, u32 color, u8 alpha)
 {
@@ -25,10 +29,13 @@ carefree_alpha_blend_plot_pixel(u32* dest, size_t dest_stride, u64 x, u64 y, u32
         return;
     }
     u32 dest_pixel = *pix_ptr;
+
     u8 unalpha = 0xFF - alpha;
-    u8 red = (((dest_pixel >> 16) & 255) * unalpha + ((color >> 16) & 255) * alpha) / 0xff;
-    u8 green = (((dest_pixel >> 8) & 255) * unalpha + ((color >> 8) & 255) * alpha) / 0xff;
-    u8 blue = ((dest_pixel & 255) * unalpha + (color & 255) * alpha) / 0xff;
+
+    u8 red   = (  RED_OF(dest_pixel) * unalpha +   RED_OF(color) * alpha) / 0xff;
+    u8 green = (GREEN_OF(dest_pixel) * unalpha + GREEN_OF(color) * alpha) / 0xff;
+    u8 blue  = ( BLUE_OF(dest_pixel) * unalpha +  BLUE_OF(color) * alpha) / 0xff;
+
     *pix_ptr = (red << 16) | (green << 8) | blue;
 }
 
