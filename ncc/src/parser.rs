@@ -836,21 +836,28 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         "int" => Ok(Type::Int(32)),
         "long" => Ok(Type::Int(64)),
 
+        "float" => Ok(Type::Float(32)),
+
         // Unsigned qualifier
         "unsigned" => {
             if input.match_token("char")? {
                 return Ok(Type::UInt(8));
             }
 
-            let base_type = parse_type_atom(input)?;
-
-            match base_type {
-                Type::Int(n) => Ok(Type::UInt(n)),
-                _ => input.parse_error("invalid type after unsigned qualifier")
+            if input.match_token("short")? {
+                return Ok(Type::UInt(16));
             }
-        }
 
-        "float" => Ok(Type::Float(32)),
+            if input.match_token("int")? {
+                return Ok(Type::UInt(32));
+            }
+
+            if input.match_token("long")? {
+                return Ok(Type::UInt(64));
+            }
+
+            return Ok(Type::UInt(32));
+        }
 
         _ => input.parse_error(&format!("unknown type {}", keyword))
     }
@@ -1119,6 +1126,7 @@ mod tests
         parse_ok("u64 v = -1;");
         parse_ok("unsigned int v = 1;");
         parse_ok("unsigned long v = 1;");
+        parse_ok("unsigned n = 1;");
 
         parse_ok("char* str = \"FOO\n\";");
 
