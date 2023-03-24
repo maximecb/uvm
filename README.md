@@ -3,6 +3,12 @@
 **NOTE: this project is very much a work in progress and not ready for prime time at this point. You're likely to run
 into bugs and missing features, but I am looking for collaborators who share the vision.**
 
+<p align="center">
+    <img src="media/attackers.png" height=180>&nbsp;
+    <img src="media/pirate_ship.png" height=180>&nbsp;
+    <img src="media/chess.png" height=180>
+</p>
+
 A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
 programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, fun to work
 with and approachable to newcomers. May also be valuable as a teaching tool. There is a short
@@ -27,12 +33,12 @@ Current features:
 - Little-endian byte ordering (like x86, ARM & RISC-V)
 - 32-bit and 64-bit integer ops, 32-bit floating-point support
 - Separate flat, linear address spaces for code and data
-- Built-in, easy to use assembler with a simple syntax
-- Easy to use frame buffer to draw RGB graphics with no boilerplate
+- Built-in, easy to use [assembler](https://github.com/maximecb/uvm/blob/main/vm/src/asm.rs) with a [simple syntax](https://github.com/maximecb/uvm/tree/main/vm/examples)
 - Event-driven event execution model compatible with async operations
+- Easy to use frame buffer to draw RGB graphics with no boilerplate
+- Easy to use audio output API with no boilerplate
 
 Planned future features:
-- Easy to use audio output API
 - Async file and network I/O with callbacks
   - Synchronous I/O possible as well
 - Fast JIT compiler based on dynamic binary translation and basic block versioning

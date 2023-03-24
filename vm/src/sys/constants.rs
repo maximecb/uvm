@@ -24,6 +24,7 @@ pub const VM_HEAP_SIZE: u16 = 14;
 pub const WINDOW_ON_KEYUP: u16 = 15;
 pub const MEMSET32: u16 = 16;
 pub const VM_RESIZE_HEAP: u16 = 17;
+pub const AUDIO_OPEN_OUTPUT: u16 = 18;
 pub const WINDOW_ON_TEXTINPUT: u16 = 19;
 
 pub struct SysCallDesc
@@ -52,8 +53,8 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "window_on_keyup", const_idx: 15, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "memset32", const_idx: 16, argc: 3, has_ret: false }),
-    Some(SysCallDesc { name: "vm_resize_heap", const_idx: 17, argc: 1, has_ret: false }),
-    None,
+    Some(SysCallDesc { name: "vm_resize_heap", const_idx: 17, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
     Some(SysCallDesc { name: "window_on_textinput", const_idx: 19, argc: 2, has_ret: false }),
 ];
 
@@ -110,3 +111,4 @@ pub const KEY_RIGHT: u16 = 16002;
 pub const KEY_UP: u16 = 16003;
 pub const KEY_DOWN: u16 = 16004;
 pub const KEY_SHIFT: u16 = 16005;
+pub const AUDIO_FORMAT_I16: u16 = 0;

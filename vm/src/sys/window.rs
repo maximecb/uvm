@@ -12,31 +12,26 @@ use sdl2::pixels::PixelFormatEnum;
 
 use std::time::Duration;
 
-use crate::sys::{SysState};
+use crate::sys::{SysState, get_sdl_context};
 use crate::vm::{VM, Value, ExitReason};
 
-/// Mutable state for the window syscalls
-pub struct WindowState
-{
-    // SDL video subsystem
-    sdl_video: sdl2::VideoSubsystem,
-}
+/// SDL video subsystem
+/// This is a global variable because it doesn't implement
+/// the Send trait, and so can't be referenced from another thread
+static mut SDL_VIDEO: Option<sdl2::VideoSubsystem> = None;
 
-impl SysState
+/// Lazily initialize the SDL video subsystem
+fn get_video_subsystem() -> &'static mut sdl2::VideoSubsystem
 {
-    /// Lazily initialize the window state
-    fn get_window_state(&mut self) -> &mut WindowState
+    unsafe
     {
-        if self.window_state.is_none() {
+        let sdl = get_sdl_context();
 
-            let video_subsystem = self.get_sdl_context().video().unwrap();
-
-            self.window_state = Some(WindowState {
-                sdl_video: video_subsystem
-            })
+        if SDL_VIDEO.is_none() {
+            SDL_VIDEO = Some(sdl.video().unwrap());
         }
 
-        self.window_state.as_mut().unwrap()
+        SDL_VIDEO.as_mut().unwrap()
     }
 }
 
@@ -90,7 +85,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     let height: u32 = height.as_usize().try_into().unwrap();
     let title_str = vm.get_heap_str(title.as_usize()).to_owned();
 
-    let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
+    let video_subsystem = get_video_subsystem();
 
     let window = video_subsystem.window(&title_str, width, height)
         .hidden()
@@ -124,20 +119,6 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     unsafe {
         WINDOW = Some(window)
     }
-
-    /*
-    unsafe {
-        let window = WINDOW.as_mut().unwrap();
-
-        // Pixels use the BGRA byte order (0xAA_RR_GG_BB on a little-endian machine)
-        window.texture = Some(window.texture_creator.create_texture(
-            PixelFormatEnum::BGRA32,
-            TextureAccess::Streaming,
-            width,
-            height
-        ).unwrap());
-    }
-    */
 
     // TODO: return unique window id
     Value::from(0)
@@ -217,7 +198,7 @@ pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
 pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
-    let video_subsystem = &mut vm.sys_state.get_window_state().sdl_video;
+    let video_subsystem = get_video_subsystem();
     video_subsystem.text_input().start();
     window.cb_textinput = cb.as_u64();
 }
@@ -225,7 +206,7 @@ pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
 /// Process SDL events
 pub fn process_events(vm: &mut VM) -> ExitReason
 {
-    let mut event_pump = vm.sys_state.get_sdl_context().event_pump().unwrap();
+    let mut event_pump = get_sdl_context().event_pump().unwrap();
 
     // Process all pending events
     // See: https://docs.rs/sdl2/0.30.0/sdl2/event/enum.Event.html

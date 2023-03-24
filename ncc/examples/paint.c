@@ -2,15 +2,15 @@
 #include <uvm/utils.h>
 #include <stdlib.h>
 
-size_t FRAME_WIDTH = 800;
-size_t FRAME_HEIGHT = 600;
-size_t NUM_COLORS = 32;
-size_t BOX_WIDTH = 25;
-size_t BOX_HEIGHT = 25;
-size_t BRUSH_RADIUS = 4;
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
+#define NUM_COLORS 32
+#define BOX_WIDTH 25
+#define BOX_HEIGHT 25
+#define BRUSH_RADIUS 4
 
-// RGBA pixels: 800 * 600
-u32 frame_buffer[480_000];
+// 2D RGBA pixel array
+u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
 
 // Current mouse pointer position
 size_t pos_x = 200;
@@ -69,7 +69,7 @@ void draw_brush()
             if (dist_sqr > BRUSH_RADIUS * BRUSH_RADIUS)
                 continue;
 
-            u32* pix_ptr = frame_buffer + (FRAME_WIDTH * y + x);
+            u32* pix_ptr = (u32*)frame_buffer + (FRAME_WIDTH * y + x);
             *pix_ptr = brush_color;
         }
     }
@@ -107,7 +107,7 @@ void draw_palette()
         size_t ymin = FRAME_HEIGHT - BOX_HEIGHT;
 
         fill_rect(
-            frame_buffer,
+            (u32*)frame_buffer,
             FRAME_WIDTH,
             FRAME_HEIGHT,
             xmin,
@@ -154,7 +154,7 @@ void mousedown(u64 window_id, u8 btn_id)
     {
         if (pos_y > FRAME_HEIGHT - BOX_HEIGHT)
         {
-            u32* pixel_ptr = get_pixel_ptr(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
+            u32* pixel_ptr = get_pixel_ptr((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, pos_x, pos_y);
             brush_color = *pixel_ptr;
         }
         else
@@ -181,7 +181,7 @@ void main()
 
     // Initially fill the canvas with white
     fill_rect(
-        frame_buffer,
+        (u32*)frame_buffer,
         FRAME_WIDTH,
         FRAME_HEIGHT,
         0,

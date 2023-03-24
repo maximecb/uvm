@@ -7,6 +7,7 @@ extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdout, stdin};
+use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM};
 use window::*;
 use audio::*;
@@ -22,6 +23,7 @@ pub enum SysCallFn
     Fn0_0(fn(&mut VM)),
     Fn0_1(fn(&mut VM) -> Value),
     Fn1_0(fn(&mut VM, a0: Value)),
+    Fn1_1(fn(&mut VM, a0: Value) -> Value),
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
     Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
     Fn4_0(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value)),
@@ -36,6 +38,7 @@ impl SysCallFn
             Self::Fn0_0(_) => 0,
             Self::Fn0_1(_) => 0,
             Self::Fn1_0(_) => 1,
+            Self::Fn1_1(_) => 1,
             Self::Fn2_0(_) => 2,
             Self::Fn3_0(_) => 3,
             Self::Fn4_0(_) => 4,
@@ -49,6 +52,7 @@ impl SysCallFn
             Self::Fn0_0(_) => false,
             Self::Fn0_1(_) => true,
             Self::Fn1_0(_) => false,
+            Self::Fn1_1(_) => true,
             Self::Fn2_0(_) => false,
             Self::Fn3_0(_) => false,
             Self::Fn4_0(_) => false,
@@ -57,18 +61,33 @@ impl SysCallFn
     }
 }
 
+/// SDL context (used for UI and audio)
+/// This is a global variable because it doesn't implement
+/// the Send trait, and so can't be referenced from another thread
+static mut SDL: Option<sdl2::Sdl> = None;
+
+pub fn get_sdl_context() -> &'static mut sdl2::Sdl
+{
+    unsafe
+    {
+        // Lazily initialize the SDL context
+        if SDL.is_none() {
+            SDL = Some(sdl2::init().unwrap());
+        }
+
+        SDL.as_mut().unwrap()
+    }
+}
+
 pub struct SysState
 {
     /// Map of indices to syscall functions
     syscalls: [Option<SysCallFn>; SYSCALL_TBL_LEN],
 
-    /// SDL context (used for UI and audio)
-    sdl: Option<sdl2::Sdl>,
+    /// Weak reference to a mutex for the VM
+    mutex: Weak<Mutex<VM>>,
 
-    /// Window module state
-    pub window_state: Option<WindowState>,
-
-    // Time module state
+    /// Time module state
     pub time_state: TimeState,
 }
 
@@ -78,8 +97,7 @@ impl SysState
     {
         let mut sys_state = Self {
             syscalls: [None; SYSCALL_TBL_LEN],
-            sdl: None,
-            window_state: None,
+            mutex: Weak::new(),
             time_state: TimeState::new(),
         };
 
@@ -88,14 +106,15 @@ impl SysState
         sys_state
     }
 
-    pub fn get_sdl_context(&mut self) -> &mut sdl2::Sdl
+    pub fn get_mutex(vm: VM) -> Arc<Mutex<VM>>
     {
-        // Lazily initialize the SDL context
-        if self.sdl.is_none() {
-            self.sdl = Some(sdl2::init().unwrap());
-        }
+        // Move the VM into a mutex
+        let vm_arc = Arc::new(Mutex::new(vm));
 
-        self.sdl.as_mut().unwrap()
+        // Store a weak reference to the mutex into the sys state
+        vm_arc.lock().unwrap().sys_state.mutex = Arc::downgrade(&vm_arc);
+
+        vm_arc
     }
 
     pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
@@ -135,7 +154,7 @@ impl SysState
         self.reg_syscall(MEMSET32, SysCallFn::Fn3_0(memset32));
         self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
         self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
-        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_0(vm_resize_heap));
+        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_1(vm_resize_heap));
 
         self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
         self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
@@ -153,6 +172,8 @@ impl SysState
         self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
         self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
         self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
+
+        self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
     }
 }
 
@@ -161,10 +182,13 @@ fn vm_heap_size(vm: &mut VM) -> Value
     Value::from(vm.heap_size())
 }
 
-fn vm_resize_heap(vm: &mut VM, num_bytes: Value)
+fn vm_resize_heap(vm: &mut VM, num_bytes: Value) -> Value
 {
     let num_bytes = num_bytes.as_usize();
     vm.resize_heap(num_bytes);
+
+    // Success
+    Value::from(true)
 }
 
 fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)

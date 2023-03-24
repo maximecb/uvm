@@ -51,10 +51,12 @@ Report the current heap size in bytes.
 ## vm_resize_heap
 
 ```
-void vm_resize_heap(u64 num_bytes)
+bool vm_resize_heap(u64 num_bytes)
 ```
 
-Resize the heap to a new size given in bytes.
+**Returns:** `bool success`
+
+Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Returns `true` if successful, `false` otherwise.
 
 # io
 
@@ -246,6 +248,21 @@ These are the constants associated with the window subsystem:
 # audio
 
 Audio input and output.
+
+## audio_open_output
+
+```
+u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+```
+
+**Returns:** `u32 device_id`
+
+Open an audio output device.
+
+## Constants
+These are the constants associated with the audio subsystem:
+
+- `u16 AUDIO_FORMAT_I16 = 0`
 
 # fs
 
