@@ -212,14 +212,18 @@ impl Expr
             }
 
             Expr::Cast { new_type, child } => {
-                let child_type = child.eval_type()?;
+                let src_type = child.eval_type()?;
 
-                match (&new_type, &child_type) {
+                match (&new_type, &src_type) {
                     // Integer casts
                     (UInt(m), Int(n)) => {},
                     (Int(m), UInt(n)) => {},
                     (UInt(m), UInt(n)) => {},
                     (Int(m), Int(n)) => {},
+
+                    // Int/float casts
+                    (Float(32), Int(32)) => {},
+                    (Int(32), Float(32)) => {},
 
                     // Pointer casts
                     (Pointer(_), Pointer(_)) => {},
@@ -229,7 +233,7 @@ impl Expr
 
                     _ => return ParseError::msg_only(&format!(
                         "cannot cast type {} into {}",
-                        child_type,
+                        src_type,
                         new_type
                     ))
                 }

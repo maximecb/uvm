@@ -428,6 +428,10 @@ impl Expr
                 out.push_str(&format!("push {};\n", v));
             }
 
+            Expr::Float32(v) => {
+                out.push_str(&format!("push_f32 {};\n", v));
+            }
+
             Expr::Ref(decl) => {
                 match decl {
                     Decl::Arg { idx, .. } => {
@@ -463,10 +467,10 @@ impl Expr
             Expr::Cast { new_type, child } => {
                 use Type::*;
 
-                let child_type = child.eval_type()?;
+                let src_type = child.eval_type()?;
                 child.gen_code(sym, out)?;
 
-                match (&new_type, &child_type) {
+                match (&new_type, &src_type) {
                     // These int casts are no-ops
                     (UInt(m), Int(n)) if m >= n => {},
                     (Int(m), UInt(n)) if m >= n => {},
@@ -478,13 +482,21 @@ impl Expr
                         out.push_str(&format!("trunc_u{};\n", m));
                     }
 
-                    // Pointer cast
+                    (Float(32), Int(32)) => {
+                        out.push_str("i32_to_f32;\n");
+                    }
+
+                    (Int(32), Float(32)) => {
+                        out.push_str("f32_to_i32;\n");
+                    }
+
+                    // Pointer cast, these as no-ops
                     (Pointer(_), Pointer(_)) => {},
                     (Pointer(_), Array{..}) => {},
                     (UInt(64), Pointer(_)) => {},
                     (Pointer(_), UInt(64)) => {},
 
-                    _ => panic!("cannot cast to {} from {}", new_type, child_type)
+                    _ => panic!("cannot cast to {} from {}", new_type, src_type)
                 }
             }
 
