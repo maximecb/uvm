@@ -13,6 +13,11 @@ int main()
     assert((int)3.0f == 3);
     assert((int)(float)3 == 3);
 
+    // Floating-point comparisons
+    //assert(0.0f == 0.0f);
+
+
+
     sqrtf(0);
     //assert(sqrtf(0) == 0);
 

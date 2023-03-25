@@ -657,8 +657,18 @@ fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut St
 }
 
 /// Emit code for a comparison operation
-fn emit_cmp_op(lhs_type: &Type, rhs_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+fn emit_cmp_op(lhs_type: &Type, rhs_type: &Type, signed_op: &str, unsigned_op: &str, fp_op: &str, out: &mut String)
 {
+    match (lhs_type, rhs_type) {
+        (Float(32), Float(32)) => {
+
+
+
+            return;
+        }
+        _ => {}
+    }
+
     let is_signed = lhs_type.is_signed() && rhs_type.is_signed();
 
     let num_bits = match (lhs_type, rhs_type) {
@@ -763,7 +773,6 @@ fn gen_bin_op(
 
     let lhs_type = lhs.eval_type()?;
     let rhs_type = rhs.eval_type()?;
-    let signed_op = lhs_type.is_signed() && rhs_type.is_signed();
 
     match op {
         BitAnd => {
@@ -856,45 +865,39 @@ fn gen_bin_op(
         }
 
         Mul => {
-            out.push_str("mul_u64;\n");
+            emit_int_op(out_type, "mul_u", "mul_u", out);
         }
 
         Div => {
-            match signed_op {
-                true => out.push_str("div_i64;\n"),
-                false => out.push_str("div_u64;\n"),
-            }
+            emit_int_op(out_type, "div_i", "div_u", out);
         }
 
         Mod => {
-            match signed_op {
-                true => out.push_str("mod_i64;\n"),
-                false => out.push_str("mod_u64;\n"),
-            }
+            emit_int_op(out_type, "mod_i", "mod_u", out);
         }
 
         Eq => {
-            emit_cmp_op(&lhs_type, &rhs_type, "eq_u", "eq_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "eq_u", "eq_u", "eq_f", out);
         }
 
         Ne => {
-            emit_cmp_op(&lhs_type, &rhs_type, "ne_u", "ne_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "ne_u", "ne_u", "ne_f", out);
         }
 
         Lt => {
-            emit_cmp_op(&lhs_type, &rhs_type, "lt_i", "lt_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "lt_i", "lt_u", "lt_f", out);
         }
 
         Le => {
-            emit_cmp_op(&lhs_type, &rhs_type, "le_i", "le_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "le_i", "le_u", "le_f", out);
         }
 
         Gt => {
-            emit_cmp_op(&lhs_type, &rhs_type, "gt_i", "gt_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "gt_i", "gt_u", "gt_f", out);
         }
 
         Ge => {
-            emit_cmp_op(&lhs_type, &rhs_type, "ge_i", "ge_u", out);
+            emit_cmp_op(&lhs_type, &rhs_type, "ge_i", "ge_u", "ge_f", out);
         }
 
         _ => todo!("{:?}", op),
