@@ -173,6 +173,10 @@ pub enum Op
     gt_f32,
     ge_f32,
 
+    // Int/float conversion
+    i32_to_f32,
+    f32_to_i32,
+
     // Load a value at a given adress
     // store (addr)
     load_u8,
@@ -1247,6 +1251,25 @@ impl VM
                     let v1 = self.pop();
                     let v0 = self.pop();
                     self.push(v0.as_f32() >= v1.as_f32());
+                }
+
+                // Follows Rust semantics:
+                // - Round ties to even
+                // - Overflow produces infinity (not possible for i32)
+                // - Never panics
+                Op::i32_to_f32 => {
+                    let v = self.pop();
+                    self.push(v.as_i32() as f32);
+                }
+
+                // Follows Rust semantics:
+                // - Rounds towards zero (truncates)
+                // - Saturates to min/max int values
+                // - NaN converts to zero
+                // - Never panics
+                Op::f32_to_i32 => {
+                    let v = self.pop();
+                    self.push(v.as_f32() as i32);
                 }
 
                 Op::load_u8 => {

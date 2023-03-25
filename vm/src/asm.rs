@@ -1090,6 +1090,9 @@ impl Assembler
             "gt_f32" => self.code.push_op(Op::gt_f32),
             "ge_f32" => self.code.push_op(Op::ge_f32),
 
+            "i32_to_f32" => self.code.push_op(Op::i32_to_f32),
+            "f32_to_i32" => self.code.push_op(Op::f32_to_i32),
+
             "load_u8" => self.code.push_op(Op::load_u8),
             "load_u16" => self.code.push_op(Op::load_u16),
             "load_u32" => self.code.push_op(Op::load_u32),
