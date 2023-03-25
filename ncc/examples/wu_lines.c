@@ -18,34 +18,31 @@ size_t pos_y = 200;
 #define GREEN_OF(color) ((color >> 8) & 255)
 #define BLUE_OF(color) (color & 255)
 
-void
-carefree_alpha_blend_plot_pixel(u32* dest, size_t dest_stride, u64 x, u64 y, u32 color, u8 alpha)
+
+void unsafe_alpha_blend_plot_pixel(u32* fb, size_t fb_width, u64 x, u64 y, u32 color, u8 alpha)
 {
     if (!alpha) return;
-    u32* pix_ptr = dest + dest_stride * y + x;
+
+    u32* pix_ptr = fb + fb_width * y + x;
+
     if (0xFF == alpha)
     {
         *pix_ptr = color;
         return;
     }
-    u32 dest_pixel = *pix_ptr;
+
+    u32 dest_color = *pix_ptr;
 
     u8 unalpha = 0xFF - alpha;
 
-    u8 red   = (  RED_OF(dest_pixel) * unalpha +   RED_OF(color) * alpha) / 0xff;
-    u8 green = (GREEN_OF(dest_pixel) * unalpha + GREEN_OF(color) * alpha) / 0xff;
-    u8 blue  = ( BLUE_OF(dest_pixel) * unalpha +  BLUE_OF(color) * alpha) / 0xff;
+    u8 red   = (  RED_OF(dest_color) * unalpha +   RED_OF(color) * alpha) / 0xff;
+    u8 green = (GREEN_OF(dest_color) * unalpha + GREEN_OF(color) * alpha) / 0xff;
+    u8 blue  = ( BLUE_OF(dest_color) * unalpha +  BLUE_OF(color) * alpha) / 0xff;
 
     *pix_ptr = rgb32(red, green, blue);
 }
 
 
-// > the “error adjust,” is stored as a fixed-point fraction, in 0.16 format (that is, all bits are fractional, and the decimal point is just to the left of bit 15). An error accumulator, also in 0.16 format, is initialized to 0. Then the first pixel is drawn; no weighting is needed, because the line intersects its endpoints exactly.
-
-// LIMIT is 16 bits of 0.999... in 0.16 format
-#define LIMIT 0xffff
-
-// Draw a line using Wu's algorithm
 void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
     if (x1 == x0)
@@ -102,7 +99,7 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 }
                 else
                 {
-                    draw_225_degree_line(fb, fb_width, x1, y1, dx, color);
+                    draw_135_degree_line(fb, fb_width, x1, y1, dx, color);
                 }
             }
             else
@@ -113,7 +110,7 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 }
                 else
                 {
-                    draw_225_degree_line(fb, fb_width, x0, y0, dx, color);
+                    draw_135_degree_line(fb, fb_width, x0, y0, dx, color);
                 }
             }
         }
@@ -172,7 +169,7 @@ void draw_45_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 c
     }
 }
 
-void draw_225_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 color)
+void draw_135_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 color)
 {
     u32 *point = fb + x0 + y0 * fb_width;
     *point = color;
@@ -182,6 +179,24 @@ void draw_225_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 
         *point = color;
     }
 }
+
+/*
+
+Draw a line using Wu's algorithm
+
+> the “error adjust”, is stored as a fixed-point fraction, in 0.16 format
+(that is, all bits are fractional, and the decimal point is just to the
+left of bit 15). An error accumulator, also in 0.16 format, is initialized
+to 0. Then the first pixel is drawn; no weighting is needed, because the
+line intersects its endpoints exactly.
+
+~ "Graphics Programming Black Book", Michael Abrash, pg. 778
+
+*/
+
+// LIMIT is 16 bits of 0.999... in 0.16 format
+#define LIMIT 0xffff
+
 
 void draw_wu_line_first_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
@@ -193,10 +208,10 @@ void draw_wu_line_first_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32
     while (x1 >= x0)
     {
         u8 intensity = error_accumulator >> 8 & 0xff;
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0 + 1, color, intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1 - 1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0 + 1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1 - 1, color, intensity);
         ++x0;
         --x1;
         error_accumulator = error_accumulator + error_adjust;
@@ -219,10 +234,10 @@ void draw_wu_line_second_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
     while (y1 >= y0)
     {
         u8 intensity = error_accumulator >> 8 & 0xff;
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0 + 1, y0, color, intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1 - 1, y1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0 + 1, y0, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1 - 1, y1, color, intensity);
         ++y0;
         --y1;
         error_accumulator = error_accumulator + error_adjust;
@@ -245,10 +260,10 @@ void draw_wu_line_third_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32
     while (x1 >= x0)
     {
         u8 intensity = error_accumulator >> 8 & 0xff;
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0 - 1, color, intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1 + 1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0 - 1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1 + 1, color, intensity);
         ++x0;
         --x1;
         error_accumulator = error_accumulator + error_adjust;
@@ -271,10 +286,10 @@ void draw_wu_line_fourth_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
     while (y1 >= y0)
     {
         u8 intensity = error_accumulator >> 8 & 0xff;
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x0 - 1, y0, color, intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
-        carefree_alpha_blend_plot_pixel(fb, fb_width, x1 + 1, y1, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0, y0,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x0 - 1, y0, color, intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1, y1,     color, 0xFF - intensity);
+        unsafe_alpha_blend_plot_pixel(fb, fb_width, x1 + 1, y1, color, intensity);
         ++y0;
         --y1;
         error_accumulator = error_accumulator + error_adjust;
@@ -288,8 +303,7 @@ void draw_wu_line_fourth_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
 }
 
 
-void
-mousemove(u64 window_id, u64 new_x, u64 new_y)
+void mousemove(u64 window_id, u64 new_x, u64 new_y)
 {
     // Update the mouse position
     pos_x = new_x;
@@ -317,6 +331,7 @@ void anim_callback()
 
     time_delay_cb(10, anim_callback);
 }
+
 
 void main()
 {
