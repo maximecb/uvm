@@ -661,9 +661,7 @@ fn emit_cmp_op(lhs_type: &Type, rhs_type: &Type, signed_op: &str, unsigned_op: &
 {
     match (lhs_type, rhs_type) {
         (Float(32), Float(32)) => {
-
-
-
+            out.push_str(&format!("{}32;\n", fp_op));
             return;
         }
         _ => {}

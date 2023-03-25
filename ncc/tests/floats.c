@@ -14,12 +14,13 @@ int main()
     assert((int)(float)3 == 3);
 
     // Floating-point comparisons
-    //assert(0.0f == 0.0f);
+    assert(0.0f == 0.0f);
+    assert(0.0f != 1.0f);
+    assert(0.0f < 1.0f);
 
-
-
-    sqrtf(0);
-    //assert(sqrtf(0) == 0);
+    assert(sqrtf(0.0f) == 0.0f);
+    assert(sqrtf(4.0f) == 2.0f);
+    assert(sinf(0.0f) == 0.0f);
 
     return 0;
 }
