@@ -223,7 +223,7 @@ impl Expr
 
                     // Int/float casts
                     (Float(32), Int(32)) => {},
-                    (Int(32), Float(32)) => {},
+                    (Int(m), Float(32)) if *m <= 32 => {},
 
                     // Pointer casts
                     (Pointer(_), Pointer(_)) => {},
