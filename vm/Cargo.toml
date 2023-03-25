@@ -2,19 +2,23 @@
 
 [package]
 name = "uvm"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 sdl2 = "0.35.2"
 
 [profile.dev]
+debug = true
 opt-level = 1
 overflow-checks = true
 debug-assertions = true
 
 [profile.release]
+debug = false
+# Enable all optimizations for maximum performance
 opt-level = 3
+codegen-units = 1
 lto = true
 # For now, we leave overflow checks and debug assertions
 # enabled in release mode for security reasons
