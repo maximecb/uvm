@@ -36,7 +36,7 @@ carefree_alpha_blend_plot_pixel(u32* dest, size_t dest_stride, u64 x, u64 y, u32
     u8 green = (GREEN_OF(dest_pixel) * unalpha + GREEN_OF(color) * alpha) / 0xff;
     u8 blue  = ( BLUE_OF(dest_pixel) * unalpha +  BLUE_OF(color) * alpha) / 0xff;
 
-    *pix_ptr = (red << 16) | (green << 8) | blue;
+    *pix_ptr = rgb32(red, green, blue);
 }
 
 
