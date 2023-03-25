@@ -37,6 +37,7 @@ int printf(char* format, ...)
         // Format specifier
         if (c == '%')
         {
+            // Percent character
             if (format[i+1] == '%')
             {
                 __write_char('%');
@@ -75,9 +76,11 @@ int printf(char* format, ...)
                 continue;
             }
 
-            //
-            // TODO: %p, support for printing pointers
-            //
+            // TODO: %x %X for printing hexadecimal integers
+
+            // TODO: %p for printing pointers
+
+            // TODO: %f for printing floats
 
             // Unknown format specifier
             // Just print it in the output for now
@@ -86,7 +89,7 @@ int printf(char* format, ...)
 
         // Print this character
         // NOTE: may want to be careful about printing
-        // in the middle of a unicode character?
+        // in the middle of a UTF-8 unicode character?
         __write_char(c);
         ++ch_written;
     }

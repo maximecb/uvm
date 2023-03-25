@@ -13,6 +13,10 @@ int main()
     assert((int)3.0f == 3);
     assert((int)(float)3 == 3);
 
+    // Global variable access
+    //assert(g == 3.5f);
+    assert(f_array[0] == 1.0f);
+
     // Floating-point comparisons
     assert(0.0f == 0.0f);
     assert(0.0f != 1.0f);
