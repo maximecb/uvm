@@ -1,6 +1,8 @@
 #include <math.h>
 #include <assert.h>
 
+float g = 3.5f;
+
 int main()
 {
     // Int/float casts

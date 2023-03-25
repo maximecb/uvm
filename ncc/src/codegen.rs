@@ -121,6 +121,10 @@ impl Unit
                     out.push_str(&format!(".i{} {};\n", n, v))
                 }
 
+                (Type::Float(32), Some(Expr::Float32(v))) => {
+                    out.push_str(&format!(".f32 {};\n", v))
+                }
+
                 (Type::Pointer(_), Some(Expr::Int(v))) => {
                     out.push_str(&format!(".u64 {};\n", v))
                 }
