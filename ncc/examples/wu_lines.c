@@ -67,7 +67,7 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 y0 = y0 ^ y1;
                 y1 = y1 ^ y0;
             }
-            u32 *point = fb + x0;
+            u32 *point = fb + x0 + y0 * fb_width;
             for (; y1 >= y0; ++y0)
             {
                 *point = color;
@@ -78,6 +78,14 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
     else if (y1 == y0)  // and we know x1 != x0
     {
         //draw_horizontal_line
+        if (x1 > x0)
+        {
+            memset32(fb + x0 + y0 * fb_width, color, x1 - x0);
+        }
+        else
+        {
+            memset32(fb + x1 + y0 * fb_width, color, x0 - x1);
+        }
     }
     else
     {
@@ -86,6 +94,28 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
         if (dx == dy)
         {
             //draw_45_degree_line
+            if (x1 > x0)
+            {
+                if (y1 > y0)
+                {
+                    draw_45_degree_line(fb, fb_width, x0, y0, dx, color);
+                }
+                else
+                {
+                    draw_225_degree_line(fb, fb_width, x1, y1, dx, color);
+                }
+            }
+            else
+            {
+                if (y1 < y0)
+                {
+                    draw_45_degree_line(fb, fb_width, x1, y1, dx, color);
+                }
+                else
+                {
+                    draw_225_degree_line(fb, fb_width, x0, y0, dx, color);
+                }
+            }
         }
         else
         {
@@ -128,6 +158,28 @@ void draw_wu_line(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u32 y0, u32 x1, 
                 }
             }
         }
+    }
+}
+
+void draw_45_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 color)
+{
+    u32 *point = fb + x0 + y0 * fb_width;
+    *point = color;
+    for (;delta; --delta)
+    {
+        point = point + fb_width + 1;
+        *point = color;
+    }
+}
+
+void draw_225_degree_line(u32* fb, u32 fb_width, u32 x0, u32 y0, u32 delta, u32 color)
+{
+    u32 *point = fb + x0 + y0 * fb_width;
+    *point = color;
+    for (;delta; --delta)
+    {
+        point = point + fb_width - 1;
+        *point = color;
     }
 }
 
