@@ -44,7 +44,7 @@ fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Resu
     };
 
     match array_elem_t {
-        // Initializing an array of signed integers
+        // Array of signed integers
         Type::Int(n) => {
             for expr in elem_exprs {
                 match expr {
@@ -54,7 +54,7 @@ fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Resu
             }
         }
 
-        // Initializing an array of unsigned integers
+        // Array of unsigned integers
         Type::UInt(n) => {
             for expr in elem_exprs {
                 match expr {
@@ -64,6 +64,17 @@ fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Resu
             }
         }
 
+        // Array of floats
+        Type::Float(32) => {
+            for expr in elem_exprs {
+                match expr {
+                    Expr::Float32(v) => out.push_str(&format!(".f32 {};\n", v)),
+                    _ => panic!()
+                }
+            }
+        }
+
+        // Array of arrays (n-dimensional array)
         Type::Array {..} => {
             for expr in elem_exprs {
                 gen_array_init(&array_elem_t, expr, out)?;

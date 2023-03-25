@@ -3,6 +3,8 @@
 
 float g = 3.5f;
 
+float f_array[4] = { 1.0f, 2.0f, 3.0f, 4.5f };
+
 int main()
 {
     // Int/float casts
