@@ -4,6 +4,8 @@
 int main()
 {
     // Int/float casts
+    float x = 4.0f;
+    assert((int)x == 4);
     assert((int)3.0f == 3);
     assert((int)(float)3 == 3);
 
