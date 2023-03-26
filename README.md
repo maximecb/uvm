@@ -139,3 +139,24 @@ code that automatically generates [markdown documentation](doc/syscalls.md), Rus
 The code for UVM, NCC and associated tools is shared under the [Apache-2.0 license](https://github.com/maximecb/uvm/blob/main/LICENSE).
 
 The examples under the `vm/examples` and `ncc/examples` directories are shared under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) license.
+
+## Contributing
+
+There is a lot of work to be done to get this project going and contributions are welcome.
+
+A good first step is to look at open issues and read the available documentation. Another easy way to contribute
+is to create new example programs showcasing cool things you can do with UVM, or to open issues to report bugs.
+
+You can also search the codebase for TODO notes:
+```sh
+grep -IRi "todo"
+```
+
+In general, smaller pull requests are easier to review and have a much higher chance of getting merged than large
+pull requests. If you would like to add a new, complex feature or refactor the design of UVM, I recommend opening
+an issue or starting a discussion about your proposed change first.
+
+Also please keep in mind that one of the core principles of UVM is to minimize dependencies to keep the VM easy
+to install and easy to port. Opening a PR that adds dependencies to multiple new packages and libraries is
+unlikely to get merged. Again, if you have a valid argument in favor of doing so, please open a discussion to
+share your point of view.
