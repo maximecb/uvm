@@ -12,6 +12,7 @@ Supported features:
   - Array initializer syntax
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
+- The `float` type and floating-point arithmetic
 - Character strings and the `char` type
 - The `bool` type
 - Pointers and pointer arithmetic, bitwise operations
@@ -36,7 +37,7 @@ Not yet implemented (TODO):
 - Enums
 - Typedefs
 - The `const` qualifier
-- Float and double types
+- The `double` type
 - The `switch` statement
 - Local arrays variables
 - Pointers to local variables
@@ -45,6 +46,7 @@ Caveats:
 - At the moment `malloc()` / `free()` don't use a free list, they just leak memory
 - Some error messages are currently fairly weak
   - Line numbers are currently inaccurate because of the preprocessor. This is a known bug.
+- The [`printf()` function](include/stdio.h) doesn't yet have support for printing floats.
 
 ## Usage
 
