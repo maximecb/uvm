@@ -146,6 +146,8 @@ There is a lot of work to be done to get this project going and contributions ar
 
 A good first step is to look at open issues and read the available documentation. Another easy way to contribute
 is to create new example programs showcasing cool things you can do with UVM, or to open issues to report bugs.
+If you do report bugs, please provide as much context as possible, and the smallest reproduction you can
+come up with.
 
 You can also search the codebase for TODO notes:
 ```sh
