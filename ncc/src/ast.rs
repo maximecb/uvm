@@ -116,7 +116,7 @@ impl Type
             UInt(_) => false,
             Pointer(_) => false,
             Array{..} => false,
-            _ => panic!("{:?}", self)
+            _ => panic!("is_signed {:?}", self)
         }
     }
 }

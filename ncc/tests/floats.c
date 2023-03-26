@@ -12,8 +12,10 @@ int main()
     assert((int)x == 4);
     assert((int)3.0f == 3);
     assert((int)(float)3 == 3);
+    assert((int)-5000.0f == -5000);
     assert((short)5000.0f == 5000);
-    //assert((short)-5000.0f == -5000);
+    // FIXME:
+    //assert((short)-5000.0f == (short)-5000);
 
     // Global variable access
     assert(g == 3.5f);
@@ -25,6 +27,7 @@ int main()
     assert(0.0f == 0.0f);
     assert(0.0f != 1.0f);
     assert(0.0f < 1.0f);
+    assert(-1.0f < 0.0f);
 
     // Arithmetic
     assert(1.0f + 2.0f == 3.0f);

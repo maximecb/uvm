@@ -553,17 +553,27 @@ impl Expr
 
                     UnOp::Minus => {
                         let child_type = child.eval_type()?;
-                        let num_bits = child_type.num_bits();
 
-                        if num_bits <= 32 {
-                            if child_type.is_signed() && num_bits < 32 {
-                                out.push_str(&format!("sx_i{}_i32;\n", num_bits));
+                        match child_type {
+                            Float(32) => {
+                                out.push_str(&format!("push_f32 -1;\n"));
+                                out.push_str(&format!("mul_f32;\n"));
                             }
-                            out.push_str(&format!("push -1;\n"));
-                            out.push_str(&format!("mul_u32;\n"));
-                        } else {
-                            out.push_str(&format!("push -1;\n"));
-                            out.push_str(&format!("mul_u64;\n"));
+
+                            Int(n) | UInt(n) => {
+                                if n <= 32 {
+                                    if child_type.is_signed() && n < 32 {
+                                        out.push_str(&format!("sx_i{}_i32;\n", n));
+                                    }
+                                    out.push_str(&format!("push -1;\n"));
+                                    out.push_str(&format!("mul_u32;\n"));
+                                } else {
+                                    out.push_str(&format!("push -1;\n"));
+                                    out.push_str(&format!("mul_u64;\n"));
+                                }
+                            }
+
+                            _ => panic!()
                         }
                     }
 
