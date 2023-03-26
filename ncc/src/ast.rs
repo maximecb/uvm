@@ -128,6 +128,7 @@ impl fmt::Display for Type {
             Void => write!(f, "void"),
             UInt(n) => write!(f, "u{}", n),
             Int(n) => write!(f, "i{}", n),
+            Float(n) => write!(f, "f{}", n),
             Pointer(t) => write!(f, "{}*", t.as_ref()),
             Array { elem_type, size_expr } => write!(f, "{}[]", elem_type.as_ref()),
             _ => todo!()

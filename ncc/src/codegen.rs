@@ -643,9 +643,18 @@ impl Expr
     }
 }
 
-/// Emit code for an integer operation
-fn emit_int_op(out_type: &Type, signed_op: &str, unsigned_op: &str, out: &mut String)
+/// Emit code for an arithmetic operation
+fn emit_arith_op(out_type: &Type, signed_op: &str, unsigned_op: &str, fp_op: &str, out: &mut String)
 {
+    match out_type {
+        Float(32) => {
+            assert!(fp_op.len() > 0);
+            out.push_str(&format!("{}32;\n", fp_op));
+            return;
+        }
+        _ => {}
+    }
+
     // Type checking should have caught invalid types before this point
     let out_bits = out_type.num_bits();
     assert!(out_bits <= 64);
@@ -777,23 +786,23 @@ fn gen_bin_op(
 
     match op {
         BitAnd => {
-            emit_int_op(out_type, "and_u", "and_u", out);
+            emit_arith_op(out_type, "and_u", "and_u", "", out);
         }
 
         BitOr => {
-            emit_int_op(out_type, "or_u", "or_u", out);
+            emit_arith_op(out_type, "or_u", "or_u", "", out);
         }
 
         BitXor => {
-            emit_int_op(out_type, "xor_u", "xor_u", out);
+            emit_arith_op(out_type, "xor_u", "xor_u", "", out);
         }
 
         LShift => {
-            emit_int_op(out_type, "lshift_u", "lshift_u", out);
+            emit_arith_op(out_type, "lshift_u", "lshift_u", "", out);
         }
 
         RShift => {
-            emit_int_op(out_type, "rshift_i", "rshift_u", out);
+            emit_arith_op(out_type, "rshift_i", "rshift_u", "", out);
         }
 
         // For now we're ignoring the type
@@ -831,11 +840,9 @@ fn gen_bin_op(
                     out.push_str("add_u64;\n");
                 }
 
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    emit_int_op(out_type, "add_u", "add_u", out);
+                _ => {
+                    emit_arith_op(out_type, "add_u", "add_u", "add_f", out);
                 }
-
-                _ => todo!()
             }
         }
 
@@ -857,24 +864,23 @@ fn gen_bin_op(
                     out.push_str("sub_u64;\n");
                 }
 
-                (Int(m), UInt(n)) | (UInt(m), Int(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) => {
-                    emit_int_op(out_type, "sub_u", "sub_u", out);
+                _ => {
+                    emit_arith_op(out_type, "sub_u", "sub_u", "sub_f", out);
                 }
-
-                _ => todo!()
             }
         }
 
         Mul => {
-            emit_int_op(out_type, "mul_u", "mul_u", out);
+            emit_arith_op(out_type, "mul_u", "mul_u", "mul_f", out);
         }
 
         Div => {
-            emit_int_op(out_type, "div_i", "div_u", out);
+            emit_arith_op(out_type, "div_i", "div_u", "div_f", out);
         }
 
         Mod => {
-            emit_int_op(out_type, "mod_i", "mod_u", out);
+            // Modulo with floating-point values should not pass type checking
+            emit_arith_op(out_type, "mod_i", "mod_u", "", out);
         }
 
         Eq => {

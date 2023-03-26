@@ -299,6 +299,8 @@ impl Expr
                             // to insert an explicit cast operation
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
+                            (Float(32), Float(32)) => Ok(Float(32)),
+
                             (Pointer(b), UInt(n)) | (UInt(n), Pointer(b)) => Ok(Pointer(b)),
                             (Pointer(b), Int(n)) | (Int(n), Pointer(b)) => Ok(Pointer(b)),
                             (Array {elem_type, ..}, Int(n)) | (Int(n), Array {elem_type, ..}) => Ok(Pointer(elem_type)),
@@ -312,7 +314,28 @@ impl Expr
                         }
                     }
 
-                    BitAnd | BitOr | BitXor | Mul | Div | Mod => {
+                    Mul | Div | Mod => {
+                        match (lhs_type.clone(), rhs_type.clone()) {
+                            (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
+                            (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
+
+                            // TODO: we may need to do sign-extension here
+                            // we could do it in the backend, but it might be better/simpler
+                            // to insert an explicit cast operation
+                            (Int(m), Int(n)) => Ok(Int(max(m, n))),
+
+                            (Float(32), Float(32)) => Ok(Float(32)),
+
+                            _ => ParseError::msg_only(&format!(
+                                "incompatible types in arithmetic op {}, {}",
+                                lhs_type,
+                                rhs_type
+                            ))
+                        }
+                    }
+
+                    // Bitwise operations
+                    BitAnd | BitOr | BitXor => {
                         match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
@@ -323,7 +346,7 @@ impl Expr
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             _ => ParseError::msg_only(&format!(
-                                "incompatible types in arithmetic op {}, {}",
+                                "incompatible types in bitwise op {}, {}",
                                 lhs_type,
                                 rhs_type
                             ))
