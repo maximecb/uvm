@@ -14,7 +14,9 @@ int main()
     assert((int)(float)3 == 3);
 
     // Global variable access
-    //assert(g == 3.5f);
+    assert(g == 3.5f);
+    g = 4.0f;
+    assert(g == 4.0f);
     assert(f_array[0] == 1.0f);
 
     // Floating-point comparisons

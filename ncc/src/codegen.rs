@@ -464,6 +464,9 @@ impl Expr
                                 out.push_str("load_u32;\n");
                                 out.push_str("sx_i32_i64;\n");
                             }
+                            Type::Float(32) => {
+                                out.push_str("load_u32;\n");
+                            }
                             Type::Pointer(t) => {
                                 out.push_str("load_u64;\n");
                             }
@@ -984,6 +987,7 @@ fn gen_assign(
                     match t {
                         Type::UInt(n) | Type::Int(n) => out.push_str(&format!("store_u{};\n", n)),
                         Type::Pointer(_) => out.push_str(&format!("store_u64;\n")),
+                        Type::Float(32) => out.push_str("store_u32;\n"),
 
                         _ => todo!()
                     }
