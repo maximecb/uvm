@@ -6,7 +6,7 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-sdl2 = "0.35.2"
+sdl2 = { version = "0.35.2", optional = true }
 
 [profile.dev]
 debug = true
@@ -24,3 +24,7 @@ lto = true
 # enabled in release mode for security reasons
 overflow-checks = true
 debug-assertions = true
+
+[features]
+sdl = ["dep:sdl2"]
+default = ["sdl"]

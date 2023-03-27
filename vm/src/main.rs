@@ -7,6 +7,7 @@ mod vm;
 mod sys;
 mod asm;
 
+#[cfg(feature = "sdl")]
 extern crate sdl2;
 use std::env;
 use std::thread::sleep;
@@ -88,6 +89,7 @@ fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
     {
         let mut vm = mutex.lock().unwrap();
 
+        #[cfg(feature = "sdl")]
         if let ExitReason::Exit(val) = sys::window::process_events(&mut vm) {
             return val;
         }

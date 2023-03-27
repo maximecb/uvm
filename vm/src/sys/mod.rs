@@ -3,6 +3,7 @@ pub mod audio;
 pub mod time;
 pub mod constants;
 
+#[cfg(feature = "sdl")]
 extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
@@ -64,8 +65,10 @@ impl SysCallFn
 /// SDL context (used for UI and audio)
 /// This is a global variable because it doesn't implement
 /// the Send trait, and so can't be referenced from another thread
+#[cfg(feature = "sdl")]
 static mut SDL: Option<sdl2::Sdl> = None;
 
+#[cfg(feature = "sdl")]
 pub fn get_sdl_context() -> &'static mut sdl2::Sdl
 {
     unsafe
@@ -164,16 +167,20 @@ impl SysState
         self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
         self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
 
-        self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
-        self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
-        self.reg_syscall(WINDOW_ON_MOUSEMOVE, SysCallFn::Fn2_0(window_on_mousemove));
-        self.reg_syscall(WINDOW_ON_MOUSEDOWN, SysCallFn::Fn2_0(window_on_mousedown));
-        self.reg_syscall(WINDOW_ON_MOUSEUP, SysCallFn::Fn2_0(window_on_mouseup));
-        self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
-        self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
-        self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
+        #[cfg(feature = "sdl")]
+        {
+            self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
+            self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
+            self.reg_syscall(WINDOW_ON_MOUSEMOVE, SysCallFn::Fn2_0(window_on_mousemove));
+            self.reg_syscall(WINDOW_ON_MOUSEDOWN, SysCallFn::Fn2_0(window_on_mousedown));
+            self.reg_syscall(WINDOW_ON_MOUSEUP, SysCallFn::Fn2_0(window_on_mouseup));
+            self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
+            self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
+            self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
 
-        self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
+            self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
+        }
+
     }
 }
 
