@@ -10,7 +10,9 @@ use std::io::Write;
 use std::io::{stdout, stdin};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM};
+#[cfg(feature = "sdl")]
 use window::*;
+#[cfg(feature = "sdl")]
 use audio::*;
 use time::*;
 use constants::*;

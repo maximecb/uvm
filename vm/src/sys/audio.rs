@@ -1,12 +1,11 @@
-#[cfg(feature = "sdl")]
+#![cfg(feature = "sdl")]
+
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM, ExitReason};
-#[cfg(feature = "sdl")]
 use crate::sys::{get_sdl_context};
 use crate::sys::constants::*;
 
-#[cfg(feature = "sdl")]
 #[derive(Clone)]
 struct AudioCB
 {
@@ -21,7 +20,6 @@ struct AudioCB
     num_channels: usize,
 }
 
-#[cfg(feature = "sdl")]
 impl AudioCallback for AudioCB
 {
     // Signed 16-bit samples
@@ -52,13 +50,11 @@ impl AudioCallback for AudioCB
 /// We have to keep the audio device alive
 /// This is a global variable because it doesn't implement
 /// the Send trait, and so can't be referenced from another thread
-#[cfg(feature = "sdl")]
 static mut DEVICE: Option<AudioDevice<AudioCB>> = None;
 
 // NOTE: this can only be called from the main thread since it uses SDL
 // However, it creates a new thread to generate audio sample, this thread
 // could be given a reference to another VM instance
-#[cfg(feature = "sdl")]
 pub fn audio_open_output(vm: &mut VM, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
 {
     let sample_rate = sample_rate.as_u32();

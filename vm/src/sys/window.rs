@@ -1,38 +1,28 @@
 // Simple display/window device
 
-#[cfg(feature = "sdl")]
+#![cfg(feature = "sdl")]
+
 extern crate sdl2;
-#[cfg(feature = "sdl")]
 use sdl2::pixels::Color;
-#[cfg(feature = "sdl")]
 use sdl2::event::Event;
-#[cfg(feature = "sdl")]
 use sdl2::keyboard::Keycode;
-#[cfg(feature = "sdl")]
 use sdl2::mouse::MouseButton;
-#[cfg(feature = "sdl")]
 use sdl2::surface::Surface;
-#[cfg(feature = "sdl")]
 use sdl2::render::Texture;
-#[cfg(feature = "sdl")]
 use sdl2::render::TextureAccess;
-#[cfg(feature = "sdl")]
 use sdl2::pixels::PixelFormatEnum;
 
 use std::time::Duration;
 
-#[cfg(feature = "sdl")]
 use crate::sys::{SysState, get_sdl_context};
 use crate::vm::{VM, Value, ExitReason};
 
 /// SDL video subsystem
 /// This is a global variable because it doesn't implement
 /// the Send trait, and so can't be referenced from another thread
-#[cfg(feature = "sdl")]
 static mut SDL_VIDEO: Option<sdl2::VideoSubsystem> = None;
 
 /// Lazily initialize the SDL video subsystem
-#[cfg(feature = "sdl")]
 fn get_video_subsystem() -> &'static mut sdl2::VideoSubsystem
 {
     unsafe
@@ -47,7 +37,6 @@ fn get_video_subsystem() -> &'static mut sdl2::VideoSubsystem
     }
 }
 
-#[cfg(feature = "sdl")]
 struct Window<'a>
 {
     width: u32,
@@ -73,10 +62,8 @@ struct Window<'a>
 // Note: we're leaving this global to avoid the Window lifetime
 // bubbling up everywhere.
 // TODO: eventually we will likely want to allow multiple windows
-#[cfg(feature = "sdl")]
 static mut WINDOW: Option<Window> = None;
 
-#[cfg(feature = "sdl")]
 fn get_window(window_id: u32) -> &'static mut Window<'static>
 {
     if window_id != 0 {
@@ -88,7 +75,6 @@ fn get_window(window_id: u32) -> &'static mut Window<'static>
     }
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, flags: Value) -> Value
 {
     unsafe {
@@ -140,7 +126,6 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     Value::from(0)
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
 {
     // Get the address to copy pixel data from
@@ -182,42 +167,36 @@ pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
     window.canvas.present();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_mousemove(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
     window.cb_mousemove = cb.as_u64();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_mousedown(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
     window.cb_mousedown = cb.as_u64();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
     window.cb_mouseup = cb.as_u64();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_keydown(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
     window.cb_keydown = cb.as_u64();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
     window.cb_keyup = cb.as_u64();
 }
 
-#[cfg(feature = "sdl")]
 pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
 {
     let window = get_window(window_id.as_u32());
@@ -227,7 +206,6 @@ pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
 }
 
 /// Process SDL events
-#[cfg(feature = "sdl")]
 pub fn process_events(vm: &mut VM) -> ExitReason
 {
     let mut event_pump = get_sdl_context().event_pump().unwrap();
@@ -294,7 +272,6 @@ pub fn process_events(vm: &mut VM) -> ExitReason
 
 // TODO: this is just for testing
 // we should handle window-related events here instead
-#[cfg(feature = "sdl")]
 fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32) -> ExitReason
 {
     let window = get_window(0);
@@ -317,7 +294,6 @@ MouseButtonDown {
     y: i32,
 },
 */
-#[cfg(feature = "sdl")]
 fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
 {
     let window = get_window(0);
@@ -346,7 +322,6 @@ fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: 
     vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
 }
 
-#[cfg(feature = "sdl")]
 fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
 {
     let window = get_window(0);
@@ -375,7 +350,6 @@ fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: Mo
     vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
 }
 
-#[cfg(feature = "sdl")]
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {
     use crate::sys::constants::*;
@@ -444,7 +418,6 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
     }
 }
 
-#[cfg(feature = "sdl")]
 fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
 {
     let window = get_window(0);
@@ -463,7 +436,6 @@ fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitRea
     }
 }
 
-#[cfg(feature = "sdl")]
 fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
 {
     let window = get_window(0);
@@ -482,7 +454,6 @@ fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReaso
     }
 }
 
-#[cfg(feature = "sdl")]
 fn window_call_textinput(vm: &mut VM, window_id: u32, utf8_byte: u8) -> ExitReason
 {
     let window = get_window(0);
