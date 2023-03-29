@@ -223,14 +223,14 @@ pub fn process_events(vm: &mut VM) -> ExitReason
                 }
             }
 
-            Event::MouseButtonDown { window_id, which, mouse_btn, .. } => {
-                if let ExitReason::Exit(val) = window_call_mousedown(vm, window_id, which, mouse_btn) {
+            Event::MouseButtonDown { window_id, which, mouse_btn, x, y, .. } => {
+                if let ExitReason::Exit(val) = window_call_mousedown(vm, window_id, mouse_btn, x, y) {
                     return ExitReason::Exit(val);
                 }
             }
 
-            Event::MouseButtonUp { window_id, which, mouse_btn, .. } => {
-                if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, which, mouse_btn) {
+            Event::MouseButtonUp { window_id, which, mouse_btn, x, y, .. } => {
+                if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, mouse_btn, x, y) {
                     return ExitReason::Exit(val);
                 }
             }
@@ -292,7 +292,7 @@ MouseButtonDown {
     y: i32,
 },
 */
-fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
+fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_btn: MouseButton, x: i32, y: i32) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_mousedown;
@@ -317,10 +317,15 @@ fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: 
         }
     };
 
-    vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
+    vm.call(cb, &[
+        Value::from(window.window_id),
+        Value::from(btn_id),
+        Value::from(x),
+        Value::from(y),
+    ])
 }
 
-fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: MouseButton) -> ExitReason
+fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_btn: MouseButton, x: i32, y: i32) -> ExitReason
 {
     let window = get_window(0);
     let cb = window.cb_mouseup;
@@ -345,7 +350,12 @@ fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_id: u32, mouse_btn: Mo
         }
     };
 
-    vm.call(cb, &[Value::from(window.window_id), Value::from(btn_id)])
+    vm.call(cb, &[
+        Value::from(window.window_id),
+        Value::from(btn_id),
+        Value::from(x),
+        Value::from(y),
+    ])
 }
 
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
