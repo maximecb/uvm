@@ -72,26 +72,6 @@ void redraw()
     window_draw_frame(0, frame_buffer);
 }
 
-void step()
-{
-    u64 bpm = 120;
-    u64 beats_per_sec = 2;
-    u64 steps_per_beat = 4;
-    u64 steps_per_sec = beats_per_sec * steps_per_beat;
-    u64 ms_per_step = 1000 / steps_per_sec;
-
-    print_i64(step_idx);
-    print_endl();
-
-    redraw();
-
-    // Move to the next step
-    step_idx = (step_idx + 1) % NUM_STEPS;
-    sample_idx = 0;
-
-    time_delay_cb(ms_per_step, step);
-}
-
 u16* audio_cb(u16 num_channels, u32 num_samples)
 {
     assert(num_channels == 1);
@@ -99,6 +79,13 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
     memset(audio_buffer, 0, sizeof(audio_buffer));
 
+    u64 bpm = 120;
+    u64 beats_per_sec = 2;
+    u64 steps_per_beat = 4;
+    u64 steps_per_sec = beats_per_sec * steps_per_beat;
+    u64 samples_per_step = 44100 / steps_per_sec;
+
+    // For each sample to generate
     for (int i = 0; i < num_samples; ++i)
     {
         float out = 0.0f;
@@ -113,7 +100,8 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
             float phase = freq * (float)(i32)sample_idx / 44100.0f;
             float cycle_pos = phase - (float)(int)phase;
 
-            // Here we assume that phase is in [0, 1[
+            // Here we assume that cycle_pos is in [0, 1[
+            // Use a square wave for a retro sound
             float osc_val = (cycle_pos < 0.5f)? 1.0f:-1.0f;
 
             // Convert the output to signed 16-bit i16 samples
@@ -127,6 +115,17 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
         audio_buffer[i] = (i16)(5000.0f * out * env);
 
         sample_idx = sample_idx + 1;
+
+        // If it's time to move to the next step
+        if (sample_idx >= samples_per_step)
+        {
+            // Move to the next step
+            step_idx = (step_idx + 1) % NUM_STEPS;
+            sample_idx = 0;
+
+            // Schedule redrawing as soon as we are done generating audio
+            time_delay_cb(0, redraw);
+        }
     }
 
    return audio_buffer;
@@ -169,9 +168,9 @@ void main()
     window_on_keydown(0, keydown);
     window_on_mousedown(0, mousedown);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
-
     enable_event_loop();
 
-    step();
+    redraw();
+
+    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 }
