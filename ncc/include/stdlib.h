@@ -13,6 +13,9 @@ void exit(int status)
     asm (status) -> void { exit; };
 }
 
+// We define RAND_MAX to be the same as INT32_MAX
+#define RAND_MAX 0x7FFFFFFF
+
 // The state has 64 bits
 // The seed must be an odd number
 unsigned long __cur_rand__ = 1337;
@@ -29,8 +32,8 @@ int rand()
 {
     __cur_rand__ = (0xf1357aea2e62a9c5 * __cur_rand__);
 
-    // Use the upper 32 bits of the state only
-    return (int)(__cur_rand__ >> 32);
+    // Use the upper 31 bits of the state only
+    return (int)(__cur_rand__ >> 33);
 }
 
 void srand(unsigned int seed)
