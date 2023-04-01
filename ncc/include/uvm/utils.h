@@ -16,16 +16,14 @@ void enable_event_loop()
 
 // Schedule a new update at a fixed rate
 // This takes into account the time taken by the current update
-void fixed_rate_update(u64 start_time, u64 update_rate, void* callback)
+void fixed_rate_update(u64 start_time, u64 rate_ms, void* callback)
 {
-    assert(update_rate > 0);
-    assert(update_rate <= 100);
+    assert(rate_ms > 0);
 
     u64 time_taken = time_current_ms() - start_time;
-    u64 update_delay = 1000 / update_rate;
 
     // Compute when to do the next update
-    u64 next_update = (time_taken > update_delay)? (u64)0:(update_delay - time_taken);
+    u64 next_update = (time_taken > rate_ms)? (u64)0:(rate_ms - time_taken);
 
     // Schedule the next update
     asm (next_update, callback) -> void { syscall time_delay_cb; };

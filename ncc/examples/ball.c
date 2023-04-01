@@ -91,8 +91,8 @@ void anim_callback()
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame
-    fixed_rate_update(start_time, 60, anim_callback);
+    // Schedule a fixed rate update for the next frame (60fps)
+    fixed_rate_update(start_time, 1000 / 60, anim_callback);
 }
 
 u16* audio_cb(u16 num_channels, u32 num_samples)

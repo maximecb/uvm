@@ -176,7 +176,7 @@ void anim_callback()
     window_draw_frame(0, frame_buffer);
 
     // Schedule a fixed rate update for the next frame
-    fixed_rate_update(start_time, 10, anim_callback);
+    fixed_rate_update(start_time, 100, anim_callback);
 }
 
 void keydown(u64 window_id, u16 keycode)

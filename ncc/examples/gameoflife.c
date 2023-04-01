@@ -109,8 +109,8 @@ void anim_callback()
 
     benchmark(update());
 
-    // Schedule a fixed rate update for the next frame
-    fixed_rate_update(start_time, 20, anim_callback);
+    // Schedule a fixed rate update for the next frame (20fps)
+    fixed_rate_update(start_time, 1000 / 20, anim_callback);
 }
 
 void main()

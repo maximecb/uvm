@@ -274,8 +274,8 @@ void anim_callback()
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame
-    fixed_rate_update(start_time, 40, anim_callback);
+    // Schedule a fixed rate update for the next frame (40fps)
+    fixed_rate_update(start_time, 1000 / 40, anim_callback);
 }
 
 // Enemy movement update
