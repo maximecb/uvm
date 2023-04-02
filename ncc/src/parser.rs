@@ -859,6 +859,11 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
             return Ok(Type::UInt(32));
         }
 
+        // Struct type
+        "struct" => {
+            parse_struct(input)
+        }
+
         _ => input.parse_error(&format!("unknown type {}", keyword))
     }
 
@@ -903,6 +908,39 @@ fn parse_array_type(input: &mut Input, base_type: Type) -> Result<Type, ParseErr
     {
         Ok(base_type)
     }
+}
+
+/// Parse a struct declaration.
+/// Returns a Type::Struct
+fn parse_struct(input: &mut Input) -> Result<Type, ParseError>
+{
+    let mut fields: Vec<(String, Type)> = Vec::new();
+
+    input.expect_token("{")?;
+
+    loop
+    {
+        input.eat_ws()?;
+
+        if input.eof() {
+            return input.parse_error("unexpected end of input inside struct");
+        }
+
+        if input.match_token("}")? {
+            break;
+        }
+
+        // Parse one field name and its type
+        let field_type = parse_type(input)?;
+        let field_type = parse_array_type(input, field_type)?;
+        let field_name = input.parse_ident()?;
+        fields.push((field_name, field_type));
+        input.expect_token(";")?;
+    }
+
+    Ok(Type::Struct {
+        fields
+    })
 }
 
 /// Parse a function declaration
@@ -972,6 +1010,16 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
         // If this is the end of the input
         if input.eof() {
             break;
+        }
+
+        // If this is a type definition
+        if input.match_token("typedef")? {
+            let t = parse_type(input)?;
+            let t = parse_array_type(input, t)?;
+            let name = input.parse_ident()?;
+            input.expect_token(";")?;
+            unit.typedefs.push((name, t));
+            continue;
         }
 
         // If this is an inline function attribute
@@ -1067,6 +1115,14 @@ mod tests
         parse_fails("x");
         parse_fails("x;");
         parse_fails("/* Hi\nthere");
+    }
+
+    #[test]
+    fn typedefs()
+    {
+        parse_ok("typedef int foo;");
+        parse_ok("typedef struct {} foo;");
+        parse_ok("typedef struct { float x; float y; float z; } vec;");
     }
 
     #[test]

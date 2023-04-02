@@ -75,6 +75,7 @@ impl Type
             Void => panic!(),
             UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
             Pointer(_) => 8,
+
             Array { elem_type, size_expr } => {
                 match size_expr.as_ref() {
                     Expr::Int(num_elems) => {
@@ -83,6 +84,22 @@ impl Type
                     _ => panic!()
                 }
             }
+
+            Struct { fields } => {
+                let mut num_bytes: usize = 0;
+
+                for (_, t) in fields {
+                    // Align the field
+                    let field_align = t.align_bytes();
+                    num_bytes = (num_bytes + (field_align - 1)) & !(field_align - 1);
+
+                    // Add the field size
+                    num_bytes += t.sizeof();
+                }
+
+                num_bytes
+            }
+
             _ => panic!()
         }
     }
@@ -375,6 +392,8 @@ pub struct Global
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
+    pub typedefs: Vec<(String, Type)>,
+
     pub global_vars: Vec<Global>,
 
     pub fun_decls: Vec<Function>,
