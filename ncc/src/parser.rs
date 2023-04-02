@@ -89,16 +89,25 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     if ch == '(' {
         input.eat_ch();
 
+
         // Try to parse this as a type casting expression
-        let new_type = input.with_backtracking(|input| parse_type(input));
-        if let Ok(new_type) = new_type {
+        let cast_expr = input.with_backtracking(|input| {
+            // Type we're casting to
+            let new_type = parse_type(input)?;
             input.expect_token(")")?;
+
+            // Expression being casted
             let child_expr = parse_prefix(input)?;
 
-            return Ok(Expr::Cast {
+            Ok(Expr::Cast {
                 new_type,
                 child: Box::new(child_expr)
-            });
+            })
+        });
+
+        // If the parsing as a type casting expression was successful
+        if cast_expr.is_ok() {
+            return cast_expr;
         }
 
         // Try parsing this as an expression
@@ -119,10 +128,14 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         input.expect_token("(")?;
 
         // Try to parse this as sizeof(type)
-        let t = input.with_backtracking(|input| parse_type(input));
-        if let Ok(t) = t {
+        let sizeof_expr = input.with_backtracking(|input| {
+            let t = parse_type(input)?;
             input.expect_token(")")?;
-            return Ok(Expr::SizeofType { t });
+            Ok(Expr::SizeofType { t })
+        });
+
+        if sizeof_expr.is_ok() {
+            return sizeof_expr;
         }
 
         // Try parsing this as sizeof(expr)
@@ -865,8 +878,14 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         }
 
         _ => input.parse_error(&format!("unknown type {}", keyword))
-    }
 
+        // TODO: support for typedefs
+        /*
+        _ => {
+            Ok(Type::Ref(keyword))
+        }
+        */
+    }
 }
 
 /// Parse a type name
