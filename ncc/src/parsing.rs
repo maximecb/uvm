@@ -48,6 +48,12 @@ impl fmt::Display for ParseError
     }
 }
 
+/// Check if a character can be the start of an identifier
+pub fn is_ident_start(ch: char) -> bool
+{
+    ch.is_ascii_alphabetic() || ch == '_'
+}
+
 /// Check if a character can be part of an identifier
 pub fn is_ident_ch(ch: char) -> bool
 {
@@ -478,7 +484,7 @@ impl Input
     {
         let mut ident = String::new();
 
-        if self.eof() || !is_ident_ch(self.peek_ch()) {
+        if self.eof() || !is_ident_start(self.peek_ch()) {
             return self.parse_error("expected identifier");
         }
 

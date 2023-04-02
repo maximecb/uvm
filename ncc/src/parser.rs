@@ -139,7 +139,7 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     }
 
     // Identifier (variable reference)
-    if is_ident_ch(ch) {
+    if is_ident_start(ch) {
         let ident = input.parse_ident()?;
         return Ok(Expr::Ident(ident));
     }

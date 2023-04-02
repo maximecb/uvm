@@ -25,7 +25,10 @@ pub enum Type
 
     Struct {
         fields: Vec<(String, Type)>,
-    }
+    },
+
+    // Reference to a typedef
+    Ref(String),
 }
 
 impl Type

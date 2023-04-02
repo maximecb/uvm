@@ -397,7 +397,7 @@ fn expand_macro(
             }
 
             // If this is an identifier
-            if is_ident_ch(ch) {
+            if is_ident_start(ch) {
                 let ident = input.parse_ident()?;
 
                 // If we have a definition for this identifier
@@ -572,7 +572,7 @@ fn process_input_rec(
         }
 
         // If this is an identifier
-        if gen_output && is_ident_ch(ch) {
+        if gen_output && is_ident_start(ch) {
             let ident = input.parse_ident()?;
 
             // If we have a definition for this identifier
