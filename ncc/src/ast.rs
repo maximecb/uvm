@@ -164,6 +164,7 @@ pub enum Decl
     Arg { idx: usize, t: Type },
     Local { idx: usize, t: Type },
     Fun { name: String, t: Type },
+    TypeDef { name: String, t: Type },
 }
 
 impl Decl
@@ -175,6 +176,7 @@ impl Decl
             Decl::Arg { idx, t } => t.clone(),
             Decl::Local { idx, t } => t.clone(),
             Decl::Fun { name, t } => t.clone(),
+            Decl::TypeDef { name, t } => t.clone(),
         }
     }
 }

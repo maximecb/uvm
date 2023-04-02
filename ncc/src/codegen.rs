@@ -478,7 +478,8 @@ impl Expr
                     Decl::Fun { name, t } => {
                         out.push_str(&format!("push {};\n", name));
                     }
-                    //_ => todo!()
+
+                    _ => panic!()
                 }
             }
 

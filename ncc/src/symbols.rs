@@ -64,7 +64,7 @@ impl Env
         top_scope.decls.insert(name.to_string(), decl);
     }
 
-    /// Define a new variable in the topmost scope
+    /// Define a new entity in the topmost scope
     fn define(&mut self, name: &str, decl: Decl)
     {
         let num_scopes = self.scopes.len();
@@ -128,6 +128,14 @@ impl Unit
     {
         let mut env = Env::default();
         env.push_scope();
+
+        // Add definitions for each typedef
+        for (name, t) in &self.typedefs {
+            env.define(&name, Decl::TypeDef {
+                name: name.clone(),
+                t: t.clone(),
+            });
+        }
 
         // Add definitions for all global variables
         for global in &mut self.global_vars {
