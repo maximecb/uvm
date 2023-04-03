@@ -1251,7 +1251,7 @@ u64 vm_emit_prim() {
   if(num >= 0)  {
     puts("E2\n");
     vm_bytecode_emit(OP_PUSH, num);
-    return;
+    return 0;
   }
 
   u64* sym = read_sym();
@@ -1261,7 +1261,7 @@ u64 vm_emit_prim() {
     puts("E4\n");
     u64 var = vm_get_symbol_var(sym);
     vm_bytecode_emit(OP_GET_VAR, var);
-    return;
+    return 0;
   }
 
   puts("E5\n");
@@ -1269,7 +1269,7 @@ u64 vm_emit_prim() {
   if(next_ch == '(') {
     puts("E6\n");
     read_ch();
-    emit_exp();
+    vm_emit_exp();
     puts("E7\n");
     puts("rem buffer: ");
     puts(vm_command_text_buffer + vm_command_text_buffer_read);
@@ -1278,22 +1278,24 @@ u64 vm_emit_prim() {
     if(next_ch != ')') {
       console_error("Expected to find ) but did not");
       vm_error = 1;
+      return 1;
     }
-    return;
+    return 0;
   }
   puts("E8\n");
 
-  if (next_ch == ')') return;
+  if (next_ch == ')') return 0;
 
   vm_error = 1;
   console_error("Unexpected token in expression");
+  return 1;
 }
 
-u64 emit_factor() {
+u64 vm_emit_factor() {
   u8 next_ch;
   u8 op;
 
-  emit_prim();
+  if(vm_emit_prim()) return 1;
   while(1) {
     next_ch = peek_next();
     if('*' ==  next_ch) op = OP_MULT;
@@ -1301,16 +1303,18 @@ u64 emit_factor() {
     else break;
 
     read_ch();
-    emit_prim();
+    if(vm_emit_prim()) return 1;
     vm_bytecode_emit(op, 0);
   }
+
+  return 0;
 }
 
 u64 emit_term() {
   u8 op;
   u8 next_ch;
 
-  emit_factor();
+  if(vm_emit_factor()) return 1;
   while(1) {
     next_ch = peek_next();
     if('+' ==  next_ch) op = OP_ADD;
@@ -1318,17 +1322,18 @@ u64 emit_term() {
     else break;
 
     read_ch();
-    emit_factor();
+    if(vm_emit_factor()) return 1;
     vm_bytecode_emit(op, 0);
   }
+  return 0;
 }
 
-u64 emit_comparison() {
+u64 vm_emit_comparison() {
   u8 op;
   u8 next_ch;
 
   puts("O1\n");
-  emit_term();
+  if(emit_term()) return 1;
   while(1) {
     next_ch = peek_next();
     if('>' ==  next_ch) {
@@ -1352,17 +1357,18 @@ u64 emit_comparison() {
     } else break;
 
     puts("O2\n");
-    emit_term();
+    if(emit_term()) return 1;
     vm_bytecode_emit(op, 0);
   }
   puts("O3\n");
+  return 0;
 }
 
-u64 emit_equality() {
+u64 vm_emit_exp() {
   u8 op;
   u8 next_ch;
 
-  emit_comparison();
+  if(vm_emit_comparison()) return 1;
 
   puts("M1");
   while(1) {
@@ -1376,16 +1382,14 @@ u64 emit_equality() {
     puts("compiling equality");
     read_ch();
     read_ch();
-    emit_comparison();
+    if(vm_emit_comparison()) return 1;
  
     vm_bytecode_emit(op, 0);
   }
   puts("M3");
+  return 0;
 }
 
-u64 emit_exp() {
-  emit_equality();
-  return 0;
 #define EMIT_EXP if(vm_emit_exp()) return 1;
 
 u64 vm_emit_color() {
@@ -1488,7 +1492,10 @@ void vm_load_cmd() {
 
   vm_commands_selected = (u64**)cmd;
   
-  vm_emit_cmd();
+  if(vm_emit_cmd()) {
+    if(cmd_num >= 0) vm_command_create(cmd_num);
+    return;
+  };
   
   if(cmd_num < 0) {
     puts("EXECUTING 1 off cmd\n");
