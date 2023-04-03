@@ -126,6 +126,7 @@ void main()
   vm_command_text_buffer_clear();
   window_create(FRAME_WIDTH, FRAME_HEIGHT, "Text Editor Demo", 0);
 
+  canvas_clear();
   console_redraw_all_text();
 
   console_puts("  **** UVM Basic ****");
@@ -853,6 +854,10 @@ void canvas_plot(u64 x, u64 y, u64 color) {
   }
 }
 
+void canvas_clear() {
+  memset32(frame_buffer, 0xFFFFFF, sizeof(frame_buffer) / sizeof(u32));
+}
+
 
 //===========================================================================
 /* INTERP */
@@ -904,6 +909,7 @@ void vm_command_text_buffer_backspace() {
 
 #define OP_PLOT 18 // draws a pixel at x, y
 #define OP_LINE 19
+#define OP_CLEAN 20
 
 
 // Maps symbols to var positions
@@ -1111,6 +1117,7 @@ u64* vm_commands_sym_run;
 u64* vm_commands_sym_if;
 u64* vm_commands_sym_plot;
 u64* vm_commands_sym_line;
+u64* vm_commands_sym_clear;
 u64* vm_commands_sym_blue;
 u64* vm_commands_sym_red;
 u64* vm_commands_sym_green;
@@ -1136,6 +1143,7 @@ int vm_init() {
   vm_commands_sym_if = vm_init_sym("IF");
   vm_commands_sym_plot = vm_init_sym("PLOT");
   vm_commands_sym_line = vm_init_sym("LINE");
+  vm_commands_sym_clear = vm_init_sym("CLEAR");
   vm_commands_sym_blue = vm_init_sym("BLUE");
   vm_commands_sym_red = vm_init_sym("RED");
   vm_commands_sym_green = vm_init_sym("GREEN");
@@ -1459,6 +1467,8 @@ u8 vm_emit_cmd() {
     EMIT_EXP
     if(vm_emit_color()) return 1;
     vm_bytecode_emit(OP_LINE, 0);
+  } else if (command == vm_commands_sym_clear) {
+    vm_bytecode_emit(OP_CLEAN, 0);
   }
   else if (command == vm_commands_sym_run) vm_exec(vm_commands_root);
   else if (read_sym() == 0)  {
@@ -1630,8 +1640,7 @@ void vm_exec(u64** commands) {
 	DEBUG("Unconditionally jumping\n");
 	inst_idx = arg;
 	continue;
-      }
-      else if (op == OP_JUMP_IF_NOT) {
+      } else if (op == OP_JUMP_IF_NOT) {
 	DEBUG("EXECUTING OP_JUMP_IF_NOT");
 	if (arg > cmd_size) break;
 	if(!vm_pop()) {
@@ -1651,6 +1660,9 @@ void vm_exec(u64** commands) {
 	u64 x0 = vm_pop();
 	u64 y0 = vm_pop();
 	draw_line((u32*)frame_buffer, (u32)FRAME_WIDTH, (u32)FRAME_HEIGHT, (u32) console_width + x0, (u32)y0, (u32) console_width + x1, (u32)y1, (u32)color);
+      } else if (op == OP_CLEAN) {
+	canvas_clear();
+	console_redraw_all_text();
       }
       BIN_OP(OP_ADD, +)
 	BIN_OP(OP_SUB, -)
