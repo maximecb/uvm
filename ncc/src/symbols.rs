@@ -153,9 +153,13 @@ impl Unit
                     // Replace the init expr by a reference to the string constant
                     global.init_expr = Some(Expr::Ref(decl));
                 }
-
                 _ => {}
             }
+
+
+
+
+
         }
 
         // Add definitions for all functions
@@ -342,6 +346,16 @@ impl Expr
             Expr::Ref(_) => panic!(),
 
             Expr::Cast { new_type, child } => {
+                if let Type::Ref(name) = new_type {
+                    if let Some(Decl::TypeDef { name, t }) = env.lookup(name) {
+                        *new_type = t.clone();
+                    }
+                    else
+                    {
+                        return ParseError::msg_only(&format!("reference to unknown type \"{}\"", name));
+                    }
+                }
+
                 child.as_mut().resolve_syms(env)?;
             }
 
