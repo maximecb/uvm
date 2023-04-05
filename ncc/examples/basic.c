@@ -910,6 +910,7 @@ void vm_command_text_buffer_backspace() {
 #define OP_PLOT 18 // draws a pixel at x, y
 #define OP_LINE 19
 #define OP_CLEAN 20
+#define OP_HELP 21
 
 
 // Maps symbols to var positions
@@ -1118,6 +1119,7 @@ u64* vm_commands_sym_if;
 u64* vm_commands_sym_plot;
 u64* vm_commands_sym_line;
 u64* vm_commands_sym_clear;
+u64* vm_commands_sym_help;
 u64* vm_commands_sym_blue;
 u64* vm_commands_sym_red;
 u64* vm_commands_sym_green;
@@ -1144,6 +1146,7 @@ int vm_init() {
   vm_commands_sym_plot = vm_init_sym("PLOT");
   vm_commands_sym_line = vm_init_sym("LINE");
   vm_commands_sym_clear = vm_init_sym("CLEAR");
+  vm_commands_sym_help = vm_init_sym("HELP");
   vm_commands_sym_blue = vm_init_sym("BLUE");
   vm_commands_sym_red = vm_init_sym("RED");
   vm_commands_sym_green = vm_init_sym("GREEN");
@@ -1162,7 +1165,7 @@ int vm_init() {
 /* } */
 
 u64 vm_bytecode_pointer_inc() {
-  u64 current_val = (u64)vm_commands_selected[VM_COMMANDS_CUR]; 
+  u64 current_val = (u64)vm_commands_selected[VM_COMMANDS_CUR];
   vm_commands_selected[VM_COMMANDS_CUR] = (u64*)(current_val + 1);
   return current_val;
 }
@@ -1421,7 +1424,10 @@ u64 vm_emit_color() {
 u8 vm_emit_cmd() {
   u64* command = read_sym();
   
-  if(command == vm_commands_sym_let) {
+  if(command == vm_commands_sym_help) {
+    vm_bytecode_emit(OP_HELP, 0);
+    
+  } else if(command == vm_commands_sym_let) {
     u64* sym = read_sym();
     if (sym == 0) {
       console_error("LET is expected to be followed by a symbol but was not");
@@ -1504,9 +1510,10 @@ void vm_load_cmd() {
   
   if(vm_emit_cmd()) {
     if(cmd_num >= 0) vm_command_create(cmd_num);
+    if(cmd_num < 0) free((void*)cmd);
     return;
-  };
-  
+  }
+ 
   if(cmd_num < 0) {
     puts("EXECUTING 1 off cmd\n");
     vm_exec((u64**)cmd);
@@ -1635,6 +1642,25 @@ void vm_exec(u64** commands) {
       else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
       else if (op == OP_PRINT_INT) console_print_i64(vm_pop());
       else if (op == OP_GOTO) next_cmd = vm_command_find(vm_pop());
+      else if (op == OP_HELP) {
+	console_newline();
+	console_puts("UVM Basic commands");
+	console_newline();
+	console_puts("LET {sym} {expr}");
+	console_newline();
+	console_puts("GOTO {cmd num}");
+	console_newline();
+	console_puts("IF {pred} {then} ELSE {else}");
+	console_newline();
+	console_puts("PLOT {x} {y} {color}");
+	console_newline();
+	console_puts("LINE {x0} {y0} {x1} {y1} {color}");
+	console_newline();
+	console_puts("CLEAR");
+	console_newline();
+	console_puts("RUN");
+	console_newline();
+      }
       else if (op == OP_JUMP) {
 	if (arg > cmd_size) break;
 	DEBUG("Unconditionally jumping\n");
