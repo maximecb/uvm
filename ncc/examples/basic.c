@@ -20,10 +20,14 @@
 
 #define DEBUG
 #ifdef DEBUG
-#define DEBUG(s) puts(s "\n");
+#define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
+#define DEBUGI(i) print_i64(i);
 #else 
-#define DEBUG(s) 
+#define DEBUGS(s) 
+#define DEBUGI(i) 
 #endif
+
+#define DEBUG(s) DEBUGS(s "\n");
 
 size_t console_width;
 
@@ -67,8 +71,8 @@ void textinput(u64 window_id, char ch)
 {
   console_putchar(ch);
   vm_command_text_buffer[vm_command_text_buffer_cursor] = ch;
-  puts(vm_command_text_buffer);
-  puts("\n");
+  DEBUGS(vm_command_text_buffer);
+  DEBUGS("\n");
   ++vm_command_text_buffer_cursor;
   console_redraw_commit();
 }
@@ -121,6 +125,7 @@ void console_print_ready() {
 
 void main()
 {
+  DEBUGS("DEBUGGING\n");
   console_width = FRAME_WIDTH/3+75;
   vm_init();
   vm_command_text_buffer_clear();
@@ -781,28 +786,21 @@ void console_print_i64(i64 n) {
     is_neg = 1;
     n = -n;
   } else if (n == 0) {
-    puts("NUM IS 0 \n");
+    DEBUG("num is 0");
     console_input_buff[buff_start] = 48;
     --buff_start;
   }
 
   for(; n!=0; --buff_start) {
-    puts("setting buff @ ");
-    print_i64(buff_start);
-    puts("\n");
     console_input_buff[buff_start] = (n % 10) + 48;
     n = n / 10;
   }
 
   if (is_neg) {
-    puts("setting neg sign\n");
+    DEBUG("setting neg sign\n");
     console_input_buff[buff_start] = '-';
     --buff_start;
   }
-
-  puts("buff_start:");
-  print_i64(buff_start);
-  puts("\n");
 
   console_newline();
   console_puts(console_input_buff+(buff_start+1));
@@ -843,7 +841,6 @@ void console_draw_char(char ch, size_t row_num, size_t col_num) {
 #define CANVAS_PLOT_POINT_SIZE 5
 
 void canvas_plot(u64 x, u64 y, u64 color) {
-  puts("CANVAS_PLOT");
   /* x = x * CANVAS_PLOT_POINT_SIZE; */
   /* y = y * CANVAS_PLOT_POINT_SIZE; */
   u32* p = get_point_ptr((u32*)frame_buffer, FRAME_WIDTH, x, y);
@@ -959,7 +956,6 @@ u64** vm_command_find(u64 num) {
 
 
 u64* vm_command_create(u64 num) {
-  puts("vm_command_create\n");
 
   u64** new_cmd = vm_commands_alloc(num);
 
@@ -979,7 +975,6 @@ u64* vm_command_create(u64 num) {
       break;
     }
     u64 cur_cmd_num = (u64)cur_cmd[VM_COMMANDS_NUM];
-    puts("Iterating \n");
     if(cur_cmd_num > num) { // insert command before
       DEBUG("Inserting commands in between commands");
       if(cur_cmd == vm_commands_root) vm_commands_root = new_cmd;
@@ -998,7 +993,6 @@ u64* vm_command_create(u64 num) {
   }
 
   return (u64*)new_cmd;
-  puts("--------------------\n");
 }
 
 
@@ -1257,34 +1251,24 @@ void console_error(char* err) {
 }
 
 u64 vm_emit_prim() {
-  puts("E1\n");
   i64 num = read_int();
   if(num >= 0)  {
-    puts("E2\n");
     vm_bytecode_emit(OP_PUSH, num);
     return 0;
   }
 
   u64* sym = read_sym();
-  puts("E3\n");
   
   if(sym != 0) {
-    puts("E4\n");
     u64 var = vm_get_symbol_var(sym);
     vm_bytecode_emit(OP_GET_VAR, var);
     return 0;
   }
 
-  puts("E5\n");
   char next_ch = peek_next();
   if(next_ch == '(') {
-    puts("E6\n");
     read_ch();
     vm_emit_exp();
-    puts("E7\n");
-    puts("rem buffer: ");
-    puts(vm_command_text_buffer + vm_command_text_buffer_read);
-    puts("\n");
     next_ch = read_ch();
     if(next_ch != ')') {
       console_error("Expected to find ) but did not");
@@ -1293,7 +1277,6 @@ u64 vm_emit_prim() {
     }
     return 0;
   }
-  puts("E8\n");
 
   if (next_ch == ')') return 0;
 
@@ -1343,7 +1326,6 @@ u64 vm_emit_comparison() {
   u8 op;
   u8 next_ch;
 
-  puts("O1\n");
   if(emit_term()) return 1;
   while(1) {
     next_ch = peek_next();
@@ -1351,9 +1333,7 @@ u64 vm_emit_comparison() {
       read_ch();
       next_ch = peek_next();
       op = OP_GT;
-      puts("emitting GT\n");
       if ('=' == next_ch) {
-	puts("emitting GT or EQ\n");
 	op = OP_GT_EQ;
 	read_ch();
       } 
@@ -1367,11 +1347,9 @@ u64 vm_emit_comparison() {
       }
     } else break;
 
-    puts("O2\n");
     if(emit_term()) return 1;
     vm_bytecode_emit(op, 0);
   }
-  puts("O3\n");
   return 0;
 }
 
@@ -1381,23 +1359,18 @@ u64 vm_emit_exp() {
 
   if(vm_emit_comparison()) return 1;
 
-  puts("M1");
   while(1) {
     next_ch = peek_next();
 
-    if(next_ch == '!' && peek_ch(1) == '=') { DEBUG("detected !="); op = OP_NOT_EQ;}
-    else if(next_ch == '=' && peek_ch(1) == '=') {DEBUG("DETECTED =="); op = OP_EQ;}
+    if(next_ch == '!' && peek_ch(1) == '=') op = OP_NOT_EQ;
+    else if(next_ch == '=' && peek_ch(1) == '=') op = OP_EQ;
     else break;
-    puts("M2");
-
-    puts("compiling equality");
     read_ch();
     read_ch();
     if(vm_emit_comparison()) return 1;
  
     vm_bytecode_emit(op, 0);
   }
-  puts("M3");
   return 0;
 }
 
@@ -1417,6 +1390,9 @@ u64 vm_emit_color() {
 	console_error("Unrecognized color");
 	return 1;
       }
+      DEBUGS("PUSHING COLOR: ");
+      DEBUGI(color_val);
+      DEBUG("")
       vm_bytecode_emit(OP_PUSH, color_val);
     }
 }
@@ -1437,11 +1413,11 @@ u8 vm_emit_cmd() {
     u64 var = vm_get_symbol_var(sym);
     vm_bytecode_emit(OP_SET_VAR , var);
   } else if (command == vm_commands_sym_goto) {
+    DEBUG("Emitting GOTO");
     EMIT_EXP
     vm_bytecode_emit(OP_GOTO, 0);
   } else if (command == vm_commands_sym_if) {
-    puts("EXECUTING IF\n");
-    
+    DEBUG("Emitting IF");
     EMIT_EXP
     u64 jump_to_else_pos = vm_bytecode_pointer_inc(); // resever inst to jump to else if pred is false
     if(vm_emit_cmd()) return 1; // Then cmd
@@ -1462,11 +1438,13 @@ u8 vm_emit_cmd() {
     vm_bytecode_patch(jump_to_else_pos, OP_JUMP_IF_NOT, start_of_else);
     vm_bytecode_patch(jump_to_else_end_pos, OP_JUMP, end_of_else);
   } else if (command == vm_commands_sym_plot) {
+    DEBUG("Emitting plot");
     EMIT_EXP
     EMIT_EXP
     if(vm_emit_color()) return 1;
     vm_bytecode_emit(OP_PLOT, 0);
   } else if (command == vm_commands_sym_line) {
+    DEBUG("Emitting line");
     EMIT_EXP
     EMIT_EXP
     EMIT_EXP
@@ -1474,6 +1452,7 @@ u8 vm_emit_cmd() {
     if(vm_emit_color()) return 1;
     vm_bytecode_emit(OP_LINE, 0);
   } else if (command == vm_commands_sym_clear) {
+    DEBUG("Emitting clear");
     vm_bytecode_emit(OP_CLEAN, 0);
   }
   else if (command == vm_commands_sym_run) vm_exec(vm_commands_root);
@@ -1492,17 +1471,18 @@ void vm_load_cmd() {
 
   if(vm_command_text_buffer_cursor == 0) return;
   
-  puts(vm_command_text_buffer);
+  DEBUG(vm_command_text_buffer);
 
   i64 cmd_num = read_int();
-  puts("cmd_num\n");
-  print_i64(cmd_num);
+  DEBUG("cmd_num\n");
+  DEBUGI(cmd_num);
+  DEBUG("");
   u64* cmd;
   if(cmd_num < 0) {
-    puts("creating one off cmd\n");
+    DEBUG("Creating disposable cmd");
     cmd = (u64*)vm_commands_alloc(cmd_num);
   } else {
-    puts("Retrieving cmd\n");
+    DEBUG("Retrieving cmd");
     cmd = (u64*)vm_command_create(cmd_num);
   }
 
@@ -1515,7 +1495,7 @@ void vm_load_cmd() {
   }
  
   if(cmd_num < 0) {
-    puts("EXECUTING 1 off cmd\n");
+    DEBUG("EXECUTING 1 off cmd");
     vm_exec((u64**)cmd);
     free((void*)cmd);
   }
@@ -1539,23 +1519,21 @@ void vm_push(i64 v) {
   else if (op == opcode) {			\
     val2 = vm_pop();				\
     val1 = vm_pop();				\
-    puts("OP: ");				\
-    print_i64(op);				\
-    puts("\n");					\
-    puts("val1: ");				\
-    print_i64(val1);				\
-    puts("\n");					\
-    puts("val2: ");				\
-    print_i64(val2);				\
-    puts("\n");					\
+    DEBUGS("OP: ");				\
+    DEBUGI(op);				\
+    DEBUGS("\n");					\
+    DEBUGS("val1: ");				\
+    DEBUGI(val1);				\
+    DEBUGS("\n");					\
+    DEBUGS("val2: ");				\
+    DEBUGI(val2);				\
+    DEBUGS("\n");					\
     i64 result = val1 c_op val2;		\
-    puts("result: ");				\
-    print_i64(result);				\
-    puts("\n");					\
+    DEBUGS("result: ");				\
+    DEBUGI(result);				\
+    DEBUGS("\n");					\
     vm_push(result);				\
   }
-
-#define STR_VAL(arg) #arg
 
 void print_inst(u64 inst) {
 #define PRINT_OP(op_str, op_name) else if(op == op_name) {	\
@@ -1629,7 +1607,6 @@ void vm_exec(u64** commands) {
 
     for(size_t inst_idx = 0; (inst_idx < cmd_size); ) {
       if(vm_error) return;
-      puts("--------------\n");
       u64 inst = cmd_insts[inst_idx];
       u8 op = (u8)(inst >> 56);
       u64 arg = (inst & (((u64)1<<56) - 1));
@@ -1701,10 +1678,10 @@ void vm_exec(u64** commands) {
 	BIN_OP(OP_EQ, ==)
 	BIN_OP(OP_NOT_EQ, !=)
       else {
-	puts("unrecognized command\n");
+	DEBUG("unrecognized command\n");
 	vm_error = 1;
       }
-      puts("executing inst\n");
+      DEBUG("executing inst\n");
       ++inst_idx;
     }
   }
