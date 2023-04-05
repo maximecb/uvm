@@ -29,6 +29,9 @@
 
 #define DEBUG(s) DEBUGS(s "\n");
 
+#define TRY(exp) if(exp) return 1;
+
+
 size_t console_width;
 
 size_t margin = 5;
@@ -1289,7 +1292,7 @@ u64 vm_emit_factor() {
   u8 next_ch;
   u8 op;
 
-  if(vm_emit_prim()) return 1;
+  TRY(vm_emit_prim());
   while(1) {
     next_ch = peek_next();
     if('*' ==  next_ch) op = OP_MULT;
@@ -1297,7 +1300,7 @@ u64 vm_emit_factor() {
     else break;
 
     read_ch();
-    if(vm_emit_prim()) return 1;
+    TRY(vm_emit_prim());
     vm_bytecode_emit(op, 0);
   }
 
@@ -1308,7 +1311,7 @@ u64 emit_term() {
   u8 op;
   u8 next_ch;
 
-  if(vm_emit_factor()) return 1;
+  TRY(vm_emit_factor());
   while(1) {
     next_ch = peek_next();
     if('+' ==  next_ch) op = OP_ADD;
@@ -1316,7 +1319,7 @@ u64 emit_term() {
     else break;
 
     read_ch();
-    if(vm_emit_factor()) return 1;
+    TRY(vm_emit_factor());
     vm_bytecode_emit(op, 0);
   }
   return 0;
@@ -1326,7 +1329,7 @@ u64 vm_emit_comparison() {
   u8 op;
   u8 next_ch;
 
-  if(emit_term()) return 1;
+  TRY(emit_term());
   while(1) {
     next_ch = peek_next();
     if('>' ==  next_ch) {
@@ -1347,7 +1350,7 @@ u64 vm_emit_comparison() {
       }
     } else break;
 
-    if(emit_term()) return 1;
+    TRY(emit_term());
     vm_bytecode_emit(op, 0);
   }
   return 0;
@@ -1357,7 +1360,7 @@ u64 vm_emit_exp() {
   u8 op;
   u8 next_ch;
 
-  if(vm_emit_comparison()) return 1;
+  TRY(vm_emit_comparison());
 
   while(1) {
     next_ch = peek_next();
@@ -1367,19 +1370,17 @@ u64 vm_emit_exp() {
     else break;
     read_ch();
     read_ch();
-    if(vm_emit_comparison()) return 1;
+    TRY(vm_emit_comparison());
  
     vm_bytecode_emit(op, 0);
   }
   return 0;
 }
 
-#define EMIT_EXP if(vm_emit_exp()) return 1;
-
 u64 vm_emit_color() {
     u64* color = read_sym();
     if(color == 0) {
-      EMIT_EXP
+      TRY(vm_emit_exp());
     } else {
       u64 color_val;
       if(color == vm_commands_sym_blue) color_val = blue;
@@ -1409,18 +1410,18 @@ u8 vm_emit_cmd() {
       console_error("LET is expected to be followed by a symbol but was not");
       return 1;
     }
-    EMIT_EXP
+    TRY(vm_emit_exp());
     u64 var = vm_get_symbol_var(sym);
     vm_bytecode_emit(OP_SET_VAR , var);
   } else if (command == vm_commands_sym_goto) {
     DEBUG("Emitting GOTO");
-    EMIT_EXP
+    TRY(vm_emit_exp());
     vm_bytecode_emit(OP_GOTO, 0);
   } else if (command == vm_commands_sym_if) {
     DEBUG("Emitting IF");
-    EMIT_EXP
+    TRY(vm_emit_exp());
     u64 jump_to_else_pos = vm_bytecode_pointer_inc(); // resever inst to jump to else if pred is false
-    if(vm_emit_cmd()) return 1; // Then cmd
+    TRY(vm_emit_cmd()); // Then cmd
     
     u64 jump_to_else_end_pos = vm_bytecode_pointer_inc(); // reserve inst to jump to end of else;
 
@@ -1431,7 +1432,7 @@ u8 vm_emit_cmd() {
       return 1;
     }
     u64 start_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
-    if(vm_emit_cmd()) return 1; // Then cmd
+    TRY(vm_emit_cmd()); // Then cmd
 
     u64 end_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
 
@@ -1439,17 +1440,17 @@ u8 vm_emit_cmd() {
     vm_bytecode_patch(jump_to_else_end_pos, OP_JUMP, end_of_else);
   } else if (command == vm_commands_sym_plot) {
     DEBUG("Emitting plot");
-    EMIT_EXP
-    EMIT_EXP
-    if(vm_emit_color()) return 1;
+    TRY(vm_emit_exp());
+    TRY(vm_emit_exp());
+    TRY(vm_emit_color());
     vm_bytecode_emit(OP_PLOT, 0);
   } else if (command == vm_commands_sym_line) {
     DEBUG("Emitting line");
-    EMIT_EXP
-    EMIT_EXP
-    EMIT_EXP
-    EMIT_EXP
-    if(vm_emit_color()) return 1;
+    TRY(vm_emit_exp());
+    TRY(vm_emit_exp());
+    TRY(vm_emit_exp());
+    TRY(vm_emit_exp());
+    TRY(vm_emit_color());
     vm_bytecode_emit(OP_LINE, 0);
   } else if (command == vm_commands_sym_clear) {
     DEBUG("Emitting clear");
@@ -1471,7 +1472,7 @@ void vm_load_cmd() {
 
   if(vm_command_text_buffer_cursor == 0) return;
   
-  DEBUG(vm_command_text_buffer);
+  DEBUGS(vm_command_text_buffer);
 
   i64 cmd_num = read_int();
   DEBUG("cmd_num\n");
