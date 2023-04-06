@@ -1878,14 +1878,14 @@ void vm_exec(u64** commands)
 			}
 			else if (op == OP_LINE)
 			{
-				u64 color = vm_pop();
-				u64 x1 = vm_pop();
-				u64 y1 = vm_pop();
-				u64 x0 = vm_pop();
-				u64 y0 = vm_pop();
+				u32 color = (u32)vm_pop();
+				u32 y1 = (u32)vm_pop();
+				u32 x1 = (u32)vm_pop();
+				u32 y0 = (u32)vm_pop();
+				u32 x0 = (u32)vm_pop();
 				if(canvas_coord_gaurd(x0, y0)) break;
 				if(canvas_coord_gaurd(x1, y1)) break;
-				draw_line((u32*)frame_buffer, (u32)FRAME_WIDTH, (u32)FRAME_HEIGHT, (u32) console_width + x0, (u32)y0, (u32) console_width + x1, (u32)y1, (u32)color);
+				draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
 			}
 			else if (op == OP_CLEAN)
 			{
