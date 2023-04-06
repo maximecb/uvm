@@ -1258,6 +1258,7 @@ i64 read_int() {
 }
 
 u64* read_sym() {
+  DEBUG("Reading sym");
   ignore_ws();
   size_t sym_start = vm_command_text_buffer_read;
   u32 hash = 5381;
@@ -1429,12 +1430,15 @@ u64 vm_emit_color() {
 }
 
 u8 vm_emit_cmd() {
+  DEBUG("Emitting command");
   u64* command = read_sym();
   
   if(command == vm_commands_sym_help) {
+    DEBUG("Emitting help command");
     vm_bytecode_emit(OP_HELP, 0);
     
   } else if(command == vm_commands_sym_let) {
+    DEBUG("Emitting LET command");
     u64* sym = read_sym();
     if (sym == 0) {
       console_error("LET is expected to be followed by a symbol but was not");
@@ -1486,8 +1490,13 @@ u8 vm_emit_cmd() {
     DEBUG("Emitting clear");
     vm_bytecode_emit(OP_CLEAN, 0);
   }
-  else if (command == vm_commands_sym_run) vm_exec(vm_commands_root);
+  else if (command == vm_commands_sym_run) {
+    DEBUG("Running loaded commands");
+    vm_exec(vm_commands_root); 
+  }
   else if (read_sym() == 0)  {
+    DEBUG("Printing symbol value")
+    if(command == 0) return 1;
     u64 var = vm_get_symbol_var(command);
     console_print_i64(vm_vars[var]);
   } else {
@@ -1521,12 +1530,8 @@ void vm_load_cmd() {
   
   if(vm_emit_cmd()) {
     if(cmd_num >= 0) vm_command_create(cmd_num);
-    if(cmd_num < 0) free((void*)cmd);
-    return;
-  }
- 
-  if(cmd_num < 0) {
-    DEBUG("EXECUTING 1 off cmd");
+    else free((void*)cmd);
+  } else if(cmd_num < 0) {
     vm_exec((u64**)cmd);
     free((void*)cmd);
   }
