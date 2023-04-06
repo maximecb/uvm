@@ -1343,7 +1343,7 @@ u8 read_ch()
 	return ret;
 }
 
-i64 read_int() {
+i64 read_uint() {
 	ignore_ws();
 	size_t start = vm_command_text_buffer_read;
 	u64 acc = 0;
@@ -1399,7 +1399,7 @@ void console_error(char* err)
 
 u64 vm_emit_prim()
 {
-	i64 num = read_int();
+	i64 num = read_uint();
 	if(num >= 0)
 	{
 		vm_bytecode_emit(OP_PUSH, num);
@@ -1665,7 +1665,7 @@ void vm_load_cmd() {
 
 	DEBUGS(vm_command_text_buffer);
 
-	i64 cmd_num = read_int();
+	i64 cmd_num = read_uint();
 	DEBUG("cmd_num\n");
 	DEBUGI(cmd_num);
 	DEBUG("");
