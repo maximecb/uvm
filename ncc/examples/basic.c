@@ -1,3 +1,11 @@
+//
+// UVM Basic
+// by Abdul Bahajaj
+// 
+// Note to reader: When I authored this VM there were a lot of missing features from the NCC compiler ( e.g. there are no structs, unions, etc...).
+// Keeping this in mind might help you understand why the code is structured in the way it is.
+
+
 #include <stddef.h>
 #include <string.h>
 #include <uvm/syscalls.h>
