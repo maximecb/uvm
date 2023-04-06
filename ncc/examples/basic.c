@@ -18,7 +18,6 @@
 #define NUM_ROWS 21
 
 
-#define DEBUG
 #ifdef DEBUG
 #define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
 #define DEBUGI(i) print_i64(i);
@@ -30,6 +29,7 @@
 #define DEBUG(s) DEBUGS(s "\n");
 
 #define TRY(exp) if(exp) return 1;
+#define NULLGAURD(ptr) if(ptr == NULL) return NULL;
 
 
 size_t console_width;
@@ -842,15 +842,28 @@ void console_draw_char(char ch, size_t row_num, size_t col_num) {
 
 #define CANVAS_PLOT_POINT_SIZE 5
 
-void canvas_plot(u64 x, u64 y, u64 color) {
-  /* x = x * CANVAS_PLOT_POINT_SIZE; */
-  /* y = y * CANVAS_PLOT_POINT_SIZE; */
+u8 canvas_plot(u64 x, u64 y, u64 color) {
+  TRY(canvas_coord_gaurd(x, y));
   u32* p = get_point_ptr((u32*)frame_buffer, FRAME_WIDTH, x, y);
   
   for(u32 y = 0; y < CANVAS_PLOT_POINT_SIZE; ++y){
     memset32(p + console_width, color, CANVAS_PLOT_POINT_SIZE);
     p = p + FRAME_WIDTH;
   }
+  return 0;
+}
+
+u8 canvas_coord_gaurd(u64 x, u64 y) {
+  if((x + console_width) > FRAME_WIDTH) {
+    console_error("The given X coordinate exceeds the size of the canvas width");
+    return 1;
+  }
+  if(y > FRAME_HEIGHT) {
+    console_error("The given y coordinate exceeds the size of the canvas height");
+    return 1;
+  }
+
+  return 0;
 }
 
 void canvas_clear() {
@@ -913,7 +926,7 @@ void vm_command_text_buffer_backspace() {
 
 
 // Maps symbols to var positions
-size_t vm_intern_capacity = 1024; // TODO increase
+size_t vm_intern_capacity = 1024;
 u64** vm_intern_buffer;
 
 // Linkedlist containing sorterd commands
@@ -944,8 +957,10 @@ u64** vm_commands_alloc(u64 num) {
   size_t inst_buffer_size = sizeof(u64)*capacity;
   
   u64** command_meta = (u64**)malloc(meta_data_size);
+  NULLGAURD(command_meta);
   memset(command_meta, 0, meta_data_size);
   u64* inst_buffer = (u64*) malloc(inst_buffer_size);
+  NULLGAURD(inst_buffer);
   memset(command_meta, 0, inst_buffer_size);
   command_meta[VM_COMMANDS_CAPACITY] = (u64*)capacity;
   command_meta[VM_COMMANDS_NUM] = (u64*)num;
@@ -969,6 +984,7 @@ void vm_command_free(u64** cmd) {
 u64** vm_command_create(u64 num) {
 
   u64** new_cmd = vm_commands_alloc(num);
+  NULLGAURD(new_cmd);
 
   if(vm_commands_root == 0) { // insert initialize
     DEBUG("Init commands\n");
@@ -1036,6 +1052,7 @@ int strcmp_with_len(char* a, char* b, size_t b_len) {
 u64* vm_alloc_sym_meta() {
   size_t size = sizeof(u64)*3;
   u64* sym_meta = (u64*)malloc(size);
+  NULLGAURD(sym_meta);
   memset(sym_meta, 0, size);
   return sym_meta;
 }
@@ -1106,10 +1123,12 @@ u64* vm_intern(u8* sym, u64 len, u32 hash) {
       DEBUG("Symbol not found, creating a new entry");
       char* sym_str;
       sym_str = (char*)malloc(len+1);
+      NULLGAURD(sym_str);
       memcpy(sym_str, sym, len);
       sym_str[len] = 0;
  
       sym_meta = vm_alloc_sym_meta();
+      NULLGAURD(sym_meta);
       sym_meta[SYM_META_STR] = (u64)sym_str;
 
       vm_intern_buffer[cursor] = (u64)sym_meta;
@@ -1122,7 +1141,6 @@ u64* vm_intern(u8* sym, u64 len, u32 hash) {
     }
   }
 
-  // TODO increase memory and retry
   DEBUG("Not enough space in intern buffer");
   resize_interned_sym_buffer();
   DEBUG("Done resizing intern buffer");
@@ -1206,6 +1224,10 @@ void vm_command_double_size() {
   size_t new_size = new_capacity*sizeof(u64);
 
   u64* new_buff = (u64*)malloc(new_size);
+  if(new_buff == 0) {
+    DEBUG("Failed to allocate more memory for the selected command");
+    exit(1);
+  }
 
   memset(new_buff, 0, new_size);
   memcpy(new_buff, old_buff, old_size);
@@ -1233,8 +1255,6 @@ void vm_bytecode_patch(u64 inst_num, u8 op, u64 arg) {
 }
 
 void vm_bytecode_emit(u8 op, u64 arg) {
-  // TODO boundry check
-  // TODO dynamically allocate more memory when command is executed
   DEBUGS("VM command capacity");
   DEBUGI(vm_commands_selected[VM_COMMANDS_CAPACITY]);
   DEBUG("");
@@ -1556,6 +1576,11 @@ void vm_load_cmd() {
     cmd = vm_command_create(cmd_num);
   }
 
+  if(cmd == NULL) {
+    DEBUG("Failed to allocate command");
+    return;
+  }
+
   vm_commands_selected = cmd;
   
   if(vm_emit_cmd()) {
@@ -1658,14 +1683,12 @@ void print_insts(u64** cmd) {
   puts("-- END INSTRUCTION PRINTOUT");
 }
 
+
 void vm_exec(u64** commands) {
   u64** next_cmd ;
   i64 val1;
   i64 val2;
   for(u64** cmd = commands; cmd != 0; cmd = next_cmd) {
-#ifdef DEBUG
-    print_insts(cmd);
-#endif
     next_cmd = (u64**) cmd[VM_COMMANDS_NEXT];
     u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
   
@@ -1678,10 +1701,6 @@ void vm_exec(u64** commands) {
       u64 inst = cmd_insts[inst_idx];
       u8 op = (u8)(inst >> 56);
       u64 arg = (inst & (((u64)1<<56) - 1));
-
-#ifdef DEBUG
-      print_inst(inst);
-#endif
 
       // TODO check for overflow
       if(op == OP_PUSH) vm_push(arg);
@@ -1710,14 +1729,14 @@ void vm_exec(u64** commands) {
       }
       else if (op == OP_JUMP) {
 	if (arg > cmd_size) break;
-	DEBUG("Unconditionally jumping\n");
+	DEBUG("Unconditionally jumping");
 	inst_idx = arg;
 	continue;
       } else if (op == OP_JUMP_IF_NOT) {
 	DEBUG("EXECUTING OP_JUMP_IF_NOT");
 	if (arg > cmd_size) break;
 	if(!vm_pop()) {
-	  DEBUG("DETECTED A NOT SO jumping\n");
+	  DEBUG("DETECTED A NOT SO jumping");
 	  inst_idx = arg;
 	  continue;
 	}
@@ -1732,6 +1751,8 @@ void vm_exec(u64** commands) {
 	u64 y1 = vm_pop();
 	u64 x0 = vm_pop();
 	u64 y0 = vm_pop();
+	if(canvas_coord_gaurd(x0, y0)) break;
+	if(canvas_coord_gaurd(x1, y1)) break;
 	draw_line((u32*)frame_buffer, (u32)FRAME_WIDTH, (u32)FRAME_HEIGHT, (u32) console_width + x0, (u32)y0, (u32) console_width + x1, (u32)y1, (u32)color);
       } else if (op == OP_CLEAN) {
 	canvas_clear();
@@ -1748,10 +1769,10 @@ void vm_exec(u64** commands) {
 	BIN_OP(OP_EQ, ==)
 	BIN_OP(OP_NOT_EQ, !=)
       else {
-	DEBUG("unrecognized command\n");
+	DEBUG("unrecognized command");
 	vm_error = 1;
       }
-      DEBUG("executing inst\n");
+      DEBUG("executing inst");
       ++inst_idx;
     }
   }
