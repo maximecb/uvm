@@ -923,7 +923,7 @@ u64** vm_intern_buffer;
 #define VM_COMMANDS_CAPACITY 1
 #define VM_COMMANDS_CUR 2
 #define VM_COMMANDS_NEXT 3
-#define VM_COMMANDS_INSTS 4
+#define VM_COMMANDS_INSTS_BUFFER 4
 
 u64** vm_commands_selected;
 u64** vm_commands_root;
@@ -939,14 +939,18 @@ i64 vm_stack[1024];
 u8 vm_error = 0;
 
 u64** vm_commands_alloc(u64 num) {
-  size_t capacity = 1024;
-  size_t total_size = sizeof(u64*)*(capacity + 4);
-  // TODO make it resizable
-  u64** c = (u64**)malloc(total_size);
-  memset(c, 0, total_size);
-  c[VM_COMMANDS_CAPACITY] = (u64*)capacity;
-  c[VM_COMMANDS_NUM] = (u64*)num;
-  return c;
+  size_t capacity = 2;
+  size_t meta_data_size = sizeof(u64*)*5;
+  size_t inst_buffer_size = sizeof(u64)*capacity;
+  
+  u64** command_meta = (u64**)malloc(meta_data_size);
+  memset(command_meta, 0, meta_data_size);
+  u64* inst_buffer = (u64*) malloc(inst_buffer_size);
+  memset(command_meta, 0, inst_buffer_size);
+  command_meta[VM_COMMANDS_CAPACITY] = (u64*)capacity;
+  command_meta[VM_COMMANDS_NUM] = (u64*)num;
+  command_meta[VM_COMMANDS_INSTS_BUFFER] = inst_buffer;
+  return command_meta;
 }
 
 u64** vm_command_find(u64 num) {
@@ -957,8 +961,12 @@ u64** vm_command_find(u64 num) {
   return 0;
 }
 
+void vm_command_free(u64** cmd) {
+  free((void*)cmd[VM_COMMANDS_INSTS_BUFFER]);
+  free((void*) cmd);
+}
 
-u64* vm_command_create(u64 num) {
+u64** vm_command_create(u64 num) {
 
   u64** new_cmd = vm_commands_alloc(num);
 
@@ -966,7 +974,7 @@ u64* vm_command_create(u64 num) {
     DEBUG("Init commands\n");
     new_cmd[VM_COMMANDS_NEXT] = (u64*)vm_commands_root;
     vm_commands_root = new_cmd;
-    return (u64*)new_cmd;
+    return new_cmd;
   } 
 
   DEBUG("Finding command\n");
@@ -989,15 +997,14 @@ u64* vm_command_create(u64 num) {
       if(cur_cmd == vm_commands_root) vm_commands_root = new_cmd;
       prev_cmd[VM_COMMANDS_NEXT] = (u64*)new_cmd;
       new_cmd[VM_COMMANDS_NEXT] = (u64*)cur_cmd[VM_COMMANDS_NEXT];
-      free((void*)cur_cmd);
+      vm_command_free(cur_cmd);
       break;
     }
     prev_cmd = cur_cmd;
   }
 
-  return (u64*)new_cmd;
+  return new_cmd;
 }
-
 
 u64 vm_alloc_var() {
   u64 allocated = vm_vars_allocated;
@@ -1191,9 +1198,29 @@ int vm_init() {
 /*   return buff; */
 /* } */
 
+void vm_command_double_size() {
+  u64* old_buff = vm_commands_selected[VM_COMMANDS_INSTS_BUFFER];
+  size_t old_capacity = (size_t)vm_commands_selected[VM_COMMANDS_CAPACITY];
+  size_t new_capacity = old_capacity*2;
+  size_t old_size = old_capacity*sizeof(u64);
+  size_t new_size = new_capacity*sizeof(u64);
+
+  u64* new_buff = (u64*)malloc(new_size);
+
+  memset(new_buff, 0, new_size);
+  memcpy(new_buff, old_buff, old_size);
+  vm_commands_selected[VM_COMMANDS_INSTS_BUFFER] = new_buff;
+  vm_commands_selected[VM_COMMANDS_CAPACITY] = new_capacity;
+  free((void*)old_buff);
+}
+
 u64 vm_bytecode_pointer_inc() {
   u64 current_val = (u64)vm_commands_selected[VM_COMMANDS_CUR];
   vm_commands_selected[VM_COMMANDS_CUR] = (u64*)(current_val + 1);
+  if(vm_commands_selected[VM_COMMANDS_CUR] >= vm_commands_selected[VM_COMMANDS_CAPACITY]) {
+    DEBUG("Exceeded command capacity");
+    vm_command_double_size();
+  }
   return current_val;
 }
 
@@ -1202,14 +1229,17 @@ u64 vm_bytecode_get(u8 op, u64 arg) {
 }
 
 void vm_bytecode_patch(u64 inst_num, u8 op, u64 arg) {
-  vm_commands_selected[VM_COMMANDS_INSTS + inst_num] = (u64*)vm_bytecode_get(op, arg);
+  vm_commands_selected[VM_COMMANDS_INSTS_BUFFER][inst_num] = vm_bytecode_get(op, arg);
 }
 
 void vm_bytecode_emit(u8 op, u64 arg) {
   // TODO boundry check
   // TODO dynamically allocate more memory when command is executed
+  DEBUGS("VM command capacity");
+  DEBUGI(vm_commands_selected[VM_COMMANDS_CAPACITY]);
+  DEBUG("");
   u64 pos = (u64)vm_commands_selected[VM_COMMANDS_CUR];
-  vm_commands_selected[VM_COMMANDS_INSTS + pos] = (u64*)vm_bytecode_get(op, arg);
+  vm_commands_selected[VM_COMMANDS_INSTS_BUFFER][pos] = vm_bytecode_get(op, arg);
   vm_bytecode_pointer_inc();
 }
 
@@ -1517,23 +1547,23 @@ void vm_load_cmd() {
   DEBUG("cmd_num\n");
   DEBUGI(cmd_num);
   DEBUG("");
-  u64* cmd;
+  u64** cmd;
   if(cmd_num < 0) {
     DEBUG("Creating disposable cmd");
-    cmd = (u64*)vm_commands_alloc(cmd_num);
+    cmd = vm_commands_alloc(cmd_num);
   } else {
     DEBUG("Retrieving cmd");
-    cmd = (u64*)vm_command_create(cmd_num);
+    cmd = vm_command_create(cmd_num);
   }
 
-  vm_commands_selected = (u64**)cmd;
+  vm_commands_selected = cmd;
   
   if(vm_emit_cmd()) {
     if(cmd_num >= 0) vm_command_create(cmd_num);
-    else free((void*)cmd);
+    else vm_command_free(cmd);
   } else if(cmd_num < 0) {
-    vm_exec((u64**)cmd);
-    free((void*)cmd);
+    vm_exec(cmd);
+    vm_command_free(cmd);
   }
 
   vm_command_text_buffer_clear();
@@ -1612,7 +1642,7 @@ void print_inst(u64 inst) {
 }
 
 void print_insts(u64** cmd) {
-  u64* cmd_insts = (u64*)(cmd + VM_COMMANDS_INSTS);
+  u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
   u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
   puts("INSTRUCTION PRINTOUT \n");
   for(size_t inst_idx = 0; (inst_idx < cmd_size); ++inst_idx) {
@@ -1633,11 +1663,13 @@ void vm_exec(u64** commands) {
   i64 val1;
   i64 val2;
   for(u64** cmd = commands; cmd != 0; cmd = next_cmd) {
+#ifdef DEBUG
     print_insts(cmd);
+#endif
     next_cmd = (u64**) cmd[VM_COMMANDS_NEXT];
     u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
   
-    u64* cmd_insts = (u64*)(cmd + VM_COMMANDS_INSTS);
+    u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
     u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
     vm_error = 0;
 
@@ -1647,7 +1679,9 @@ void vm_exec(u64** commands) {
       u8 op = (u8)(inst >> 56);
       u64 arg = (inst & (((u64)1<<56) - 1));
 
+#ifdef DEBUG
       print_inst(inst);
+#endif
 
       // TODO check for overflow
       if(op == OP_PUSH) vm_push(arg);
