@@ -1132,32 +1132,6 @@ u64 vm_get_symbol_var(u64* sym) {
   return sym[SYM_META_LOC]-1;
 }
 
-
-u64** ll_node() {
-  return (u64**)malloc(sizeof(u64*)*2);
-}
-
-u64* ll_set_val(u64** l, u64* v) {
-  l[0] = v;
-}
-u64* ll_get_val(u64** l) {
-  return l[0];
-}
-
-u64* ll_set_next(u64** l, u64* v) {
-  l[1] = v;
-}
-u64* ll_get_next(u64** l) {
-  return l[1];
-}
-
-
-// Imm
-// | 0-7 | 8 - 63 |
-// | 63 - 56 | 55 -  0 |
-// dst src
-// | 0-7 | 8 - 35 | 36 - 63 |
-// | 63 - 56 | 55 - 28 | 27 - 0 |
 u32 hash(u8 *str) {
   u32 hash = 5381;
   u8 c;
