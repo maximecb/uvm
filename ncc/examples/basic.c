@@ -789,7 +789,6 @@ void console_print_i64(i64 n) {
     is_neg = 1;
     n = -n;
   } else if (n == 0) {
-    DEBUG("num is 0");
     console_input_buff[buff_start] = 48;
     --buff_start;
   }
@@ -914,8 +913,8 @@ void vm_command_text_buffer_backspace() {
 
 
 // Maps symbols to var positions
-size_t vm_symbol_capacity = 1024;
-u64** vm_symbols;
+size_t vm_intern_capacity = 1024; // TODO increase
+u64** vm_intern_buffer;
 
 // Linkedlist containing sorterd commands
 // Each command is a list of instructions
@@ -942,6 +941,7 @@ u8 vm_error = 0;
 u64** vm_commands_alloc(u64 num) {
   size_t capacity = 1024;
   size_t total_size = sizeof(u64*)*(capacity + 4);
+  // TODO make it resizable
   u64** c = (u64**)malloc(total_size);
   memset(c, 0, total_size);
   c[VM_COMMANDS_CAPACITY] = (u64*)capacity;
@@ -1033,14 +1033,70 @@ u64* vm_alloc_sym_meta() {
   return sym_meta;
 }
 
-u64* vm_intern(u8* sym, u64 len, u32 hash) {
-  u64 idx = (vm_symbol_capacity - 1) & hash;
-  for(size_t cursor = idx;; ++cursor) {
-    if (cursor >= vm_symbol_capacity) {
-      cursor = 0;
+u8 vm_intern_buffer_alloc() {
+  DEBUGS("Allocating intern buffer with size: ");
+  DEBUGI(vm_intern_capacity);
+  DEBUG("");
+
+  size_t interned_symbols_size = sizeof(u64**) * vm_intern_capacity;
+  vm_intern_buffer = (u64**)(malloc(interned_symbols_size));
+  if(vm_intern_buffer == NULL) return 1;
+  memset(vm_intern_buffer, 0, interned_symbols_size);
+  return 0;
+}
+
+void resize_interned_sym_buffer() {
+  size_t old_capacity = vm_intern_capacity;
+  u64** old_buffer = vm_intern_buffer;
+
+  vm_intern_capacity = vm_intern_capacity * 2;
+  vm_intern_buffer_alloc();
+  
+  DEBUG("Copying interned symbols from old to new buffer");
+  for(size_t cursor = 0; cursor < old_capacity; ++cursor) {
+    u64* sym_meta = old_buffer[cursor];
+    char* str = sym_meta[SYM_META_STR];
+    u32 str_hash = hash(str);
+    u64 idx = (vm_intern_capacity - 1) & str_hash;
+
+    DEBUG("Finding a spot for symbol: ");
+    DEBUGS(str);
+    DEBUG("");
+
+    while(vm_intern_buffer[idx] != 0) {
+      DEBUGS("Couldn't find a spot at index: ");
+      DEBUGI(idx);
+      DEBUG("");
+      ++idx;
+      if(idx >= vm_intern_buffer) idx = 0;
     }
-    u64* sym_meta = vm_symbols[cursor];
+    DEBUG("Found a spot at index: ");
+    DEBUGI(idx);
+    DEBUG("");
+    
+    vm_intern_buffer[idx] = sym_meta;
+  }
+  
+ 
+}
+
+u64* vm_intern(u8* sym, u64 len, u32 hash) {
+  u64 idx = (vm_intern_capacity - 1) & hash;
+  DEBUG("Interning a new sym: ");
+  DEBUGS(sym);
+  for(size_t cursor = idx;; ++cursor) {
+    if (cursor >= vm_intern_capacity) {
+      if(idx == 0) break;
+      cursor = 0; 
+    }
+
+    DEBUGS("Attempting to locate symbol at index: ");
+    DEBUGI(cursor);
+    DEBUG("");
+    
+    u64* sym_meta = vm_intern_buffer[cursor];
     if (sym_meta == 0) {
+      DEBUG("Symbol not found, creating a new entry");
       char* sym_str;
       sym_str = (char*)malloc(len+1);
       memcpy(sym_str, sym, len);
@@ -1049,17 +1105,23 @@ u64* vm_intern(u8* sym, u64 len, u32 hash) {
       sym_meta = vm_alloc_sym_meta();
       sym_meta[SYM_META_STR] = (u64)sym_str;
 
-      vm_symbols[cursor] = (u64)sym_meta;
+      vm_intern_buffer[cursor] = (u64)sym_meta;
       return sym_meta;
-    }
-    if (strcmp_with_len(sym_meta[SYM_META_STR], sym, len) == 0) {
+    } else if (strcmp_with_len(sym_meta[SYM_META_STR], sym, len) == 0) {
+      DEBUG("Symbol have been found");
       return sym_meta;
-    }
-    if(cursor == (idx-1)) {
-      // TODO increase memory and retry
-      return 0;
+    } else if(cursor == (idx-1)) {
+      break;
     }
   }
+
+  // TODO increase memory and retry
+  DEBUG("Not enough space in intern buffer");
+  resize_interned_sym_buffer();
+  DEBUG("Done resizing intern buffer");
+  return vm_intern(sym, len, hash);
+
+  
 }
 
 // translates symbol strings to symbols
@@ -1127,13 +1189,7 @@ u64* vm_init_sym(char* sym) {
 }
 
 int vm_init() {
-  size_t interned_symbols_size = sizeof(u64**) * vm_symbol_capacity;
-  vm_symbols = (u64**)(malloc(interned_symbols_size));
-  if(vm_symbols == NULL) return 1;
-  memset(vm_symbols, 0, interned_symbols_size);
-
-  vm_commands_selected = vm_commands_alloc(0);
-  vm_commands_root = vm_commands_selected;
+  TRY(vm_intern_buffer_alloc());
 
   vm_commands_sym_else = vm_init_sym("ELSE");
   vm_commands_sym_let = vm_init_sym("LET");
