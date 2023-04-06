@@ -820,7 +820,6 @@ void console_print_i64(i64 n)
 		--buff_start;
 	}
 
-	console_newline();
 	console_puts(console_input_buff+(buff_start+1));
 }
 
@@ -1648,6 +1647,7 @@ u8 vm_emit_cmd()
 		DEBUG("Printing symbol value")
 			if(command == 0) return 1;
 		u64 var = vm_get_symbol_var(command);
+		console_newline();
 		console_print_i64(vm_vars[var]);
 	}
 	else
@@ -1820,7 +1820,11 @@ void vm_exec(u64** commands)
 			if(op == OP_PUSH) vm_push(arg);
 			else if (op == OP_SET_VAR) vm_vars[arg] = vm_pop();
 			else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
-			else if (op == OP_PRINT_INT) console_print_i64(vm_pop());
+			else if (op == OP_PRINT_INT)
+			{
+			  console_newline();
+			  console_print_i64(vm_pop());
+			}
 			else if (op == OP_GOTO) next_cmd = vm_command_find(vm_pop());
 			else if (op == OP_HELP)
 			{
@@ -1841,6 +1845,12 @@ void vm_exec(u64** commands)
 				console_newline();
 				console_puts("RUN");
 				console_newline();
+				console_puts("Supported colors: blue, red, green, black");
+				console_newline();
+				console_puts("The canvas size is ");
+				console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
+				console_puts("X");
+				console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
 			}
 			else if (op == OP_JUMP)
 			{
