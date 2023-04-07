@@ -141,7 +141,7 @@ void main()
 	console_width = FRAME_WIDTH/3+75;
 	vm_init();
 	vm_command_text_buffer_clear();
-	window_create(FRAME_WIDTH, FRAME_HEIGHT, "Text Editor Demo", 0);
+	window_create(FRAME_WIDTH, FRAME_HEIGHT, "UVM Basic", 0);
 
 	canvas_clear();
 	console_redraw_all_text();
