@@ -965,8 +965,8 @@ u64** vm_intern_buffer;
 #define VM_COMMANDS_NEXT 3
 #define VM_COMMANDS_INSTS_BUFFER 4
 
-u64** vm_commands_selected;
-u64** vm_commands_root;
+u64** vm_commands_selected = NULL;
+u64** vm_commands_root = NULL;
 
 // Vector containing variable values
 size_t vm_vars_allocated = 0;
@@ -1016,7 +1016,7 @@ u64** vm_command_create(u64 num)
 	u64** new_cmd = vm_commands_alloc(num);
 	NULLGAURD(new_cmd);
 
-	if(vm_commands_root == 0)
+	if(vm_commands_root == NULL)
 	{ // initialize
 		DEBUG("Init commands\n");
 		new_cmd[VM_COMMANDS_NEXT] = (u64*)vm_commands_root;
@@ -1028,7 +1028,7 @@ u64** vm_command_create(u64 num)
 	u64** prev_cmd = 0;
 	for(u64** cur_cmd = vm_commands_root;; cur_cmd = (u64**)cur_cmd[VM_COMMANDS_NEXT])
 	{
-		if(cur_cmd == 0)
+		if(cur_cmd == NULL)
 		{
 			DEBUG("Inserting command at the end");
 			prev_cmd[VM_COMMANDS_NEXT] = (u64*)new_cmd;
@@ -1166,7 +1166,7 @@ u64* vm_intern(u8* sym, u64 len, u32 hash)
 		DEBUG("");
 
 		u64* sym_meta = vm_intern_buffer[cursor];
-		if (sym_meta == 0)
+		if (sym_meta == NULL)
 		{
 			DEBUG("Symbol not found, creating a new entry");
 			char* sym_str;
@@ -1275,7 +1275,7 @@ void vm_command_double_size()
 	size_t new_size = new_capacity*sizeof(u64);
 
 	u64* new_buff = (u64*)malloc(new_size);
-	if(new_buff == 0)
+	if(new_buff == NULL)
 	{
 		DEBUG("Failed to allocate more memory for the selected command");
 		exit(1);
@@ -1581,7 +1581,8 @@ u8 vm_emit_cmd()
 	{
 		DEBUG("Emitting LET command");
 		u64* sym = read_sym();
-		if (sym == 0) {
+		if (sym == NULL)
+		{
 			console_error("LET is expected to be followed by a symbol but was not");
 			return 1;
 		}
@@ -1651,10 +1652,10 @@ u8 vm_emit_cmd()
 		DEBUG("Running loaded commands");
 		vm_exec(vm_commands_root); 
 	}
-	else if (read_sym() == 0)
+	else if (read_sym() == NULL)
 	{
-		DEBUG("Printing symbol value")
-			if(command == 0) return 1;
+		DEBUG("Printing symbol value");
+		if(command == NULL) return 1;
 		u64 var = vm_get_symbol_var(command);
 		console_newline();
 		console_print_i64(vm_vars[var]);
@@ -1762,26 +1763,26 @@ void print_inst(u64 inst)
 	puts("name:");
 	if(0){}
 	PRINT_OP("OP_PUSH", OP_PUSH)
-		PRINT_OP("OP_SET_VAR", OP_SET_VAR)
-		PRINT_OP("OP_GET_VAR", OP_GET_VAR)
-		PRINT_OP("OP_JUMP", OP_JUMP)
-		PRINT_OP("OP_JUMP_IF", OP_JUMP_IF)
-		PRINT_OP("OP_JUMP_IF_NOT", OP_JUMP_IF_NOT)
-		PRINT_OP("OP_ADD", OP_ADD)
-		PRINT_OP("OP_SUB", OP_SUB)
-		PRINT_OP("OP_MULT", OP_MULT)
-		PRINT_OP("OP_DIV", OP_DIV)
-		PRINT_OP("OP_GT", OP_GT)
-		PRINT_OP("OP_LT", OP_LT)
-		PRINT_OP("OP_GT_EQ", OP_GT_EQ)
-		PRINT_OP("OP_LT_EQ", OP_LT_EQ)
-		PRINT_OP("OP_EQ", OP_EQ)
-		PRINT_OP("OP_NOT_EQ", OP_NOT_EQ)
-		PRINT_OP("OP_PRINT_INT", OP_PRINT_INT)
-		PRINT_OP("OP_GOTO", OP_GOTO)
+	PRINT_OP("OP_SET_VAR", OP_SET_VAR)
+	PRINT_OP("OP_GET_VAR", OP_GET_VAR)
+	PRINT_OP("OP_JUMP", OP_JUMP)
+	PRINT_OP("OP_JUMP_IF", OP_JUMP_IF)
+	PRINT_OP("OP_JUMP_IF_NOT", OP_JUMP_IF_NOT)
+	PRINT_OP("OP_ADD", OP_ADD)
+	PRINT_OP("OP_SUB", OP_SUB)
+	PRINT_OP("OP_MULT", OP_MULT)
+	PRINT_OP("OP_DIV", OP_DIV)
+	PRINT_OP("OP_GT", OP_GT)
+	PRINT_OP("OP_LT", OP_LT)
+	PRINT_OP("OP_GT_EQ", OP_GT_EQ)
+	PRINT_OP("OP_LT_EQ", OP_LT_EQ)
+	PRINT_OP("OP_EQ", OP_EQ)
+	PRINT_OP("OP_NOT_EQ", OP_NOT_EQ)
+	PRINT_OP("OP_PRINT_INT", OP_PRINT_INT)
+	PRINT_OP("OP_GOTO", OP_GOTO)
 
 
-		puts("\n");
+	puts("\n");
 	puts("arg:");
 	print_i64(arg);
 	puts("\n");
