@@ -949,6 +949,8 @@ void vm_command_text_buffer_backspace()
 #define OP_CLEAN 20
 #define OP_HELP 21
 
+#define OP_HALT 22 // stops execution
+
 
 // Maps symbols to var positions
 size_t vm_intern_capacity = 1024;
@@ -1236,6 +1238,7 @@ u64* vm_commands_sym_blue;
 u64* vm_commands_sym_red;
 u64* vm_commands_sym_green;
 u64* vm_commands_sym_black;
+u64* vm_commands_sym_halt;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1259,6 +1262,7 @@ int vm_init()
 	vm_commands_sym_red = vm_init_sym("RED");
 	vm_commands_sym_green = vm_init_sym("GREEN");
 	vm_commands_sym_black = vm_init_sym("BLACK");
+	vm_commands_sym_halt = vm_init_sym("HALT");
 	return 0;
 }
 
@@ -1632,6 +1636,11 @@ u8 vm_emit_cmd()
 		TRY(vm_emit_color());
 		vm_bytecode_emit(OP_LINE, 0);
 	}
+	else if (command == vm_commands_sym_halt)
+	{
+		DEBUG("Emitting clear");
+		vm_bytecode_emit(OP_HALT, 0);
+	}
 	else if (command == vm_commands_sym_clear)
 	{
 		DEBUG("Emitting clear");
@@ -1826,6 +1835,7 @@ void vm_exec(u64** commands)
 			  console_print_i64(vm_pop());
 			}
 			else if (op == OP_GOTO) next_cmd = vm_command_find(vm_pop());
+			else if (op == OP_HALT) return;
 			else if (op == OP_HELP)
 			{
 				console_newline();
@@ -1843,7 +1853,9 @@ void vm_exec(u64** commands)
 				console_newline();
 				console_puts("CLEAR");
 				console_newline();
-				console_puts("RUN");
+				console_puts("RUN: runs loaded commands");
+				console_newline();
+				console_puts("HALT: stops RUN");
 				console_newline();
 				console_puts("Supported colors: blue, red, green, black");
 				console_newline();
