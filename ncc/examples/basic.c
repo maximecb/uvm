@@ -149,6 +149,7 @@ void main()
 	console_puts("  **** UVM Basic ****");
 	console_print_ready();
 	console_newline();
+	++min_line_idx;
 
 	console_redraw_commit();
 
