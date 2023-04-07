@@ -979,7 +979,7 @@ i64 vm_stack[1024];
 
 u64** vm_commands_alloc(u64 num)
 {
-	size_t capacity = 2;
+	size_t capacity = 256;
 	size_t meta_data_size = sizeof(u64*)*5;
 	size_t inst_buffer_size = sizeof(u64)*capacity;
 
@@ -988,7 +988,7 @@ u64** vm_commands_alloc(u64 num)
 	memset(command_meta, 0, meta_data_size);
 	u64* inst_buffer = (u64*) malloc(inst_buffer_size);
 	NULLGAURD(inst_buffer);
-	memset(command_meta, 0, inst_buffer_size);
+	memset(inst_buffer, 0, inst_buffer_size);
 	command_meta[VM_COMMANDS_CAPACITY] = (u64*)capacity;
 	command_meta[VM_COMMANDS_NUM] = (u64*)num;
 	command_meta[VM_COMMANDS_INSTS_BUFFER] = inst_buffer;
