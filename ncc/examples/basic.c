@@ -74,6 +74,7 @@ u32* get_point_ptr(u32* dst, size_t frame_width, size_t x, size_t y)
     return dst + frame_width* y + x;
 }
 
+int white = 0xFFFFFF;
 int blue = 0x0247fe; 
 int red = 0xFF0000; 
 int green = 0x008000; 
@@ -143,7 +144,7 @@ void main()
     vm_command_text_buffer_clear();
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "UVM Basic", 0);
 
-    canvas_clear();
+    canvas_fill(white);
     console_redraw_all_text();
 
     console_puts("  **** UVM Basic ****");
@@ -891,9 +892,9 @@ u8 canvas_coord_gaurd(u64 x, u64 y)
     return 0;
 }
 
-void canvas_clear()
+void canvas_fill(u32 color)
 {
-    memset32(frame_buffer, 0xFFFFFF, sizeof(frame_buffer) / sizeof(u32));
+    memset32(frame_buffer, color, sizeof(frame_buffer) / sizeof(u32));
 }
 
 
@@ -950,11 +951,12 @@ void vm_command_text_buffer_backspace()
 
 #define OP_PLOT 18 // draws a pixel at x, y
 #define OP_LINE 19
-#define OP_CLEAN 20
+#define OP_FILL 20
 #define OP_HELP 21
 
 #define OP_HALT 22 // stops execution
 
+#define OP_EXIT 23 // Exits the program
 
 // Maps symbols to var positions
 size_t vm_intern_capacity = 1024;
@@ -1228,7 +1230,11 @@ u64* vm_commands_sym_blue;
 u64* vm_commands_sym_red;
 u64* vm_commands_sym_green;
 u64* vm_commands_sym_black;
+u64* vm_commands_sym_white;
 u64* vm_commands_sym_halt;
+u64* vm_commands_sym_exit;
+u64* vm_commands_sym_quit;
+u64* vm_commands_sym_fill;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1252,7 +1258,11 @@ int vm_init()
     vm_commands_sym_red = vm_init_sym("RED");
     vm_commands_sym_green = vm_init_sym("GREEN");
     vm_commands_sym_black = vm_init_sym("BLACK");
+    vm_commands_sym_white = vm_init_sym("WHITE");
     vm_commands_sym_halt = vm_init_sym("HALT");
+    vm_commands_sym_exit = vm_init_sym("EXIT");
+    vm_commands_sym_quit = vm_init_sym("QUIT");
+    vm_commands_sym_fill = vm_init_sym("FILL");
     return 0;
 }
 
@@ -1544,6 +1554,7 @@ u64 vm_emit_color()
         else if(color == vm_commands_sym_red) color_val = red;
         else if(color == vm_commands_sym_green) color_val = green;
         else if(color == vm_commands_sym_black) color_val = black;
+        else if(color == vm_commands_sym_white) color_val = white;
         else
         {
             console_error("Unrecognized color");
@@ -1635,7 +1646,19 @@ u8 vm_emit_cmd()
     else if (command == vm_commands_sym_clear)
     {
         DEBUG("Emitting clear");
-        vm_bytecode_emit(OP_CLEAN, 0);
+        vm_bytecode_emit(OP_PUSH, white);
+        vm_bytecode_emit(OP_FILL, 0);
+    }
+    else if (command == vm_commands_sym_exit || command == vm_commands_sym_quit)
+    {
+      DEBUG("emitting exit command");
+      vm_bytecode_emit(OP_EXIT, 0);
+    }
+    else if (command == vm_commands_sym_fill)
+    {
+      DEBUG("emitting exit command");
+      TRY(vm_emit_color()); // the color to fill the screen with
+      vm_bytecode_emit(OP_FILL, 0);
     }
     else if (command == vm_commands_sym_run)
     {
@@ -1844,16 +1867,32 @@ void vm_exec(u64** commands)
                 console_newline();
                 console_puts("CLEAR");
                 console_newline();
-                console_puts("RUN: runs loaded commands");
+                console_puts("FILL {color}:fills the screen with a color");
                 console_newline();
-                console_puts("HALT: stops RUN");
+                console_puts("RUN:runs loaded commands");
                 console_newline();
-                console_puts("Supported colors: BLUE, RED, GREEN, BLACK");
+                console_puts("HALT:stops RUN");
+                console_newline();
+                console_puts("EXIT or QUIT: terminate the Basic REPL");
+                console_newline();
+                console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
                 console_newline();
                 console_puts("The canvas size is ");
                 console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
                 console_puts("X");
                 console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
+            }
+            else if (op == OP_EXIT)
+            {
+                DEBUG("Exiting the program");
+		exit(0);
+            }
+            else if (op == OP_FILL)
+            {
+                DEBUG("Filling the screen color");
+		u32 color = vm_pop();
+		canvas_fill(color);
+                console_redraw_all_text();
             }
             else if (op == OP_JUMP)
             {
@@ -1889,11 +1928,6 @@ void vm_exec(u64** commands)
                 if(canvas_coord_gaurd(x0, y0)) break;
                 if(canvas_coord_gaurd(x1, y1)) break;
                 draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
-            }
-            else if (op == OP_CLEAN)
-            {
-                canvas_clear();
-                console_redraw_all_text();
             }
             BIN_OP(OP_ADD, +)
 	    BIN_OP(OP_SUB, -)
