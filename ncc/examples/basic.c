@@ -961,11 +961,16 @@ u64** vm_intern_buffer;
 // Linkedlist containing sorterd commands
 // Each command is a list of instructions
 // represented this way in order to insert new commands in between old ones
-#define VM_COMMANDS_NUM 0
-#define VM_COMMANDS_CAPACITY 1
-#define VM_COMMANDS_CUR 2
-#define VM_COMMANDS_NEXT 3
-#define VM_COMMANDS_INSTS_BUFFER 4
+// the number of the command. e.g. 10 LET x 10 -> command[VM_COMMANDS_NUM] = 10
+#define VM_COMMANDS_NUM 0 
+// The number of instructions that the command can hold
+#define VM_COMMANDS_CAPACITY 1 
+// The number of instructions that the command currently hold
+#define VM_COMMANDS_CUR 2 
+// command[VM_COMMANDS_NEXT] holds the address of the next command
+#define VM_COMMANDS_NEXT 3 
+// command[VM_COMMANDS_INSTS_BUFFER] is the buffer that actually holds the instructions
+#define VM_COMMANDS_INSTS_BUFFER 4 
 
 u64** vm_commands_selected = NULL;
 u64** vm_commands_root = NULL;
@@ -1086,9 +1091,11 @@ int strcmp_with_len(char* a, char* b, size_t b_len)
     return 0;
 }
 
-#define SYM_META_STR 0
-#define SYM_META_LOC 1
-#define SYM_META_LOOP_PATCH 2
+// When a symbol is interned a small area of memory that holds some meta data about the symbol is allocated
+// stores the actual string that represents the symbol
+#define SYM_META_STR 0 
+// stores the index of the variable in vm_vars. vm_vars[sym_meta[SYM_META_LOC]] = the value of the symbol as set by LET
+#define SYM_META_LOC 1 
 
 u64* vm_alloc_sym_meta()
 {
