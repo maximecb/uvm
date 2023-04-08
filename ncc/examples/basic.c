@@ -1848,7 +1848,7 @@ void vm_exec(u64** commands)
                 console_newline();
                 console_puts("HALT: stops RUN");
                 console_newline();
-                console_puts("Supported colors: blue, red, green, black");
+                console_puts("Supported colors: BLUE, RED, GREEN, BLACK");
                 console_newline();
                 console_puts("The canvas size is ");
                 console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
