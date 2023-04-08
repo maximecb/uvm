@@ -1072,25 +1072,6 @@ u64 vm_alloc_var()
     return allocated;
 }
 
-int strcmp_with_len(char* a, char* b, size_t b_len)
-{
-    for (size_t i = 0;; ++i)
-    {
-        char ch_a = a[i];
-
-        if(i == b_len && ch_a == 0)
-            break;
-
-        char ch_b = b[i];
-
-        if (ch_a < ch_b)
-            return -1;
-        else if (ch_a > ch_b)
-            return 1;
-    }
-    return 0;
-}
-
 // When a symbol is interned a small area of memory that holds some meta data about the symbol is allocated
 // stores the actual string that represents the symbol
 #define SYM_META_STR 0 
@@ -1189,7 +1170,7 @@ u64* vm_intern(u8* sym, u64 len, u32 hash)
             vm_intern_buffer[cursor] = (u64)sym_meta;
             return sym_meta;
         }
-        else if (strcmp_with_len(sym_meta[SYM_META_STR], sym, len) == 0)
+        else if (strncmp(sym_meta[SYM_META_STR], sym, len) == 0)
         {
             DEBUG("Symbol have been found");
             return sym_meta;
