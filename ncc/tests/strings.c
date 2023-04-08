@@ -22,6 +22,10 @@ int main()
     assert(strcmp("foo", "fooo") == -1);
     assert(strcmp("fooo", "foo") == 1);
 
+    assert(strncmp("", "foobar", 0) == 0);
+    assert(strncmp("foo", "foobar", 3) == 0);
+    assert(strncmp("foobar", "foobar", 6) == 0);
+
     // strchr
     char* str = "lestring";
     assert(strchr("", 'c') == null);
