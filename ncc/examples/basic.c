@@ -1146,8 +1146,6 @@ void resize_interned_sym_buffer()
 
 		vm_intern_buffer[idx] = sym_meta;
 	}
-
-
 }
 
 u64* vm_intern(u8* sym, u64 len, u32 hash)
