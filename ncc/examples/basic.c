@@ -1211,7 +1211,9 @@ i64 vm_symbol_get_var(u64* sym)
     {
         console_newline();
         console_puts(error_prefix);
-        console_puts("Trying to access an uninitialized variable:");
+        console_puts("Trying to access ");
+	console_newline();
+	console_puts("an uninitialized variable");
         console_puts(sym[SYM_META_STR]);
         return -1;
     }
