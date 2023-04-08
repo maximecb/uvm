@@ -4,4 +4,4 @@
 #include <assert.h>
 
 
-err_line_7 // line 7
+err_line_7 = 1; // line 7

@@ -1119,6 +1119,13 @@ mod tests
     }
 
     #[test]
+    fn cast()
+    {
+        // Cast/typedef parsing ambiguity
+        gen_ok("int foo() { int g = 3; return (g); }");
+    }
+
+    #[test]
     fn pointers()
     {
         // Void pointers
