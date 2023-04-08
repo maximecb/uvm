@@ -877,14 +877,11 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
             parse_struct(input)
         }
 
-        _ => input.parse_error(&format!("unknown type {}", keyword))
+        //_ => input.parse_error(&format!("unknown type {}", keyword))
 
-        // TODO: support for typedefs
-        /*
         _ => {
             Ok(Type::Ref(keyword))
         }
-        */
     }
 }
 
