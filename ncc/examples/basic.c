@@ -53,7 +53,7 @@ char text[NUM_ROWS][NUM_COLS];
 
 // Position of the cursor
 size_t line_idx = 0;
-size_t min_line_idx = 4;
+size_t min_line_idx = 5;
 size_t col_idx = 0;
 
 size_t row_len(size_t row_idx)
@@ -148,7 +148,9 @@ void main()
 
     console_puts("  **** UVM Basic ****");
     console_newline();
-    console_puts("Type HELP for available commands");
+    console_puts("Type HELP for available ");
+    console_newline();
+    console_puts("commands");
     console_print_ready();
     console_newline();
 
