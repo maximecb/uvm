@@ -122,6 +122,49 @@ impl Env
     }
 }
 
+
+
+
+fn resolve_types(t: &mut Type, env: &Env) -> Result<(), ParseError>
+{
+    match t {
+        Type::Ref(name) => {
+            if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
+                // Start without worrying about the recursion
+                // Normally, the recursion inside typedefs would already be handled directly in the typedef definition
+                *t = dt.clone();
+            }
+            else
+            {
+                return ParseError::msg_only(&format!("reference to unknown type \"{}\"", name));
+            }
+        }
+
+
+        // TODO: pointer
+
+
+        // TODO: array
+
+
+        // TODO: struct
+
+
+        // TODO: function
+
+
+
+
+        _ => {}
+    }
+
+    Ok(())
+}
+
+
+
+
+
 impl Unit
 {
     pub fn resolve_syms(&mut self) -> Result<(), ParseError>
@@ -139,6 +182,8 @@ impl Unit
 
         // Add definitions for all global variables
         for global in &mut self.global_vars {
+            resolve_types(&mut global.var_type, &env)?;
+
             env.define(&global.name, Decl::Global {
                 name: global.name.clone(),
                 t: global.var_type.clone(),
@@ -155,11 +200,6 @@ impl Unit
                 }
                 _ => {}
             }
-
-
-
-
-
         }
 
         // Add definitions for all functions
@@ -363,7 +403,20 @@ impl Expr
                 child.as_mut().resolve_syms(env)?;
             }
 
-            Expr::SizeofType { .. } => {
+            Expr::SizeofType { t } => {
+                if let Type::Ref(name) = t {
+                    if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
+                        *t = dt.clone();
+                    }
+                    else
+                    {
+                        *self = Expr::SizeofExpr {
+                            child: Box::new(Expr::Ident(name.clone()))
+                        };
+
+                        self.resolve_syms(env)?;
+                    }
+                }
             }
 
             Expr::Unary { op, child } => {

@@ -103,7 +103,7 @@ impl Type
                 num_bytes
             }
 
-            _ => panic!("{:?}", self)
+            _ => panic!("sizeof {:?}", self)
         }
     }
 
