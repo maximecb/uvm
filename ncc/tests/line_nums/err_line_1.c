@@ -1,1 +1,1 @@
-gighfi // error on line 1
+gighfi = 1; // error on line 1
