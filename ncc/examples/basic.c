@@ -19,12 +19,10 @@
 #define FONT_MONOGRAM_HEIGHT 12
 #define FONT_MONOGRAM_WIDTH 7
 
-
 #define FRAME_WIDTH 1200
 #define FRAME_HEIGHT 700
 #define NUM_COLS 25
 #define NUM_ROWS 21
-
 
 #ifdef DEBUG
 #define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
@@ -33,26 +31,20 @@
 #define DEBUGS(s) 
 #define DEBUGI(i) 
 #endif
-
 #define DEBUG(s) DEBUGS(s "\n");
 
 #define TRY(exp) if(exp) return 1;
 #define NULLGAURD(ptr) if(ptr == NULL) return NULL;
-#define MIN_COL_FIRST_LINE 2
-
 
 size_t console_width;
-
 size_t margin = 5;
 size_t char_width = 18;
 size_t char_height = 32;
-
 u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
-
 char text[NUM_ROWS][NUM_COLS];
 
-
 // Position of the cursor
+#define MIN_COL_FIRST_LINE 2
 size_t line_idx = 0;
 size_t min_line_idx = 4;
 size_t col_idx = 0;
@@ -67,7 +59,6 @@ size_t row_len(size_t row_idx)
             return i;
         }
     }
-
     return NUM_COLS;
 }
 
@@ -109,16 +100,15 @@ void keydown(u64 window_id, u16 keycode)
         {
             console_redraw_line(line_idx);
             line_idx = line_idx - 1;
-	    if(line_idx == min_line_idx) min_col_idx = MIN_COL_FIRST_LINE;
+            if(line_idx == min_line_idx) min_col_idx = MIN_COL_FIRST_LINE;
             col_idx = row_len(line_idx);
         }
         text[line_idx][col_idx] = 0;
     }
     else if (keycode == KEY_RETURN)
     {
-
         vm_load_cmd();
-	console_print_ready();
+        console_print_ready();
         min_line_idx = line_idx;
     }
     console_redraw_commit();
@@ -132,14 +122,14 @@ void anim_callback()
     time_delay_cb(400, anim_callback);
 }
 
-void console_print_ready() {
+void console_print_ready()
+{
     console_newline();
     console_puts("READY.");
     console_newline();
     console_puts("> ");
     min_col_idx = MIN_COL_FIRST_LINE;
 }
-
 
 void main()
 {
@@ -740,10 +730,8 @@ void console_redraw_line(size_t start_y)
 
 void console_redraw_all_text()
 {
-
     for(size_t y = 0; y < FRAME_HEIGHT; ++y)
         memset32(((u32*)frame_buffer) + FRAME_WIDTH * y, blue, console_width);
-
 }
 
 void console_make_space()
@@ -778,7 +766,7 @@ void console_putchar(char ch)
     {
         size_t old_col_idx = col_idx;
         console_newline();
-	min_col_idx = 0;
+        min_col_idx = 0;
         if(old_col_idx >= NUM_COLS)
             col_idx = col_idx + 1;
     }
@@ -799,7 +787,8 @@ void console_puts(u8* ch)
     }
 }
 
-char console_input_buff[20] ;
+char console_input_buff[20];
+
 void console_print_i64(i64 n)
 {
     memset(console_input_buff, 0, sizeof(console_input_buff));
@@ -862,6 +851,7 @@ void console_draw_char(char ch, size_t row_num, size_t col_num)
         }
     }
 }
+
 
 //===========================================================================
 /* CANVAS */
@@ -952,9 +942,11 @@ void vm_command_text_buffer_backspace()
 
 #define OP_PRINT_INT 16
 
-#define OP_GOTO 17 // Jumps to a command, as opposed to jumping to instructions as OP_JUMP does
+// Jumps to a command, as opposed to jumping to instructions as OP_JUMP does
+#define OP_GOTO 17 
 
-#define OP_PLOT 18 // draws a pixel at x, y
+// draws a pixel at x, y
+#define OP_PLOT 18
 #define OP_LINE 19
 #define OP_FILL 20
 #define OP_HELP 21
@@ -962,6 +954,8 @@ void vm_command_text_buffer_backspace()
 #define OP_HALT 22 // stops execution
 
 #define OP_EXIT 23 // Exits the program
+
+char* error_prefix = "Error: ";
 
 // Maps symbols to var positions
 size_t vm_intern_capacity = 1024;
@@ -971,15 +965,15 @@ u64** vm_intern_buffer;
 // Each command is a list of instructions
 // represented this way in order to insert new commands in between old ones
 // the number of the command. e.g. 10 LET x 10 -> command[VM_COMMANDS_NUM] = 10
-#define VM_COMMANDS_NUM 0 
+#define VM_COMMANDS_NUM 0
 // The number of instructions that the command can hold
-#define VM_COMMANDS_CAPACITY 1 
+#define VM_COMMANDS_CAPACITY 1
 // The number of instructions that the command currently hold
-#define VM_COMMANDS_CUR 2 
+#define VM_COMMANDS_CUR 2
 // command[VM_COMMANDS_NEXT] holds the address of the next command
-#define VM_COMMANDS_NEXT 3 
+#define VM_COMMANDS_NEXT 3
 // command[VM_COMMANDS_INSTS_BUFFER] is the buffer that actually holds the instructions
-#define VM_COMMANDS_INSTS_BUFFER 4 
+#define VM_COMMANDS_INSTS_BUFFER 4
 
 u64** vm_commands_selected = NULL;
 u64** vm_commands_root = NULL;
@@ -1033,8 +1027,8 @@ u64** vm_command_create(u64 num)
     NULLGAURD(new_cmd);
 
     if(vm_commands_root == NULL)
-    { // initialize
-        DEBUG("Init commands\n");
+    { // initialize the root
+        DEBUG("Init root\n");
         new_cmd[VM_COMMANDS_NEXT] = (u64*)vm_commands_root;
         vm_commands_root = new_cmd;
         return new_cmd;
@@ -1194,16 +1188,32 @@ u64* vm_intern(u8* sym, u64 len, u32 hash)
     resize_interned_sym_buffer();
     DEBUG("Done resizing intern buffer");
     return vm_intern(sym, len, hash);
+}
 
+u8 vm_symbol_is_initialized(u64* sym)
+{
+    return sym[SYM_META_LOC] != 0;
+}
 
+u64 vm_symbol_init_or_get_var(u64* sym)
+{
+    if(!vm_symbol_is_initialized(sym))
+    {
+        sym[SYM_META_LOC] = ++vm_vars_allocated;
+    }
+    return sym[SYM_META_LOC]-1;
 }
 
 // translates symbol strings to symbols
-u64 vm_get_symbol_var(u64* sym)
+i64 vm_symbol_get_var(u64* sym)
 {
-    if(sym[SYM_META_LOC] == 0)
+    if(!vm_symbol_is_initialized(sym))
     {
-        sym[SYM_META_LOC] = ++vm_vars_allocated;
+        console_newline();
+        console_puts(error_prefix);
+        console_puts("Trying to access an uninitialized variable:");
+        console_puts(sym[SYM_META_STR]);
+        return -1;
     }
     return sym[SYM_META_LOC]-1;
 }
@@ -1325,7 +1335,6 @@ void vm_bytecode_emit(u8 op, u64 arg)
     vm_bytecode_pointer_inc();
 }
 
-
 void ignore_ws()
 {
     while(vm_command_text_buffer_cursor > vm_command_text_buffer_read &&
@@ -1352,7 +1361,8 @@ u8 read_ch()
     return ret;
 }
 
-i64 read_uint() {
+i64 read_uint()
+{
     ignore_ws();
     size_t start = vm_command_text_buffer_read;
     u64 acc = 0;
@@ -1375,7 +1385,8 @@ i64 read_uint() {
     return acc;
 }
 
-u64* read_sym() {
+u64* read_sym()
+{
     DEBUG("Reading sym");
     ignore_ws();
     size_t sym_start = vm_command_text_buffer_read;
@@ -1401,7 +1412,7 @@ u64* read_sym() {
 void console_error(char* err)
 {
     console_newline();
-    console_puts("Error: ");
+    console_puts(error_prefix);
     console_puts(err);
     console_newline();
 }
@@ -1419,7 +1430,8 @@ u64 vm_emit_prim()
 
     if(sym != 0)
     {
-        u64 var = vm_get_symbol_var(sym);
+        i64 var = vm_symbol_get_var(sym);
+        if(0 > var) return 1;
         vm_bytecode_emit(OP_GET_VAR, var);
         return 0;
     }
@@ -1504,7 +1516,8 @@ u64 vm_emit_comparison()
                 op = OP_GT_EQ;
                 read_ch();
             } 
-        } else if('<' == next_ch)
+        }
+        else if('<' == next_ch)
         {
             read_ch();
             next_ch = peek_next();
@@ -1514,7 +1527,8 @@ u64 vm_emit_comparison()
                 op = OP_LT_EQ;
                 read_ch();
             }
-        } else break;
+        }
+        else break;
 
         TRY(emit_term());
         vm_bytecode_emit(op, 0);
@@ -1593,7 +1607,7 @@ u8 vm_emit_cmd()
             return 1;
         }
         TRY(vm_emit_exp());
-        u64 var = vm_get_symbol_var(sym);
+        u64 var = vm_symbol_init_or_get_var(sym);
         vm_bytecode_emit(OP_SET_VAR , var);
     }
     else if (command == vm_commands_sym_goto)
@@ -1613,7 +1627,8 @@ u8 vm_emit_cmd()
 
         // emitting else
         u64* else_sym = read_sym();
-        if(else_sym != vm_commands_sym_else) {
+        if(else_sym != vm_commands_sym_else)
+        {
             console_error("Expected the Then clause to be followed by ELSE");
             return 1;
         }
@@ -1656,14 +1671,14 @@ u8 vm_emit_cmd()
     }
     else if (command == vm_commands_sym_exit || command == vm_commands_sym_quit)
     {
-      DEBUG("emitting exit command");
-      vm_bytecode_emit(OP_EXIT, 0);
+        DEBUG("emitting exit command");
+        vm_bytecode_emit(OP_EXIT, 0);
     }
     else if (command == vm_commands_sym_fill)
     {
-      DEBUG("emitting exit command");
-      TRY(vm_emit_color()); // the color to fill the screen with
-      vm_bytecode_emit(OP_FILL, 0);
+        DEBUG("emitting exit command");
+        TRY(vm_emit_color()); // the color to fill the screen with
+        vm_bytecode_emit(OP_FILL, 0);
     }
     else if (command == vm_commands_sym_run)
     {
@@ -1674,7 +1689,8 @@ u8 vm_emit_cmd()
     {
         DEBUG("Printing symbol value");
         if(command == NULL) return 1;
-        u64 var = vm_get_symbol_var(command);
+        i64 var = vm_symbol_get_var(command);
+        if(0 > var) return 1;
         console_newline();
         console_print_i64(vm_vars[var]);
     }
@@ -1687,7 +1703,8 @@ u8 vm_emit_cmd()
     return 0;
 }
 
-void vm_load_cmd() {
+void vm_load_cmd()
+{
 
     if(vm_command_text_buffer_cursor == 0) return;
 
@@ -1731,42 +1748,45 @@ void vm_load_cmd() {
     vm_command_text_buffer_clear();
 }
 
-i64 vm_pop() {
+i64 vm_pop()
+{
     i64 val = vm_stack[--vm_stack_cursor];
     vm_stack[vm_stack_cursor] = 0;
     return val;
 }
 
-void vm_push(i64 v) {
+void vm_push(i64 v)
+{
     vm_stack[vm_stack_cursor] = v;
     ++vm_stack_cursor;
 }
 
-#define BIN_OP(opcode, c_op)			\
-    else if (op == opcode) \
-{							\
-    val2 = vm_pop();				\
-    val1 = vm_pop();				\
-    DEBUGS("OP: ");				\
-    DEBUGI(op);					\
-    DEBUGS("\n");				\
-    DEBUGS("val1: ");				\
-    DEBUGI(val1);				\
-    DEBUGS("\n");				\
-    DEBUGS("val2: ");				\
-    DEBUGI(val2);				\
-    DEBUGS("\n");				\
-    i64 result = val1 c_op val2;		\
-    DEBUGS("result: ");				\
-    DEBUGI(result);				\
-    DEBUGS("\n");				\
-    vm_push(result);				\
+#define BIN_OP(opcode, c_op)            \
+    else if (op == opcode)              \
+{                                       \
+    val2 = vm_pop();                    \
+    val1 = vm_pop();                    \
+    DEBUGS("OP: ");                     \
+    DEBUGI(op);                         \
+    DEBUGS("\n");                       \
+    DEBUGS("val1: ");                   \
+    DEBUGI(val1);                       \
+    DEBUGS("\n");                       \
+    DEBUGS("val2: ");                   \
+    DEBUGI(val2);                       \
+    DEBUGS("\n");                       \
+    i64 result = val1 c_op val2;        \
+    DEBUGS("result: ");                 \
+    DEBUGI(result);                     \
+    DEBUGS("\n");                       \
+    vm_push(result);                    \
 }
 
 #define PRINT_OP(op_str, op_name) else if(op == op_name) \
-{								\
-    puts(op_str);						\
-}		 
+{                                                        \
+    puts(op_str);                                        \
+}
+
 void print_inst(u64 inst)
 {
     u8 op = (u8)(inst >> 56);
@@ -1797,9 +1817,12 @@ void print_inst(u64 inst)
     PRINT_OP("OP_NOT_EQ", OP_NOT_EQ)
     PRINT_OP("OP_PRINT_INT", OP_PRINT_INT)
     PRINT_OP("OP_GOTO", OP_GOTO)
+    PRINT_OP("OP_HALT", OP_HALT)
+    PRINT_OP("OP_FILL", OP_FILL)
+    PRINT_OP("OP_EXIT", OP_EXIT)
 
 
-        puts("\n");
+    puts("\n");
     puts("arg:");
     print_i64(arg);
     puts("\n");
@@ -1822,7 +1845,6 @@ void print_insts(u64** cmd)
 
     puts("-- END INSTRUCTION PRINTOUT");
 }
-
 
 void vm_exec(u64** commands)
 {
@@ -1889,13 +1911,13 @@ void vm_exec(u64** commands)
             else if (op == OP_EXIT)
             {
                 DEBUG("Exiting the program");
-		exit(0);
+                exit(0);
             }
             else if (op == OP_FILL)
             {
                 DEBUG("Filling the screen color");
-		u32 color = vm_pop();
-		canvas_fill(color);
+                u32 color = vm_pop();
+                canvas_fill(color);
                 console_redraw_all_text();
             }
             else if (op == OP_JUMP)
@@ -1909,7 +1931,8 @@ void vm_exec(u64** commands)
             {
                 DEBUG("EXECUTING OP_JUMP_IF_NOT");
                 if (arg > cmd_size) break;
-                if(!vm_pop()) {
+                if(!vm_pop())
+                {
                     DEBUG("DETECTED A NOT SO jumping");
                     inst_idx = arg;
                     continue;
@@ -1934,15 +1957,15 @@ void vm_exec(u64** commands)
                 draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
             }
             BIN_OP(OP_ADD, +)
-	    BIN_OP(OP_SUB, -)
-	    BIN_OP(OP_MULT, *)
-	    BIN_OP(OP_DIV, /)
-	    BIN_OP(OP_GT, >)
-	    BIN_OP(OP_LT, <)
-	    BIN_OP(OP_GT_EQ, >=)
-	    BIN_OP(OP_LT_EQ, <=)
-	    BIN_OP(OP_EQ, ==)
-	    BIN_OP(OP_NOT_EQ, !=)
+            BIN_OP(OP_SUB, -)
+            BIN_OP(OP_MULT, *)
+            BIN_OP(OP_DIV, /)
+            BIN_OP(OP_GT, >)
+            BIN_OP(OP_LT, <)
+            BIN_OP(OP_GT_EQ, >=)
+            BIN_OP(OP_LT_EQ, <=)
+            BIN_OP(OP_EQ, ==)
+            BIN_OP(OP_NOT_EQ, !=)
             else
             {
                 DEBUG("unrecognized command");
