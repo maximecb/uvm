@@ -38,6 +38,7 @@
 
 #define TRY(exp) if(exp) return 1;
 #define NULLGAURD(ptr) if(ptr == NULL) return NULL;
+#define MIN_COL_FIRST_LINE 2
 
 
 size_t console_width;
@@ -53,8 +54,9 @@ char text[NUM_ROWS][NUM_COLS];
 
 // Position of the cursor
 size_t line_idx = 0;
-size_t min_line_idx = 5;
+size_t min_line_idx = 4;
 size_t col_idx = 0;
+size_t min_col_idx;
 
 size_t row_len(size_t row_idx)
 {
@@ -98,7 +100,7 @@ void keydown(u64 window_id, u16 keycode)
     }
     else if (keycode == KEY_BACKSPACE)
     {
-        if (col_idx > 0)
+        if (col_idx > min_col_idx)
         {
             col_idx = col_idx - 1;
             vm_command_text_buffer_backspace();
@@ -107,16 +109,16 @@ void keydown(u64 window_id, u16 keycode)
         {
             console_redraw_line(line_idx);
             line_idx = line_idx - 1;
+	    if(line_idx == min_line_idx) min_col_idx = MIN_COL_FIRST_LINE;
             col_idx = row_len(line_idx);
         }
-
         text[line_idx][col_idx] = 0;
     }
     else if (keycode == KEY_RETURN)
     {
 
         vm_load_cmd();
-        console_newline();
+	console_print_ready();
         min_line_idx = line_idx;
     }
     console_redraw_commit();
@@ -133,6 +135,9 @@ void anim_callback()
 void console_print_ready() {
     console_newline();
     console_puts("READY.");
+    console_newline();
+    console_puts("> ");
+    min_col_idx = MIN_COL_FIRST_LINE;
 }
 
 
@@ -153,7 +158,6 @@ void main()
     console_newline();
     console_puts("commands");
     console_print_ready();
-    console_newline();
 
     console_redraw_commit();
 
@@ -774,6 +778,7 @@ void console_putchar(char ch)
     {
         size_t old_col_idx = col_idx;
         console_newline();
+	min_col_idx = 0;
         if(old_col_idx >= NUM_COLS)
             col_idx = col_idx + 1;
     }
@@ -1724,7 +1729,6 @@ void vm_load_cmd() {
     }
 
     vm_command_text_buffer_clear();
-    console_print_ready();
 }
 
 i64 vm_pop() {
