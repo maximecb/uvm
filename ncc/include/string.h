@@ -68,6 +68,10 @@ char* strchr(char *str, int c)
     return NULL;
 }
 
+// TODO:
+// Returns a pointer to the first occurrence of str2 in str1,
+// or a null pointer if str2 is not part of str1.
+// char* strstr(char * str1, const char * str2);
 
 // TODO:
 // char* strncpy(char* destination, const char* source, size_t num)
