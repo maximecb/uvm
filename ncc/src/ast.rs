@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::fmt;
 
 // TODO: we may want a const type
@@ -33,7 +34,7 @@ pub enum Type
 
     // Reference to a typedef
     // This is used to handle cyclic types
-    Ref(Rc<Box<Type>>),
+    Ref(Rc<Box<RefCell<Type>>>),
 }
 
 impl Type
@@ -169,19 +170,19 @@ pub enum Decl
     Arg { idx: usize, t: Type },
     Local { idx: usize, t: Type },
     Fun { name: String, t: Type },
-    TypeDef { name: String, t: Rc<Box<Type>> },
+    TypeDef { name: String, t: Rc<Box<RefCell<Type>>> },
 }
 
 impl Decl
 {
-    pub fn get_type(&self) -> &Type
+    pub fn get_type(&self) -> Type
     {
         match self {
-            Decl::Global { name, t } => t,
-            Decl::Arg { idx, t } => t,
-            Decl::Local { idx, t } => t,
-            Decl::Fun { name, t } => t,
-            Decl::TypeDef { name, t } => t,
+            Decl::Global { name, t } => t.clone(),
+            Decl::Arg { idx, t } => t.clone(),
+            Decl::Local { idx, t } => t.clone(),
+            Decl::Fun { name, t } => t.clone(),
+            Decl::TypeDef { name, t } => t.borrow().clone(),
         }
     }
 }
@@ -402,7 +403,7 @@ pub struct Global
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
-    pub typedefs: Vec<(String, Rc<Box<Type>>)>,
+    pub typedefs: Vec<(String, Rc<Box<RefCell<Type>>>)>,
 
     pub global_vars: Vec<Global>,
 

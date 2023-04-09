@@ -135,9 +135,8 @@ fn resolve_types(t: &mut Type, env: &Env, inside_def: Option<&str>) -> Result<()
             }
 
             if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
-                // Start without worrying about the recursion
-                // Normally, the recursion inside typedefs would already be handled directly in the typedef definition
-                *t = (**dt).clone();
+                // Since we're not inside this typedef, we just clone the type
+                *t = (**dt).borrow().clone();
             }
             else
             {
@@ -152,7 +151,8 @@ fn resolve_types(t: &mut Type, env: &Env, inside_def: Option<&str>) -> Result<()
                 if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
                     if let Some(inside_def) = inside_def {
                         if name == inside_def {
-                            *t = Box::new(Type::Ref(dt))
+                            *t = Box::new(Type::Ref(dt));
+                            return Ok(());
                         }
                     }
                 }
@@ -162,26 +162,26 @@ fn resolve_types(t: &mut Type, env: &Env, inside_def: Option<&str>) -> Result<()
                 }
             }
 
-            resolve_types(t, env, None)?;
+            resolve_types(t, env, inside_def)?;
         }
 
         Type::Array { elem_type, size_expr } => {
-            resolve_types(elem_type, env, None)?;
+            resolve_types(elem_type, env, inside_def)?;
 
             // TODO: process size_expr?
         }
 
         Type::Fun { ret_type, param_types, var_arg } => {
-            resolve_types(ret_type, env, None)?;
+            resolve_types(ret_type, env, inside_def)?;
 
             for t in param_types {
-                resolve_types(t, env, None)?;
+                resolve_types(t, env, inside_def)?;
             }
         }
 
         Type::Struct { fields } => {
             for (name, t) in fields {
-                resolve_types(t, env, None)?;
+                resolve_types(t, env, inside_def)?;
             }
         }
 
@@ -206,6 +206,11 @@ impl Unit
                 name: name.clone(),
                 t: t.clone(),
             });
+        }
+
+        // Resolve typedefs inside of typedefs
+        for (name, t) in &mut self.typedefs {
+            resolve_types(&mut t.borrow_mut(), &mut env, Some(name))?;
         }
 
         // Add definitions for all global variables
@@ -416,7 +421,7 @@ impl Expr
             Expr::Cast { new_type, child } => {
                 if let Type::Named(name) = new_type {
                     if let Some(Decl::TypeDef { name, t }) = env.lookup(name) {
-                        *new_type = (**t).clone();
+                        *new_type = (**t).borrow().clone();
                     }
                     else
                     {
@@ -438,7 +443,7 @@ impl Expr
             Expr::SizeofType { t } => {
                 if let Type::Named(name) = t {
                     if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
-                        *t = (**dt).clone();
+                        *t = (**dt).borrow().clone();
                     }
                     else
                     {

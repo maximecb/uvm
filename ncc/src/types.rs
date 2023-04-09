@@ -208,7 +208,7 @@ impl Expr
             Expr::Ident(_) => panic!("IdentExpr made it past symbol resolution"),
 
             Expr::Ref(decl) => {
-                Ok(decl.get_type().clone())
+                Ok(decl.get_type())
             }
 
             Expr::Cast { new_type, child } => {

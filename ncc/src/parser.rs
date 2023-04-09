@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
@@ -1034,7 +1035,7 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
             let t = parse_array_type(input, t)?;
             let name = input.parse_ident()?;
             input.expect_token(";")?;
-            unit.typedefs.push((name, Rc::new(Box::new(t))));
+            unit.typedefs.push((name, Rc::new(Box::new(RefCell::new(t)))));
             continue;
         }
 
