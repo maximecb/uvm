@@ -157,6 +157,7 @@ impl fmt::Display for Type {
             Float(n) => write!(f, "f{}", n),
             Pointer(t) => write!(f, "{}*", t.as_ref()),
             Array { elem_type, size_expr } => write!(f, "{}[]", elem_type.as_ref()),
+            Struct { .. } => write!(f, "struct"),
             _ => todo!()
         }
     }

@@ -237,6 +237,12 @@ impl Unit
 
         // Add definitions for all functions
         for fun in &mut self.fun_decls {
+            resolve_types(&mut fun.ret_type, &env, None)?;
+
+            for (t, name) in &mut fun.params {
+                resolve_types(t, &env, None)?;
+            }
+
             env.define(&fun.name, Decl::Fun {
                 name: fun.name.clone(),
                 t: fun.get_type()

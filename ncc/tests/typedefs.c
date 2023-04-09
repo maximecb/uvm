@@ -21,6 +21,10 @@ typedef struct {
     node* next;
 } node;
 
+void add(vec3* v0, vec3* v1)
+{
+}
+
 int main()
 {
     assert(sizeof(my_int) == 4);
