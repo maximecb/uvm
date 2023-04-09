@@ -34,8 +34,9 @@ int main()
     assert(sizeof(g2) == 4);
     assert(sizeof(ptr_to_vec) == sizeof(void*));
 
-
-
+    my_int n = 2;
+    assert(n == 2);
+    assert((my_int)3 == 3);
 
     return 0;
 }

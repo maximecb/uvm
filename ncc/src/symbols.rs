@@ -352,6 +352,8 @@ impl Stmt
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
+                resolve_types(var_type, env, None)?;
+
                 env.define_local(var_name, var_type.clone());
 
                 let decl = env.lookup(var_name).unwrap();
@@ -438,6 +440,10 @@ impl Expr
                         return Ok(());
                     }
                 }
+                else
+                {
+                    resolve_types(new_type, env, None)?;
+                }
 
                 child.as_mut().resolve_syms(env)?;
             }
@@ -459,6 +465,10 @@ impl Expr
 
                         self.resolve_syms(env)?;
                     }
+                }
+                else
+                {
+                    resolve_types(t, env, None)?;
                 }
             }
 
@@ -484,10 +494,12 @@ impl Expr
                 }
             }
 
-            Expr::Asm { args, .. } => {
+            Expr::Asm { args, out_type, .. } => {
                 for arg in args {
                     arg.resolve_syms(env)?;
                 }
+
+                resolve_types(out_type, env, None)?;
             }
 
             //_ => todo!()
