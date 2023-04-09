@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::fmt;
 
 // TODO: we may want a const type
@@ -27,8 +28,12 @@ pub enum Type
         fields: Vec<(String, Type)>,
     },
 
+    // Unresolved named reference to a typedef
+    Named(String),
+
     // Reference to a typedef
-    Ref(String),
+    // This is used to handle cyclic types
+    Ref(Rc<Box<Type>>),
 }
 
 impl Type
@@ -164,19 +169,19 @@ pub enum Decl
     Arg { idx: usize, t: Type },
     Local { idx: usize, t: Type },
     Fun { name: String, t: Type },
-    TypeDef { name: String, t: Type },
+    TypeDef { name: String, t: Rc<Box<Type>> },
 }
 
 impl Decl
 {
-    pub fn get_type(&self) -> Type
+    pub fn get_type(&self) -> &Type
     {
         match self {
-            Decl::Global { name, t } => t.clone(),
-            Decl::Arg { idx, t } => t.clone(),
-            Decl::Local { idx, t } => t.clone(),
-            Decl::Fun { name, t } => t.clone(),
-            Decl::TypeDef { name, t } => t.clone(),
+            Decl::Global { name, t } => t,
+            Decl::Arg { idx, t } => t,
+            Decl::Local { idx, t } => t,
+            Decl::Fun { name, t } => t,
+            Decl::TypeDef { name, t } => t,
         }
     }
 }
@@ -397,7 +402,7 @@ pub struct Global
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
-    pub typedefs: Vec<(String, Type)>,
+    pub typedefs: Vec<(String, Rc<Box<Type>>)>,
 
     pub global_vars: Vec<Global>,
 
