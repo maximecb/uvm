@@ -165,18 +165,27 @@ fn resolve_types(t: &mut Type, env: &Env, inside_def: Option<&str>) -> Result<()
             resolve_types(t, env, None)?;
         }
 
+        Type::Array { elem_type, size_expr } => {
+            resolve_types(elem_type, env, None)?;
 
+            // TODO: process size_expr?
+        }
 
-        // TODO: array
+        Type::Fun { ret_type, param_types, var_arg } => {
+            resolve_types(ret_type, env, None)?;
 
+            for t in param_types {
+                resolve_types(t, env, None)?;
+            }
+        }
 
-        // TODO: struct
+        Type::Struct { fields } => {
+            for (name, t) in fields {
+                resolve_types(t, env, None)?;
+            }
+        }
 
-
-        // TODO: function
-
-
-
+        Type::Ref(_) => panic!(),
 
         _ => {}
     }
