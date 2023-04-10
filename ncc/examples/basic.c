@@ -91,17 +91,13 @@ void textinput(u64 window_id, char ch)
 
 void keydown(u64 window_id, u16 keycode)
 {
-    
-  if(vm_status != VM_STATUS_DONE)
-    {
-    if(keycode == KEY_ESCAPE) vm_status = VM_STATUS_HALT;
 
-    return;
-  }
-    if (keycode == KEY_ESCAPE)
+    if(vm_status != VM_STATUS_DONE)
     {
-        exit(0);
+        if(keycode == KEY_ESCAPE) vm_status = VM_STATUS_HALT;
+        return;
     }
+    if (keycode == KEY_ESCAPE) exit(0);
     else if (keycode == KEY_BACKSPACE)
     {
         if (col_idx > min_col_idx)
@@ -121,7 +117,7 @@ void keydown(u64 window_id, u16 keycode)
     else if (keycode == KEY_RETURN)
     {
         vm_load_cmd();
-	vm_exec();
+        vm_exec();
     }
     console_redraw_commit();
 }
@@ -1230,8 +1226,8 @@ i64 vm_symbol_get_var(u64* sym)
         console_newline();
         console_puts(error_prefix);
         console_puts("Trying to access ");
-	console_newline();
-	console_puts("an uninitialized variable");
+        console_newline();
+        console_puts("an uninitialized variable");
         console_puts(sym[SYM_META_STR]);
         return -1;
     }
@@ -1369,8 +1365,7 @@ void ignore_ws()
 u8 peek_ch(u8 n)
 {
     ignore_ws();
-    if(vm_command_text_buffer_read >= vm_command_text_buffer_cursor)
-      return 0;
+    if(vm_command_text_buffer_read >= vm_command_text_buffer_cursor) return 0;
     return (u8)vm_command_text_buffer[vm_command_text_buffer_read + n];
 }
 
@@ -1443,26 +1438,32 @@ void console_error(char* err)
     console_newline();
 }
 
-u8 vm_emit_args(u8 expected_args_count) {
-  char current = read_ch();
-  if(current != '(') {
-    console_error("Expected to find an ( but did not");
-    return 1;
-  }
-  current = peek_next();
-  u8 actual_args_count = 0;
-  while(current != ')') {
-    if(current == 0) {
-	console_error("Expected function call to end with )");
-	return 1;
-    } else if (actual_args_count > expected_args_count) {
-	console_error("Function got too many arguments");
-	return 1;
+u8 vm_emit_args(u8 expected_args_count)
+{
+    char current = read_ch();
+    if(current != '(')
+    {
+        console_error("Expected to find an ( but did not");
+        return 1;
     }
-    ++actual_args_count;
-    vm_emit_exp();
-  }
-  return 0;
+    current = peek_next();
+    u8 actual_args_count = 0;
+    while(current != ')')
+    {
+        if(current == 0)
+        {
+            console_error("Expected function call to end with )");
+            return 1;
+        }
+        else if (actual_args_count > expected_args_count)
+        {
+            console_error("Function got too many arguments");
+            return 1;
+        }
+        ++actual_args_count;
+        vm_emit_exp();
+    }
+    return 0;
 }
 
 u64 vm_emit_prim()
@@ -1479,20 +1480,20 @@ u64 vm_emit_prim()
 
     if(sym != 0)
     {
-      if(next_ch == '(')
-      {
-	if (sym == vm_commands_sym_rand)
-	{
-	  vm_emit_args(0);
-	  vm_bytecode_emit(OP_RAND, 0);
-	}
-	else
-	{
-	  console_error("Undefined function");
-	  return 1;
-	}
-	return 0;
-      }
+        if(next_ch == '(')
+        {
+            if (sym == vm_commands_sym_rand)
+            {
+                vm_emit_args(0);
+                vm_bytecode_emit(OP_RAND, 0);
+            }
+            else
+            {
+                console_error("Undefined function");
+                return 1;
+            }
+            return 0;
+        }
 
         i64 var = vm_symbol_get_var(sym);
         if(0 > var) return 1;
@@ -1675,8 +1676,8 @@ u8 vm_emit_cmd(u64* command)
     }
     else if (command == vm_commands_sym_sleep)
     {
-      TRY(vm_emit_exp());
-      vm_bytecode_emit(OP_SLEEP, 0);
+        TRY(vm_emit_exp());
+        vm_bytecode_emit(OP_SLEEP, 0);
     }
     else if (command == vm_commands_sym_goto)
     {
@@ -1689,7 +1690,7 @@ u8 vm_emit_cmd(u64* command)
         DEBUG("Emitting IF");
         TRY(vm_emit_exp());
         u64 jump_to_else_pos = vm_bytecode_pointer_inc(); // resever inst to jump to else if pred is false
-	command = read_sym();
+        command = read_sym();
         TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 jump_to_else_end_pos = vm_bytecode_pointer_inc(); // reserve inst to jump to end of else;
@@ -1702,7 +1703,7 @@ u8 vm_emit_cmd(u64* command)
             return 1;
         }
         u64 start_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
-	command = read_sym();
+        command = read_sym();
         TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 end_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
@@ -1779,8 +1780,8 @@ void vm_load_cmd()
     u64* command = read_sym();
     if (command == vm_commands_sym_run)
     {
-	vm_commands_selected = vm_commands_root;
-	return;
+        vm_commands_selected = vm_commands_root;
+        return;
     }
     DEBUG("cmd_num\n");
     DEBUGI(cmd_num);
@@ -1811,11 +1812,11 @@ void vm_load_cmd()
     {
         if(cmd_num >= 0) vm_command_create(cmd_num);
         else vm_command_free(cmd);
-	vm_commands_selected = NULL;
+        vm_commands_selected = NULL;
     }
     else if (cmd_num >= 0)
     {
-	vm_commands_selected = NULL;
+        vm_commands_selected = NULL;
     }
     vm_command_text_buffer_clear();
 }
@@ -1921,140 +1922,140 @@ void print_insts(u64** cmd)
 
 void vm_hand_control_back()
 {
-  vm_commands_selected = NULL;
-  vm_status = VM_STATUS_DONE;
-  console_print_ready();
-  min_line_idx = line_idx;
-  console_redraw_commit();
+    vm_commands_selected = NULL;
+    vm_status = VM_STATUS_DONE;
+    console_print_ready();
+    min_line_idx = line_idx;
+    console_redraw_commit();
 }
 
 void vm_exec()
 {
     if(vm_commands_selected == NULL || vm_status == VM_STATUS_HALT)
     {
-	vm_hand_control_back();
-	return;
+        vm_hand_control_back();
+        return;
     } 
-     
+
     vm_status = VM_STATUS_RUNNING;
     i64 val1;
     i64 val2;
     u64 sleep = 0;
-	u64** cmd = vm_commands_selected;
-	vm_commands_selected = (u64**) cmd[VM_COMMANDS_NEXT];
-        u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
+    u64** cmd = vm_commands_selected;
+    vm_commands_selected = (u64**) cmd[VM_COMMANDS_NEXT];
+    u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
 
-        u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
-        u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
+    u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
+    u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
 
-        for(size_t inst_idx = 0; (inst_idx < cmd_size);)
+    for(size_t inst_idx = 0; (inst_idx < cmd_size);)
+    {
+        u64 inst = cmd_insts[inst_idx];
+        u8 op = (u8)(inst >> 56);
+        u64 arg = (inst & (((u64)1<<56) - 1));
+
+        // TODO check for overflow
+        if(op == OP_PUSH) vm_push(arg);
+        else if (op == OP_SET_VAR) vm_vars[arg] = vm_pop();
+        else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
+        else if (op == OP_PRINT_INT)
         {
-            u64 inst = cmd_insts[inst_idx];
-            u8 op = (u8)(inst >> 56);
-            u64 arg = (inst & (((u64)1<<56) - 1));
-
-            // TODO check for overflow
-            if(op == OP_PUSH) vm_push(arg);
-            else if (op == OP_SET_VAR) vm_vars[arg] = vm_pop();
-            else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
-            else if (op == OP_PRINT_INT)
+            console_newline();
+            console_print_i64(vm_pop());
+        }
+        else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
+        else if (op == OP_RAND) vm_push(rand());
+        else if (op == OP_SLEEP)
+        {
+            sleep = vm_pop();
+            break;
+        }
+        else if (op == OP_HALT)
+        {
+            vm_hand_control_back();
+            return;
+        }
+        else if (op == OP_HELP)
+        {
+            console_newline();
+            console_puts("UVM Basic commands");
+            console_newline();
+            console_puts("LET {sym} {expr}");
+            console_newline();
+            console_puts("GOTO {cmd num}");
+            console_newline();
+            console_puts("IF {pred} {then} ELSE {else}");
+            console_newline();
+            console_puts("PLOT {x} {y} {color}");
+            console_newline();
+            console_puts("LINE {x0} {y0} {x1} {y1} {color}");
+            console_newline();
+            console_puts("CLEAR");
+            console_newline();
+            console_puts("FILL {color}:fills the screen with a color");
+            console_newline();
+            console_puts("RUN:runs loaded commands");
+            console_newline();
+            console_puts("HALT:stops RUN");
+            console_newline();
+            console_puts("EXIT or QUIT: terminate the Basic REPL");
+            console_newline();
+            console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
+            console_newline();
+            console_puts("The canvas size is ");
+            console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
+            console_puts("X");
+            console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
+        }
+        else if (op == OP_EXIT)
+        {
+            DEBUG("Exiting the program");
+            exit(0);
+        }
+        else if (op == OP_FILL)
+        {
+            DEBUG("Filling the screen color");
+            u32 color = vm_pop();
+            canvas_fill(color);
+            console_redraw_all_text();
+        }
+        else if (op == OP_JUMP)
+        {
+            if (arg > cmd_size) break;
+            DEBUG("Unconditionally jumping");
+            inst_idx = arg;
+            continue;
+        }
+        else if (op == OP_JUMP_IF_NOT)
+        {
+            DEBUG("EXECUTING OP_JUMP_IF_NOT");
+            if (arg > cmd_size) break;
+            if(!vm_pop())
             {
-                console_newline();
-                console_print_i64(vm_pop());
-            }
-            else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
-            else if (op == OP_RAND) vm_push(rand());
-            else if (op == OP_SLEEP)
-	    {
-	      sleep = vm_pop();
-	      break;
-	    }
-            else if (op == OP_HALT)
-	    {
-		vm_hand_control_back();
-		return;
-	    }
-            else if (op == OP_HELP)
-            {
-                console_newline();
-                console_puts("UVM Basic commands");
-                console_newline();
-                console_puts("LET {sym} {expr}");
-                console_newline();
-                console_puts("GOTO {cmd num}");
-                console_newline();
-                console_puts("IF {pred} {then} ELSE {else}");
-                console_newline();
-                console_puts("PLOT {x} {y} {color}");
-                console_newline();
-                console_puts("LINE {x0} {y0} {x1} {y1} {color}");
-                console_newline();
-                console_puts("CLEAR");
-                console_newline();
-                console_puts("FILL {color}:fills the screen with a color");
-                console_newline();
-                console_puts("RUN:runs loaded commands");
-                console_newline();
-                console_puts("HALT:stops RUN");
-                console_newline();
-                console_puts("EXIT or QUIT: terminate the Basic REPL");
-                console_newline();
-                console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
-                console_newline();
-                console_puts("The canvas size is ");
-                console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
-                console_puts("X");
-                console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
-            }
-            else if (op == OP_EXIT)
-            {
-                DEBUG("Exiting the program");
-                exit(0);
-            }
-            else if (op == OP_FILL)
-            {
-                DEBUG("Filling the screen color");
-                u32 color = vm_pop();
-                canvas_fill(color);
-                console_redraw_all_text();
-            }
-            else if (op == OP_JUMP)
-            {
-                if (arg > cmd_size) break;
-                DEBUG("Unconditionally jumping");
+                DEBUG("DETECTED A NOT SO jumping");
                 inst_idx = arg;
                 continue;
             }
-            else if (op == OP_JUMP_IF_NOT)
-            {
-                DEBUG("EXECUTING OP_JUMP_IF_NOT");
-                if (arg > cmd_size) break;
-                if(!vm_pop())
-                {
-                    DEBUG("DETECTED A NOT SO jumping");
-                    inst_idx = arg;
-                    continue;
-                }
-            }
-            else if (op == OP_PLOT)
-            {
-                u64 color = vm_pop();
-                u64 y = vm_pop();
-                u64 x = vm_pop();
-                canvas_plot(x, y, color);
-            }
-            else if (op == OP_LINE)
-            {
-                u32 color = (u32)vm_pop();
-                u32 y1 = (u32)vm_pop();
-                u32 x1 = (u32)vm_pop();
-                u32 y0 = (u32)vm_pop();
-                u32 x0 = (u32)vm_pop();
-                if(canvas_coord_gaurd(x0, y0)) break;
-                if(canvas_coord_gaurd(x1, y1)) break;
-                draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
-            }
-            BIN_OP(OP_ADD, +)
+        }
+        else if (op == OP_PLOT)
+        {
+            u64 color = vm_pop();
+            u64 y = vm_pop();
+            u64 x = vm_pop();
+            canvas_plot(x, y, color);
+        }
+        else if (op == OP_LINE)
+        {
+            u32 color = (u32)vm_pop();
+            u32 y1 = (u32)vm_pop();
+            u32 x1 = (u32)vm_pop();
+            u32 y0 = (u32)vm_pop();
+            u32 x0 = (u32)vm_pop();
+            if(canvas_coord_gaurd(x0, y0)) break;
+            if(canvas_coord_gaurd(x1, y1)) break;
+            draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
+        }
+        BIN_OP(OP_ADD, +)
             BIN_OP(OP_SUB, -)
             BIN_OP(OP_MULT, *)
             BIN_OP(OP_DIV, /)
@@ -2065,15 +2066,15 @@ void vm_exec()
             BIN_OP(OP_EQ, ==)
             BIN_OP(OP_NOT_EQ, !=)
             BIN_OP(OP_MOD, %)
-            else
-            {
-                DEBUG("unrecognized command");
-		vm_hand_control_back();
-                return;
-            }
-            DEBUG("executing inst");
-            ++inst_idx;
+        else
+        {
+            DEBUG("unrecognized command");
+            vm_hand_control_back();
+            return;
         }
+        DEBUG("executing inst");
+        ++inst_idx;
+    }
 
-	time_delay_cb(sleep, vm_exec);
+    time_delay_cb(sleep, vm_exec);
 }
