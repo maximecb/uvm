@@ -247,6 +247,29 @@ impl Expr
                 Ok(UInt(64))
             }
 
+            Expr::Arrow { base, field } => {
+                let base_type = base.eval_type()?;
+
+                if let Pointer(s) = base_type {
+                    if let Struct { fields } = s.as_ref() {
+                        for (name, t) in fields {
+                            if name == field {
+                                return Ok(t.clone())
+                            }
+                        }
+
+                        return ParseError::msg_only(&format!(
+                            "unknown struct field \"{}\"",
+                            field
+                        ))
+                    }
+                }
+
+                ParseError::msg_only(&format!(
+                    "arrow operator only applicable to struct pointers"
+                ))
+            }
+
             Expr::Unary { op, child } => {
                 let child_type = child.eval_type()?;
 
@@ -384,7 +407,7 @@ impl Expr
                         Ok(rhs_type)
                     }
 
-                    _ => todo!(),
+                    //_ => todo!(),
                 }
             }
 

@@ -468,6 +468,10 @@ impl Expr
                 }
             }
 
+            Expr::Arrow { base, field } => {
+                base.as_mut().resolve_syms(env)?;
+            }
+
             Expr::Unary { op, child } => {
                 child.as_mut().resolve_syms(env)?;
             }

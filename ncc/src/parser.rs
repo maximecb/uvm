@@ -203,6 +203,15 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
             continue;
         }
 
+        // Arrow operator (a->b)
+        if input.match_token("->")? {
+            let field_name = input.parse_ident()?;
+            base_expr = Expr::Arrow {
+                base: Box::new(base_expr),
+                field: field_name
+            };
+        }
+
         // Postfix increment expression
         if input.match_token("++")? {
             // Let users know this is not supported. We use panic!() because
@@ -432,10 +441,7 @@ struct OpInfo
 /// Binary operators and their precedence level
 /// Lower numbers mean higher precedence
 /// https://en.cppreference.com/w/c/language/operator_precedence
-const BIN_OPS: [OpInfo; 22] = [
-    OpInfo { op_str: "->", prec: 1, op: BinOp::Arrow, rtl: false },
-    OpInfo { op_str: ".", prec: 1, op: BinOp::Member, rtl: false },
-
+const BIN_OPS: [OpInfo; 20] = [
     OpInfo { op_str: "*", prec: 3, op: BinOp::Mul, rtl: false },
     OpInfo { op_str: "/", prec: 3, op: BinOp::Div, rtl: false },
     OpInfo { op_str: "%", prec: 3, op: BinOp::Mod, rtl: false },

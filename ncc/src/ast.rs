@@ -133,7 +133,33 @@ impl Type
         }
     }
 
-    /// Alignment for the type in bytes
+    /// Field offset in bytes
+    pub fn offsetof(&self, name: &str) -> Option<usize>
+    {
+        match self {
+            Type::Struct { fields } => {
+                let mut offset: usize = 0;
+
+                for (f_name, t) in fields {
+                    // Align the field
+                    let field_align = t.align_bytes();
+                    offset = (offset + (field_align - 1)) & !(field_align - 1);
+
+                    if f_name == name {
+                        return Some(offset);
+                    }
+
+                    // Add the field size
+                    offset += t.sizeof();
+                }
+
+                None
+            }
+            _ => panic!()
+        }
+    }
+
+    /// Alignment of the type in bytes
     pub fn align_bytes(&self) -> usize
     {
         use Type::*;
@@ -234,10 +260,6 @@ pub enum UnOp
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BinOp
 {
-    // Struct member access
-    Arrow,
-    Member,
-
     // Bitwise
     BitAnd,
     BitOr,
@@ -299,6 +321,12 @@ pub enum Expr
 
     SizeofType {
         t: Type
+    },
+
+    // a->b
+    Arrow {
+        base: Box<Expr>,
+        field: String,
     },
 
     Unary {
