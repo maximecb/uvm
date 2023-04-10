@@ -15,6 +15,10 @@
 #include <ctype.h>
 #include <uvm/graphics.h>
 
+// VM status
+#define VM_STATUS_RUNNING 0
+#define VM_STATUS_DONE 1
+#define VM_STATUS_HALT 2
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS 390
 #define FONT_MONOGRAM_HEIGHT 12
 #define FONT_MONOGRAM_WIDTH 7
@@ -24,6 +28,7 @@
 #define NUM_COLS 25
 #define NUM_ROWS 21
 
+/* #define DEBUG */
 #ifdef DEBUG
 #define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
 #define DEBUGI(i) print_i64(i);
@@ -75,6 +80,7 @@ int black = 0x0;
 
 void textinput(u64 window_id, char ch)
 {
+    if(vm_status != VM_STATUS_DONE) return;
     console_putchar(ch);
     vm_command_text_buffer[vm_command_text_buffer_cursor] = ch;
     DEBUGS(vm_command_text_buffer);
@@ -85,6 +91,13 @@ void textinput(u64 window_id, char ch)
 
 void keydown(u64 window_id, u16 keycode)
 {
+    
+  if(vm_status != VM_STATUS_DONE)
+    {
+    if(keycode == KEY_ESCAPE) vm_status = VM_STATUS_HALT;
+
+    return;
+  }
     if (keycode == KEY_ESCAPE)
     {
         exit(0);
@@ -108,8 +121,7 @@ void keydown(u64 window_id, u16 keycode)
     else if (keycode == KEY_RETURN)
     {
         vm_load_cmd();
-        console_print_ready();
-        min_line_idx = line_idx;
+	vm_exec();
     }
     console_redraw_commit();
 }
@@ -896,6 +908,8 @@ void canvas_fill(u32 color)
 //===========================================================================
 /* INTERP */
 
+u64 vm_status = VM_STATUS_DONE;
+
 char vm_command_text_buffer[1024];
 size_t vm_command_text_buffer_cursor =0;
 size_t vm_command_text_buffer_read = 0; 
@@ -1588,10 +1602,9 @@ u64 vm_emit_color()
     }
 }
 
-u8 vm_emit_cmd()
+u8 vm_emit_cmd(u64* command)
 {
     DEBUG("Emitting command");
-    u64* command = read_sym();
 
     if(command == vm_commands_sym_help)
     {
@@ -1623,7 +1636,8 @@ u8 vm_emit_cmd()
         DEBUG("Emitting IF");
         TRY(vm_emit_exp());
         u64 jump_to_else_pos = vm_bytecode_pointer_inc(); // resever inst to jump to else if pred is false
-        TRY(vm_emit_cmd()); // Then cmd
+	command = read_sym();
+        TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 jump_to_else_end_pos = vm_bytecode_pointer_inc(); // reserve inst to jump to end of else;
 
@@ -1635,7 +1649,8 @@ u8 vm_emit_cmd()
             return 1;
         }
         u64 start_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
-        TRY(vm_emit_cmd()); // Then cmd
+	command = read_sym();
+        TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 end_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
 
@@ -1682,11 +1697,6 @@ u8 vm_emit_cmd()
         TRY(vm_emit_color()); // the color to fill the screen with
         vm_bytecode_emit(OP_FILL, 0);
     }
-    else if (command == vm_commands_sym_run)
-    {
-        DEBUG("Running loaded commands");
-        vm_exec(vm_commands_root); 
-    }
     else if (read_sym() == NULL)
     {
         DEBUG("Printing symbol value");
@@ -1707,12 +1717,18 @@ u8 vm_emit_cmd()
 
 void vm_load_cmd()
 {
-
+    vm_commands_selected = NULL;
     if(vm_command_text_buffer_cursor == 0) return;
 
     DEBUGS(vm_command_text_buffer);
 
     i64 cmd_num = read_uint();
+    u64* command = read_sym();
+    if (command == vm_commands_sym_run)
+    {
+	vm_commands_selected = vm_commands_root;
+	return;
+    }
     DEBUG("cmd_num\n");
     DEBUGI(cmd_num);
     DEBUG("");
@@ -1736,19 +1752,21 @@ void vm_load_cmd()
 
     vm_commands_selected = cmd;
 
-    if(vm_emit_cmd())
+    if(command == NULL) command = read_sym();
+
+    if(vm_emit_cmd(command))
     {
         if(cmd_num >= 0) vm_command_create(cmd_num);
         else vm_command_free(cmd);
+	vm_commands_selected = NULL;
     }
-    else if(cmd_num < 0)
+    else if (cmd_num >= 0)
     {
-        vm_exec(cmd);
-        vm_command_free(cmd);
+	vm_commands_selected = NULL;
     }
-
     vm_command_text_buffer_clear();
 }
+
 
 i64 vm_pop()
 {
@@ -1848,20 +1866,35 @@ void print_insts(u64** cmd)
     puts("-- END INSTRUCTION PRINTOUT");
 }
 
-void vm_exec(u64** commands)
+void vm_hand_control_back()
 {
-    u64** next_cmd ;
+  vm_commands_selected = NULL;
+  vm_status = VM_STATUS_DONE;
+  console_print_ready();
+  min_line_idx = line_idx;
+  console_redraw_commit();
+}
+
+void vm_exec()
+{
+    if(vm_commands_selected == NULL || vm_status == VM_STATUS_HALT)
+    {
+	vm_hand_control_back();
+	return;
+    } 
+     
+    vm_status = VM_STATUS_RUNNING;
     i64 val1;
     i64 val2;
-    for(u64** cmd = commands; cmd != 0; cmd = next_cmd)
-    {
-        next_cmd = (u64**) cmd[VM_COMMANDS_NEXT];
+    u64 sleep = 0;
+	u64** cmd = vm_commands_selected;
+	vm_commands_selected = (u64**) cmd[VM_COMMANDS_NEXT];
         u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
 
         u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
         u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
 
-        for(size_t inst_idx = 0; (inst_idx < cmd_size); )
+        for(size_t inst_idx = 0; (inst_idx < cmd_size);)
         {
             u64 inst = cmd_insts[inst_idx];
             u8 op = (u8)(inst >> 56);
@@ -1876,8 +1909,17 @@ void vm_exec(u64** commands)
                 console_newline();
                 console_print_i64(vm_pop());
             }
-            else if (op == OP_GOTO) next_cmd = vm_command_find(vm_pop());
-            else if (op == OP_HALT) return;
+            else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
+            else if (op == OP_SLEEP)
+	    {
+	      sleep = vm_pop();
+	      break;
+	    }
+            else if (op == OP_HALT)
+	    {
+		vm_hand_control_back();
+		return;
+	    }
             else if (op == OP_HELP)
             {
                 console_newline();
@@ -1971,10 +2013,12 @@ void vm_exec(u64** commands)
             else
             {
                 DEBUG("unrecognized command");
+		vm_hand_control_back();
                 return;
             }
             DEBUG("executing inst");
             ++inst_idx;
         }
-    }
+
+	time_delay_cb(sleep, vm_exec);
 }
