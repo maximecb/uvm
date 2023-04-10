@@ -19,6 +19,9 @@ typedef struct {
     float z;
 } vec3;
 
+// 4x4 matrix
+typedef float[4][4] mat44;
+
 vec3* ptr_to_vec = NULL;
 
 vec3 g_vec;
