@@ -133,8 +133,8 @@ impl Type
         }
     }
 
-    /// Field offset in bytes
-    pub fn offsetof(&self, name: &str) -> Option<usize>
+    /// Field offset and size in bytes
+    pub fn get_field(&self, name: &str) -> Option<(usize, usize)>
     {
         match self {
             Type::Struct { fields } => {
@@ -145,12 +145,14 @@ impl Type
                     let field_align = t.align_bytes();
                     offset = (offset + (field_align - 1)) & !(field_align - 1);
 
+                    let size = t.sizeof();
+
                     if f_name == name {
-                        return Some(offset);
+                        return Some((offset, size));
                     }
 
                     // Add the field size
-                    offset += t.sizeof();
+                    offset += size;
                 }
 
                 None

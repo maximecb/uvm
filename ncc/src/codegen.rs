@@ -533,6 +533,31 @@ impl Expr
                 out.push_str(&format!("push {};\n", t.sizeof()));
             }
 
+            Expr::Arrow { base, field } => {
+                base.gen_code(sym, out)?;
+                let base_type = base.eval_type()?;
+
+                if let Pointer(s) = base_type {
+                    let (offset, size_bytes) = s.get_field(field).unwrap();
+                    let num_bits = size_bytes * 8;
+
+                    if num_bits <= 64 {
+                        out.push_str(&format!("push {};\n", offset));
+                        out.push_str(&format!("load_u{};\n", num_bits));
+                    }
+                    else
+                    {
+                        // Don't load the field, compute its address instead
+                        out.push_str(&format!("push {};\n", offset));
+                        out.push_str("add_u64;");
+                    }
+                }
+                else
+                {
+                    panic!();
+                }
+            }
+
             Expr::Unary { op, child } => {
                 child.gen_code(sym, out)?;
 

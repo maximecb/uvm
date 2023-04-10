@@ -6,6 +6,12 @@ int g = 3;
 typedef int my_int;
 my_int g2 = 4;
 
+// Linked-list node
+typedef struct {
+    int v;
+    node* next;
+} node;
+
 // 3D vector
 typedef struct {
     float x;
@@ -17,14 +23,11 @@ vec3* ptr_to_vec = NULL;
 
 vec3 g_vec;
 
-// Linked-list node
-typedef struct {
-    int v;
-    node* next;
-} node;
-
 void add(vec3* v0, vec3* v1, vec3* out)
 {
+    v0->y;
+
+
 }
 
 int main()
