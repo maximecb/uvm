@@ -1037,8 +1037,8 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
         // If this is a type definition
         if input.match_token("typedef")? {
             let t = parse_type(input)?;
-            let t = parse_array_type(input, t)?;
             let name = input.parse_ident()?;
+            let t = parse_array_type(input, t)?;
             input.expect_token(";")?;
             unit.typedefs.push((name, Rc::new(Box::new(RefCell::new(t)))));
             continue;

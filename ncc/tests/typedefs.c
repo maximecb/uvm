@@ -20,7 +20,7 @@ typedef struct {
 } vec3;
 
 // 4x4 matrix
-typedef float[4][4] mat44;
+typedef float mat44[4][4];
 
 vec3* ptr_to_vec = NULL;
 
