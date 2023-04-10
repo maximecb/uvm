@@ -961,7 +961,7 @@ void vm_command_text_buffer_backspace()
 #define OP_PLOT 18
 #define OP_LINE 19
 #define OP_FILL 20
-#define OP_HELP 21
+#define OP_HELP_ALL 21
 
 #define OP_HALT 22 // stops execution
 
@@ -1395,12 +1395,17 @@ u8 read_ch()
     return ret;
 }
 
+u8 did_read_all_input()
+{
+    return vm_command_text_buffer_read >= vm_command_text_buffer_cursor;
+}
+
 i64 read_uint()
 {
     ignore_ws();
     size_t start = vm_command_text_buffer_read;
     u64 acc = 0;
-    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    while(!did_read_all_input())
     {
 
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
@@ -1429,7 +1434,7 @@ u64* read_string()
     size_t str_start = ++vm_command_text_buffer_read;
 
     u32 hash = 5381;
-    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    while(!did_read_all_input())
     {
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
         if (cur_char == '\\')
@@ -1453,7 +1458,7 @@ u64* read_sym()
     ignore_ws();
     size_t sym_start = vm_command_text_buffer_read;
     u32 hash = 5381;
-    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    while(!did_read_all_input())
     {
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
         // TODO accept symbols with numbers, _, etc
@@ -1660,16 +1665,61 @@ u64 vm_emit_exp()
     return 0;
 }
 
+void emit_print_str(char* s)
+{
+    u64* interned_s = vm_intern(s, strlen(s), hash(s));
+    u64 var = vm_symbol_init_or_get_var(interned_s);
+    vm_vars[var] = (u64)interned_s;
+    vm_bytecode_emit(OP_PRINT_STR, var);
+}
+
 u8 vm_emit_cmd(u64* command)
 {
     DEBUG("Emitting command");
 
     if(command == vm_commands_sym_help)
     {
-        DEBUG("Emitting help command");
-        vm_bytecode_emit(OP_HELP, 0);
-
+        u64* sym = read_sym();
+        if(sym == NULL)
+        {
+            DEBUG("Emitting help command");
+            vm_bytecode_emit(OP_HELP_ALL, 0);
+        } 
+        else if (sym == vm_commands_sym_let)
+            emit_print_str("Assigns the value of the expression to the variable named by the symbol.   LET {symbol} {expression}");
+        else if (sym == vm_commands_sym_goto)
+            emit_print_str("Goes to a loaded command. Commands can be loaded by prefixing them with a number. GOTO {cmd number}");
+        else if (sym == vm_commands_sym_run)
+            emit_print_str("Runs loaded commands. Commands can be loaded by prefixing them with a number");
+        else if (sym == vm_commands_sym_if)
+            emit_print_str("IF {predicate expression} {then command} ELSE {else command}");
+        else if (sym == vm_commands_sym_plot)
+            emit_print_str("Plots a dot at x and y.  PLOT {x} {y} {color}"); 
+        else if (sym == vm_commands_sym_line)
+            emit_print_str("Draws a line from (x0, y0) to (x1, y1). LINE {x0} {y0} {x1} {y1} {color}"); 
+        else if (sym == vm_commands_sym_clear)
+            emit_print_str("Clears the canvas"); 
+        else if (sym == vm_commands_sym_halt)
+            emit_print_str("Stops command execution. You can use it to stop loops"); 
+        else if (sym == vm_commands_sym_exit)
+            emit_print_str("Exit the program"); 
+        else if (sym == vm_commands_sym_quit)
+            emit_print_str("Same as exit");
+        else if (sym == vm_commands_sym_fill)
+            emit_print_str("Fills the canvas with a  color. FILL {color}");
+        else if (sym == vm_commands_sym_sleep)
+            emit_print_str("Sleep before executing the next command. SLEEP {time in milliseconds}");
+        else if (sym == vm_commands_sym_rand)
+            emit_print_str("A function that returns a random number. Example: LET x RAND()");
+        else if (sym == vm_commands_sym_print)
+            emit_print_str("Prints a string or a number. PRINT \"SOME STRING\"");
+        else
+        {
+            console_error("Command or function is not found");
+            return 1;
+        }
     }
+
     else if(command == vm_commands_sym_let)
     {
         DEBUG("Emitting LET command");
@@ -1782,7 +1832,7 @@ u8 vm_emit_cmd(u64* command)
         TRY(vm_emit_exp()); // the color to fill the screen with
         vm_bytecode_emit(OP_FILL, 0);
     }
-    else if (read_sym() == NULL)
+    else if (did_read_all_input())
     {
         DEBUG("Printing symbol value");
         if(command == NULL) return 1;
@@ -2013,37 +2063,39 @@ void vm_exec()
             vm_hand_control_back();
             return;
         }
-        else if (op == OP_HELP)
+        else if (op == OP_HELP_ALL)
         {
             console_newline();
-            console_puts("UVM Basic commands");
+            console_puts("Commands: ");
             console_newline();
-            console_puts("LET {sym} {expr}");
+            console_puts("LET GOTO IF PLOT LINE");
             console_newline();
-            console_puts("GOTO {cmd num}");
+            console_puts("CLEAR FILL RUN HALT EXIT SLEEP PRINT");
             console_newline();
-            console_puts("IF {pred} {then} ELSE {else}");
             console_newline();
-            console_puts("PLOT {x} {y} {color}");
+            console_puts("Builtin functions:");
             console_newline();
-            console_puts("LINE {x0} {y0} {x1} {y1} {color}");
+            console_puts("RAND");
             console_newline();
-            console_puts("CLEAR");
             console_newline();
-            console_puts("FILL {color}:fills the screen with a color");
+            console_puts("Builtin variables:");
             console_newline();
-            console_puts("RUN:runs loaded commands");
+            console_puts("BLUE RED GREEN BLACK");
             console_newline();
-            console_puts("HALT:stops RUN");
+            console_puts("WHITE");
             console_newline();
-            console_puts("EXIT or QUIT: terminate the Basic REPL");
+            console_puts("CWIDTH(canvas width)");
             console_newline();
-            console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
+            console_puts("CHEIGHT(canvas height)");
             console_newline();
-            console_puts("The canvas size is ");
+            console_newline();
+            console_puts("Canvas size: ");
             console_print_i64(canvas_width);
             console_puts("X");
             console_print_i64(canvas_height);
+            console_newline();
+            console_newline();
+            console_puts("Use HELP {command or function} for more information");
         }
         else if (op == OP_EXIT)
         {
