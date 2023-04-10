@@ -971,6 +971,8 @@ void vm_command_text_buffer_backspace()
 
 #define OP_SLEEP 24 
 #define OP_RAND 25
+#define OP_MOD 26
+
 char* error_prefix = "Error: ";
 
 // Maps symbols to var positions
@@ -1528,6 +1530,7 @@ u64 vm_emit_factor()
         next_ch = peek_next();
         if('*' ==  next_ch) op = OP_MULT;
         else if('/' == next_ch) op = OP_DIV;
+        else if('%' == next_ch) op = OP_MOD;
         else break;
 
         read_ch();
@@ -2061,6 +2064,7 @@ void vm_exec()
             BIN_OP(OP_LT_EQ, <=)
             BIN_OP(OP_EQ, ==)
             BIN_OP(OP_NOT_EQ, !=)
+            BIN_OP(OP_MOD, %)
             else
             {
                 DEBUG("unrecognized command");
