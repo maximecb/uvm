@@ -864,6 +864,8 @@ void console_draw_char(char ch, size_t row_num, size_t col_num)
 //===========================================================================
 /* CANVAS */
 
+size_t canvas_width;
+size_t canvas_height;
 #define CANVAS_PLOT_POINT_SIZE 5
 
 u8 canvas_plot(u64 x, u64 y, u64 color)
@@ -1303,6 +1305,11 @@ int vm_init()
     vm_symbol_init_val(vm_init_sym("GREEN"), green);
     vm_symbol_init_val(vm_init_sym("BLACK"), black);
     vm_symbol_init_val(vm_init_sym("WHITE"), white);
+
+    canvas_width = FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE;
+    canvas_height = FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE;
+    vm_symbol_init_val(vm_init_sym("CWIDTH"), canvas_width);
+    vm_symbol_init_val(vm_init_sym("CHEIGHT"), canvas_height);
 
     return 0;
 }
@@ -2034,9 +2041,9 @@ void vm_exec()
             console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
             console_newline();
             console_puts("The canvas size is ");
-            console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
+            console_print_i64(canvas_width);
             console_puts("X");
-            console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
+            console_print_i64(canvas_height);
         }
         else if (op == OP_EXIT)
         {
