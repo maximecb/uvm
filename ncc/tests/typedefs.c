@@ -52,6 +52,7 @@ int main()
     assert(sizeof(vec3) == 12);
     assert(sizeof(g_vec) == 12);
     assert(sizeof(node) == 16);
+    assert(sizeof(mat44) == 64);
     assert(sizeof(g) == 4);
     assert(sizeof(g2) == 4);
     assert(sizeof(ptr_to_vec) == sizeof(void*));
