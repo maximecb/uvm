@@ -49,7 +49,7 @@ impl Type
             (Float(m), Float(n)) if m == n => true,
             (Pointer(ta), Pointer(tb)) => ta.eq(tb),
 
-            (Array { elem_type: elem_ta, size_expr: size_a }, Array { elem_type: elem_tb, size_expr: size_b } )  => {
+            (Array { elem_type: elem_ta, size_expr: size_a }, Array { elem_type: elem_tb, size_expr: size_b })  => {
                 if !elem_ta.eq(elem_tb) {
                     false
                 } else {
@@ -58,6 +58,26 @@ impl Type
                         _ => panic!()
                     }
                 }
+            }
+
+            (Struct { fields: f_a }, Struct { fields: f_b }) => {
+                if f_a.len() != f_b.len() {
+                    return false;
+                }
+
+                for (idx, (na, ta)) in f_a.iter().enumerate() {
+                    let (nb, tb) = &f_b[idx];
+
+                    if na != nb {
+                        return false;
+                    }
+
+                    if !ta.eq(tb) {
+                        return false;
+                    }
+                }
+
+                true
             }
 
             _ => false

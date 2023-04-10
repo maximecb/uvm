@@ -472,6 +472,7 @@ impl Expr
                             }
                             Type::Fun { .. } => {}
                             Type::Array { .. } => {}
+                            Type::Struct { .. } => {}
                             _ => todo!()
                         }
                     }
@@ -552,6 +553,18 @@ impl Expr
                         out.push_str(&format!("load_u{};\n", elem_bits));
                     }
 
+                    // Address of (&a) operator
+                    UnOp::AddressOf => {
+                        let child_type = child.eval_type()?;
+
+                        // For structs, this is currently a no-op
+                        if let Struct {..} = child_type {
+                            return Ok(())
+                        }
+
+                        todo!();
+                    }
+
                     UnOp::Minus => {
                         let child_type = child.eval_type()?;
 
@@ -595,7 +608,7 @@ impl Expr
                         out.push_str("eq_u64;\n");
                     }
 
-                    _ => todo!()
+                    //_ => todo!()
                 }
             },
 

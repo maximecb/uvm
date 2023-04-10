@@ -15,7 +15,7 @@ typedef struct {
 
 vec3* ptr_to_vec = NULL;
 
-vec3 global_vec;
+vec3 g_vec;
 
 // Linked-list node
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
     node* next;
 } node;
 
-void add(vec3* v0, vec3* v1)
+void add(vec3* v0, vec3* v1, vec3* out)
 {
 }
 
@@ -31,6 +31,7 @@ int main()
 {
     assert(sizeof(my_int) == 4);
     assert(sizeof(vec3) == 12);
+    assert(sizeof(g_vec) == 12);
     assert(sizeof(node) == 16);
     assert(sizeof(g) == 4);
     assert(sizeof(g2) == 4);
@@ -39,6 +40,8 @@ int main()
     my_int n = 2;
     assert(n == 2);
     assert((my_int)3 == 3);
+
+    add(&g_vec, &g_vec, &g_vec);
 
     return 0;
 }

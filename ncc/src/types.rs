@@ -39,8 +39,6 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
         // Assigning a function to a void pointer
         (Pointer(base_type), Fun { .. }) => base_type.eq(&Type::Void),
 
-        // TODO: we need to correctly handle signed vs unsigned, sign extension
-
         _ => lhs_type.eq(&rhs_type)
     }
 }
@@ -264,7 +262,11 @@ impl Expr
                         }
                     }
 
-                    _ => todo!("{:?}", op)
+                    UnOp::AddressOf => {
+                        Ok(Pointer(Box::new(child_type)))
+                    }
+
+                    //_ => todo!("{:?}", op)
                 }
             }
 
