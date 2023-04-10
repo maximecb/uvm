@@ -30,7 +30,7 @@ void add(vec3* v0, vec3* v1, vec3* out)
 {
     out->x = v0->x + v1->x;
     out->y = v0->y + v1->y;
-    //out->z = v0->z + v1->z;
+    out->z = v0->z + v1->z;
 }
 
 int main()
@@ -47,7 +47,9 @@ int main()
     assert(n == 2);
     assert((my_int)3 == 3);
 
+    (&g_vec)->z = 1.0f;
     add(&g_vec, &g_vec, &g_vec);
+    assert((&g_vec)->z == 2.0f);
 
     return 0;
 }

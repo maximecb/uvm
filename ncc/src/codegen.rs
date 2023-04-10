@@ -543,6 +543,7 @@ impl Expr
 
                     if num_bits <= 64 {
                         out.push_str(&format!("push {};\n", offset));
+                        out.push_str("add_u64;");
                         out.push_str(&format!("load_u{};\n", num_bits));
                     }
                     else
@@ -989,8 +990,9 @@ fn gen_assign(
 
                         // Evaluate the base address
                         base.gen_code(sym, out)?;
-
                         out.push_str(&format!("push {};\n", offset));
+                        out.push_str("add_u64;\n");
+
                         out.push_str("getn 1;\n");
                         out.push_str(&format!("store_u{};\n", num_bits));
                     }
@@ -998,8 +1000,8 @@ fn gen_assign(
                     {
                         // Evaluate the base address
                         base.gen_code(sym, out)?;
-
                         out.push_str(&format!("push {};\n", offset));
+                        out.push_str("add_u64;\n");
 
                         // Evaluate the value expression
                         rhs.gen_code(sym, out)?;
