@@ -1264,11 +1264,6 @@ u64* vm_commands_sym_plot;
 u64* vm_commands_sym_line;
 u64* vm_commands_sym_clear;
 u64* vm_commands_sym_help;
-u64* vm_commands_sym_blue;
-u64* vm_commands_sym_red;
-u64* vm_commands_sym_green;
-u64* vm_commands_sym_black;
-u64* vm_commands_sym_white;
 u64* vm_commands_sym_halt;
 u64* vm_commands_sym_exit;
 u64* vm_commands_sym_quit;
@@ -1295,11 +1290,6 @@ int vm_init()
     vm_commands_sym_line = vm_init_sym("LINE");
     vm_commands_sym_clear = vm_init_sym("CLEAR");
     vm_commands_sym_help = vm_init_sym("HELP");
-    vm_commands_sym_blue = vm_init_sym("BLUE");
-    vm_commands_sym_red = vm_init_sym("RED");
-    vm_commands_sym_green = vm_init_sym("GREEN");
-    vm_commands_sym_black = vm_init_sym("BLACK");
-    vm_commands_sym_white = vm_init_sym("WHITE");
     vm_commands_sym_halt = vm_init_sym("HALT");
     vm_commands_sym_exit = vm_init_sym("EXIT");
     vm_commands_sym_quit = vm_init_sym("QUIT");
@@ -1307,6 +1297,13 @@ int vm_init()
     vm_commands_sym_sleep = vm_init_sym("SLEEP");
     vm_commands_sym_rand = vm_init_sym("RAND");
     vm_commands_sym_print = vm_init_sym("PRINT");
+
+    vm_symbol_init_val(vm_init_sym("BLUE"), blue);
+    vm_symbol_init_val(vm_init_sym("RED"), red);
+    vm_symbol_init_val(vm_init_sym("GREEN"), green);
+    vm_symbol_init_val(vm_init_sym("BLACK"), black);
+    vm_symbol_init_val(vm_init_sym("WHITE"), white);
+
     return 0;
 }
 
@@ -1656,33 +1653,6 @@ u64 vm_emit_exp()
     return 0;
 }
 
-u64 vm_emit_color()
-{
-    u64* color = read_sym();
-    if(color == 0)
-    {
-        TRY(vm_emit_exp());
-    }
-    else
-    {
-        u64 color_val;
-        if(color == vm_commands_sym_blue) color_val = blue;
-        else if(color == vm_commands_sym_red) color_val = red;
-        else if(color == vm_commands_sym_green) color_val = green;
-        else if(color == vm_commands_sym_black) color_val = black;
-        else if(color == vm_commands_sym_white) color_val = white;
-        else
-        {
-            console_error("Unrecognized color");
-            return 1;
-        }
-        DEBUGS("PUSHING COLOR: ");
-        DEBUGI(color_val);
-        DEBUG("")
-            vm_bytecode_emit(OP_PUSH, color_val);
-    }
-}
-
 u8 vm_emit_cmd(u64* command)
 {
     DEBUG("Emitting command");
@@ -1770,7 +1740,7 @@ u8 vm_emit_cmd(u64* command)
         DEBUG("Emitting plot");
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
-        TRY(vm_emit_color());
+        TRY(vm_emit_exp());
         vm_bytecode_emit(OP_PLOT, 0);
     }
     else if (command == vm_commands_sym_line)
@@ -1780,7 +1750,7 @@ u8 vm_emit_cmd(u64* command)
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
-        TRY(vm_emit_color());
+        TRY(vm_emit_exp());
         vm_bytecode_emit(OP_LINE, 0);
     }
     else if (command == vm_commands_sym_halt)
@@ -1802,7 +1772,7 @@ u8 vm_emit_cmd(u64* command)
     else if (command == vm_commands_sym_fill)
     {
         DEBUG("emitting exit command");
-        TRY(vm_emit_color()); // the color to fill the screen with
+        TRY(vm_emit_exp()); // the color to fill the screen with
         vm_bytecode_emit(OP_FILL, 0);
     }
     else if (read_sym() == NULL)
