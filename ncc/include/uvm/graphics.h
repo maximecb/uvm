@@ -44,7 +44,7 @@ void fill_rect(
     {
         for (u32 i = 0; i < width; ++i)
         {
-            u32* pix_ptr = fb + (fb_width) * (ymin + j) + (xmin + i);
+            u32* pix_ptr = fb + fb_width * (ymin + j) + (xmin + i);
             *pix_ptr = color;
         }
     }

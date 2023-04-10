@@ -1,3 +1,5 @@
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
@@ -88,7 +90,6 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     // Parenthesized expression or type casting expression
     if ch == '(' {
         input.eat_ch();
-
 
         // Try to parse this as a type casting expression
         let cast_expr = input.with_backtracking(|input| {
@@ -877,14 +878,10 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
             parse_struct(input)
         }
 
-        _ => input.parse_error(&format!("unknown type {}", keyword))
-
-        // TODO: support for typedefs
-        /*
+        // Assume this is a named reference to a typedef
         _ => {
-            Ok(Type::Ref(keyword))
+            Ok(Type::Named(keyword))
         }
-        */
     }
 }
 
@@ -1037,7 +1034,7 @@ pub fn parse_unit(input: &mut Input) -> Result<Unit, ParseError>
             let t = parse_array_type(input, t)?;
             let name = input.parse_ident()?;
             input.expect_token(";")?;
-            unit.typedefs.push((name, t));
+            unit.typedefs.push((name, Rc::new(Box::new(RefCell::new(t)))));
             continue;
         }
 

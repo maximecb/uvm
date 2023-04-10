@@ -1,3 +1,5 @@
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::fmt;
 
 // TODO: we may want a const type
@@ -27,8 +29,12 @@ pub enum Type
         fields: Vec<(String, Type)>,
     },
 
+    // Unresolved named reference to a typedef
+    Named(String),
+
     // Reference to a typedef
-    Ref(String),
+    // This is used to handle cyclic types
+    Ref(Rc<Box<RefCell<Type>>>),
 }
 
 impl Type
@@ -103,7 +109,7 @@ impl Type
                 num_bytes
             }
 
-            _ => panic!("{:?}", self)
+            _ => panic!("sizeof {:?}", self)
         }
     }
 
@@ -115,6 +121,15 @@ impl Type
             UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
             Pointer(_) => 8,
             Array { elem_type, .. } => elem_type.align_bytes(),
+
+            Struct { fields } => {
+                let mut max_align = 0;
+                for (name, t) in fields {
+                    max_align = max_align.max(t.align_bytes());
+                }
+                max_align
+            }
+
             _ => panic!()
         }
     }
@@ -151,6 +166,7 @@ impl fmt::Display for Type {
             Float(n) => write!(f, "f{}", n),
             Pointer(t) => write!(f, "{}*", t.as_ref()),
             Array { elem_type, size_expr } => write!(f, "{}[]", elem_type.as_ref()),
+            Struct { .. } => write!(f, "struct"),
             _ => todo!()
         }
     }
@@ -164,7 +180,7 @@ pub enum Decl
     Arg { idx: usize, t: Type },
     Local { idx: usize, t: Type },
     Fun { name: String, t: Type },
-    TypeDef { name: String, t: Type },
+    TypeDef { name: String, t: Rc<Box<RefCell<Type>>> },
 }
 
 impl Decl
@@ -176,7 +192,7 @@ impl Decl
             Decl::Arg { idx, t } => t.clone(),
             Decl::Local { idx, t } => t.clone(),
             Decl::Fun { name, t } => t.clone(),
-            Decl::TypeDef { name, t } => t.clone(),
+            Decl::TypeDef { name, t } => t.borrow().clone(),
         }
     }
 }
@@ -397,7 +413,7 @@ pub struct Global
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
-    pub typedefs: Vec<(String, Type)>,
+    pub typedefs: Vec<(String, Rc<Box<RefCell<Type>>>)>,
 
     pub global_vars: Vec<Global>,
 

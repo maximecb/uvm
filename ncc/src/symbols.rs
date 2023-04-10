@@ -122,6 +122,77 @@ impl Env
     }
 }
 
+/// Resolve typedefs inside the AST
+/// This doesn't handle potential type recursion inside structs/arrays/typedefs
+fn resolve_types(t: &mut Type, env: &Env, inside_def: Option<&str>) -> Result<(), ParseError>
+{
+    match t {
+        Type::Named(name) => {
+            if let Some(inside_def) = inside_def {
+                if name == inside_def {
+                    return ParseError::msg_only(&format!("recursive instance of \"{}\" in typedef", name));
+                }
+            }
+
+            if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
+                // Since we're not inside this typedef, we just clone the type
+                *t = (**dt).borrow().clone();
+            }
+            else
+            {
+                return ParseError::msg_only(&format!("reference to unknown type \"{}\"", name));
+            }
+        }
+
+        // If we have a pointer to a typedef inside of itself (recursive typedef),
+        // then we create an Rc reference to the typedef's type to avoid infinite recursion
+        Type::Pointer(t) => {
+            if let Type::Named(name) = t.as_ref() {
+                if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
+                    if let Some(inside_def) = inside_def {
+                        if name == inside_def {
+                            *t = Box::new(Type::Ref(dt));
+                            return Ok(());
+                        }
+                    }
+                }
+                else
+                {
+                    return ParseError::msg_only(&format!("reference to unknown type \"{}\"", name));
+                }
+            }
+
+            resolve_types(t, env, inside_def)?;
+        }
+
+        Type::Array { elem_type, size_expr } => {
+            resolve_types(elem_type, env, inside_def)?;
+
+            // TODO: process size_expr?
+        }
+
+        Type::Fun { ret_type, param_types, var_arg } => {
+            resolve_types(ret_type, env, inside_def)?;
+
+            for t in param_types {
+                resolve_types(t, env, inside_def)?;
+            }
+        }
+
+        Type::Struct { fields } => {
+            for (name, t) in fields {
+                resolve_types(t, env, inside_def)?;
+            }
+        }
+
+        Type::Ref(_) => panic!(),
+
+        _ => {}
+    }
+
+    Ok(())
+}
+
 impl Unit
 {
     pub fn resolve_syms(&mut self) -> Result<(), ParseError>
@@ -137,8 +208,15 @@ impl Unit
             });
         }
 
+        // Resolve typedefs inside of typedefs
+        for (name, t) in &mut self.typedefs {
+            resolve_types(&mut t.borrow_mut(), &mut env, Some(name))?;
+        }
+
         // Add definitions for all global variables
         for global in &mut self.global_vars {
+            resolve_types(&mut global.var_type, &env, None)?;
+
             env.define(&global.name, Decl::Global {
                 name: global.name.clone(),
                 t: global.var_type.clone(),
@@ -155,15 +233,16 @@ impl Unit
                 }
                 _ => {}
             }
-
-
-
-
-
         }
 
         // Add definitions for all functions
         for fun in &mut self.fun_decls {
+            resolve_types(&mut fun.ret_type, &env, None)?;
+
+            for (t, name) in &mut fun.params {
+                resolve_types(t, &env, None)?;
+            }
+
             env.define(&fun.name, Decl::Fun {
                 name: fun.name.clone(),
                 t: fun.get_type()
@@ -273,6 +352,8 @@ impl Stmt
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
+                resolve_types(var_type, env, None)?;
+
                 env.define_local(var_name, var_type.clone());
 
                 let decl = env.lookup(var_name).unwrap();
@@ -346,14 +427,18 @@ impl Expr
             Expr::Ref(_) => panic!(),
 
             Expr::Cast { new_type, child } => {
-                if let Type::Ref(name) = new_type {
+                if let Type::Named(name) = new_type {
                     if let Some(Decl::TypeDef { name, t }) = env.lookup(name) {
-                        *new_type = t.clone();
+                        *new_type = (**t).borrow().clone();
                     }
                     else
                     {
-                        return ParseError::msg_only(&format!("reference to unknown type \"{}\"", name));
+                        return ParseError::msg_only(&format!("reference to unknown type \"{}\" in cast expression", name));
                     }
+                }
+                else
+                {
+                    resolve_types(new_type, env, None)?;
                 }
 
                 child.as_mut().resolve_syms(env)?;
@@ -363,7 +448,24 @@ impl Expr
                 child.as_mut().resolve_syms(env)?;
             }
 
-            Expr::SizeofType { .. } => {
+            Expr::SizeofType { t } => {
+                if let Type::Named(name) = t {
+                    if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
+                        *t = (**dt).borrow().clone();
+                    }
+                    else
+                    {
+                        *self = Expr::SizeofExpr {
+                            child: Box::new(Expr::Ident(name.clone()))
+                        };
+
+                        self.resolve_syms(env)?;
+                    }
+                }
+                else
+                {
+                    resolve_types(t, env, None)?;
+                }
             }
 
             Expr::Unary { op, child } => {
@@ -388,10 +490,12 @@ impl Expr
                 }
             }
 
-            Expr::Asm { args, .. } => {
+            Expr::Asm { args, out_type, .. } => {
                 for arg in args {
                     arg.resolve_syms(env)?;
                 }
+
+                resolve_types(out_type, env, None)?;
             }
 
             //_ => todo!()

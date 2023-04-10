@@ -38,7 +38,7 @@ void fill_rect(
     {
         for (size_t i = 0; i < r_width; ++i)
         {
-            u32* pix_ptr = f_buffer + (f_width) * (r_y + j) + (r_x + i);
+            u32* pix_ptr = f_buffer + f_width * (r_y + j) + (r_x + i);
             *pix_ptr = color;
         }
     }
