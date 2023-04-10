@@ -4,8 +4,8 @@
 into bugs and missing features, but I am looking for collaborators who share the vision.**
 
 <p align="center">
+    <img src="media/basic.png" height=180>&nbsp;
     <img src="media/attackers.png" height=180>&nbsp;
-    <img src="media/pirate_ship.png" height=180>&nbsp;
     <img src="media/chess.png" height=180>
 </p>
 
