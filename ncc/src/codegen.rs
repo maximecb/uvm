@@ -974,6 +974,50 @@ fn gen_assign(
     //dbg!(rhs);
 
     match lhs {
+        Expr::Arrow { base, field } => {
+            let base_type = base.eval_type()?;
+
+            if let Pointer(s) = base_type {
+                let (offset, size_bytes) = s.get_field(field).unwrap();
+                let num_bits = size_bytes * 8;
+
+                if num_bits <= 64 {
+                    // If the output value is needed
+                    if need_value {
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
+
+                        // Evaluate the base address
+                        base.gen_code(sym, out)?;
+
+                        out.push_str(&format!("push {};\n", offset));
+                        out.push_str("getn 1;\n");
+                        out.push_str(&format!("store_u{};\n", num_bits));
+                    }
+                    else
+                    {
+                        // Evaluate the base address
+                        base.gen_code(sym, out)?;
+
+                        out.push_str(&format!("push {};\n", offset));
+
+                        // Evaluate the value expression
+                        rhs.gen_code(sym, out)?;
+
+                        out.push_str(&format!("store_u{};\n", num_bits));
+                    }
+                }
+                else
+                {
+                    panic!();
+                }
+            }
+            else
+            {
+                panic!();
+            }
+        }
+
         Expr::Unary { op, child } => {
             match op {
                 UnOp::Deref => {

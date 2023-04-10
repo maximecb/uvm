@@ -25,9 +25,9 @@ vec3 g_vec;
 
 void add(vec3* v0, vec3* v1, vec3* out)
 {
-    v0->y;
-
-
+    out->x = v0->x + v1->x;
+    out->y = v0->y + v1->y;
+    //out->z = v0->z + v1->z;
 }
 
 int main()
