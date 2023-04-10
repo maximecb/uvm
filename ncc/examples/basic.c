@@ -968,6 +968,7 @@ void vm_command_text_buffer_backspace()
 #define OP_SLEEP 24 
 #define OP_RAND 25
 #define OP_MOD 26
+#define OP_PRINT_STR 27
 
 char* error_prefix = "Error: ";
 
@@ -994,7 +995,7 @@ u64** vm_commands_root = NULL;
 
 // Vector containing variable values
 size_t vm_vars_allocated = 0;
-i64 vm_vars[1024];
+i64 vm_vars[32768];
 
 // Stack that can be pushed to and poped from
 size_t vm_stack_cursor = 0;
@@ -1218,6 +1219,12 @@ u64 vm_symbol_init_or_get_var(u64* sym)
     return sym[SYM_META_LOC]-1;
 }
 
+void vm_symbol_init_val(u64* sym, u64 val)
+{
+    u64 var = vm_symbol_init_or_get_var(sym);
+    vm_vars[var] = val;
+}
+
 // translates symbol strings to symbols
 i64 vm_symbol_get_var(u64* sym)
 {
@@ -1268,6 +1275,7 @@ u64* vm_commands_sym_quit;
 u64* vm_commands_sym_fill;
 u64* vm_commands_sym_sleep;
 u64* vm_commands_sym_rand;
+u64* vm_commands_sym_print;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1298,6 +1306,7 @@ int vm_init()
     vm_commands_sym_fill = vm_init_sym("FILL");
     vm_commands_sym_sleep = vm_init_sym("SLEEP");
     vm_commands_sym_rand = vm_init_sym("RAND");
+    vm_commands_sym_print = vm_init_sym("PRINT");
     return 0;
 }
 
@@ -1406,6 +1415,34 @@ i64 read_uint()
     return acc;
 }
 
+// TODO combine read_string and read_sym to some common func
+u64* read_string()
+{
+    ignore_ws();
+    u8 bracket = vm_command_text_buffer[vm_command_text_buffer_read];
+    if(bracket != '"') return NULL;
+
+    size_t str_start = ++vm_command_text_buffer_read;
+
+    u32 hash = 5381;
+    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    {
+        u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
+        if (cur_char == '\\')
+        {
+            ++vm_command_text_buffer_read;
+        }
+        else if (cur_char == '"') break;
+        hash = ((hash << 5) + hash) + cur_char;
+        // TODO handle escape
+
+        ++vm_command_text_buffer_read;
+    }
+    if(vm_command_text_buffer_read == str_start) return NULL;
+
+    return vm_intern((u8*) (vm_command_text_buffer+str_start), vm_command_text_buffer_read-str_start, hash);
+}
+
 u64* read_sym()
 {
     DEBUG("Reading sym");
@@ -1416,17 +1453,11 @@ u64* read_sym()
     {
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
         // TODO accept symbols with numbers, _, etc
-        if(!((90 >= cur_char && cur_char >= 65) || (122 >= cur_char && cur_char >= 97)))
-        {
-            break;
-        }
+        if(!((90 >= cur_char && cur_char >= 65) || (122 >= cur_char && cur_char >= 97))) break;
         hash = ((hash << 5) + hash) + cur_char;
         ++vm_command_text_buffer_read;
     }
-    if(vm_command_text_buffer_read == sym_start)
-    {
-        return 0;
-    }
+    if(vm_command_text_buffer_read == sym_start) return NULL;
     return vm_intern((u8*) (vm_command_text_buffer+sym_start), vm_command_text_buffer_read-sym_start, hash);
 }
 
@@ -1463,6 +1494,7 @@ u8 vm_emit_args(u8 expected_args_count)
         ++actual_args_count;
         vm_emit_exp();
     }
+    read_ch();
     return 0;
 }
 
@@ -1673,6 +1705,28 @@ u8 vm_emit_cmd(u64* command)
         TRY(vm_emit_exp());
         u64 var = vm_symbol_init_or_get_var(sym);
         vm_bytecode_emit(OP_SET_VAR , var);
+    }
+    else if (command == vm_commands_sym_print)
+    {
+        DEBUG("Emitting print");
+        u64* str = read_string();
+        if(str != NULL)
+        {
+            DEBUG("Printing string");
+            u64 var = vm_symbol_init_or_get_var(str);
+            vm_vars[var] = (u64)str;
+            vm_bytecode_emit(OP_PRINT_STR, var);
+        }
+        else
+        {
+            if(vm_emit_exp())
+            {
+                console_error("PRINT expects to be followed by a string or an expression");
+                return 1;
+            }
+            DEBUG("Printing int");
+            vm_bytecode_emit(OP_PRINT_INT, 0);
+        }
     }
     else if (command == vm_commands_sym_sleep)
     {
@@ -1965,6 +2019,13 @@ void vm_exec()
         }
         else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
         else if (op == OP_RAND) vm_push(rand());
+        else if (op == OP_PRINT_STR)
+        {
+            u64* str = (u64)vm_vars[arg];
+            console_newline();
+            console_puts(str[SYM_META_STR]);
+            break;
+        }
         else if (op == OP_SLEEP)
         {
             sleep = vm_pop();
