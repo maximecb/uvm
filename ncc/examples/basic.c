@@ -970,6 +970,7 @@ void vm_command_text_buffer_backspace()
 #define OP_EXIT 23 // Exits the program
 
 #define OP_SLEEP 24 
+#define OP_RAND 25
 char* error_prefix = "Error: ";
 
 // Maps symbols to var positions
@@ -1268,6 +1269,7 @@ u64* vm_commands_sym_exit;
 u64* vm_commands_sym_quit;
 u64* vm_commands_sym_fill;
 u64* vm_commands_sym_sleep;
+u64* vm_commands_sym_rand;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1297,6 +1299,7 @@ int vm_init()
     vm_commands_sym_quit = vm_init_sym("QUIT");
     vm_commands_sym_fill = vm_init_sym("FILL");
     vm_commands_sym_sleep = vm_init_sym("SLEEP");
+    vm_commands_sym_rand = vm_init_sym("RAND");
     return 0;
 }
 
@@ -1364,6 +1367,8 @@ void ignore_ws()
 u8 peek_ch(u8 n)
 {
     ignore_ws();
+    if(vm_command_text_buffer_read >= vm_command_text_buffer_cursor)
+      return 0;
     return (u8)vm_command_text_buffer[vm_command_text_buffer_read + n];
 }
 
@@ -1436,6 +1441,28 @@ void console_error(char* err)
     console_newline();
 }
 
+u8 vm_emit_args(u8 expected_args_count) {
+  char current = read_ch();
+  if(current != '(') {
+    console_error("Expected to find an ( but did not");
+    return 1;
+  }
+  current = peek_next();
+  u8 actual_args_count = 0;
+  while(current != ')') {
+    if(current == 0) {
+	console_error("Expected function call to end with )");
+	return 1;
+    } else if (actual_args_count > expected_args_count) {
+	console_error("Function got too many arguments");
+	return 1;
+    }
+    ++actual_args_count;
+    vm_emit_exp();
+  }
+  return 0;
+}
+
 u64 vm_emit_prim()
 {
     i64 num = read_uint();
@@ -1446,16 +1473,31 @@ u64 vm_emit_prim()
     }
 
     u64* sym = read_sym();
+    char next_ch = peek_next();
 
     if(sym != 0)
     {
+      if(next_ch == '(')
+      {
+	if (sym == vm_commands_sym_rand)
+	{
+	  vm_emit_args(0);
+	  vm_bytecode_emit(OP_RAND, 0);
+	}
+	else
+	{
+	  console_error("Undefined function");
+	  return 1;
+	}
+	return 0;
+      }
+
         i64 var = vm_symbol_get_var(sym);
         if(0 > var) return 1;
         vm_bytecode_emit(OP_GET_VAR, var);
         return 0;
     }
 
-    char next_ch = peek_next();
     if(next_ch == '(')
     {
         read_ch();
@@ -1918,6 +1960,7 @@ void vm_exec()
                 console_print_i64(vm_pop());
             }
             else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
+            else if (op == OP_RAND) vm_push(rand());
             else if (op == OP_SLEEP)
 	    {
 	      sleep = vm_pop();
