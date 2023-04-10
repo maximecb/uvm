@@ -969,6 +969,7 @@ void vm_command_text_buffer_backspace()
 
 #define OP_EXIT 23 // Exits the program
 
+#define OP_SLEEP 24 
 char* error_prefix = "Error: ";
 
 // Maps symbols to var positions
@@ -1266,6 +1267,7 @@ u64* vm_commands_sym_halt;
 u64* vm_commands_sym_exit;
 u64* vm_commands_sym_quit;
 u64* vm_commands_sym_fill;
+u64* vm_commands_sym_sleep;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1294,6 +1296,7 @@ int vm_init()
     vm_commands_sym_exit = vm_init_sym("EXIT");
     vm_commands_sym_quit = vm_init_sym("QUIT");
     vm_commands_sym_fill = vm_init_sym("FILL");
+    vm_commands_sym_sleep = vm_init_sym("SLEEP");
     return 0;
 }
 
@@ -1624,6 +1627,11 @@ u8 vm_emit_cmd(u64* command)
         TRY(vm_emit_exp());
         u64 var = vm_symbol_init_or_get_var(sym);
         vm_bytecode_emit(OP_SET_VAR , var);
+    }
+    else if (command == vm_commands_sym_sleep)
+    {
+      TRY(vm_emit_exp());
+      vm_bytecode_emit(OP_SLEEP, 0);
     }
     else if (command == vm_commands_sym_goto)
     {
