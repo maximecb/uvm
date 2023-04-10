@@ -1443,7 +1443,6 @@ u64* read_string()
         }
         else if (cur_char == '"') break;
         hash = ((hash << 5) + hash) + cur_char;
-        // TODO handle escape
 
         ++vm_command_text_buffer_read;
     }
