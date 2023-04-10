@@ -26,11 +26,24 @@ vec3* ptr_to_vec = NULL;
 
 vec3 g_vec;
 
+mat44 g_mat = {
+    { 1.0f, 0.0f, 0.0f, 0.0f},
+    { 0.0f, 1.0f, 0.0f, 0.0f},
+    { 0.0f, 0.0f, 1.0f, 0.0f},
+    { 0.0f, 0.0f, 0.0f, 1.0f},
+};
+
 void add(vec3* v0, vec3* v1, vec3* out)
 {
     out->x = v0->x + v1->x;
     out->y = v0->y + v1->y;
     out->z = v0->z + v1->z;
+}
+
+void mat44_test(mat44 m)
+{
+    assert(m[2][2] == 1.0f);
+    assert(m[2][3] == 0.0f);
 }
 
 int main()
@@ -50,6 +63,8 @@ int main()
     (&g_vec)->z = 1.0f;
     add(&g_vec, &g_vec, &g_vec);
     assert((&g_vec)->z == 2.0f);
+
+    mat44_test(g_mat);
 
     return 0;
 }
