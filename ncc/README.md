@@ -1,5 +1,7 @@
 # NCC - Not a C Compiler
 
+Ceci n'est pas un compilateur C.
+
 The name NCC stands for "Not a C Compiler", because the compiler is a work in progress
 and not fully compliant. At this stage, it should be considered a toy compiler and you
 should expect to run into bugs and missing features. That being said, it is still
@@ -8,7 +10,7 @@ level of C compliance of NCC over time.
 
 Supported features:
 - Global variables
-- Global arrays, two-dimensional arrays
+- Global arrays, N-dimensional arrays
   - Array initializer syntax
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
@@ -21,6 +23,7 @@ Supported features:
 - Functions and function calls
 - If/else statements
 - For loops, while loops, do-while loops
+- Typedefs
 - C preprocessor
   - `#include`
   - `#define` constants
@@ -35,7 +38,6 @@ Not yet implemented (TODO):
 - Structs
 - Unions
 - Enums
-- Typedefs
 - The `const` qualifier
 - The `double` type
 - The `switch` statement
@@ -43,9 +45,12 @@ Not yet implemented (TODO):
 - Pointers to local variables
 
 Caveats:
+- You may need to manually insert type casts in places where they aren't required by the C standard.
 - At the moment `malloc()` / `free()` don't use a free list, they just leak memory
-- Some error messages are currently fairly weak
-  - Line numbers are currently inaccurate because of the preprocessor. This is a known bug.
+  - If you would like to help with this, the implementation is in [`include/stdlib.h`](https://github.com/maximecb/uvm/blob/main/ncc/include/stdlib.h)
+- The error messages are currently fairly weak
+  - Type errors have no line numbers
+  - Errors inside macro expansions have incorrect line numbers
 - The [`printf()` function](include/stdio.h) doesn't yet have support for printing floats.
 
 ## Usage
