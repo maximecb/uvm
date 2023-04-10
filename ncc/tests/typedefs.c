@@ -15,6 +15,8 @@ typedef struct {
 
 vec3* ptr_to_vec = NULL;
 
+vec3 global_vec;
+
 // Linked-list node
 typedef struct {
     int v;

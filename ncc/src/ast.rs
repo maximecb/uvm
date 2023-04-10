@@ -121,6 +121,15 @@ impl Type
             UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
             Pointer(_) => 8,
             Array { elem_type, .. } => elem_type.align_bytes(),
+
+            Struct { fields } => {
+                let mut max_align = 0;
+                for (name, t) in fields {
+                    max_align = max_align.max(t.align_bytes());
+                }
+                max_align
+            }
+
             _ => panic!()
         }
     }
