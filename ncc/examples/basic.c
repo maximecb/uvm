@@ -881,14 +881,14 @@ u8 canvas_plot(u64 x, u64 y, u64 color)
     return 0;
 }
 
-u8 canvas_coord_gaurd(u64 x, u64 y)
+u8 canvas_coord_gaurd(u32 x, u32 y)
 {
-    if((x + console_width) > FRAME_WIDTH)
+    if((x + console_width) >= FRAME_WIDTH)
     {
         console_error("The given X coordinate exceeds the size of the canvas width");
         return 1;
     }
-    if(y > FRAME_HEIGHT)
+    if(y >= FRAME_HEIGHT)
     {
         console_error("The given y coordinate exceeds the size of the canvas height");
         return 1;
