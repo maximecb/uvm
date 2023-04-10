@@ -433,11 +433,7 @@ impl Expr
                     }
                     else
                     {
-                        // We probably mis-parsed a parenthesized identifier, i.e. (ident)
-                        // Transform this into a reference to an identifier
-                        *self = Expr::Ident(name.clone());
-                        self.resolve_syms(env)?;
-                        return Ok(());
+                        return ParseError::msg_only(&format!("reference to unknown type \"{}\" in cast expression", name));
                     }
                 }
                 else

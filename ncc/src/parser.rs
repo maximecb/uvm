@@ -91,7 +91,6 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
     if ch == '(' {
         input.eat_ch();
 
-
         // Try to parse this as a type casting expression
         let cast_expr = input.with_backtracking(|input| {
             // Type we're casting to
