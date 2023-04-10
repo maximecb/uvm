@@ -15,6 +15,10 @@
 #include <ctype.h>
 #include <uvm/graphics.h>
 
+// VM status
+#define VM_STATUS_RUNNING 0
+#define VM_STATUS_DONE 1
+#define VM_STATUS_HALT 2
 #define FONT_MONOGRAM_NUMBER_OF_CHARACTERS 390
 #define FONT_MONOGRAM_HEIGHT 12
 #define FONT_MONOGRAM_WIDTH 7
@@ -24,6 +28,7 @@
 #define NUM_COLS 25
 #define NUM_ROWS 21
 
+/* #define DEBUG */
 #ifdef DEBUG
 #define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
 #define DEBUGI(i) print_i64(i);
@@ -75,6 +80,7 @@ int black = 0x0;
 
 void textinput(u64 window_id, char ch)
 {
+    if(vm_status != VM_STATUS_DONE) return;
     console_putchar(ch);
     vm_command_text_buffer[vm_command_text_buffer_cursor] = ch;
     DEBUGS(vm_command_text_buffer);
@@ -85,10 +91,13 @@ void textinput(u64 window_id, char ch)
 
 void keydown(u64 window_id, u16 keycode)
 {
-    if (keycode == KEY_ESCAPE)
+
+    if(vm_status != VM_STATUS_DONE)
     {
-        exit(0);
+        if(keycode == KEY_ESCAPE) vm_status = VM_STATUS_HALT;
+        return;
     }
+    if (keycode == KEY_ESCAPE) exit(0);
     else if (keycode == KEY_BACKSPACE)
     {
         if (col_idx > min_col_idx)
@@ -108,8 +117,7 @@ void keydown(u64 window_id, u16 keycode)
     else if (keycode == KEY_RETURN)
     {
         vm_load_cmd();
-        console_print_ready();
-        min_line_idx = line_idx;
+        vm_exec();
     }
     console_redraw_commit();
 }
@@ -856,6 +864,8 @@ void console_draw_char(char ch, size_t row_num, size_t col_num)
 //===========================================================================
 /* CANVAS */
 
+size_t canvas_width;
+size_t canvas_height;
 #define CANVAS_PLOT_POINT_SIZE 5
 
 u8 canvas_plot(u64 x, u64 y, u64 color)
@@ -871,14 +881,14 @@ u8 canvas_plot(u64 x, u64 y, u64 color)
     return 0;
 }
 
-u8 canvas_coord_gaurd(u64 x, u64 y)
+u8 canvas_coord_gaurd(u32 x, u32 y)
 {
-    if((x + console_width) > FRAME_WIDTH)
+    if((x + console_width) >= FRAME_WIDTH)
     {
         console_error("The given X coordinate exceeds the size of the canvas width");
         return 1;
     }
-    if(y > FRAME_HEIGHT)
+    if(y >= FRAME_HEIGHT)
     {
         console_error("The given y coordinate exceeds the size of the canvas height");
         return 1;
@@ -895,6 +905,8 @@ void canvas_fill(u32 color)
 
 //===========================================================================
 /* INTERP */
+
+u64 vm_status = VM_STATUS_DONE;
 
 char vm_command_text_buffer[1024];
 size_t vm_command_text_buffer_cursor =0;
@@ -949,11 +961,16 @@ void vm_command_text_buffer_backspace()
 #define OP_PLOT 18
 #define OP_LINE 19
 #define OP_FILL 20
-#define OP_HELP 21
+#define OP_HELP_ALL 21
 
 #define OP_HALT 22 // stops execution
 
 #define OP_EXIT 23 // Exits the program
+
+#define OP_SLEEP 24 
+#define OP_RAND 25
+#define OP_MOD 26
+#define OP_PRINT_STR 27
 
 char* error_prefix = "Error: ";
 
@@ -980,7 +997,7 @@ u64** vm_commands_root = NULL;
 
 // Vector containing variable values
 size_t vm_vars_allocated = 0;
-i64 vm_vars[1024];
+i64 vm_vars[32768];
 
 // Stack that can be pushed to and poped from
 size_t vm_stack_cursor = 0;
@@ -1204,6 +1221,12 @@ u64 vm_symbol_init_or_get_var(u64* sym)
     return sym[SYM_META_LOC]-1;
 }
 
+void vm_symbol_init_val(u64* sym, u64 val)
+{
+    u64 var = vm_symbol_init_or_get_var(sym);
+    vm_vars[var] = val;
+}
+
 // translates symbol strings to symbols
 i64 vm_symbol_get_var(u64* sym)
 {
@@ -1212,8 +1235,8 @@ i64 vm_symbol_get_var(u64* sym)
         console_newline();
         console_puts(error_prefix);
         console_puts("Trying to access ");
-	console_newline();
-	console_puts("an uninitialized variable");
+        console_newline();
+        console_puts("an uninitialized variable");
         console_puts(sym[SYM_META_STR]);
         return -1;
     }
@@ -1243,15 +1266,13 @@ u64* vm_commands_sym_plot;
 u64* vm_commands_sym_line;
 u64* vm_commands_sym_clear;
 u64* vm_commands_sym_help;
-u64* vm_commands_sym_blue;
-u64* vm_commands_sym_red;
-u64* vm_commands_sym_green;
-u64* vm_commands_sym_black;
-u64* vm_commands_sym_white;
 u64* vm_commands_sym_halt;
 u64* vm_commands_sym_exit;
 u64* vm_commands_sym_quit;
 u64* vm_commands_sym_fill;
+u64* vm_commands_sym_sleep;
+u64* vm_commands_sym_rand;
+u64* vm_commands_sym_print;
 
 u64* vm_init_sym(char* sym)
 {
@@ -1271,15 +1292,25 @@ int vm_init()
     vm_commands_sym_line = vm_init_sym("LINE");
     vm_commands_sym_clear = vm_init_sym("CLEAR");
     vm_commands_sym_help = vm_init_sym("HELP");
-    vm_commands_sym_blue = vm_init_sym("BLUE");
-    vm_commands_sym_red = vm_init_sym("RED");
-    vm_commands_sym_green = vm_init_sym("GREEN");
-    vm_commands_sym_black = vm_init_sym("BLACK");
-    vm_commands_sym_white = vm_init_sym("WHITE");
     vm_commands_sym_halt = vm_init_sym("HALT");
     vm_commands_sym_exit = vm_init_sym("EXIT");
     vm_commands_sym_quit = vm_init_sym("QUIT");
     vm_commands_sym_fill = vm_init_sym("FILL");
+    vm_commands_sym_sleep = vm_init_sym("SLEEP");
+    vm_commands_sym_rand = vm_init_sym("RAND");
+    vm_commands_sym_print = vm_init_sym("PRINT");
+
+    vm_symbol_init_val(vm_init_sym("BLUE"), blue);
+    vm_symbol_init_val(vm_init_sym("RED"), red);
+    vm_symbol_init_val(vm_init_sym("GREEN"), green);
+    vm_symbol_init_val(vm_init_sym("BLACK"), black);
+    vm_symbol_init_val(vm_init_sym("WHITE"), white);
+
+    canvas_width = FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE;
+    canvas_height = FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE;
+    vm_symbol_init_val(vm_init_sym("CWIDTH"), canvas_width);
+    vm_symbol_init_val(vm_init_sym("CHEIGHT"), canvas_height);
+
     return 0;
 }
 
@@ -1347,6 +1378,7 @@ void ignore_ws()
 u8 peek_ch(u8 n)
 {
     ignore_ws();
+    if(vm_command_text_buffer_read >= vm_command_text_buffer_cursor) return 0;
     return (u8)vm_command_text_buffer[vm_command_text_buffer_read + n];
 }
 
@@ -1363,12 +1395,17 @@ u8 read_ch()
     return ret;
 }
 
+u8 did_read_all_input()
+{
+    return vm_command_text_buffer_read >= vm_command_text_buffer_cursor;
+}
+
 i64 read_uint()
 {
     ignore_ws();
     size_t start = vm_command_text_buffer_read;
     u64 acc = 0;
-    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    while(!did_read_all_input())
     {
 
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
@@ -1387,27 +1424,48 @@ i64 read_uint()
     return acc;
 }
 
+// TODO combine read_string and read_sym to some common func
+u64* read_string()
+{
+    ignore_ws();
+    u8 bracket = vm_command_text_buffer[vm_command_text_buffer_read];
+    if(bracket != '"') return NULL;
+
+    size_t str_start = ++vm_command_text_buffer_read;
+
+    u32 hash = 5381;
+    while(!did_read_all_input())
+    {
+        u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
+        if (cur_char == '\\')
+        {
+            ++vm_command_text_buffer_read;
+        }
+        else if (cur_char == '"') break;
+        hash = ((hash << 5) + hash) + cur_char;
+
+        ++vm_command_text_buffer_read;
+    }
+    if(vm_command_text_buffer_read == str_start) return NULL;
+
+    return vm_intern((u8*) (vm_command_text_buffer+str_start), vm_command_text_buffer_read-str_start, hash);
+}
+
 u64* read_sym()
 {
     DEBUG("Reading sym");
     ignore_ws();
     size_t sym_start = vm_command_text_buffer_read;
     u32 hash = 5381;
-    while(vm_command_text_buffer_cursor > vm_command_text_buffer_read)
+    while(!did_read_all_input())
     {
         u8 cur_char = (u8)vm_command_text_buffer[vm_command_text_buffer_read];
         // TODO accept symbols with numbers, _, etc
-        if(!((90 >= cur_char && cur_char >= 65) || (122 >= cur_char && cur_char >= 97)))
-        {
-            break;
-        }
+        if(!((90 >= cur_char && cur_char >= 65) || (122 >= cur_char && cur_char >= 97))) break;
         hash = ((hash << 5) + hash) + cur_char;
         ++vm_command_text_buffer_read;
     }
-    if(vm_command_text_buffer_read == sym_start)
-    {
-        return 0;
-    }
+    if(vm_command_text_buffer_read == sym_start) return NULL;
     return vm_intern((u8*) (vm_command_text_buffer+sym_start), vm_command_text_buffer_read-sym_start, hash);
 }
 
@@ -1417,6 +1475,35 @@ void console_error(char* err)
     console_puts(error_prefix);
     console_puts(err);
     console_newline();
+}
+
+u8 vm_emit_args(u8 expected_args_count)
+{
+    char current = read_ch();
+    if(current != '(')
+    {
+        console_error("Expected to find an ( but did not");
+        return 1;
+    }
+    current = peek_next();
+    u8 actual_args_count = 0;
+    while(current != ')')
+    {
+        if(current == 0)
+        {
+            console_error("Expected function call to end with )");
+            return 1;
+        }
+        else if (actual_args_count > expected_args_count)
+        {
+            console_error("Function got too many arguments");
+            return 1;
+        }
+        ++actual_args_count;
+        vm_emit_exp();
+    }
+    read_ch();
+    return 0;
 }
 
 u64 vm_emit_prim()
@@ -1429,16 +1516,31 @@ u64 vm_emit_prim()
     }
 
     u64* sym = read_sym();
+    char next_ch = peek_next();
 
     if(sym != 0)
     {
+        if(next_ch == '(')
+        {
+            if (sym == vm_commands_sym_rand)
+            {
+                vm_emit_args(0);
+                vm_bytecode_emit(OP_RAND, 0);
+            }
+            else
+            {
+                console_error("Undefined function");
+                return 1;
+            }
+            return 0;
+        }
+
         i64 var = vm_symbol_get_var(sym);
         if(0 > var) return 1;
         vm_bytecode_emit(OP_GET_VAR, var);
         return 0;
     }
 
-    char next_ch = peek_next();
     if(next_ch == '(')
     {
         read_ch();
@@ -1469,6 +1571,7 @@ u64 vm_emit_factor()
         next_ch = peek_next();
         if('*' ==  next_ch) op = OP_MULT;
         else if('/' == next_ch) op = OP_DIV;
+        else if('%' == next_ch) op = OP_MOD;
         else break;
 
         read_ch();
@@ -1561,44 +1664,61 @@ u64 vm_emit_exp()
     return 0;
 }
 
-u64 vm_emit_color()
+void emit_print_str(char* s)
 {
-    u64* color = read_sym();
-    if(color == 0)
-    {
-        TRY(vm_emit_exp());
-    }
-    else
-    {
-        u64 color_val;
-        if(color == vm_commands_sym_blue) color_val = blue;
-        else if(color == vm_commands_sym_red) color_val = red;
-        else if(color == vm_commands_sym_green) color_val = green;
-        else if(color == vm_commands_sym_black) color_val = black;
-        else if(color == vm_commands_sym_white) color_val = white;
-        else
-        {
-            console_error("Unrecognized color");
-            return 1;
-        }
-        DEBUGS("PUSHING COLOR: ");
-        DEBUGI(color_val);
-        DEBUG("")
-            vm_bytecode_emit(OP_PUSH, color_val);
-    }
+    u64* interned_s = vm_intern(s, strlen(s), hash(s));
+    u64 var = vm_symbol_init_or_get_var(interned_s);
+    vm_vars[var] = (u64)interned_s;
+    vm_bytecode_emit(OP_PRINT_STR, var);
 }
 
-u8 vm_emit_cmd()
+u8 vm_emit_cmd(u64* command)
 {
     DEBUG("Emitting command");
-    u64* command = read_sym();
 
     if(command == vm_commands_sym_help)
     {
-        DEBUG("Emitting help command");
-        vm_bytecode_emit(OP_HELP, 0);
-
+        u64* sym = read_sym();
+        if(sym == NULL)
+        {
+            DEBUG("Emitting help command");
+            vm_bytecode_emit(OP_HELP_ALL, 0);
+        } 
+        else if (sym == vm_commands_sym_let)
+            emit_print_str("Assigns the value of the expression to the variable named by the symbol.   LET {symbol} {expression}");
+        else if (sym == vm_commands_sym_goto)
+            emit_print_str("Goes to a loaded command. Commands can be loaded by prefixing them with a number. GOTO {cmd number}");
+        else if (sym == vm_commands_sym_run)
+            emit_print_str("Runs loaded commands. Commands can be loaded by prefixing them with a number");
+        else if (sym == vm_commands_sym_if)
+            emit_print_str("IF {predicate expression} {then command} ELSE {else command}");
+        else if (sym == vm_commands_sym_plot)
+            emit_print_str("Plots a dot at x and y.  PLOT {x} {y} {color}"); 
+        else if (sym == vm_commands_sym_line)
+            emit_print_str("Draws a line from (x0, y0) to (x1, y1). LINE {x0} {y0} {x1} {y1} {color}"); 
+        else if (sym == vm_commands_sym_clear)
+            emit_print_str("Clears the canvas"); 
+        else if (sym == vm_commands_sym_halt)
+            emit_print_str("Stops command execution. You can use it to stop loops"); 
+        else if (sym == vm_commands_sym_exit)
+            emit_print_str("Exit the program"); 
+        else if (sym == vm_commands_sym_quit)
+            emit_print_str("Same as exit");
+        else if (sym == vm_commands_sym_fill)
+            emit_print_str("Fills the canvas with a  color. FILL {color}");
+        else if (sym == vm_commands_sym_sleep)
+            emit_print_str("Sleep before executing the next command. SLEEP {time in milliseconds}");
+        else if (sym == vm_commands_sym_rand)
+            emit_print_str("A function that returns a random number. Example: LET x RAND()");
+        else if (sym == vm_commands_sym_print)
+            emit_print_str("Prints a string or a number. PRINT \"SOME STRING\"");
+        else
+        {
+            console_error("Command or function is not found");
+            return 1;
+        }
     }
+
     else if(command == vm_commands_sym_let)
     {
         DEBUG("Emitting LET command");
@@ -1612,6 +1732,33 @@ u8 vm_emit_cmd()
         u64 var = vm_symbol_init_or_get_var(sym);
         vm_bytecode_emit(OP_SET_VAR , var);
     }
+    else if (command == vm_commands_sym_print)
+    {
+        DEBUG("Emitting print");
+        u64* str = read_string();
+        if(str != NULL)
+        {
+            DEBUG("Printing string");
+            u64 var = vm_symbol_init_or_get_var(str);
+            vm_vars[var] = (u64)str;
+            vm_bytecode_emit(OP_PRINT_STR, var);
+        }
+        else
+        {
+            if(vm_emit_exp())
+            {
+                console_error("PRINT expects to be followed by a string or an expression");
+                return 1;
+            }
+            DEBUG("Printing int");
+            vm_bytecode_emit(OP_PRINT_INT, 0);
+        }
+    }
+    else if (command == vm_commands_sym_sleep)
+    {
+        TRY(vm_emit_exp());
+        vm_bytecode_emit(OP_SLEEP, 0);
+    }
     else if (command == vm_commands_sym_goto)
     {
         DEBUG("Emitting GOTO");
@@ -1623,7 +1770,8 @@ u8 vm_emit_cmd()
         DEBUG("Emitting IF");
         TRY(vm_emit_exp());
         u64 jump_to_else_pos = vm_bytecode_pointer_inc(); // resever inst to jump to else if pred is false
-        TRY(vm_emit_cmd()); // Then cmd
+        command = read_sym();
+        TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 jump_to_else_end_pos = vm_bytecode_pointer_inc(); // reserve inst to jump to end of else;
 
@@ -1635,7 +1783,8 @@ u8 vm_emit_cmd()
             return 1;
         }
         u64 start_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
-        TRY(vm_emit_cmd()); // Then cmd
+        command = read_sym();
+        TRY(vm_emit_cmd(command)); // Then cmd
 
         u64 end_of_else = (u64)vm_commands_selected[VM_COMMANDS_CUR];
 
@@ -1647,7 +1796,7 @@ u8 vm_emit_cmd()
         DEBUG("Emitting plot");
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
-        TRY(vm_emit_color());
+        TRY(vm_emit_exp());
         vm_bytecode_emit(OP_PLOT, 0);
     }
     else if (command == vm_commands_sym_line)
@@ -1657,7 +1806,7 @@ u8 vm_emit_cmd()
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
         TRY(vm_emit_exp());
-        TRY(vm_emit_color());
+        TRY(vm_emit_exp());
         vm_bytecode_emit(OP_LINE, 0);
     }
     else if (command == vm_commands_sym_halt)
@@ -1679,15 +1828,10 @@ u8 vm_emit_cmd()
     else if (command == vm_commands_sym_fill)
     {
         DEBUG("emitting exit command");
-        TRY(vm_emit_color()); // the color to fill the screen with
+        TRY(vm_emit_exp()); // the color to fill the screen with
         vm_bytecode_emit(OP_FILL, 0);
     }
-    else if (command == vm_commands_sym_run)
-    {
-        DEBUG("Running loaded commands");
-        vm_exec(vm_commands_root); 
-    }
-    else if (read_sym() == NULL)
+    else if (did_read_all_input())
     {
         DEBUG("Printing symbol value");
         if(command == NULL) return 1;
@@ -1707,12 +1851,18 @@ u8 vm_emit_cmd()
 
 void vm_load_cmd()
 {
-
+    vm_commands_selected = NULL;
     if(vm_command_text_buffer_cursor == 0) return;
 
     DEBUGS(vm_command_text_buffer);
 
     i64 cmd_num = read_uint();
+    u64* command = read_sym();
+    if (command == vm_commands_sym_run)
+    {
+        vm_commands_selected = vm_commands_root;
+        return;
+    }
     DEBUG("cmd_num\n");
     DEBUGI(cmd_num);
     DEBUG("");
@@ -1736,19 +1886,21 @@ void vm_load_cmd()
 
     vm_commands_selected = cmd;
 
-    if(vm_emit_cmd())
+    if(command == NULL) command = read_sym();
+
+    if(vm_emit_cmd(command))
     {
         if(cmd_num >= 0) vm_command_create(cmd_num);
         else vm_command_free(cmd);
+        vm_commands_selected = NULL;
     }
-    else if(cmd_num < 0)
+    else if (cmd_num >= 0)
     {
-        vm_exec(cmd);
-        vm_command_free(cmd);
+        vm_commands_selected = NULL;
     }
-
     vm_command_text_buffer_clear();
 }
+
 
 i64 vm_pop()
 {
@@ -1848,117 +2000,151 @@ void print_insts(u64** cmd)
     puts("-- END INSTRUCTION PRINTOUT");
 }
 
-void vm_exec(u64** commands)
+void vm_hand_control_back()
 {
-    u64** next_cmd ;
+    vm_commands_selected = NULL;
+    vm_status = VM_STATUS_DONE;
+    console_print_ready();
+    min_line_idx = line_idx;
+    console_redraw_commit();
+}
+
+void vm_exec()
+{
+    if(vm_commands_selected == NULL || vm_status == VM_STATUS_HALT)
+    {
+        vm_hand_control_back();
+        return;
+    } 
+
+    vm_status = VM_STATUS_RUNNING;
     i64 val1;
     i64 val2;
-    for(u64** cmd = commands; cmd != 0; cmd = next_cmd)
+    u64 sleep = 0;
+    u64** cmd = vm_commands_selected;
+    vm_commands_selected = (u64**) cmd[VM_COMMANDS_NEXT];
+    u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
+
+    u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
+    u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
+
+    for(size_t inst_idx = 0; (inst_idx < cmd_size);)
     {
-        next_cmd = (u64**) cmd[VM_COMMANDS_NEXT];
-        u64 cur_cmd_num = (u64)cmd[VM_COMMANDS_NUM];
+        u64 inst = cmd_insts[inst_idx];
+        u8 op = (u8)(inst >> 56);
+        u64 arg = (inst & (((u64)1<<56) - 1));
 
-        u64* cmd_insts = cmd[VM_COMMANDS_INSTS_BUFFER];
-        u64 cmd_size = (u64)cmd[VM_COMMANDS_CUR];
-
-        for(size_t inst_idx = 0; (inst_idx < cmd_size); )
+        // TODO check for overflow
+        if(op == OP_PUSH) vm_push(arg);
+        else if (op == OP_SET_VAR) vm_vars[arg] = vm_pop();
+        else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
+        else if (op == OP_PRINT_INT)
         {
-            u64 inst = cmd_insts[inst_idx];
-            u8 op = (u8)(inst >> 56);
-            u64 arg = (inst & (((u64)1<<56) - 1));
-
-            // TODO check for overflow
-            if(op == OP_PUSH) vm_push(arg);
-            else if (op == OP_SET_VAR) vm_vars[arg] = vm_pop();
-            else if (op == OP_GET_VAR) vm_push(vm_vars[arg]);
-            else if (op == OP_PRINT_INT)
+            console_newline();
+            console_print_i64(vm_pop());
+        }
+        else if (op == OP_GOTO) vm_commands_selected = vm_command_find(vm_pop());
+        else if (op == OP_RAND) vm_push(rand());
+        else if (op == OP_PRINT_STR)
+        {
+            u64* str = (u64)vm_vars[arg];
+            console_newline();
+            console_puts(str[SYM_META_STR]);
+            break;
+        }
+        else if (op == OP_SLEEP)
+        {
+            sleep = vm_pop();
+            break;
+        }
+        else if (op == OP_HALT)
+        {
+            vm_hand_control_back();
+            return;
+        }
+        else if (op == OP_HELP_ALL)
+        {
+            console_newline();
+            console_puts("Commands: ");
+            console_newline();
+            console_puts("LET GOTO IF PLOT LINE");
+            console_newline();
+            console_puts("CLEAR FILL RUN HALT EXIT SLEEP PRINT");
+            console_newline();
+            console_newline();
+            console_puts("Builtin functions:");
+            console_newline();
+            console_puts("RAND");
+            console_newline();
+            console_newline();
+            console_puts("Builtin variables:");
+            console_newline();
+            console_puts("BLUE RED GREEN BLACK");
+            console_newline();
+            console_puts("WHITE");
+            console_newline();
+            console_puts("CWIDTH(canvas width)");
+            console_newline();
+            console_puts("CHEIGHT(canvas height)");
+            console_newline();
+            console_newline();
+            console_puts("Canvas size: ");
+            console_print_i64(canvas_width);
+            console_puts("X");
+            console_print_i64(canvas_height);
+            console_newline();
+            console_newline();
+            console_puts("Use HELP {command or function} for more information");
+        }
+        else if (op == OP_EXIT)
+        {
+            DEBUG("Exiting the program");
+            exit(0);
+        }
+        else if (op == OP_FILL)
+        {
+            DEBUG("Filling the screen color");
+            u32 color = vm_pop();
+            canvas_fill(color);
+            console_redraw_all_text();
+        }
+        else if (op == OP_JUMP)
+        {
+            if (arg > cmd_size) break;
+            DEBUG("Unconditionally jumping");
+            inst_idx = arg;
+            continue;
+        }
+        else if (op == OP_JUMP_IF_NOT)
+        {
+            DEBUG("EXECUTING OP_JUMP_IF_NOT");
+            if (arg > cmd_size) break;
+            if(!vm_pop())
             {
-                console_newline();
-                console_print_i64(vm_pop());
-            }
-            else if (op == OP_GOTO) next_cmd = vm_command_find(vm_pop());
-            else if (op == OP_HALT) return;
-            else if (op == OP_HELP)
-            {
-                console_newline();
-                console_puts("UVM Basic commands");
-                console_newline();
-                console_puts("LET {sym} {expr}");
-                console_newline();
-                console_puts("GOTO {cmd num}");
-                console_newline();
-                console_puts("IF {pred} {then} ELSE {else}");
-                console_newline();
-                console_puts("PLOT {x} {y} {color}");
-                console_newline();
-                console_puts("LINE {x0} {y0} {x1} {y1} {color}");
-                console_newline();
-                console_puts("CLEAR");
-                console_newline();
-                console_puts("FILL {color}:fills the screen with a color");
-                console_newline();
-                console_puts("RUN:runs loaded commands");
-                console_newline();
-                console_puts("HALT:stops RUN");
-                console_newline();
-                console_puts("EXIT or QUIT: terminate the Basic REPL");
-                console_newline();
-                console_puts("Supported colors:BLUE, RED, GREEN, BLACK, WHITE");
-                console_newline();
-                console_puts("The canvas size is ");
-                console_print_i64(FRAME_WIDTH - console_width-CANVAS_PLOT_POINT_SIZE);
-                console_puts("X");
-                console_print_i64(FRAME_HEIGHT-CANVAS_PLOT_POINT_SIZE);
-            }
-            else if (op == OP_EXIT)
-            {
-                DEBUG("Exiting the program");
-                exit(0);
-            }
-            else if (op == OP_FILL)
-            {
-                DEBUG("Filling the screen color");
-                u32 color = vm_pop();
-                canvas_fill(color);
-                console_redraw_all_text();
-            }
-            else if (op == OP_JUMP)
-            {
-                if (arg > cmd_size) break;
-                DEBUG("Unconditionally jumping");
+                DEBUG("DETECTED A NOT SO jumping");
                 inst_idx = arg;
                 continue;
             }
-            else if (op == OP_JUMP_IF_NOT)
-            {
-                DEBUG("EXECUTING OP_JUMP_IF_NOT");
-                if (arg > cmd_size) break;
-                if(!vm_pop())
-                {
-                    DEBUG("DETECTED A NOT SO jumping");
-                    inst_idx = arg;
-                    continue;
-                }
-            }
-            else if (op == OP_PLOT)
-            {
-                u64 color = vm_pop();
-                u64 y = vm_pop();
-                u64 x = vm_pop();
-                canvas_plot(x, y, color);
-            }
-            else if (op == OP_LINE)
-            {
-                u32 color = (u32)vm_pop();
-                u32 y1 = (u32)vm_pop();
-                u32 x1 = (u32)vm_pop();
-                u32 y0 = (u32)vm_pop();
-                u32 x0 = (u32)vm_pop();
-                if(canvas_coord_gaurd(x0, y0)) break;
-                if(canvas_coord_gaurd(x1, y1)) break;
-                draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
-            }
-            BIN_OP(OP_ADD, +)
+        }
+        else if (op == OP_PLOT)
+        {
+            u64 color = vm_pop();
+            u64 y = vm_pop();
+            u64 x = vm_pop();
+            canvas_plot(x, y, color);
+        }
+        else if (op == OP_LINE)
+        {
+            u32 color = (u32)vm_pop();
+            u32 y1 = (u32)vm_pop();
+            u32 x1 = (u32)vm_pop();
+            u32 y0 = (u32)vm_pop();
+            u32 x0 = (u32)vm_pop();
+            if(canvas_coord_gaurd(x0, y0)) break;
+            if(canvas_coord_gaurd(x1, y1)) break;
+            draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
+        }
+        BIN_OP(OP_ADD, +)
             BIN_OP(OP_SUB, -)
             BIN_OP(OP_MULT, *)
             BIN_OP(OP_DIV, /)
@@ -1968,13 +2154,16 @@ void vm_exec(u64** commands)
             BIN_OP(OP_LT_EQ, <=)
             BIN_OP(OP_EQ, ==)
             BIN_OP(OP_NOT_EQ, !=)
-            else
-            {
-                DEBUG("unrecognized command");
-                return;
-            }
-            DEBUG("executing inst");
-            ++inst_idx;
+            BIN_OP(OP_MOD, %)
+        else
+        {
+            DEBUG("unrecognized command");
+            vm_hand_control_back();
+            return;
         }
+        DEBUG("executing inst");
+        ++inst_idx;
     }
+
+    time_delay_cb(sleep, vm_exec);
 }
