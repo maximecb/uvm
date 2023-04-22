@@ -177,9 +177,18 @@ void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 // Generate a perspective projection matrix
 // This is used to project coordinates from eye space into clip space.
 // We follow OpenGL conventions.
-// The Y axis points up, X points to the right, negative Z goes into the screen.
+//
 // aspect = screen width / screen height
 // fovy is in radians
+//
+// +Y points up,
+// +X points to the right,
+// -Z points into the screen.
+//
+// Points are projected such that X/Y are in [-1, 1]
+// Z values between [near, far] get projected into [-1, 1]
+// Points that are behind the camera should be discarded ahead of time
+//
 void perspective(float fovy, float aspect, float near, float far, mat44 result)
 {
     float f = 1.0f / tanf(fovy * 0.5f);
