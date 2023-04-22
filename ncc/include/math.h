@@ -1,6 +1,9 @@
 #ifndef __MATH_H__
 #define __MATH_H__
 
+// Float constants
+#define M_PI_F 3.14159266f
+
 // Here we use macros for performance because
 // ncc doesn't yet support inline functions
 #define sinf(__f) (asm (__f) -> float { sin_f32; })
