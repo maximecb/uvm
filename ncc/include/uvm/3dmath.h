@@ -112,6 +112,24 @@ void mat44_translate(vec3 v, mat44 result)
     result[3][2] = v[2];
 }
 
+// Matrix for a rotation about the Y axis
+void mat44_roty(float theta, mat44 result)
+{
+    // Set the matrix to the identity
+    memcpy(result, MAT44_IDENT, sizeof(mat44));
+
+    float cost = cosf(theta);
+    float sint = sinf(theta);
+
+    // First column
+    result[0][0] = cost;
+    result[0][2] = -sint;
+
+    // Third column
+    result[2][0] = sint;
+    result[2][2] = cost;
+}
+
 // Transform a 3D point using a 4x4 transformation matrix
 void mat44_transform(mat44 mat, vec3 in, vec3 out)
 {
@@ -128,9 +146,6 @@ void mat44_transform(mat44 mat, vec3 in, vec3 out)
         out[2] = out[2] * inv_w;
     }
 }
-
-// TODO:
-//void mat44_roty(angle0, result)
 
 // FIXME: we can't have local array variables
 /*
