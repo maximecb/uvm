@@ -298,15 +298,23 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
         input.eat_ch();
         let sub_expr = parse_prefix(input)?;
 
-        // If this is an integer value, negate it
-        if let Expr::Int(int_val) = sub_expr {
-            return Ok(Expr::Int(-int_val));
-        }
+        // If this is an integer or floating-point value, negate it
+        match sub_expr {
+            Expr::Int(int_val) => {
+                return Ok(Expr::Int(-int_val));
+            }
 
-        return Ok(Expr::Unary{
-            op: UnOp::Minus,
-            child: Box::new(sub_expr)
-        });
+            Expr::Float32(f_val) => {
+                return Ok(Expr::Float32(-f_val));
+            }
+
+            _ => {
+                return Ok(Expr::Unary{
+                    op: UnOp::Minus,
+                    child: Box::new(sub_expr)
+                });
+            }
+        }
     }
 
     // Unary bitwise not expression
