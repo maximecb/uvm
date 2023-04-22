@@ -126,6 +126,22 @@
         "description": "Print an i64 value to standard output."
       },
       {
+        "name": "print_f32",
+        "args": [
+          [
+            "f32",
+            "val"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 20,
+        "description": "Print an f32 value to standard output."
+      },
+      {
         "name": "print_str",
         "args": [
           [

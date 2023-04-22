@@ -70,6 +70,14 @@ void print_i64(i64 val)
 
 Print an i64 value to standard output.
 
+## print_f32
+
+```
+void print_f32(f32 val)
+```
+
+Print an f32 value to standard output.
+
 ## print_str
 
 ```

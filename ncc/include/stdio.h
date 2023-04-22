@@ -82,6 +82,21 @@ int printf(char* format, ...)
 
             // TODO: %f for printing floats
 
+            // Floats (f32)
+            if (format[i+1] == 'f')
+            {
+                ++i;
+
+                // Get the float argument and print it
+                asm (var_arg_idx) -> void {
+                    get_var_arg;
+                    syscall print_f32;
+                };
+                ++var_arg_idx;
+
+                continue;
+            }
+
             // Unknown format specifier
             // Just print it in the output for now
             // That makes it easier to debug the problem than a panic.

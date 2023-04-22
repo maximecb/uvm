@@ -94,6 +94,7 @@ fn normalize_description(text: &str) -> String
 
 fn alloc_syscall_idx(idx_to_name: &mut Vec<Option<String>>, name: &str) -> u16
 {
+    // Try to find a free index
     for idx in 0..idx_to_name.len() {
         if idx_to_name[idx].is_none() {
             let const_idx: u16 = idx.try_into().unwrap();
@@ -102,8 +103,9 @@ fn alloc_syscall_idx(idx_to_name: &mut Vec<Option<String>>, name: &str) -> u16
         }
     }
 
-    idx_to_name.push(Some(name.to_string()));
+    // Allocate a new index
     let const_idx: u16 = idx_to_name.len().try_into().unwrap();
+    idx_to_name.push(Some(name.to_string()));
     return const_idx;
 }
 

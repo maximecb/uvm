@@ -157,6 +157,7 @@ impl SysState
         self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_1(vm_resize_heap));
 
         self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
+        self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
         self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
         self.reg_syscall(PRINT_ENDL, SysCallFn::Fn0_0(print_endl));
         self.reg_syscall(READ_I64, SysCallFn::Fn0_1(read_i64));
@@ -230,6 +231,13 @@ fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
 fn print_i64(vm: &mut VM, v: Value)
 {
     let v = v.as_i64();
+    print!("{}", v);
+    stdout().flush().unwrap();
+}
+
+fn print_f32(vm: &mut VM, v: Value)
+{
+    let v = v.as_f32();
     print!("{}", v);
     stdout().flush().unwrap();
 }

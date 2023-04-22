@@ -29,6 +29,10 @@
 // Print an i64 value to standard output.
 #define print_i64(__val) asm (__val) -> void { syscall print_i64; }
 
+// void print_f32(f32 val)
+// Print an f32 value to standard output.
+#define print_f32(__val) asm (__val) -> void { syscall print_f32; }
+
 // void print_str(const char* str)
 // Print a string to standard output.
 #define print_str(__str) asm (__str) -> void { syscall print_str; }
