@@ -12,7 +12,7 @@
 #define COLOR_ORANGE    0xFF_FF_A5_00
 #define COLOR_YELLOW    0xFF_FF_FF_00
 #define COLOR_MAGENTA   0xFF_FF_00_FF
-#define COLOR_PURPLE    0xFF_CC_88_99
+#define COLOR_PURPLE    0xFF_D6_00_FF
 #define COLOR_TURQUOISE 0xFF_40_E0_D0
 
 // Convert RGB values in the range [0, 255] to a u32 encoding

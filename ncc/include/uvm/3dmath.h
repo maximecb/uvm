@@ -112,7 +112,25 @@ void mat44_translate(vec3 v, mat44 result)
     result[3][2] = v[2];
 }
 
-// Matrix for a rotation about the Y axis
+// Matrix for a rotation around the X axis
+void mat44_rotx(float theta, mat44 result)
+{
+    // Set the matrix to the identity
+    memcpy(result, MAT44_IDENT, sizeof(mat44));
+
+    float cost = cosf(theta);
+    float sint = sinf(theta);
+
+    // Second column
+    result[1][1] = cost;
+    result[1][2] = sint;
+
+    // Third column
+    result[2][1] = -sint;
+    result[2][2] = cost;
+}
+
+// Matrix for a rotation around the Y axis
 void mat44_roty(float theta, mat44 result)
 {
     // Set the matrix to the identity
