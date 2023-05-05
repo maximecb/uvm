@@ -1184,6 +1184,7 @@ mod tests
         gen_ok("i64 g = -77; i64 foo() { return g; }");
         gen_ok("i64 g = -77; void foo() { g = 1; }");
         gen_ok("float g = -3.5f; void foo() {}");
+        gen_ok("float g = +3.5f; void foo() {}");
         gen_ok("bool levar = true; bool foo() { return levar; }");
         gen_ok("int g = 5; int f() { return g; }");
     }

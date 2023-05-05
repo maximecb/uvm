@@ -293,28 +293,37 @@ fn parse_prefix(input: &mut Input) -> Result<Expr, ParseError>
         );
     }
 
-    // Unary negation expression
+    // Unary minus expression
     if ch == '-' {
         input.eat_ch();
         let sub_expr = parse_prefix(input)?;
 
         // If this is an integer or floating-point value, negate it
-        match sub_expr {
-            Expr::Int(int_val) => {
-                return Ok(Expr::Int(-int_val));
+        let expr = match sub_expr {
+            Expr::Int(int_val) => Expr::Int(-int_val),
+            Expr::Float32(f_val) => Expr::Float32(-f_val),
+            _ => Expr::Unary{
+                op: UnOp::Minus,
+                child: Box::new(sub_expr)
             }
+        };
 
-            Expr::Float32(f_val) => {
-                return Ok(Expr::Float32(-f_val));
-            }
+        return Ok(expr)
+    }
 
-            _ => {
-                return Ok(Expr::Unary{
-                    op: UnOp::Minus,
-                    child: Box::new(sub_expr)
-                });
-            }
-        }
+    // Unary plus expression
+    if ch == '+' {
+        input.eat_ch();
+        let sub_expr = parse_prefix(input)?;
+
+        // If this is an integer or floating-point value, negate it
+        let expr = match sub_expr {
+            Expr::Int(int_val) => sub_expr,
+            Expr::Float32(f_val) => sub_expr,
+            _ => return input.parse_error("plus operator applied to non-constant value")
+        };
+
+        return Ok(expr)
     }
 
     // Unary bitwise not expression
