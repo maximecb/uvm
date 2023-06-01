@@ -14,7 +14,7 @@ syscall print_str;
 # Read input number
 syscall read_i64;
 
-# Fall FIB with 1 argument
+# Call FIB with 1 argument
 call FIB, 1;
 
 # Print the result
