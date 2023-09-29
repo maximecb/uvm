@@ -1,7 +1,8 @@
 # UVM
 
-**NOTE: this project is very much a work in progress and not ready for prime time at this point. You're likely to run
-into bugs and missing features, but I am looking for collaborators who share the vision.**
+**NOTE: this project is very much a work in progress. You're likely to run
+into bugs and missing features. I'm looking for collaborators who share the vision
+and want to help me make it happen.**
 
 <p align="center">
     <img src="media/basic.png" height=180>&nbsp;
@@ -23,6 +24,8 @@ Contents:
 - [Design and Architecture](doc/design.md)
 - [Subsystems and System Calls](doc/syscalls.md)
 - [Planning and Evolution](doc/planning.md)
+
+If you think that UVM is cool, you can support my work via [GitHub Sponsors](https://github.com/sponsors/maximecb) :heart:
 
 ## Features
 
