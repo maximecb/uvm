@@ -47,7 +47,7 @@ more fragile and detract from our design goals.
 
 ## Architectural Choices
 
-### There is No Foreign Function Interface (FFI)
+### No Foreign Function Interface (FFI)
 
 UVM provides no FFI. If your program wants to communicate with the outside world, it has to be done through the
 small set of minimalistic APIs ([system calls](/doc/syscalls.md)) that UVM provides. This is likely going to turn
@@ -70,7 +70,7 @@ APIs to eventually guarantee their stability over time. This gives you a stable 
 on. You don't get access to just any library you want, but you get to free yourself from dependency hell so that
 you can focus on the sofware you actually want to build.
 
-### There is No Dynamic Linking
+### No dynamic linking
 
 One of the key goals of UVM is to have application binaries that are fully self-contained. We want
 to avoid a situation where an application needs to download dependencies from the network to install.
@@ -114,7 +114,7 @@ This again comes down to pragmatism. The most widely used ISAs today (x86, ARM a
 
 When designing a virtual platform to run software on, it's tempting to base its design on an existing system. For example, a virtual x86 PC running some barebones Linux kernel. The problem here is that this design can easily get very complex. You have to ask how much of this system you want to simulate. Are you going to handle I/O by simulating PCI devices and SATA hard drives? The more complex the design gets, the harder it is to port. The higher the risk that something will break, or that different implementations will have subtle differences in behavior. The goal with UVM is very much to design a VM that is conceptually simple, and has as few unspecified behaviors as possible.
 
-There's a downside in UVM having its own unique architecture, which is that it can't necessarily benefit from the wealth of tools that target x86 or other existing platforms. However, there's also a flipside to this. If UVM were a virtual x86 architecture, for example, then people would necessarily come to expect that UVM will support all x86 instructions. If UVM were a virtual Linux system, then people would complain when UVM doesn't support features they've come to expect from other Linux systems. UVM has its own design and its own identity, which avoids setting the expectation that UVM has to support whatever other platform X supports.
+There's a downside in UVM having its own unique architecture, which is that it can't automatically benefit from the wealth of tools that target x86 or other existing platforms. However, there's also a flipside to this. If UVM were a virtual x86 architecture, for example, then people would come to expect that UVM will support all x86 instructions and complain when programs they've compiled with GCC or Clang don't work as is. If UVM were a virtual Linux system, then people would complain when UVM doesn't support features they've come to expect from other Linux systems. UVM has its own design and its own identity, which avoids setting the expectation that UVM has to support whatever some other platform X supports.
 
 ### Why a Harvard architecture?
 
