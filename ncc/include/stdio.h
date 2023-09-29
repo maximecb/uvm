@@ -3,6 +3,8 @@
 
 #include <assert.h>
 
+#define EOF -1
+
 int puts(char* str)
 {
     asm (str) -> void { syscall print_str; };
