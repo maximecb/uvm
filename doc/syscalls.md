@@ -94,15 +94,15 @@ void print_endl()
 
 Print a newline to standard output.
 
-## read_i64
+## getchar
 
 ```
-i64 read_i64()
+i32 getchar()
 ```
 
-**Returns:** `i64 val`
+**Returns:** `i32 val`
 
-Read an i64 value from standard input.
+Read one byte from standard input. This is a blocking function. The value -1 is returned on end of file or error.
 
 # time
 

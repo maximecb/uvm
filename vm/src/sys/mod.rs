@@ -6,6 +6,7 @@ pub mod constants;
 extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
+use std::io::Read;
 use std::io::{stdout, stdin};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM};
@@ -160,7 +161,7 @@ impl SysState
         self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
         self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
         self.reg_syscall(PRINT_ENDL, SysCallFn::Fn0_0(print_endl));
-        self.reg_syscall(READ_I64, SysCallFn::Fn0_1(read_i64));
+        self.reg_syscall(GETCHAR, SysCallFn::Fn0_1(getchar));
 
         self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
         self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
@@ -232,14 +233,12 @@ fn print_i64(vm: &mut VM, v: Value)
 {
     let v = v.as_i64();
     print!("{}", v);
-    stdout().flush().unwrap();
 }
 
 fn print_f32(vm: &mut VM, v: Value)
 {
     let v = v.as_f32();
     print!("{}", v);
-    stdout().flush().unwrap();
 }
 
 /// Print a null-terminated UTF-8 string to stdout
@@ -247,23 +246,22 @@ fn print_str(vm: &mut VM, str_ptr: Value)
 {
     let rust_str = vm.get_heap_str(str_ptr.as_usize());
     print!("{}", rust_str);
-    stdout().flush().unwrap();
 }
 
 /// Print a newline characted to stdout
 fn print_endl(vm: &mut VM)
 {
     println!();
-    stdout().flush().unwrap();
 }
 
-fn read_i64(vm: &mut VM) -> Value
+/// Read one byte of input from stdin.
+/// Analogous to C's getchar
+fn getchar(vm: &mut VM) -> Value
 {
-    let mut line_buf = String::new();
-    stdin()
-        .read_line(&mut line_buf)
-        .expect("failed to read input line");
-    let val: i64 = line_buf.trim().parse().expect("expected i64 input");
+    let ch = stdin().bytes().next();
 
-    return Value::from(val);
+    match ch {
+        Some(Ok(ch)) => Value::from(ch as i64),
+        None | Some(Err(_)) => Value::from(-1 as i64),
+    }
 }

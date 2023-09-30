@@ -169,15 +169,15 @@
         "description": "Print a newline to standard output."
       },
       {
-        "name": "read_i64",
+        "name": "getchar",
         "args": [],
         "returns": [
-          "i64",
+          "i32",
           "val"
         ],
         "permission": "default_allowed",
         "const_idx": 8,
-        "description": "Read an i64 value from standard input."
+        "description": "Read one byte from standard input. This is a blocking function. The value -1 is returned on end of file or error."
       }
     ],
     "constants": []

@@ -41,9 +41,9 @@
 // Print a newline to standard output.
 #define print_endl() asm () -> void { syscall print_endl; }
 
-// i64 read_i64()
-// Read an i64 value from standard input.
-#define read_i64() asm () -> i64 { syscall read_i64; }
+// i32 getchar()
+// Read one byte from standard input. This is a blocking function. The value -1 is returned on end of file or error.
+#define getchar() asm () -> i32 { syscall getchar; }
 
 // u64 time_current_ms()
 // Get the UNIX time stamp in milliseconds.

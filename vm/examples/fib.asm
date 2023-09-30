@@ -12,7 +12,7 @@ push PROMPT_STR;
 syscall print_str;
 
 # Read input number
-syscall read_i64;
+call READ_INT, 0;
 
 # Call FIB with 1 argument
 call FIB, 1;
@@ -44,4 +44,47 @@ push 2;
 sub_u64;
 call FIB, 1;
 add_u64;
+ret;
+
+#
+# Read a positive integer from stdlin
+#
+READ_INT:
+
+push 0; # Current integer value
+
+LOOP:
+    # Read one character
+    syscall getchar;
+
+    # If < 0 done
+    dup;
+    push 48;
+    lt_i64;
+    jnz DONE;
+
+    # If > 9 done
+    dup;
+    push 57;
+    gt_i64;
+    jnz DONE;
+
+    # Convert to integer digit
+    push 48;
+    sub_u64;
+
+    # int_val * 10;
+    get_local 0;
+    push 10;
+    mul_u64;
+
+    # int_val + 10;
+    add_u64;
+    set_local 0;
+
+    jmp LOOP;
+
+DONE:
+
+get_local 0;
 ret;

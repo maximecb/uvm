@@ -14,7 +14,7 @@ pub const MEMSET: u16 = 4;
 pub const PRINT_I64: u16 = 5;
 pub const PRINT_STR: u16 = 6;
 pub const PRINT_ENDL: u16 = 7;
-pub const READ_I64: u16 = 8;
+pub const GETCHAR: u16 = 8;
 pub const WINDOW_ON_KEYDOWN: u16 = 9;
 pub const WINDOW_DRAW_FRAME: u16 = 10;
 pub const WINDOW_ON_MOUSEMOVE: u16 = 11;
@@ -45,7 +45,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "print_i64", const_idx: 5, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_str", const_idx: 6, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_endl", const_idx: 7, argc: 0, has_ret: false }),
-    Some(SysCallDesc { name: "read_i64", const_idx: 8, argc: 0, has_ret: true }),
+    Some(SysCallDesc { name: "getchar", const_idx: 8, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "window_on_keydown", const_idx: 9, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "window_on_mousemove", const_idx: 11, argc: 2, has_ret: false }),
