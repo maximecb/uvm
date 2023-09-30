@@ -30,5 +30,6 @@ jobs:
       working-directory: ./ncc
       run: |
         pwd
+        cargo build --profile dev
         ls -al
         RUST_BACKTRACE=1 cargo test
