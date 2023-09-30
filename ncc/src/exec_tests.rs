@@ -42,6 +42,13 @@ fn exec_tests()
     command.arg("--profile");
     command.arg("dev");
 
+    // Make sure that ncc is built in dev/debug mode
+    let mut command = Command::new("cargo");
+    command.current_dir(".");
+    command.arg("build");
+    command.arg("--profile");
+    command.arg("dev");
+
     // Some examples involve creating a UI window
     // We parse/validate those without executing them
     let mut run_examples = HashSet::new();

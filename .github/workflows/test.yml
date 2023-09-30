@@ -31,5 +31,4 @@ jobs:
       run: |
         pwd
         ls -al
-        ls -al target
         RUST_BACKTRACE=1 cargo test
