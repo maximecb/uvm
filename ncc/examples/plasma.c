@@ -8,8 +8,16 @@
 #define FRAME_WIDTH 512
 #define FRAME_HEIGHT 512
 
+u64 prog_start_time;
+
 // RGBA pixels
-u32 frame_buffer[512][512];
+u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
+
+// Palette of RGB colors
+u32 palette[256];
+
+// Greyscale plasma values
+int plasma[FRAME_HEIGHT][FRAME_WIDTH];
 
 // Convert a color from HSV format to RGB format
 u32 hsv_to_rgb(float h, float s, float v)
@@ -53,44 +61,26 @@ u32 hsv_to_rgb(float h, float s, float v)
 
 void anim_callback()
 {
-    u64 start_time = time_current_ms();
-    float time_f = (float)(int)start_time / 1000.0f;
+    u64 frame_start_time = time_current_ms();
+    int time_ms_i = (int)(frame_start_time - prog_start_time);
+    int palette_offs = time_ms_i / 20;
 
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, sizeof(frame_buffer) / 4);
 
-
-
-    /*
+    // Draw the plasma with a shifted palette
     for (int y = 0; y < FRAME_HEIGHT; ++y)
-    for (int x = 0; x < FRAME_WIDTH; ++x)
     {
-        int color = (int)(128.0f + (128.0f * sinf((float)x / 8.0f)));
-        frame_buffer[y][x] = rgb32(color, color, color);
+        for (int x = 0; x < FRAME_WIDTH; ++x)
+        {
+            frame_buffer[y][x] = palette[(plasma[y][x] + palette_offs) % 256];
+        }
     }
-    */
-
-
-
-    for (int y = 0; y < FRAME_HEIGHT; ++y)
-    for (int x = 0; x < FRAME_WIDTH; ++x)
-    {
-        float xf = (float)x / (float)FRAME_WIDTH;
-        float yf = (float)y / (float)FRAME_HEIGHT;
-
-        u32 c = hsv_to_rgb(360.0f * xf, yf, 1.0f);
-
-        frame_buffer[y][x] = c;
-    }
-
-
-
-
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame (30fps)
-    fixed_rate_update(start_time, 1000 / 30, anim_callback);
+    // Schedule a fixed rate update for the next frame (40fps)
+    fixed_rate_update(frame_start_time, 1000 / 40, anim_callback);
 }
 
 void keydown(u64 window_id, u16 keycode)
@@ -103,6 +93,40 @@ void keydown(u64 window_id, u16 keycode)
 
 void main()
 {
+    prog_start_time = time_current_ms();
+
+    // Generate the palette
+    for (int i = 0; i < 256; ++i)
+    {
+        // Vary the hue through the palette
+        palette[i] = hsv_to_rgb(360.0f / 256.0f * (float)i, 1.0f, 1.0f);
+    }
+
+    // Generate the greyscale plasma values
+    // Based on a tutorial by Lode Vandevenne
+    // https://lodev.org/cgtutor/plasma.html
+    for (int y = 0; y < FRAME_HEIGHT; ++y)
+    {
+        for (int x = 0; x < FRAME_WIDTH; ++x)
+        {
+            float dx1 = (float)x - 128.0f;
+            float dy1 = (float)y - 128.0f;
+            float d1 = sqrtf(dx1*dx1 + dy1*dy1) / 7.0f;
+
+            float dx2 = (float)x - 300.0f;
+            float dy2 = (float)y - 306.0f;
+            float d2 = sqrtf(dx2*dx2 + dy2*dy2) / 5.0f;
+
+            // Sum of multiple sine functions, divided by number of sines
+            plasma[y][x] = (int)(
+                  128.0f + (128.0f * sinf((float)x / 12.0f))
+                + 128.0f + (128.0f * sinf((float)y / 35.0f))
+                + 128.0f + (128.0f * sinf(d1))
+                + 128.0f + (128.0f * sinf(d2))
+            ) / 4;
+        }
+    }
+
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Demoscene Plasma Effect", 0);
     window_on_keydown(0, keydown);
 
