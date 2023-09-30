@@ -163,6 +163,7 @@ pub enum Op
     asin_f32,
     acos_f32,
     atan_f32,
+    pow_f32,
     sqrt_f32,
 
     // 32-bit floating-point comparison instructions
@@ -1209,6 +1210,13 @@ impl VM
                 Op::atan_f32 => {
                     let v0 = self.pop().as_f32();
                     self.push(v0.atan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::pow_f32 => {
+                    let v1 = self.pop().as_f32();
+                    let v0 = self.pop().as_f32();
+                    self.push(v0.powf(v1));
                 }
 
                 // Should return NaN for invalid inputs

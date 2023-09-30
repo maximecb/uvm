@@ -1081,6 +1081,7 @@ impl Assembler
             "asin_f32" => self.code.push_op(Op::asin_f32),
             "acos_f32" => self.code.push_op(Op::acos_f32),
             "atan_f32" => self.code.push_op(Op::atan_f32),
+            "pow_f32" => self.code.push_op(Op::pow_f32),
             "sqrt_f32" => self.code.push_op(Op::sqrt_f32),
 
             "eq_f32" => self.code.push_op(Op::eq_f32),
