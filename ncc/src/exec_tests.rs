@@ -15,19 +15,16 @@ fn compile_and_run(file_path: &str, run_example: bool)
     io::stdout().flush().unwrap();
 
     // Compile the source file
-    let mut command = Command::new("cargo");
+    let mut command = Command::new("target/debug/ncc");
     command.current_dir(".");
-    command.arg("run");
     command.arg(file_path);
     println!("{:?}", command);
     let output = command.output().unwrap();
     assert!(output.status.success(), "compilation failed");
 
     // Run the compiled program
-    let mut command = Command::new("cargo");
+    let mut command = Command::new("target/debug/uvm");
     command.current_dir("../vm");
-    command.arg("run");
-    command.arg("--");
     if !run_example { command.arg("--parse-only"); }
     command.arg("../ncc/out.asm");
     println!("{:?}", command);
@@ -38,6 +35,13 @@ fn compile_and_run(file_path: &str, run_example: bool)
 #[test]
 fn exec_tests()
 {
+    // Make sure that uvm is built in dev/debug mode
+    let mut command = Command::new("cargo");
+    command.current_dir("../vm");
+    command.arg("build");
+    command.arg("--profile");
+    command.arg("dev");
+
     // Some examples involve creating a UI window
     // We parse/validate those without executing them
     let mut run_examples = HashSet::new();
