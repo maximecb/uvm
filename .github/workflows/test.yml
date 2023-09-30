@@ -24,8 +24,8 @@ jobs:
 
     - name: Test VM
       working-directory: ./vm
-      run: cargo test
+      run: RUST_BACKTRACE=1 cargo test
 
     - name: Test NCC
       working-directory: ./ncc
-      run: cargo test
+      run: RUST_BACKTRACE=1 cargo test
