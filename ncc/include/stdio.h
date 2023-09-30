@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-#define EOF -1
+#define EOF (-1)
 
 int puts(char* str)
 {

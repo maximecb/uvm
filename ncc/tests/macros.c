@@ -7,6 +7,8 @@
 #undef BIF
 #define BIF 2
 
+#define EOF (-1)
+
 #define MACRO2(a, b) (a+b)
 
 // Recursive macro
@@ -46,6 +48,9 @@ void main()
     BAR((1));
     BAR((1, 2));
     BAR(3 + (1, 2));
+
+    // Definition with parens, but not a macro
+    assert(EOF == -1);
 
     // Macro applied over multiple lines
     MACRO2(

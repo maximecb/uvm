@@ -73,7 +73,6 @@ struct Def
 fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 {
     let name = input.parse_ident()?;
-    input.eat_spaces();
 
     let mut params = None;
 
@@ -615,6 +614,12 @@ mod tests
         process_input(&mut input).unwrap()
     }
 
+    fn fails(src: &str)
+    {
+        let mut input = Input::new(&src, "src");
+        assert!(process_input(&mut input).is_err());
+    }
+
     fn line_count(src: &str) -> usize
     {
         let mut input = Input::new(&src, "src");
@@ -634,9 +639,6 @@ mod tests
 
         let mut input = Input::new(&output, file_name);
         let mut unit = parse_unit(&mut input)?;
-        //unit.resolve_syms().unwrap();
-        //unit.check_types().unwrap();
-        //unit.gen_code().unwrap();
 
         Ok(())
     }
@@ -655,6 +657,12 @@ mod tests
         assert_eq!(process(""), "");
         assert_eq!(process(" "), " ");
         assert_eq!(process("\n"), "\n");
+    }
+
+    #[test]
+    fn macros()
+    {
+        fails("#define EOF(-1)");
     }
 
     #[test]
