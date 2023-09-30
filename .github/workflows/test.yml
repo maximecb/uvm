@@ -28,4 +28,8 @@ jobs:
 
     - name: Test NCC
       working-directory: ./ncc
-      run: RUST_BACKTRACE=1 cargo test
+      run: |
+        pwd
+        ls -al
+        ls -al target
+        RUST_BACKTRACE=1 cargo test

@@ -62,7 +62,7 @@
 #define window_draw_frame(__window_id, __pixel_data) asm (__window_id, __pixel_data) -> void { syscall window_draw_frame; }
 
 // void window_on_mousemove(u32 window_id, void* callback)
-// Register a callback for mouse movement.
+// Register a callback for mouse movement. Mouse x/y coordinates are relative to the top-left corner of the window and may be negative if outside of the window.
 #define window_on_mousemove(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mousemove; }
 
 // void window_on_mousedown(u32 window_id, void* callback)

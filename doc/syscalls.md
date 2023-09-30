@@ -154,7 +154,7 @@ Copy a frame of pixels to be displayed into the window. The frame must have the 
 void window_on_mousemove(u32 window_id, void* callback)
 ```
 
-Register a callback for mouse movement.
+Register a callback for mouse movement. Mouse x/y coordinates are relative to the top-left corner of the window and may be negative if outside of the window.
 
 ## window_on_mousedown
 
