@@ -38,5 +38,8 @@ int main()
     assert(sqrtf(4.0f) == 2.0f);
     assert(sinf(0.0f) == 0.0f);
 
+    assert(floorf(4.5f) == 4.0f);
+    assert(floorf(-4.5f) == -5.0f);
+
     return 0;
 }

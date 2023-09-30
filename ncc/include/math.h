@@ -12,4 +12,14 @@
 #define atanf(__f) (asm (__f) -> float { atans_f32; })
 #define sqrtf(__f) (asm (__f) -> float { sqrt_f32; })
 
+float floorf(float x)
+{
+    float xi = (float)(int)x;
+
+    if (x < xi)
+        return xi - 1.0f;
+
+    return xi;
+}
+
 #endif
