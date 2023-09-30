@@ -41,6 +41,9 @@ fn exec_tests()
     command.arg("build");
     command.arg("--profile");
     command.arg("dev");
+    println!("{:?}", command);
+    let output = command.output().unwrap();
+    assert!(output.status.success(), "execution failed");
 
     // Make sure that ncc is built in dev/debug mode
     let mut command = Command::new("cargo");
@@ -48,6 +51,9 @@ fn exec_tests()
     command.arg("build");
     command.arg("--profile");
     command.arg("dev");
+    println!("{:?}", command);
+    let output = command.output().unwrap();
+    assert!(output.status.success(), "execution failed");
 
     // Some examples involve creating a UI window
     // We parse/validate those without executing them
