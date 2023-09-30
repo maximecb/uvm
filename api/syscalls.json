@@ -290,7 +290,7 @@
         ],
         "permission": "window_display",
         "const_idx": 11,
-        "description": "Register a callback for mouse movement."
+        "description": "Register a callback for mouse movement. Mouse x/y coordinates are relative to the top-left corner of the window and may be negative if outside of the window."
       },
       {
         "name": "window_on_mousedown",

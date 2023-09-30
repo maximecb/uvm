@@ -120,7 +120,7 @@ void draw_palette()
 }
 
 // Mouve movement callback
-void mousemove(u64 window_id, u64 new_x, u64 new_y)
+void mousemove(u64 window_id, int new_x, int new_y)
 {
     if (drawing)
     {
