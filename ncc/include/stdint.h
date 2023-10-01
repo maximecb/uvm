@@ -1,6 +1,12 @@
 #ifndef __STDINT_H__
 #define __STDINT_H__
 
+// Signed integer types
+#define int8_t i8
+#define int16_t i16
+#define int32_t i32
+#define int64_t i64
+
 // Unsigned integer types
 #define uint8_t u8
 #define uint16_t u16
