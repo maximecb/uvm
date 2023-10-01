@@ -10,6 +10,7 @@ mod parser;
 mod ast;
 mod symbols;
 mod types;
+mod casts;
 mod codegen;
 mod exec_tests;
 
@@ -20,6 +21,7 @@ use parser::*;
 use ast::*;
 use symbols::*;
 use types::*;
+use casts::*;
 use codegen::*;
 
 #[derive(Debug, Clone)]
