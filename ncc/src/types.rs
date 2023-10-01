@@ -227,7 +227,8 @@ impl Expr
                     (Pointer(_), Pointer(_)) => {},
                     (Pointer(_), Array{..}) => {},
                     (UInt(64), Pointer(_)) => {},
-                    (Pointer(_), UInt(64)) => {},
+                    (Pointer(_), UInt(_)) => {},
+                    (Pointer(_), Int(_)) => {},
 
                     _ => return ParseError::msg_only(&format!(
                         "cannot cast type {} into {}",
@@ -300,8 +301,6 @@ impl Expr
                 let rhs_type = rhs.eval_type()?;
 
                 match op {
-                    // TODO: we need to automatically insert type casting operations
-                    // when the cast is valid
                     Assign => {
                         if !assign_compat(&lhs_type, &rhs_type) {
                             return ParseError::msg_only(&format!(
@@ -318,10 +317,6 @@ impl Expr
                         match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
-
-                            // TODO: we may need to do sign-extension here
-                            // we could do it in the backend, but it might be better/simpler
-                            // to insert an explicit cast operation
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             (Float(32), Float(32)) => Ok(Float(32)),
@@ -343,10 +338,6 @@ impl Expr
                         match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
-
-                            // TODO: we may need to do sign-extension here
-                            // we could do it in the backend, but it might be better/simpler
-                            // to insert an explicit cast operation
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             (Float(32), Float(32)) => Ok(Float(32)),
@@ -364,10 +355,6 @@ impl Expr
                         match (lhs_type.clone(), rhs_type.clone()) {
                             (UInt(m), UInt(n)) => Ok(UInt(max(m, n))),
                             (Int(m), UInt(n)) | (UInt(m), Int(n)) => Ok(UInt(max(m, n))),
-
-                            // TODO: we may need to do sign-extension here
-                            // we could do it in the backend, but it might be better/simpler
-                            // to insert an explicit cast operation
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             _ => ParseError::msg_only(&format!(

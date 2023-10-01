@@ -528,11 +528,18 @@ impl Expr
                         }
                     }
 
-                    // Pointer cast, these as no-ops
+                    // Pointer cast, these are no-ops
                     (Pointer(_), Pointer(_)) => {},
                     (Pointer(_), Array{..}) => {},
                     (UInt(64), Pointer(_)) => {},
-                    (Pointer(_), UInt(64)) => {},
+                    (Pointer(_), UInt(_)) => {},
+
+                    // Signed integer to pointer cast
+                    (Pointer(_), Int(n)) => {
+                        if *n < 64 {
+                            out.push_str(&format!("sx_i{}_i64;\n", n));
+                        }
+                    },
 
                     _ => panic!("cannot cast to {} from {}", new_type, src_type)
                 }

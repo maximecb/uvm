@@ -93,6 +93,10 @@ impl Expr
 {
     fn insert_casts(&mut self) -> Result<(), ParseError>
     {
+        use Type::*;
+
+        let out_type = self.eval_type()?;
+
         match self {
             Expr::Int(_) => {}
             Expr::Float32(_) => {}
@@ -128,8 +132,55 @@ impl Expr
             }
 
             Expr::Binary { op, lhs, rhs } => {
+                use BinOp::*;
+
                 lhs.as_mut().insert_casts()?;
                 rhs.as_mut().insert_casts()?;
+
+                let lhs_type = lhs.eval_type()?;
+                let rhs_type = rhs.eval_type()?;
+
+                match op {
+                    Assign => {
+                        // TODO
+                    }
+
+                    Add | Sub |
+                    Mul | Div | Mod |
+                    BitAnd | BitOr | BitXor => {
+                        // If needed, cast the lhs to match the output type
+                        if !lhs_type.eq(&out_type) {
+                            *lhs = Box::new(Expr::Cast {
+                                new_type: out_type.clone(),
+                                child: lhs.clone()
+                            })
+                        }
+
+                        // If needed, cast the rhs to match the output type
+                        if !rhs_type.eq(&out_type) {
+                            let new_type = match out_type {
+                                Pointer(_) => {
+                                    if rhs_type.is_signed() {
+                                        Type::Int(64)
+                                    } else {
+                                        Type::UInt(64)
+                                    }
+                                }
+                                _ => out_type.clone()
+                            };
+
+                            *rhs = Box::new(Expr::Cast {
+                                new_type,
+                                child: rhs.clone()
+                            })
+                        }
+                    }
+
+                    LShift | RShift => {}
+                    And | Or => {}
+                    Eq | Ne | Lt | Le | Gt | Ge => {}
+                    Comma => {}
+                }
             }
 
             Expr::Ternary { test_expr, then_expr, else_expr } => {
@@ -142,6 +193,12 @@ impl Expr
                 callee.insert_casts()?;
                 for arg in args {
                     arg.insert_casts()?;
+
+                    // TODO: arg types vs param types
+
+
+
+
                 }
             }
 
