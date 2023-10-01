@@ -511,11 +511,16 @@ impl Expr
                         }
                     }
 
+                    // Int to float
                     // float f = (float)int_val;
-                    (Float(32), Int(32)) => {
+                    (Float(32), Int(n)) if *n <= 32 => {
+                        if *n < 32 {
+                            out.push_str(&format!("sx_i{}_i32;\n", n));
+                        }
                         out.push_str("i32_to_f32;\n");
                     }
 
+                    // Float to int
                     (Int(m), Float(32)) if *m <= 32 => {
                         out.push_str("f32_to_i32;\n");
                         if *m < 32 {
