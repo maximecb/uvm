@@ -93,7 +93,6 @@ impl Expr
 {
     fn insert_casts(&mut self) -> Result<(), ParseError>
     {
-        /*
         match self {
             Expr::Int(_) => {}
             Expr::Float32(_) => {}
@@ -106,35 +105,11 @@ impl Expr
                 }
             }
 
-            Expr::Ident(name) => {
-                //dbg!(&name);
+            Expr::Ident(name) => panic!(),
 
-                if let Some(decl) = env.lookup(name) {
-                    *self = Expr::Ref(decl);
-                }
-                else
-                {
-                    return ParseError::msg_only(&format!("reference to undeclared identifier \"{}\"", name));
-                }
-            }
-
-            Expr::Ref(_) => panic!(),
+            Expr::Ref(_) => {},
 
             Expr::Cast { new_type, child } => {
-                if let Type::Named(name) = new_type {
-                    if let Some(Decl::TypeDef { name, t }) = env.lookup(name) {
-                        *new_type = (**t).borrow().clone();
-                    }
-                    else
-                    {
-                        return ParseError::msg_only(&format!("reference to unknown type \"{}\" in cast expression", name));
-                    }
-                }
-                else
-                {
-                    resolve_types(new_type, env, None)?;
-                }
-
                 child.as_mut().insert_casts()?;
             }
 
@@ -142,25 +117,7 @@ impl Expr
                 child.as_mut().insert_casts()?;
             }
 
-            Expr::SizeofType { t } => {
-                if let Type::Named(name) = t {
-                    if let Some(Decl::TypeDef { name, t: dt }) = env.lookup(name) {
-                        *t = (**dt).borrow().clone();
-                    }
-                    else
-                    {
-                        *self = Expr::SizeofExpr {
-                            child: Box::new(Expr::Ident(name.clone()))
-                        };
-
-                        self.insert_casts()?;
-                    }
-                }
-                else
-                {
-                    resolve_types(t, env, None)?;
-                }
-            }
+            Expr::SizeofType { t } => {}
 
             Expr::Arrow { base, field } => {
                 base.as_mut().insert_casts()?;
@@ -192,13 +149,10 @@ impl Expr
                 for arg in args {
                     arg.insert_casts()?;
                 }
-
-                resolve_types(out_type, env, None)?;
             }
 
             //_ => todo!()
         }
-        */
 
         Ok(())
     }
