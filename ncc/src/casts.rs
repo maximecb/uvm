@@ -28,7 +28,6 @@ impl Stmt
 {
     fn insert_casts(&mut self) -> Result<(), ParseError>
     {
-        /*
         match self {
             Stmt::Expr(expr) => {
                 expr.insert_casts()?;
@@ -62,58 +61,29 @@ impl Stmt
             }
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
-                env.push_scope();
-
                 if init_stmt.is_some() {
                     init_stmt.as_mut().unwrap().insert_casts()?;
                 }
 
                 test_expr.insert_casts()?;
                 incr_expr.insert_casts()?;
-
                 body_stmt.insert_casts()?;
-
-                env.pop_scope();
             }
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
-                resolve_types(var_type, env, None)?;
-
-                env.define_local(var_name, var_type.clone());
-
-                let decl = env.lookup(var_name).unwrap();
-                let ref_expr = Expr::Ref(decl);
-
                 // If there is an initiaization expression
                 if let Some(init_expr) = init_expr {
                     init_expr.insert_casts()?;
-
-                    let assign_expr = Expr::Binary {
-                        op: BinOp::Assign,
-                        lhs: Box::new(ref_expr),
-                        rhs: Box::new(init_expr.clone()),
-                    };
-
-                    *self = Stmt::Expr(assign_expr);
-                }
-                else
-                {
-                    *self = Stmt::Expr(Expr::Int(0));
                 }
             }
 
             Stmt::Block(stmts) => {
-                env.push_scope();
-
                 for stmt in stmts {
                     stmt.insert_casts()?;
                 }
-
-                env.pop_scope();
             }
         }
-        */
 
         Ok(())
     }
@@ -128,11 +98,7 @@ impl Expr
             Expr::Int(_) => {}
             Expr::Float32(_) => {}
 
-            Expr::String(str_const) => {
-                // Get a global symbol for the string constant
-                let decl = env.get_string(str_const);
-                *self = Expr::Ref(decl);
-            }
+            Expr::String(str_const) => {}
 
             Expr::Array(exprs) => {
                 for expr in exprs {

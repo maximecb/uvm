@@ -359,7 +359,7 @@ impl Stmt
                 let decl = env.lookup(var_name).unwrap();
                 let ref_expr = Expr::Ref(decl);
 
-                // If there is an initiaization expression
+                // If there is an initialization expression
                 if let Some(init_expr) = init_expr {
                     init_expr.resolve_syms(env)?;
 
