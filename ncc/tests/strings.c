@@ -28,9 +28,18 @@ int main()
 
     // strchr
     char* str = "lestring";
-    assert(strchr("", 'c') == null);
-    assert(strchr("c", 'c') != null);
+    assert(strchr("", 'c') == NULL);
+    assert(strchr("c", 'c') != NULL);
     assert(strchr(str, 's') == str + 2);
+
+    // strstr
+    char* s = "abcabcabcdabcde";
+    assert(strstr(s, "x") == NULL);
+    assert(strstr(s, "xyz") == NULL);
+    assert(strstr(s, "a") == s + 0);
+    assert(strstr(s, "abc") == s + 0);
+    assert(strstr(s, "abcd") == s + 6);
+    assert(strstr(s, "abcde") == s + 10);
 
     // memset
     memset(arr, 177, 19);
