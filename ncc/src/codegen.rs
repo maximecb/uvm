@@ -494,12 +494,21 @@ impl Expr
                     // These int casts are no-ops
                     (UInt(m), Int(n)) if m >= n => {},
                     (Int(m), UInt(n)) if m >= n => {},
-                    (Int(m), Int(n)) => if m == n {},
+                    (Int(m), Int(n)) if m <= n => {},
                     (UInt(m), UInt(n)) => {},
 
                     // These int casts require truncation
                     (UInt(m), Int(n)) | (Int(m), UInt(n)) if m < n => {
                         out.push_str(&format!("trunc_u{};\n", m));
+                    }
+
+                    // Casts requiring sign-extension
+                    (Int(m), Int(n)) if m > n => {
+                        if *m <= 32 {
+                            out.push_str(&format!("sx_i{}_i32;\n", n));
+                        } else {
+                            out.push_str(&format!("sx_i{}_i64;\n", n));
+                        }
                     }
 
                     // float f = (float)int_val;

@@ -76,6 +76,7 @@ int main()
     assert((int)(short)(-5000) == -5000);
     assert((int)'A' == 0x41);
     assert((short)'A' == 0x41);
+    assert((int64_t)-3 == -3);
 
     return 0;
 }

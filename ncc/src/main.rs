@@ -93,6 +93,7 @@ fn compile_file(file_name: &str, opts: &Options) -> Result<(), ParseError>
 
     unit.resolve_syms()?;
     unit.check_types()?;
+    unit.insert_casts()?;
     let out = unit.gen_code()?;
 
     std::fs::write(&opts.out_file, out).unwrap();
