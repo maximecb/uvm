@@ -6,11 +6,12 @@
 
 // Here we use macros for performance because
 // ncc doesn't yet support inline functions
-#define sinf(__f) (asm (__f) -> float { sin_f32; })
-#define cosf(__f) (asm (__f) -> float { cos_f32; })
-#define tanf(__f) (asm (__f) -> float { tan_f32; })
-#define atanf(__f) (asm (__f) -> float { atans_f32; })
-#define sqrtf(__f) (asm (__f) -> float { sqrt_f32; })
+#define sinf(f) (asm (f) -> float { sin_f32; })
+#define cosf(f) (asm (f) -> float { cos_f32; })
+#define tanf(f) (asm (f) -> float { tan_f32; })
+#define atanf(f) (asm (f) -> float { atans_f32; })
+#define powf(x, y) (asm (x, y) -> float { pow_f32; })
+#define sqrtf(f) (asm (f) -> float { sqrt_f32; })
 
 float floorf(float x)
 {

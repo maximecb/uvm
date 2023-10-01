@@ -34,6 +34,9 @@ int main()
     assert(2.0f * 3.0f == 6.0f);
     assert(6.0f / 2.0f == 3.0f);
 
+    assert(powf(0.0f, 1.0f) == 0.0f);
+    assert(powf(1.0f, 2.0f) == 1.0f);
+    assert(powf(2.0f, 3.0f) == 8.0f);
     assert(sqrtf(0.0f) == 0.0f);
     assert(sqrtf(4.0f) == 2.0f);
     assert(sinf(0.0f) == 0.0f);
