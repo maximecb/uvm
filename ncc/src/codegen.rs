@@ -1139,6 +1139,7 @@ mod tests
         let mut unit = parse_unit(&mut input).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
+        unit.insert_casts().unwrap();
         dbg!(&unit.fun_decls[0]);
         unit.gen_code().unwrap()
     }
@@ -1158,6 +1159,7 @@ mod tests
         let mut unit = parse_unit(&mut input).unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
+        unit.insert_casts().unwrap();
         unit.gen_code().unwrap();
     }
 
