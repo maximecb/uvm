@@ -176,9 +176,29 @@ impl Expr
                         }
                     }
 
+                    Eq | Ne | Lt | Le | Gt | Ge => {
+                        match (lhs_type, rhs_type)
+                        {
+                            (Int(m), Int(n)) if m > n => {
+                                *rhs = Box::new(Expr::Cast {
+                                    new_type: Int(m),
+                                    child: rhs.clone()
+                                })
+                            }
+
+                            (Int(m), Int(n)) if m < n => {
+                                *lhs = Box::new(Expr::Cast {
+                                    new_type: Int(n),
+                                    child: lhs.clone()
+                                })
+                            }
+
+                            _ => {}
+                        }
+                    }
+
                     LShift | RShift => {}
                     And | Or => {}
-                    Eq | Ne | Lt | Le | Gt | Ge => {}
                     Comma => {}
                 }
             }
