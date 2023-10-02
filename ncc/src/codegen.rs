@@ -494,11 +494,11 @@ impl Expr
                     // These int casts are no-ops
                     (UInt(m), Int(n)) if m >= n => {},
                     (Int(m), UInt(n)) if m >= n => {},
-                    (Int(m), Int(n)) if m <= n => {},
-                    (UInt(m), UInt(n)) => {},
+                    (UInt(m), UInt(n)) if m >= n => {},
+                    (Int(m), Int(n)) if m == n => {},
 
                     // These int casts require truncation
-                    (UInt(m), Int(n)) | (Int(m), UInt(n)) if m < n => {
+                    (UInt(m), Int(n)) | (Int(m), UInt(n)) | (Int(m), Int(n)) | (UInt(m), UInt(n)) if m < n => {
                         out.push_str(&format!("trunc_u{};\n", m));
                     }
 
