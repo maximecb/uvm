@@ -77,6 +77,14 @@ int main()
     assert((int)'A' == 0x41);
     assert((short)'A' == 0x41);
     assert((int64_t)-3 == -3);
+    assert((short)-5000 == -5000);
+
+    // Arithmetic with integers of different sizes
+    assert((int)1 + (short)2 == 3);
+    assert((int64_t)1 + (int16_t)2 == 3);
+    assert((int64_t)1 + (int8_t)2 == (int8_t)3);
+    assert((int64_t)3 - (int8_t)1 == (int8_t)2);
+    assert((int64_t)3 - (int8_t)5 == (int16_t)-2);
 
     return 0;
 }
