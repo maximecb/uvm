@@ -109,12 +109,12 @@ void main()
     {
         for (int x = 0; x < FRAME_WIDTH; ++x)
         {
-            float dx1 = (float)x - 128.0f;
-            float dy1 = (float)y - 128.0f;
+            float dx1 = (float)x - 128;
+            float dy1 = (float)y - 128;
             float d1 = sqrtf(dx1*dx1 + dy1*dy1) / 7.0f;
 
-            float dx2 = (float)x - 300.0f;
-            float dy2 = (float)y - 306.0f;
+            float dx2 = (float)x - 300;
+            float dy2 = (float)y - 306;
             float d2 = sqrtf(dx2*dx2 + dy2*dy2) / 5.0f;
 
             // Sum of multiple sine functions, divided by number of sines

@@ -320,6 +320,7 @@ impl Expr
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             (Float(32), Float(32)) => Ok(Float(32)),
+                            (Float(32), Int(n)) | (Int(n), Float(32)) if n <= 32 => Ok(Float(32)),
 
                             (Pointer(b), UInt(n)) | (UInt(n), Pointer(b)) => Ok(Pointer(b)),
                             (Pointer(b), Int(n)) | (Int(n), Pointer(b)) => Ok(Pointer(b)),
@@ -341,6 +342,7 @@ impl Expr
                             (Int(m), Int(n)) => Ok(Int(max(m, n))),
 
                             (Float(32), Float(32)) => Ok(Float(32)),
+                            (Float(32), Int(n)) | (Int(n), Float(32)) if n <= 32 => Ok(Float(32)),
 
                             _ => ParseError::msg_only(&format!(
                                 "incompatible types in arithmetic op {}, {}",
