@@ -1,6 +1,6 @@
-// Demoscene-style plasma effect
-// Based on a tutorial by Lode Vandevenne
-// https://lodev.org/cgtutor/plasma.html
+// Demoscene-style fire effect
+// Based on a tutorial by Lode Vandevenne:
+// https://lodev.org/cgtutor/fire.html
 
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
@@ -12,19 +12,18 @@
 #define FRAME_WIDTH 512
 #define FRAME_HEIGHT 512
 
-u64 prog_start_time;
-
 // RGBA pixels
 u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
 
 // Palette of RGB colors
 u32 palette[256];
 
-// Greyscale plasma values
-int plasma[FRAME_HEIGHT][FRAME_WIDTH];
+// Greyscale fire values
+int fire[FRAME_HEIGHT][FRAME_WIDTH];
 
-// Convert a color from HSV format to RGB format
-u32 hsv_to_rgb(float h, float s, float v)
+// TODO
+// Convert a color from HSL format to RGB format
+u32 hsl_to_rgb(float h, float s, float v)
 {
 	if (s < 0.01f)
 	{
@@ -66,18 +65,39 @@ u32 hsv_to_rgb(float h, float s, float v)
 void anim_callback()
 {
     u64 frame_start_time = time_current_ms();
-    int time_ms_i = (int)(frame_start_time - prog_start_time);
-    int palette_offs = time_ms_i / 20;
 
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, sizeof(frame_buffer) / 4);
 
-    // Draw the plasma with a shifted palette
+    // Randomize the bottom row
+    for (int x = 0; x < FRAME_WIDTH; ++x)
+    {
+        int r = abs(rand()) % 256;
+        assert(r >= 0 && r < 256);
+        fire[FRAME_HEIGHT-1][x] = r;
+    }
+
+    // Apply the update rule, from top to bottom
+    for (int y = 0; y < FRAME_HEIGHT - 1; ++y)
+    {
+        for (int x = 1; x < FRAME_WIDTH - 1; ++x)
+        {
+            int pix0 = fire[y+1][x];
+            int pix1 = fire[y+1][(x-1 + FRAME_WIDTH) % FRAME_WIDTH];
+            int pix2 = fire[y+1][(x+1) % FRAME_WIDTH];
+            int pix3 = fire[(y+2) % FRAME_HEIGHT][x];
+            int sum = (pix0 + pix1 + pix2 + pix3) * 63 / 256;
+            assert(sum < 256);
+            fire[y][x] = sum;
+        }
+    }
+
+    // Draw the fire
     for (int y = 0; y < FRAME_HEIGHT; ++y)
     {
         for (int x = 0; x < FRAME_WIDTH; ++x)
         {
-            frame_buffer[y][x] = palette[(plasma[y][x] + palette_offs) % 256];
+            frame_buffer[y][x] = palette[fire[y][x]];
         }
     }
 
@@ -97,39 +117,15 @@ void keydown(u64 window_id, u16 keycode)
 
 void main()
 {
-    prog_start_time = time_current_ms();
-
     // Generate the palette
     for (int i = 0; i < 256; ++i)
     {
         // Vary the hue through the palette
-        palette[i] = hsv_to_rgb(360.0f / 256.0f * (float)i, 1.0f, 1.0f);
+        // Hue should be between orange and red
+        palette[i] = hsl_to_rgb(360.0f / 256.0f * (float)i, 1.0f, 1.0f);
     }
 
-    // Generate the greyscale plasma values
-    for (int y = 0; y < FRAME_HEIGHT; ++y)
-    {
-        for (int x = 0; x < FRAME_WIDTH; ++x)
-        {
-            float dx1 = (float)x - 128;
-            float dy1 = (float)y - 128;
-            float d1 = sqrtf(dx1*dx1 + dy1*dy1) / 7.0f;
-
-            float dx2 = (float)x - 300;
-            float dy2 = (float)y - 306;
-            float d2 = sqrtf(dx2*dx2 + dy2*dy2) / 5.0f;
-
-            // Sum of multiple sine functions, divided by number of sines
-            plasma[y][x] = (int)(
-                  128.0f + (128.0f * sinf((float)x / 12.0f))
-                + 128.0f + (128.0f * sinf((float)y / 35.0f))
-                + 128.0f + (128.0f * sinf(d1))
-                + 128.0f + (128.0f * sinf(d2))
-            ) / 4;
-        }
-    }
-
-    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Demoscene Plasma Effect", 0);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Demoscene Fire Effect", 0);
     window_on_keydown(0, keydown);
 
     time_delay_cb(0, anim_callback);
