@@ -533,6 +533,7 @@ impl Expr
                     (Pointer(_), Array{..}) => {},
                     (UInt(64), Pointer(_)) => {},
                     (Pointer(_), UInt(_)) => {},
+                    (Pointer(_), Fun {..}) => {},
 
                     // Signed integer to pointer cast
                     (Pointer(_), Int(n)) => {

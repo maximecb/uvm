@@ -230,14 +230,34 @@ impl Expr
 
             Expr::Call { callee, args } => {
                 callee.insert_casts()?;
-                for arg in args {
-                    arg.insert_casts()?;
+                let callee_t = callee.eval_type()?;
 
-                    // TODO: arg types vs param types
+                let param_types = if let Fun { param_types, .. } = callee_t {
+                    param_types
+                } else {
+                    panic!()
+                };
 
+                for idx in 0..args.len() {
+                    args[idx].insert_casts()?;
 
+                    // Ignore variadic arguments
+                    if idx >= param_types.len() {
+                        continue;
+                    }
 
+                    let arg_t = args[idx].eval_type()?;
+                    let param_t = &param_types[idx];
 
+                    if !arg_t.eq(&param_t) {
+                        let arg_clone = args[idx].clone();
+                        let new_arg = Expr::Cast {
+                            new_type: param_t.clone(),
+                            child: Box::new(arg_clone)
+                        };
+
+                        args[idx] = new_arg;
+                    }
                 }
             }
 

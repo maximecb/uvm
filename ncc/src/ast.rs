@@ -215,7 +215,7 @@ impl fmt::Display for Type {
             Pointer(t) => write!(f, "{}*", t.as_ref()),
             Array { elem_type, size_expr } => write!(f, "{}[]", elem_type.as_ref()),
             Struct { .. } => write!(f, "struct"),
-            _ => todo!()
+            _ => write!(f, "{:?}", self),
         }
     }
 }
