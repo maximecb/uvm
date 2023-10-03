@@ -142,7 +142,12 @@ impl Expr
 
                 match op {
                     Assign => {
-                        // TODO
+                        if !rhs_type.eq(&out_type) {
+                            *rhs = Box::new(Expr::Cast {
+                                new_type: out_type.clone(),
+                                child: rhs.clone()
+                            })
+                        }
                     }
 
                     Add | Sub |

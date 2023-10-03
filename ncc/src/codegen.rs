@@ -581,6 +581,15 @@ impl Expr
             }
 
             Expr::Unary { op, child } => {
+                // If we're computing the address of a dereference,
+                // which happens for addresses of array elements
+                if *op == UnOp::AddressOf {
+                    if let Expr::Unary { op: UnOp::Deref, child } = child.as_ref() {
+                        child.gen_code(sym, out)?;
+                        return Ok(());
+                    }
+                }
+
                 child.gen_code(sym, out)?;
 
                 match op {

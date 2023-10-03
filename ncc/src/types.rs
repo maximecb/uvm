@@ -28,6 +28,9 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
         // NOTE: we may need to use truncation or sign-extension here
         (Int(m), Int(n)) => true,
 
+        // Assign int to float with at least as many bits
+        (Float(m), Int(n)) if n <= m => true,
+
         // Assigning an integer to a pointer
         // Note: in C, this works but only for the value 0
         (Pointer(base_type), UInt(_)) => true,

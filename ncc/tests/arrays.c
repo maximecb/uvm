@@ -8,7 +8,7 @@ uint8_t bytes2d[2][2] = { {0, 1}, {2, 3} };
 uint8_t array2d[600][800];
 
 // Integer literals of type long and int in the same array literal
-u64 arr_int_long[2] = { 0x7fff8beb, 0x8000e82a };
+uint64_t arr_int_long[2] = { 0x7fff8beb, 0x8000e82a };
 
 int main()
 {
@@ -31,12 +31,12 @@ int main()
     assert(sizeof(array2d[0]) == 800);
     assert(sizeof(array2d[0][0]) == 1);
 
-    /*
-    assert(&(array[0][0]) + 1 == &(array[0][1]));
-    void* p0 = &(array[0]);
-    void* p1 = &(array[1]);
-    assert(p0 + 800 == p1);
-    */
+    // Array element addresses
+    assert(&int_array[0] == int_array);
+    assert(&(array2d[0][0]) + 1 == &(array2d[0][1]));
+    int* p0 = &int_array[0];
+    int* p1 = &int_array[1];
+    assert(p0 + 1 == p1);
 
     // Check row address computation
     uint8_t* row0 = *(array2d + 0);
