@@ -7,6 +7,8 @@
 uint8_t arr[19];
 uint8_t arr2[19];
 
+char dst[32];
+
 int main()
 {
     assert(strlen("") == 0);
@@ -40,6 +42,12 @@ int main()
     assert(strstr(s, "abc") == s + 0);
     assert(strstr(s, "abcd") == s + 6);
     assert(strstr(s, "abcde") == s + 10);
+
+    // strncat
+    assert(strncat(dst, "foo", 3) == dst);
+    assert(strcmp(dst, "foo") == 0);
+    assert(strncat(dst, "bar", 3) == dst);
+    assert(strcmp(dst, "foobar") == 0);
 
     // memset
     memset(arr, 177, 19);

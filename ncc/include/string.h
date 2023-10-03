@@ -97,10 +97,33 @@ char* strstr(char* s1, char* s2)
     return NULL;
 }
 
-// TODO:
-// char* strncpy(char* destination, const char* source, size_t num)
+// TODO
+/*
+char* strncpy(char* dst, char* src, size_t num)
+{
+}
+*/
 
-// TODO:
-// char* strncat(char* destination, const char* source, size_t num)
+char* strncat(char* dst, char* src, size_t num)
+{
+    char* ret = dst;
+
+    while (*dst)
+    {
+        ++dst;
+    }
+
+    while (num && *src)
+    {
+        *dst = *src;
+        ++src;
+        ++dst;
+        --num;
+    }
+
+    *dst = '\0';
+
+    return ret;
+}
 
 #endif // #ifndef __STRING_H__

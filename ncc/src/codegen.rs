@@ -81,7 +81,7 @@ fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Resu
             }
         }
 
-        _ => panic!()
+        _ => panic!("unable to initialize global array")
     }
 
     Ok(())
