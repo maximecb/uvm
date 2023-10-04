@@ -77,10 +77,10 @@ It might not be immediately apparent, but those operations use SIMD
 instructions under the hood. Even though UVM doesn't yet have a JIT,
 you can use `memcpy` to copy bytes at tens of gigabytes per second,
 and you can use `memcpy` to write graphics routines and copy sprites
-into a frame buffer while benefiting your CPU's SIMD capabilities.
+into a frame buffer while benefiting from your CPU's SIMD capabilities.
 
 Eventually, UVM may provide operations such as a blit primitive
-with alpha blending, vector and matrix operations, or a more
+with alpha blending, vector and tensor operations, or a more
 general [einsum](https://rockt.github.io/2018/04/30/einsum) primitive.
 Another possibility would be to implement a mechanism to run UVM
 bytecode in an [SIMT](https://en.wikipedia.org/wiki/Single_instruction,_multiple_threads)
@@ -98,6 +98,6 @@ changing the existing system calls.
 When it comes to adding new APIs and extensions to UVM, we want to
 do it slowly and carefully. It's important that UVM remains relatively
 small and maintainable. We don't want to add dozens of dependencies
-that could break. We don't want to make UVM hard to build. We also
-don't want to add half-baked APIs that people will rely on, and will
-turn out to be a liability because of poor design choices.
+that could break. We don't want to make UVM hard to compile and set up.
+We also don't want to add half-baked APIs that people will come rely on,
+and will turn out to be a liability because of poor design choices.
