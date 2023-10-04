@@ -18,8 +18,8 @@ modern web browsers can't manage to produce an identical rendering of the same w
 
 There seems to be a growing interest in retrocomputing, and that interest likely stems, in large part,
 because the complexity of modern computer systems and their software environment is extremely high, and
-there is constant unnecessary churn becomes exhausting. UVM aims to provide a platform that is simple,
-stable over time, and easy to target and develop for. I hope that this platform will bring back the joy
+there is constant unnecessary churn, which becomes exhausting. UVM aims to provide a platform that is simple,
+stable over time, and easy to target and develop for. I hope that this platform will help bring back the joy
 of programming for many.
 
 If you'd like to read more about the philosophy behind UVM's design, here are some relevant blog posts:
