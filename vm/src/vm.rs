@@ -401,6 +401,11 @@ impl MemBlock
     /// Resize to a new size in bytes
     pub fn resize(&mut self, num_bytes: usize)
     {
+        // The heap size should be a multiple of 8
+        if num_bytes % 8 != 0 {
+            panic!("the heap size should be a multiple of 8 bytes")
+        }
+
         self.data.resize(num_bytes, 0);
     }
 
