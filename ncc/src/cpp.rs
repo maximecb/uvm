@@ -377,6 +377,7 @@ fn expand_macro(
         let mut input = Input::new(&text, &input.src_name);
         let mut output = String::new();
 
+        // Loop through the macro text
         loop
         {
             if input.eof() {
