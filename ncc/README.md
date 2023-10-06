@@ -30,9 +30,11 @@ Supported features:
   - `#define(a,b,c)` macros
   - `#undef`
   - `#ifdef` / `#ifndef`
+  - `__COUNTER__`, `__LINE__`, `__FILE__`
 - Headers for UVM bindings
   - `#include <uvm/syscalls.h>`
   - `#include <uvm/utils.h>`
+  - `#include <uvm/graphics.h>`
 
 Not yet implemented (TODO):
 - Structs
