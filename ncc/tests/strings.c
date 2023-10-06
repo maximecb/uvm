@@ -49,6 +49,13 @@ int main()
     assert(strncat(dst, "bar", 3) == dst);
     assert(strcmp(dst, "foobar") == 0);
 
+    // strncpy
+    memset(dst, 0, sizeof(dst));
+    assert(strncpy(dst, "foo", 3) == dst);
+    assert(strcmp(dst, "foo") == 0);
+    assert(strncpy(dst, "", 3) == dst);
+    assert(strcmp(dst, "") == 0);
+
     // memset
     memset(arr, 177, 19);
     assert(arr[0] == 177);

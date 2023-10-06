@@ -97,12 +97,28 @@ char* strstr(char* s1, char* s2)
     return NULL;
 }
 
-// TODO
-/*
 char* strncpy(char* dst, char* src, size_t num)
 {
+    char* ret = dst;
+
+    while (num && *src)
+    {
+        *dst = *src;
+        ++src;
+        ++dst;
+        --num;
+    }
+
+    // Pad the rest with zeros until num characters have been written
+    while (num > 0)
+    {
+        *dst = '\0';
+        ++dst;
+        --num;
+    }
+
+    return ret;
 }
-*/
 
 char* strncat(char* dst, char* src, size_t num)
 {
