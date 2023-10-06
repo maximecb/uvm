@@ -15,6 +15,9 @@
 #define REC_MACRO2 3
 #define REC_MACRO REC_MACRO2
 
+// Definition including counter
+#define CTR_MACRO __COUNTER__
+
 // Regression: definition containing a \ character in a string
 #define newline_str "\n"
 
@@ -66,6 +69,13 @@ void main()
     // This macro isn't expanded because we supply no arguments
     int MACRO2 = 3;
     assert(MACRO2 == 3);
+
+    // Definition including the counter macro
+    int c0 = CTR_MACRO;
+    int c1 = CTR_MACRO;
+    int c2 = CTR_MACRO;
+    assert(c1 > c0);
+    assert(c2 > c1);
 
     // Regression: closing parens inside a string
     BAR(")");

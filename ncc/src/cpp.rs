@@ -170,6 +170,7 @@ fn parse_def(input: &mut Input) -> Result<Def, ParseError>
 fn process_ifdef(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
+    counter: &mut usize,
     gen_output: bool,
 ) -> Result<String, ParseError>
 {
@@ -179,6 +180,7 @@ fn process_ifdef(
     process_branches(
         input,
         defs,
+        counter,
         gen_output,
         is_defined,
     )
@@ -187,6 +189,7 @@ fn process_ifdef(
 fn process_ifndef(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
+    counter: &mut usize,
     gen_output: bool,
 ) -> Result<String, ParseError>
 {
@@ -196,6 +199,7 @@ fn process_ifndef(
     process_branches(
         input,
         defs,
+        counter,
         gen_output,
         !is_defined,
     )
@@ -205,6 +209,7 @@ fn process_ifndef(
 fn process_branches(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
+    counter: &mut usize,
     gen_output: bool,
     branch_cond: bool
 ) -> Result<String, ParseError>
@@ -217,6 +222,7 @@ fn process_branches(
         let (sub_output, end_keyword) = process_input_rec(
             input,
             defs,
+            counter,
             gen_output,
         )?;
 
@@ -225,6 +231,7 @@ fn process_branches(
             let (_, end_keyword) = process_input_rec(
                 input,
                 defs,
+                counter,
                 false,
             )?;
 
@@ -241,6 +248,7 @@ fn process_branches(
         let (_, end_keyword) = process_input_rec(
             input,
             defs,
+            counter,
             false,
         )?;
 
@@ -249,6 +257,7 @@ fn process_branches(
             let (sub_output, end_keyword) = process_input_rec(
                 input,
                 defs,
+                counter,
                 gen_output,
             )?;
 
@@ -312,6 +321,7 @@ fn read_macro_arg(input: &mut Input, depth: usize) -> Result<String, ParseError>
 fn expand_macro(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
+    counter: &mut usize,
     gen_output: bool,
     def: &Def,
 ) -> Result<String, ParseError>
@@ -420,6 +430,7 @@ fn expand_macro(
     let (sub_input, end_keyword) = process_input_rec(
         &mut input,
         defs,
+        counter,
         gen_output,
     )?;
 
@@ -434,10 +445,12 @@ fn expand_macro(
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
     let mut defs = HashMap::new();
+    let mut counter = 0;
 
     let (output, end_keyword) = process_input_rec(
         input,
         &mut defs,
+        &mut counter,
         true,
     )?;
 
@@ -452,6 +465,7 @@ pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 fn process_input_rec(
     input: &mut Input,
     defs: &mut HashMap<String, Def>,
+    counter: &mut usize,
     gen_output: bool,
 ) -> Result<(String, String), ParseError>
 {
@@ -476,13 +490,13 @@ fn process_input_rec(
 
             // If defined
             if directive == "ifdef" {
-                output += &process_ifdef(input, defs, gen_output)?;
+                output += &process_ifdef(input, defs, counter, gen_output)?;
                 continue
             }
 
             // If not defined
             if directive == "ifndef" {
-                output += &process_ifndef(input, defs, gen_output)?;
+                output += &process_ifndef(input, defs, counter, gen_output)?;
                 continue
             }
 
@@ -509,6 +523,7 @@ fn process_input_rec(
                 let (include_output, end_keyword) = process_input_rec(
                     &mut include_input,
                     defs,
+                    counter,
                     gen_output
                 )?;
 
@@ -577,7 +592,7 @@ fn process_input_rec(
             // If we have a definition for this identifier
             if let Some(def) = defs.get(&ident) {
                 let def = def.clone();
-                output += &expand_macro(input, defs, gen_output, &def)?;
+                output += &expand_macro(input, defs, counter, gen_output, &def)?;
             }
             else if ident == "__LINE__" {
                 output += &format!("{}", input.line_no);
@@ -588,6 +603,10 @@ fn process_input_rec(
                     filename = str::replace(&filename, "\\", "/");
                 }
                 output += &filename;
+            }
+            else if ident == "__COUNTER__" {
+                output += &format!("{}", counter);
+                *counter += 1;
             }
             else
             {
