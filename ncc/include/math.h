@@ -3,6 +3,7 @@
 
 // Float constants
 #define M_PI_F 3.14159266f
+#define INFINITY_F (1.0f / 0.0f)
 
 // Here we use macros for performance because
 // ncc doesn't yet support inline functions
