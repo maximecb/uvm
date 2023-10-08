@@ -1,3 +1,6 @@
+#ifndef __UVM_3DMATH_H__
+#define __UVM_3DMATH_H__
+
 #include <string.h>
 #include <math.h>
 
@@ -21,9 +24,6 @@ mat44 MAT44_IDENT = {
     { 0.0f, 0.0f, 1.0f, 0.0f},
     { 0.0f, 0.0f, 0.0f, 1.0f},
 };
-
-// Convert from degrees to radians
-#define degtorad(a) ((a) * (M_PI_F / 180.0f))
 
 void vec3_add(vec3 v0, vec3 v1, vec3 out)
 {
@@ -165,7 +165,7 @@ void mat44_transform(mat44 mat, vec3 in, vec3 out)
     }
 }
 
-// FIXME: we can't have local array variables
+// FIXME: ncc doesn't support local array variables yet
 /*
 void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 {
@@ -247,3 +247,5 @@ void perspective(float fovy, float aspect, float near, float far, mat44 result)
     result[3][2] = 2.0f * far * near * nf;
     result[3][3] = 0.0f;
 }
+
+#endif

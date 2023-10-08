@@ -3,6 +3,14 @@
 
 #include <assert.h>
 
+#ifndef MIN
+#define MIN(a, b) (a < b? a:b)
+#endif
+
+#ifndef MAX
+#define MAX(a, b) (a > b? a:b)
+#endif
+
 void enable_event_loop()
 {
     // Set a global variable to enable the event loop

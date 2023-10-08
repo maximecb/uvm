@@ -411,7 +411,7 @@ impl Expr
                 let else_type = else_expr.eval_type()?;
 
                 if !then_type.eq(&else_type) {
-                    return ParseError::msg_only("mismatched types in ternary expression")
+                    return ParseError::msg_only("mismatched types in ternary (?) expression")
                 }
 
                 Ok(then_type)

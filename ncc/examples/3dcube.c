@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <uvm/math.h>
 #include <uvm/3dmath.h>
 #include <uvm/graphics.h>
 
@@ -73,6 +74,7 @@ void draw_line3d(vec3 v0, vec3 v1, u32 color)
     );
 }
 
+// Transform and draw a 3D line
 void trans_line3d(mat44 trans, vec3 _v0, vec3 _v1)
 {
     mat44_transform(trans, _v0, v0);
@@ -136,7 +138,7 @@ int main()
 
     // Setup the perspective projection matrix
     perspective(
-        degtorad(40.0f),
+        DEG2RAD(40.0f),
         (float)FRAME_WIDTH / (float)FRAME_HEIGHT,
         0.1f,   // near,
         100.0f, // far,

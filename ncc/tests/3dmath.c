@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <uvm/math.h>
 #include <uvm/3dmath.h>
 
 mat44 persp;
@@ -9,7 +10,7 @@ vec3 v_out;
 int main()
 {
     perspective(
-        degtorad(40.0f),
+        DEG2RAD(40.0f),
         1.0f,   // aspect,
         0.1f,   // near,
         100.0f, // far,
@@ -42,9 +43,6 @@ int main()
     assert(v_out[0] == 0.0f);
     assert(v_out[1] > 0.0f && v_out[1] < 1.0f);
     assert(v_out[2] > 0.0f && v_out[2] < 1.0f);
-
-    //printf("in : %f, %f, %f\n", v_in[0], v_in[1], v_in[2]);
-    //printf("out: %f, %f, %f\n", v_out[0], v_out[1], v_out[2]);
 
     return 0;
 }
