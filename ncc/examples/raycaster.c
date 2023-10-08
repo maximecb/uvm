@@ -10,8 +10,8 @@
 #define FRAME_WIDTH 640
 #define FRAME_HEIGHT 480
 
+// Horizontal FOV angle in degrees
 #define FOV_X 90
-#define NEAR 1.0f
 
 #define MAP_WIDTH 8
 #define MAP_HEIGHT 8
@@ -216,14 +216,15 @@ void anim_callback()
     float left_x = -dir_y;
     float left_y = dir_x;
 
-    // Half of the image frame width and height
-    float half_w = NEAR * tanf(DEG2RAD(FOV_X / 2));
+    // Half of the image frame width
+    // With the image plane being one unit away
+    float half_w = tanf(DEG2RAD(FOV_X / 2));
 
     // Leftmost and rightmost coordinates on the image frame
-    float x0 = pos_x + NEAR * dir_x + (half_w * left_x);
-    float y0 = pos_y + NEAR * dir_y + (half_w * left_y);
-    float x1 = pos_x + NEAR * dir_x - (half_w * left_x);
-    float y1 = pos_y + NEAR * dir_y - (half_w * left_y);
+    float x0 = pos_x + dir_x + (half_w * left_x);
+    float y0 = pos_y + dir_y + (half_w * left_y);
+    float x1 = pos_x + dir_x - (half_w * left_x);
+    float y1 = pos_y + dir_y - (half_w * left_y);
 
     printf("x=%f, y=%f, dx=%f, dy=%f\n", pos_x, pos_y, dir_x, dir_y);
 
