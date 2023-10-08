@@ -13,6 +13,13 @@
 #define powf(x, y) (asm (x, y) -> float { pow_f32; })
 #define sqrtf(f) (asm (f) -> float { sqrt_f32; })
 
+float fabsf(float x)
+{
+    if (x < 0)
+        return -x;
+    return x;
+}
+
 float floorf(float x)
 {
     float xi = (float)(int)x;

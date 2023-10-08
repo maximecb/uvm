@@ -11,22 +11,24 @@
 #define FRAME_HEIGHT 480
 
 #define FOV_X 90
-#define NEAR 0.1f
+#define NEAR 1.0f
 
-#define MAP_WIDTH 6
-#define MAP_HEIGHT 6
+#define MAP_WIDTH 8
+#define MAP_HEIGHT 8
 
 // ----> +y
 // |
 // v
 // +x
 u8 map[MAP_HEIGHT][MAP_WIDTH] = {
-    { 1, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 1, 1, 1 },
-    { 1, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 1, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1 },
 };
 
 // RGBA pixels
@@ -127,7 +129,7 @@ float cast_ray(float cam_x, float cam_y, float dx, float dy)
 
         // Pick the closest intersection
         // Add a small constant to make sure we're not stuck in the edge
-        float l = MIN(lx, ly) + 0.001f;
+        float l = MIN(lx, ly) + 0.0001f;
         //assert(l > 0);
 
         // Update the current ray start position
@@ -140,7 +142,7 @@ float cast_ray(float cam_x, float cam_y, float dx, float dy)
 }
 
 // Paint a column of the screen
-void paint_column(int col_idx, float dx, float dy, float ray_dst)
+void paint_column(int col_idx, float dx, float dy, float frame_dst, float ray_dst)
 {
     if (ray_dst == 0)
     {
@@ -154,7 +156,7 @@ void paint_column(int col_idx, float dx, float dy, float ray_dst)
     int i = (int)x;
     int j = (int)y;
 
-    u32 wall_color = COLOR_RED;
+    u32 wall_color;
     if (x < 0 || y < 0)
     {
         wall_color = COLOR_GREY;
@@ -163,13 +165,20 @@ void paint_column(int col_idx, float dx, float dy, float ray_dst)
     {
         wall_color = COLOR_GREY;
     }
+    else
+    {
+        if (fabsf(x - (int)x) < fabsf(y - (int)y))
+            wall_color = rgb32(255, 0, 0);
+        else
+            wall_color = rgb32(180, 0, 0);
+    }
 
     float eye_z = 1.80f;
     float wall_min_z = 0.0f;
     float wall_max_z = 3.0f;
 
     // Compute the frame size at the ray distance
-    float half_w = ray_dst * tanf(DEG2RAD(FOV_X / 2));
+    float half_w = (ray_dst / frame_dst) * tanf(DEG2RAD(FOV_X / 2));
     float half_h = half_w * FRAME_HEIGHT / FRAME_WIDTH;
     float max_frame_z = eye_z + half_h;
     float min_frame_z = eye_z - half_h;
@@ -178,15 +187,12 @@ void paint_column(int col_idx, float dx, float dy, float ray_dst)
     float wall_top = CLAMP((max_frame_z - wall_max_z) / (2 * half_h), 0.0f, 1.0f);
     float wall_bot = CLAMP((max_frame_z - wall_min_z) / (2 * half_h), 0.0f, 1.0f);
 
-
     int wall_min_y = (int)(wall_top * (FRAME_HEIGHT - 1));
     int wall_max_y = (int)(wall_bot * (FRAME_HEIGHT - 1));
 
     //printf("wall_top=%f, wall_bot=%f\n", wall_top, wall_bot);
 
-
-
-
+    // TODO: optimize this loop
     for (int y = 0; y < FRAME_HEIGHT; ++y)
     {
         if (y < wall_min_y || y > wall_max_y)
@@ -197,10 +203,6 @@ void paint_column(int col_idx, float dx, float dy, float ray_dst)
 
         frame_buffer[y][col_idx] = wall_color;
     }
-
-
-
-
 }
 
 void anim_callback()
@@ -224,9 +226,6 @@ void anim_callback()
     float y1 = pos_y + NEAR * dir_y - (half_w * left_y);
 
     printf("x=%f, y=%f, dx=%f, dy=%f\n", pos_x, pos_y, dir_x, dir_y);
-
-
-
 
     /*
     for (int i = 0; i < MAP_HEIGHT; ++i)
@@ -299,11 +298,6 @@ void anim_callback()
     );
     */
 
-
-
-
-
-
     // For each column of the frame
     for (int i = 0; i < FRAME_WIDTH; ++i)
     {
@@ -319,8 +313,7 @@ void anim_callback()
         dy = dy / l;
 
         float ray_dst = cast_ray(pos_x, pos_y, dx, dy);
-        paint_column(i, dx, dy, ray_dst);
-
+        paint_column(i, dx, dy, l, ray_dst);
 
         /*
         draw_world_line(
@@ -333,15 +326,7 @@ void anim_callback()
             COLOR_PURPLE,
         );
         */
-
-
-
     }
-
-
-
-
-
 
     u64 frame_end_time = time_current_ms();
     printf("render time %d ms\n", frame_end_time - frame_start_time);
