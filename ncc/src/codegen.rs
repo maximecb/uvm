@@ -20,9 +20,58 @@ impl SymGen
     }
 }
 
+fn gen_global_init(t: &Type, init_expr: &Option<Expr>, out: &mut String) -> Result<(), ParseError>
+{
+    match (t, init_expr) {
+        (_, None) => {
+            out.push_str(&format!(".zero {};\n", t.sizeof()));
+        }
+
+        (Type::UInt(n), Some(Expr::Int(v))) => {
+            out.push_str(&format!(".u{} {};\n", n, v))
+        }
+
+        (Type::Int(n), Some(Expr::Int(v))) => {
+            out.push_str(&format!(".i{} {};\n", n, v))
+        }
+
+        (Type::Float(32), Some(Expr::Float32(v))) => {
+            out.push_str(&format!(".f32 {};\n", v))
+        }
+
+        (Type::Pointer(_), Some(Expr::Int(v))) => {
+            out.push_str(&format!(".u64 {};\n", v))
+        }
+
+        // Pointer to a global array
+        (Type::Pointer(_), Some(Expr::Ref(Decl::Global { name, t: Array { .. } } ))) => {
+            out.push_str(&format!(".addr64 {};\n", name))
+        }
+
+        // Global string constant
+        (Type::Array { elem_type, size_expr }, Some(Expr::String(s))) => {
+            match (elem_type.as_ref(), size_expr.as_ref()) {
+                (Type::UInt(8), Expr::Int(n)) => {
+                    assert!(*n as usize == s.bytes().len() + 1);
+                    out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
+                }
+                _ => panic!()
+            }
+        }
+
+        // Global array with initializer expression
+        (Type::Array {..}, Some(init_expr)) => {
+            gen_array_init(t, init_expr, out)?;
+        }
+
+        _ => todo!("{:?} {:?}", t, init_expr)
+    }
+
+    Ok(())
+}
+
 // FIXME: ideally, all error checking should be done before we get to the
 // codegen, so that codegen can't return an error?
-
 fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Result<(), ParseError>
 {
     // Get the type of the initializer expression
@@ -43,45 +92,9 @@ fn gen_array_init(array_type: &Type, init_expr: &Expr, out: &mut String) -> Resu
         _ => return ParseError::msg_only("invalid initializer for global array variable")
     };
 
-    match array_elem_t {
-        // Array of signed integers
-        Type::Int(n) => {
-            for expr in elem_exprs {
-                match expr {
-                    Expr::Int(v) => out.push_str(&format!(".i{} {};\n", n, v)),
-                    _ => panic!()
-                }
-            }
-        }
-
-        // Array of unsigned integers
-        Type::UInt(n) => {
-            for expr in elem_exprs {
-                match expr {
-                    Expr::Int(v) => out.push_str(&format!(".u{} {};\n", n, v)),
-                    _ => panic!()
-                }
-            }
-        }
-
-        // Array of floats
-        Type::Float(32) => {
-            for expr in elem_exprs {
-                match expr {
-                    Expr::Float32(v) => out.push_str(&format!(".f32 {};\n", v)),
-                    _ => panic!()
-                }
-            }
-        }
-
-        // Array of arrays (n-dimensional array)
-        Type::Array {..} => {
-            for expr in elem_exprs {
-                gen_array_init(&array_elem_t, expr, out)?;
-            }
-        }
-
-        _ => panic!("unable to initialize global array")
+    // Generate initialization data for each element expression
+    for expr in elem_exprs {
+        gen_global_init(&array_elem_t, &Some(expr.clone()), out)?;
     }
 
     Ok(())
@@ -119,49 +132,8 @@ impl Unit
             // Write a label
             out.push_str(&format!("{}:\n", global.name));
 
-            match (&global.var_type, &global.init_expr) {
-                (_, None) => {
-                    out.push_str(&format!(".zero {};\n", global.var_type.sizeof()));
-                }
-
-                (Type::UInt(n), Some(Expr::Int(v))) => {
-                    out.push_str(&format!(".u{} {};\n", n, v))
-                }
-
-                (Type::Int(n), Some(Expr::Int(v))) => {
-                    out.push_str(&format!(".i{} {};\n", n, v))
-                }
-
-                (Type::Float(32), Some(Expr::Float32(v))) => {
-                    out.push_str(&format!(".f32 {};\n", v))
-                }
-
-                (Type::Pointer(_), Some(Expr::Int(v))) => {
-                    out.push_str(&format!(".u64 {};\n", v))
-                }
-
-                // Pointer to a global array
-                (Type::Pointer(_), Some(Expr::Ref(Decl::Global { name, t: Array { .. } } ))) => {
-                    out.push_str(&format!(".addr64 {};\n", name))
-                }
-
-                // Global string constant
-                (Type::Array { elem_type, size_expr }, Some(Expr::String(s))) => {
-                    match (elem_type.as_ref(), size_expr.as_ref()) {
-                        (Type::UInt(8), Expr::Int(n)) => {
-                            assert!(*n as usize == s.bytes().len() + 1);
-                            out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
-                        }
-                        _ => panic!()
-                    }
-                }
-
-                (Type::Array {..}, Some(init_expr)) => {
-                    gen_array_init(&global.var_type, &init_expr, &mut out)?;
-                }
-
-                _ => todo!("{:?} {:?}", global.var_type, global.init_expr)
-            }
+            // Generate initialization data for the global
+            gen_global_init(&global.var_type, &global.init_expr, &mut out)?;
 
             out.push_str("\n");
         }

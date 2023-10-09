@@ -9,6 +9,8 @@ uint8_t arr2[19];
 
 char dst[32];
 
+char* global_str = "global string pointer";
+
 int main()
 {
     assert(strlen("") == 0);
@@ -16,6 +18,8 @@ int main()
     assert(strlen("foo" "bar") == 6);
     assert(strlen("()") == 2);
     assert(strlen(")") == 1);
+    assert(global_str);
+    assert(strlen(global_str) == 21);
 
     assert(strcmp("", "") == 0);
     assert(strcmp("bar", "bar") == 0);

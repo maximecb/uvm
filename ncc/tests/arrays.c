@@ -7,6 +7,8 @@ uint8_t bytes2d[2][2] = { {0, 1}, {2, 3} };
 
 uint8_t array2d[600][800];
 
+char* str_array[3] = { "foo", "bar", "bif" };
+
 // Integer literals of type long and int in the same array literal
 uint64_t arr_int_long[2] = { 0x7fff8beb, 0x8000e82a };
 
@@ -20,6 +22,8 @@ int main()
     assert(bytes2d[0][1] == 1);
     assert(bytes2d[1][0] == 2);
     assert(bytes2d[1][1] == 3);
+
+    assert(str_array[2][1] == 'i');
 
     // Regression: signed integer index needs to be sign-extended
     int* p = int_array + 2;
