@@ -222,16 +222,9 @@ impl Unit
                 t: global.var_type.clone(),
             });
 
-            // If this is a global pointer to a string constant
-            match (&global.var_type, &global.init_expr) {
-                (Type::Pointer(_), Some(Expr::String(str_const))) => {
-                    // Get a global symbol for the string constant
-                    let decl = env.get_string(&str_const);
-
-                    // Replace the init expr by a reference to the string constant
-                    global.init_expr = Some(Expr::Ref(decl));
-                }
-                _ => {}
+            // Resolve symbols in global variable initializers
+            if let Some(init_expr) = &mut global.init_expr {
+                init_expr.resolve_syms(&mut env)?
             }
         }
 
