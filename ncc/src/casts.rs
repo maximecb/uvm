@@ -18,7 +18,7 @@ impl Function
 {
     fn insert_casts(&mut self) -> Result<(), ParseError>
     {
-        self.body.insert_casts()?;
+        self.body.insert_casts(&self.ret_type)?;
 
         Ok(())
     }
@@ -26,7 +26,7 @@ impl Function
 
 impl Stmt
 {
-    fn insert_casts(&mut self) -> Result<(), ParseError>
+    fn insert_casts(&mut self, ret_type: &Type) -> Result<(), ParseError>
     {
         match self {
             Stmt::Expr(expr) => {
@@ -39,50 +39,52 @@ impl Stmt
 
             Stmt::ReturnExpr(expr) => {
                 expr.insert_casts()?;
+                let expr_t = expr.eval_type()?;
+
+                if !expr_t.eq(&ret_type) {
+                    *expr = Box::new(Expr::Cast {
+                        new_type: ret_type.clone(),
+                        child: expr.clone()
+                    });
+                }
             }
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
                 test_expr.insert_casts()?;
-                then_stmt.insert_casts()?;
+                then_stmt.insert_casts(ret_type)?;
 
                 if else_stmt.is_some() {
-                    else_stmt.as_mut().unwrap().insert_casts()?;
+                    else_stmt.as_mut().unwrap().insert_casts(ret_type)?;
                 }
             }
 
             Stmt::While { test_expr, body_stmt } => {
                 test_expr.insert_casts()?;
-                body_stmt.insert_casts()?;
+                body_stmt.insert_casts(ret_type)?;
             }
 
             Stmt::DoWhile { test_expr, body_stmt } => {
                 test_expr.insert_casts()?;
-                body_stmt.insert_casts()?;
+                body_stmt.insert_casts(ret_type)?;
             }
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_mut().unwrap().insert_casts()?;
+                    init_stmt.as_mut().unwrap().insert_casts(ret_type)?;
                 }
 
                 test_expr.insert_casts()?;
                 incr_expr.insert_casts()?;
-                body_stmt.insert_casts()?;
-            }
-
-            // Local variable declaration
-            Stmt::VarDecl { var_type, var_name, init_expr } => {
-                // If there is an initiaization expression
-                if let Some(init_expr) = init_expr {
-                    init_expr.insert_casts()?;
-                }
+                body_stmt.insert_casts(ret_type)?;
             }
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    stmt.insert_casts()?;
+                    stmt.insert_casts(ret_type)?;
                 }
             }
+
+            _ => panic!()
         }
 
         Ok(())

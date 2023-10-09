@@ -10,6 +10,12 @@ float fun(float f)
     return f;
 }
 
+// Regression: int value must be promoted to float
+float ret_int()
+{
+    return 5;
+}
+
 int main()
 {
     // Int/float casts
@@ -31,6 +37,9 @@ int main()
 
     // Automatic promotion of int argument to float
     assert(fun(4) == 4.0f);
+
+    // Automatic promotion of return value to float
+    assert(ret_int() == 5.0f);
 
     // Floating-point comparisons
     assert(0.0f == 0.0f);
