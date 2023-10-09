@@ -13,22 +13,24 @@
 // Horizontal FOV angle in degrees
 #define FOV_X 90
 
-#define MAP_WIDTH 8
-#define MAP_HEIGHT 8
+#define MAP_WIDTH 10
+#define MAP_HEIGHT 10
 
 // ----> +y
 // |
 // v
 // +x
 u8 map[MAP_HEIGHT][MAP_WIDTH] = {
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 1, 1, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 1, 0, 1, 1 },
+    { 1, 0, 1, 1, 1, 1, 0, 0, 0, 1 },
+    { 1, 0, 1, 0, 0, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 1, 0, 0, 1, 0, 0, 0, 1 },
 };
 
 // RGBA pixels
@@ -173,9 +175,9 @@ void paint_column(int col_idx, float dx, float dy, float frame_dst, float ray_ds
             wall_color = rgb32(180, 0, 0);
     }
 
-    float eye_z = 1.80f;
+    float eye_z = 0.6f;
     float wall_min_z = 0.0f;
-    float wall_max_z = 3.0f;
+    float wall_max_z = 1.0f;
 
     // Compute the frame size at the ray distance
     float half_w = (ray_dst / frame_dst) * tanf(DEG2RAD(FOV_X / 2));
@@ -380,7 +382,7 @@ void keydown(u64 window_id, u16 keycode)
 
 void main()
 {
-    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Raymarcher Example", 0);
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Ray-Casting Example", 0);
     window_on_keydown(0, keydown);
 
     time_delay_cb(0, anim_callback);
