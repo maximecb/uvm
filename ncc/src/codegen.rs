@@ -103,7 +103,7 @@ impl Unit
         out.push_str("\n");
 
         out.push_str("# Reserve the first heap word so we can use address 0 as null\n");
-        out.push_str(".u64 0;\n");
+        out.push_str(".u64 0xBADADD5EFEFEFEFE;\n");
         out.push_str("\n");
 
         out.push_str("__EVENT_LOOP_ENABLED__:\n");

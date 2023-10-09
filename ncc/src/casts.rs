@@ -228,6 +228,16 @@ impl Expr
                 test_expr.as_mut().insert_casts()?;
                 then_expr.as_mut().insert_casts()?;
                 else_expr.as_mut().insert_casts()?;
+
+                let then_t = then_expr.eval_type()?;
+                let else_t = else_expr.eval_type()?;
+
+                if !then_t.eq(&else_t) {
+                    *else_expr = Box::new(Expr::Cast {
+                        new_type: then_t.clone(),
+                        child: else_expr.clone()
+                    });
+                }
             }
 
             Expr::Call { callee, args } => {

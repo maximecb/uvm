@@ -47,6 +47,9 @@ int main()
     assert(0.0f < 1.0f);
     assert(-1.0f < 0.0f);
 
+    // Ternary expression with mismatched types
+    assert((0? 1.5f:2) == 2.0f);
+
     // Arithmetic
     assert(1.0f + 2.0f == 3.0f);
     assert(2.0f * 3.0f == 6.0f);
