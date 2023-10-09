@@ -31,4 +31,9 @@ float floorf(float x)
     return xi;
 }
 
+float truncf(float x)
+{
+    return (float)(int)x;
+}
+
 #endif

@@ -53,5 +53,9 @@ int main()
     assert(floorf(4.5f) == 4.0f);
     assert(floorf(-4.5f) == -5.0f);
 
+    assert(truncf(0.0f) == 0.0f);
+    assert(truncf(4.5f) == 4.0f);
+    assert(truncf(-4.5f) == -4.0f);
+
     return 0;
 }
