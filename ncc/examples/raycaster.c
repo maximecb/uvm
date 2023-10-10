@@ -194,16 +194,22 @@ void paint_column(int col_idx, float dx, float dy, float frame_dst, float ray_ds
 
     //printf("wall_top=%f, wall_bot=%f\n", wall_top, wall_bot);
 
-    // TODO: optimize this loop
-    for (int y = 0; y < FRAME_HEIGHT; ++y)
+    // Paint the ceiling
+    for (int y = 0; y < wall_min_y; ++y)
     {
-        if (y < wall_min_y || y > wall_max_y)
-        {
-            frame_buffer[y][col_idx] = COLOR_BLUE;
-            continue;
-        }
+        frame_buffer[y][col_idx] = rgb32(50, 50, 50);
+    }
 
+    // Paint the wall strip
+    for (int y = wall_min_y; y < wall_max_y; ++y)
+    {
         frame_buffer[y][col_idx] = wall_color;
+    }
+
+    // Paint the floor
+    for (int y = wall_max_y; y < FRAME_HEIGHT; ++y)
+    {
+        frame_buffer[y][col_idx] = rgb32(100, 100, 100);
     }
 }
 

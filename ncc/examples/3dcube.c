@@ -145,8 +145,8 @@ int main()
         persp
     );
 
+    // Translation matrix for the cube
     mat44_translate(cube_pos, trans);
-
 
     return 0;
 }
