@@ -216,8 +216,12 @@ impl Function
         out.push_str(&format!("{}:\n", self.name));
 
         // Allocate stack slots for the local variables
-        for i in 0..self.num_locals {
-            out.push_str("push 0;\n");
+        if self.num_locals > 1 && self.num_locals <= 255 {
+            out.push_str(&format!("push_0n {};\n", self.num_locals));
+        } else {
+            for i in 0..self.num_locals {
+                out.push_str("push 0;\n");
+            }
         }
 
         self.body.gen_code(&None, &None, sym, out)?;
