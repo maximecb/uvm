@@ -12,6 +12,7 @@ Supported features:
 - Global variables
 - Global arrays, N-dimensional arrays
   - Array initializer syntax
+- Structs
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
 - The `float` type and floating-point arithmetic
@@ -37,23 +38,25 @@ Supported features:
   - `#include <uvm/graphics.h>`
 
 Not yet implemented (TODO):
-- Structs
 - Unions
 - Enums
 - The `const` qualifier
 - The `double` type
 - The `switch` statement
-- Local arrays variables
+- Local arrays variables (can only be globals or malloc'ed)
+- Local struct variables (can only be globals or malloc'ed)
 - Pointers to local variables
+- Struct initializer syntax
 
 Caveats:
 - You may need to manually insert type casts in places where they aren't required by the C standard.
 - At the moment `malloc()` / `free()` don't use a free list, they just leak memory
-  - If you would like to help with this, the implementation is in [`include/stdlib.h`](https://github.com/maximecb/uvm/blob/main/ncc/include/stdlib.h)
+  - If you would like to help with this, the implementation is in [`include/stdlib.h`](include/stdlib.h)
 - The error messages are currently fairly weak
   - Type errors have no line numbers
   - Errors inside macro expansions have incorrect line numbers
-- The [`printf()` function](include/stdio.h) doesn't yet have support for printing floats.
+- The [`printf()` function](include/stdio.h) is only partially supported
+  - Help and contributions welcome
 
 ## Usage
 
