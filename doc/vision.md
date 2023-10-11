@@ -13,12 +13,15 @@ hopefully years or even decades into the future.
 The idea of a virtual machine is obviously not new. We're all familiar with the JVM. You can also think
 of the web platform as a VM. The key differences are that UVM will be much smaller, and that its APIs will
 be much simpler. UVM isn't going to provide complex, high-level APIs like a GUI toolkit, because different
-implementations of such an API would be almost guaranteed to behave differently, in the same way that
-modern web browsers can't manage to produce an identical rendering of the same webpage.
+implementations of such high-level APIs would be almost guaranteed to behave differently, in the same way that
+modern web browsers such as Firefox, Safari and Chrome can't produce an identical rendering of the
+same webpage. When the API surface is too big, there is too much room for interpretation and for small but
+material behavioral differences to creep in.
 
 There seems to be a growing interest in retrocomputing, and that interest likely stems, in large part,
 because the complexity of modern computer systems and their software environment is extremely high, and
-there is constant unnecessary churn, which becomes exhausting. UVM aims to provide a platform that is simple,
+there is constant unnecessary churn, which becomes exhausting. At some point, programmers just want to point,
+and there is a natural desire to declutter and have fun. UVM aims to provide a platform that is simple,
 stable over time, and easy to target and develop for. I hope that this platform will help bring back the joy
 of programming for many.
 
@@ -33,17 +36,17 @@ If you'd like to read more about the philosophy behind UVM's design, here are so
 
 I envision UVM as a platform that would remain very stable over time. It's designed to be small, and
 to expose only APIs that have a small surface area, so that the VM will be easy to maintain, easy
-to port, and have as few undefined behaviors as possible.
+to port to new platforms, and have as few undefined behaviors as possible.
 
 The APIs provided by UVM are in some ways very spartan. You can't link to external
-function calls using an FFI. You get a frame buffer, network sockets and a device to output audio
-samples and not much more than that. Fundamentally though, what does software need to interface
-with users and with the outside world? It needs inputs and outputs. UVM tries to provide input
-and output APIs that are simple, will behave predictably and can be guaranteed to remain stable
-over time. The idea is that if you can program software using only those APIs, it should be
-relatively easy to keep your software running even 100 years from now.
+functions using an FFI. You get a frame buffer, keyboard and mouse input, network sockets and a
+device to output audio samples and not much more than that. Fundamentally though, what does
+software need to interface with users and with the outside world? It needs inputs and outputs.
+UVM tries to provide input and output APIs that are simple, will behave predictably and can be
+guaranteed to remain stable over time. The idea is that if you can program software using only
+those APIs, it should be relatively easy to keep your software running even 100 years from now.
 
-As UVM evolves, new APIs can be added, but, after it reaches 1.0 (which we are not at yet), we
-will keep the existing APIs essentially frozen. The hope is that this will free developers from
-much of the stress of modern development. With UVM, you can be sure that the foundations your
+As UVM evolves, new APIs will need be added, but, after it reaches 1.0 (which we are not at yet),
+we will keep the existing APIs essentially frozen. The hope is that this will free developers from
+much of the stress of modern software development. With UVM, you can be sure that the foundations your
 software is built on aren't going to constantly shift under your feet for seemingly no reason.
