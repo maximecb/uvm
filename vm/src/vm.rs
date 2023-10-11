@@ -27,13 +27,17 @@ pub enum Op
     push_1,
     push_2,
 
-    // push_i8 <i8_imm> (sign-extended)
+    // Push zero n times (e.g. initialize locals)
+    // push_0n <n:u8>
+    push_0n,
+
+    // push_i8 <imm:i8> (sign-extended)
     push_i8,
 
-    // push_u32 <u32_imm>
+    // push_u32 <imm:u32>
     push_u32,
 
-    // push_u64 <u64_imm>
+    // push_u64 <imm:u64>
     push_u64,
 
     // Stack manipulation
@@ -777,6 +781,11 @@ impl VM
                 }
                 Op::push_2 => {
                     self.push(2);
+                }
+
+                Op::push_0n => {
+                    let n = self.code.read_pc::<u8>(&mut pc);
+                    self.stack.resize(self.stack.len() + n as usize, Value::from(0));
                 }
 
                 Op::push_i8 => {

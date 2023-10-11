@@ -193,8 +193,6 @@ void paint_column(int col_idx, float dx, float dy, float frame_dst, float ray_ds
     int wall_min_y = (int)(wall_top * (FRAME_HEIGHT - 1));
     int wall_max_y = (int)(wall_bot * (FRAME_HEIGHT - 1));
 
-    //printf("wall_top=%f, wall_bot=%f\n", wall_top, wall_bot);
-
     // Paint the ceiling
     for (int y = 0; y < wall_min_y; ++y)
     {
@@ -235,7 +233,7 @@ void anim_callback()
     float x1 = pos_x + dir_x - (half_w * left_x);
     float y1 = pos_y + dir_y - (half_w * left_y);
 
-    printf("x=%f, y=%f, dx=%f, dy=%f\n", pos_x, pos_y, dir_x, dir_y);
+    //printf("x=%f, y=%f, dx=%f, dy=%f\n", pos_x, pos_y, dir_x, dir_y);
 
     /*
     for (int i = 0; i < MAP_HEIGHT; ++i)
