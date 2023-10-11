@@ -46,7 +46,7 @@ UVM tries to provide input and output APIs that are simple, will behave predicta
 guaranteed to remain stable over time. The idea is that if you can program software using only
 those APIs, it should be relatively easy to keep your software running even 100 years from now.
 
-As UVM evolves, new APIs will need be added, but, after it reaches 1.0 (which we are not at yet),
+As UVM evolves, new APIs will be added, but, after it reaches 1.0 (which we are not at yet),
 we will keep the existing APIs essentially frozen. The hope is that this will free developers from
 much of the stress of modern software development. With UVM, you can be sure that the foundations your
 software is built on aren't going to constantly shift under your feet for seemingly no reason.
