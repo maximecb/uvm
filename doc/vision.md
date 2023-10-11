@@ -20,7 +20,7 @@ material behavioral differences to creep in.
 
 There seems to be a growing interest in retrocomputing, and that interest likely stems, in large part,
 because the complexity of modern computer systems and their software environment is extremely high, and
-there is constant unnecessary churn, which becomes exhausting. At some point, programmers just want to point,
+there is constant unnecessary churn, which becomes exhausting. At some point, programmers just want to build,
 and there is a natural desire to declutter and have fun. UVM aims to provide a platform that is simple,
 stable over time, and easy to target and develop for. I hope that this platform will help bring back the joy
 of programming for many.
