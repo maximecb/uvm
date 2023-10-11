@@ -399,14 +399,20 @@ impl MemBlock
     }
 
     /// Resize to a new size in bytes
-    pub fn resize(&mut self, num_bytes: usize)
+    pub fn resize(&mut self, mut num_bytes: usize) -> usize
     {
-        // The heap size should be a multiple of 8
-        if num_bytes % 8 != 0 {
-            panic!("the heap size should be a multiple of 8 bytes")
+        // Round up to a page size multiple
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        assert!(page_size % 8 == 0);
+        let rem = num_bytes % page_size;
+        if rem != 0 {
+            num_bytes += page_size - rem;
         }
 
+        assert!(num_bytes % page_size == 0);
         self.data.resize(num_bytes, 0);
+
+        num_bytes
     }
 
     pub fn push_op(&mut self, op: Op)
@@ -520,14 +526,17 @@ pub struct VM
 
 impl VM
 {
-    pub fn new(code: MemBlock, heap: MemBlock, syscalls: HashSet<u16>) -> Self
+    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Self
     {
         // Initialize the system state
         let sys_state = SysState::new();
 
+        // Resize the code and heap space to a page size multiple
+        code.resize(code.len());
+        heap.resize(heap.len());
+
         Self {
             sys_state,
-            //syscalls: syscall_fns,
             code,
             heap,
             stack: Vec::default(),
@@ -560,9 +569,9 @@ impl VM
     }
 
     /// Resize the heap to a new size in bytes
-    pub fn resize_heap(&mut self, num_bytes: usize)
+    pub fn resize_heap(&mut self, num_bytes: usize) -> usize
     {
-        self.heap.resize(num_bytes);
+        self.heap.resize(num_bytes)
     }
 
     /// Get a pointer to an address/offset in the heap
@@ -1628,13 +1637,13 @@ mod tests
     #[should_panic]
     fn test_load_oob()
     {
-        eval_src(".data; .fill 1000, 0; .code; push 1000; load_u64; exit;");
+        eval_src(".data; .fill 1000, 0; .code; push 100_000_000; load_u64; exit;");
     }
 
     #[test]
     #[should_panic]
     fn test_memset_oob()
     {
-        eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 256; syscall memset; push 0; exit;");
+        eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 100_000_000; syscall memset; push 0; exit;");
     }
 }

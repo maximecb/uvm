@@ -56,7 +56,7 @@ bool vm_resize_heap(u64 num_bytes)
 
 **Returns:** `bool success`
 
-Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Returns `true` if successful, `false` otherwise.
+Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of at least 8 bytes. Returns the new heap size in bytes if successful, or `UINT64_MAX` on failure.
 
 # io
 

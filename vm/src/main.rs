@@ -8,6 +8,7 @@ mod sys;
 mod asm;
 
 extern crate sdl2;
+extern crate libc;
 use std::env;
 use std::thread::sleep;
 use std::time::Duration;

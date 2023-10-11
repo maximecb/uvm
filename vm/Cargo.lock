@@ -53,6 +53,7 @@ dependencies = [
 name = "uvm"
 version = "0.2.0"
 dependencies = [
+ "libc",
  "sdl2",
 ]
 

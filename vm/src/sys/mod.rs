@@ -187,10 +187,8 @@ fn vm_heap_size(vm: &mut VM) -> Value
 fn vm_resize_heap(vm: &mut VM, num_bytes: Value) -> Value
 {
     let num_bytes = num_bytes.as_usize();
-    vm.resize_heap(num_bytes);
-
-    // Success
-    Value::from(true)
+    let new_size = vm.resize_heap(num_bytes);
+    Value::from(new_size)
 }
 
 fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)

@@ -45,16 +45,28 @@ void srand(unsigned int seed)
 
 #define align_ptr(ptr, n_bytes) (((u64)(ptr) + ((n_bytes) - 1)) & ~((n_bytes) - 1))
 
+u64 __heap_size__ = 0;
+u8* __next_alloc__ = 0;
+
 void* malloc(size_t size)
 {
-    u64 heap_size = asm () -> u64 { syscall vm_heap_size; };
+    // If this is the first allocation
+    if (__next_alloc__ == 0)
+    {
+        __heap_size__ = asm () -> u64 { syscall vm_heap_size; };
+        __next_alloc__ = (u8*)__heap_size__;
+    }
 
-    u64 header_ptr = align_ptr(heap_size, 8);
-    u64 block_ptr = header_ptr + 8;
+    // Bump the allocation pointer
+    u8* header_ptr = __next_alloc__;
+    u8* block_ptr = header_ptr + 8;
+    __next_alloc__ = block_ptr + size;
 
-    // Resize the heap
-    u64 new_heap_size = block_ptr + size;
-    asm (new_heap_size) -> void { syscall vm_resize_heap; };
+    // Resize the heap if needed
+    if (__next_alloc__ > __heap_size__)
+    {
+        __heap_size__ = asm (__next_alloc__) -> u64 { syscall vm_resize_heap; };
+    }
 
     // Write a magic word at the beginning of the block for safety checks
     u32* magic_ptr = (u32*)header_ptr;
