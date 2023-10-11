@@ -873,7 +873,9 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         "int" => Ok(Type::Int(32)),
         "long" => Ok(Type::Int(64)),
 
-        "float" => Ok(Type::Float(32)),
+        // Floating-point types
+        "float" | "f32" => Ok(Type::Float(32)),
+        "double" | "f64" => Ok(Type::Float(64)),
 
         // Unsigned qualifier
         "unsigned" => {
