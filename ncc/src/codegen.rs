@@ -4,6 +4,8 @@ use crate::parsing::{ParseError};
 use crate::types::*;
 use Type::*;
 
+const ALLOC_STACK_SIZE: u64 = 1024 * 1024;
+
 #[derive(Default)]
 struct SymGen
 {
@@ -138,10 +140,30 @@ impl Unit
             out.push_str("\n");
         }
 
+        // If any function in this unit uses stack allocation,
+        // The allocation stack grows downwards
+        if self.stack_alloc {
+            out.push_str("__stack_alloc_min__:\n");
+            out.push_str(&format!(".zeros {};\n", ALLOC_STACK_SIZE));
+            out.push_str("__stack_alloc_max__:\n");
+            out.push_str("__stack_alloc_sp__:\n");
+            out.push_str(".u64 0;\n");
+        }
+
         out.push_str(&("#".repeat(78) + "\n"));
         out.push_str("\n");
         out.push_str(".code;\n");
         out.push_str("\n");
+
+        // If any function in this unit uses stack allocation,
+        // The allocation stack grows downwards
+        if self.stack_alloc {
+            out.push_str("# Initialize allocation stack sp (grows downwards)\n");
+            out.push_str("push __stack_alloc_sp__;\n");
+            out.push_str("push __alloc_stack_max__;\n");
+            out.push_str("store_u64;\n");
+            out.push_str("\n");
+        }
 
         // If there is a main function
         let main_fn: Vec<&Function> = self.fun_decls.iter().filter(|f| f.name == "main").collect();

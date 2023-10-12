@@ -431,6 +431,10 @@ pub struct Function
 
     /// Number of local variables
     pub num_locals: usize,
+
+    /// Number of bytes to stack allocate on entry,
+    /// for stack-allocated local variables, e.g. arrays
+    pub stack_alloc_size: usize,
 }
 
 impl Function
@@ -464,9 +468,15 @@ pub struct Global
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
+    // Type definitions
     pub typedefs: Vec<(String, Rc<Box<RefCell<Type>>>)>,
 
+    // Global variables
     pub global_vars: Vec<Global>,
 
+    // Function declarations
     pub fun_decls: Vec<Function>,
+
+    // Some functions in this unit use stack allocation
+    pub stack_alloc: bool,
 }
