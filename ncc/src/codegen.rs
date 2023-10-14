@@ -141,29 +141,19 @@ impl Unit
         }
 
         // If any function in this unit uses stack allocation,
-        // The allocation stack grows downwards
+        // The allocation stack grows upwards
         if self.stack_alloc {
             out.push_str("__stack_alloc_min__:\n");
             out.push_str(&format!(".zeros {};\n", ALLOC_STACK_SIZE));
             out.push_str("__stack_alloc_max__:\n");
             out.push_str("__stack_alloc_sp__:\n");
-            out.push_str(".u64 0;\n");
+            out.push_str(".addr64 __stack_alloc_min;\n");
         }
 
         out.push_str(&("#".repeat(78) + "\n"));
         out.push_str("\n");
         out.push_str(".code;\n");
         out.push_str("\n");
-
-        // If any function in this unit uses stack allocation,
-        // The allocation stack grows downwards
-        if self.stack_alloc {
-            out.push_str("# Initialize allocation stack sp (grows downwards)\n");
-            out.push_str("push __stack_alloc_sp__;\n");
-            out.push_str("push __alloc_stack_max__;\n");
-            out.push_str("store_u64;\n");
-            out.push_str("\n");
-        }
 
         // If there is a main function
         let main_fn: Vec<&Function> = self.fun_decls.iter().filter(|f| f.name == "main").collect();
@@ -244,6 +234,35 @@ impl Function
             for i in 0..self.num_locals {
                 out.push_str("push 0;\n");
             }
+        }
+
+        // If this function uses stack allocation
+        if let Some(bp_idx) = self.stack_alloc_bp {
+            // Get the current sp and store it in the local bp
+            out.push_str("# Initialize bp for stack allocation;\n");
+            out.push_str(&format!("push __stack_alloc_sp__;\n"));
+            out.push_str("load_u64;\n");
+            out.push_str(&format!("set_local {};\n", bp_idx));
+
+            // Compute and update the global sp
+            out.push_str(&format!("get_local {};\n", bp_idx));
+            out.push_str(&format!("push {};\n", self.stack_alloc_size));
+            out.push_str(&format!("add_u64;\n"));
+            out.push_str(&format!("dup;\n"));
+            out.push_str(&format!("push __stack_alloc_sp__;\n"));
+            out.push_str(&format!("swap;\n"));
+            out.push_str(&format!("store_u64;\n"));
+
+            // Check if the sp overflowed
+            // Note: we could also tell ncc not to generate stack overflow
+            // checks for performance with a command-line option
+            let no_overflow = sym.gen_sym("no_overflow");
+            out.push_str(&format!("push __stack_alloc_max__;\n"));
+            out.push_str(&format!("load_u64;\n"));
+            out.push_str(&format!("le_u64;\n"));
+            out.push_str(&format!("jnz {};\n", no_overflow));
+            out.push_str(&format!("panic;\n"));
+            out.push_str(&format!("{}:\n", no_overflow));
         }
 
         self.body.gen_code(&None, &None, sym, out)?;

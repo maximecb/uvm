@@ -526,7 +526,6 @@ impl Assembler
         }
 
         Self {
-            //const_map: const_map,
             const_map: HashMap::new(),
             syscall_map: syscall_map,
             syscall_set: HashSet::new(),

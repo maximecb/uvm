@@ -435,6 +435,9 @@ pub struct Function
     /// Number of bytes to stack allocate on entry,
     /// for stack-allocated local variables, e.g. arrays
     pub stack_alloc_size: usize,
+
+    /// Local index for the stack allocation base pointer
+    pub stack_alloc_bp: Option<usize>,
 }
 
 impl Function

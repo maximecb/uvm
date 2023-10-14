@@ -1037,6 +1037,7 @@ fn parse_function(input: &mut Input, name: String, ret_type: Type, inline: bool)
         body,
         num_locals: 0,
         stack_alloc_size: 0,
+        stack_alloc_bp: None,
     })
 }
 
