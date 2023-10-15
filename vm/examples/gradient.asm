@@ -44,7 +44,7 @@ LOOP_Y:
     set_local 3;
     LOOP_X:
 
-    # Pixel address (B byte)
+    # Compute pixel address (u32 color)
     get_local 2; # Y
     push_u64 800;
     mul_u64;
@@ -52,7 +52,6 @@ LOOP_Y:
     add_u64; # Y * 800 + X
     push_u64 4;
     mul_u64; # (Y * 800 + X) * 4
-    dup;
 
     # Compute red color:
     # Y * 256 / 600

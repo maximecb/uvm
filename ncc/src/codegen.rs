@@ -241,11 +241,11 @@ impl Function
             // Get the current sp and store it in the local bp
             out.push_str("# Initialize bp for stack allocation;\n");
             out.push_str(&format!("push __stack_alloc_sp__;\n"));
-            out.push_str("load_u64;\n");
+            out.push_str(&format!("load_u64;\n"));
+            out.push_str(&format!("dup;\n"));
             out.push_str(&format!("set_local {};\n", bp_idx));
 
             // Compute and update the global sp
-            out.push_str(&format!("get_local {};\n", bp_idx));
             out.push_str(&format!("push {};\n", self.stack_alloc_size));
             out.push_str(&format!("add_u64;\n"));
             out.push_str(&format!("dup;\n"));
