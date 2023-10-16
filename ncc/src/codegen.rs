@@ -265,10 +265,17 @@ impl Function
             out.push_str(&format!("{}:\n", no_overflow));
         }
 
-        self.body.gen_code(&None, &None, sym, out)?;
+        self.body.gen_code(self, &None, &None, sym, out)?;
 
         // If the body needs a final return
         if self.needs_final_return() {
+            // If this function uses stack allocation, restore the alloc stack sp
+            if let Some(bp_idx) = self.stack_alloc_bp {
+                out.push_str(&format!("push __stack_alloc_sp__;\n"));
+                out.push_str(&format!("get_local {};\n", bp_idx));
+                out.push_str(&format!("store_u64;\n"));
+            }
+
             out.push_str("push 0;\n");
             out.push_str("ret;\n");
         }
@@ -283,6 +290,7 @@ impl Stmt
 {
     fn gen_code(
         &self,
+        fun: &Function,
         break_label: &Option<String>,
         cont_label: &Option<String>,
         sym: &mut SymGen,
@@ -291,7 +299,6 @@ impl Stmt
     {
         match self {
             Stmt::Expr(expr) => {
-
                 match expr {
                     // For assignment expressions as statements,
                     // avoid generating output that we would then need to pop
@@ -328,11 +335,26 @@ impl Stmt
 
             // Return void
             Stmt::ReturnVoid => {
+                // If this function uses stack allocation, restore the alloc stack sp
+                if let Some(bp_idx) = fun.stack_alloc_bp {
+                    out.push_str(&format!("push __stack_alloc_sp__;\n"));
+                    out.push_str(&format!("get_local {};\n", bp_idx));
+                    out.push_str(&format!("store_u64;\n"));
+                }
+
                 out.push_str("push 0;\n");
                 out.push_str("ret;\n");
             }
 
             Stmt::ReturnExpr(expr) => {
+                // If this function uses stack allocation, restore the alloc stack sp
+                if let Some(bp_idx) = fun.stack_alloc_bp {
+                    out.push_str(&format!("push __stack_alloc_sp__;\n"));
+                    out.push_str(&format!("get_local {};\n", bp_idx));
+                    out.push_str(&format!("store_u64;\n"));
+                }
+
+                // If we're returning an asm expression with type void
                 if let Expr::Asm { out_type: Type::Void, .. } = expr.as_ref() {
                     expr.gen_code(sym, out)?;
                     out.push_str("push 0;\n");
@@ -356,16 +378,16 @@ impl Stmt
                 if else_stmt.is_some() {
                     let join_label = sym.gen_sym("if_join");
 
-                    then_stmt.gen_code(break_label, cont_label, sym, out)?;
+                    then_stmt.gen_code(fun, break_label, cont_label, sym, out)?;
                     out.push_str(&format!("jmp {};\n", join_label));
 
                     out.push_str(&format!("{}:\n", false_label));
-                    else_stmt.as_ref().unwrap().gen_code(break_label, cont_label, sym, out)?;
+                    else_stmt.as_ref().unwrap().gen_code(fun, break_label, cont_label, sym, out)?;
                     out.push_str(&format!("{}:\n", join_label));
                 }
                 else
                 {
-                    then_stmt.gen_code(break_label, cont_label, sym, out)?;
+                    then_stmt.gen_code(fun, break_label, cont_label, sym, out)?;
                     out.push_str(&format!("{}:\n", false_label));
                 }
             }
@@ -379,6 +401,7 @@ impl Stmt
                 out.push_str(&format!("jz {};\n", break_label));
 
                 body_stmt.gen_code(
+                    fun,
                     &Some(break_label.clone()),
                     &Some(loop_label.clone()),
                     sym,
@@ -396,6 +419,7 @@ impl Stmt
 
                 out.push_str(&format!("{}:\n", loop_label));
                 body_stmt.gen_code(
+                    fun,
                     &Some(break_label.clone()),
                     &Some(cont_label.clone()),
                     sym,
@@ -412,7 +436,7 @@ impl Stmt
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    init_stmt.as_ref().unwrap().gen_code(break_label, cont_label, sym, out)?;
+                    init_stmt.as_ref().unwrap().gen_code(fun, break_label, cont_label, sym, out)?;
                 }
 
                 let loop_label = sym.gen_sym("for_loop");
@@ -424,6 +448,7 @@ impl Stmt
                 out.push_str(&format!("jz {};\n", break_label));
 
                 body_stmt.gen_code(
+                    fun,
                     &Some(break_label.clone()),
                     &Some(cont_label.clone()),
                     sym,
@@ -440,7 +465,7 @@ impl Stmt
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    stmt.gen_code(break_label, cont_label, sym, out)?;
+                    stmt.gen_code(fun, break_label, cont_label, sym, out)?;
                 }
             }
 
