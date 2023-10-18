@@ -420,9 +420,11 @@ impl Stmt
                         return ParseError::msg_only("initialization of local array variables not yet implemented");
                     }
 
+                    let byte_ptr_t = Type::Pointer(Box::new(Type::UInt(8)));
+
                     // Change the lhs ref type for the assignment
                     if let Expr::Ref(Decl::Local { ref mut t, .. }) = ref_expr {
-                        *t = Type::Pointer(elem_type.clone());
+                        *t = byte_ptr_t.clone();
                     }
 
                     let num_bytes = var_type.sizeof();
@@ -430,7 +432,7 @@ impl Stmt
 
                     // Compute the address of the array (bp - offset)
                     let bp_idx = env.stack_alloc_bp.unwrap();
-                    let bp_ref = Expr::Ref(Decl::Local { idx: bp_idx, t: var_type.clone() });
+                    let bp_ref = Expr::Ref(Decl::Local { idx: bp_idx, t: byte_ptr_t.clone() });
                     let bp_sub = Expr::Binary {
                         op: BinOp::Add,
                         lhs: Box::new(bp_ref),

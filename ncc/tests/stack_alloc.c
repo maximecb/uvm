@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 
 void big_alloc()
 {
     int arr[2048];
-    //memset(arr, 777, 2048);
+    memset(arr, 77, sizeof(arr));
     arr[0] = 333;
     arr[2047] = 1337;
 }
@@ -35,6 +36,13 @@ void multi_alloc()
     assert(arr_b[7] == 2);
 }
 
+void stack_align()
+{
+    uint32_t arr_4[3];
+    uint64_t arr_8[2];
+    arr_8[0] = 7;
+}
+
 int main()
 {
     int arr[3];
@@ -53,16 +61,14 @@ int main()
 
     multi_alloc();
 
-
-
-
-
     // Make sure that a big alloc doesn't trigger a stack overflow
     for (int i = 0; i < 2048; ++i)
     {
         big_alloc();
         multi_alloc();
     }
+
+    stack_align();
 
     return 0;
 }
