@@ -143,11 +143,14 @@ impl Unit
         // If any function in this unit uses stack allocation,
         // The allocation stack grows upwards
         if self.stack_alloc {
+            out.push_str("# Allocation stack\n");
+            out.push_str(".align 8;\n");
             out.push_str("__stack_alloc_min__:\n");
-            out.push_str(&format!(".zeros {};\n", ALLOC_STACK_SIZE));
+            out.push_str(&format!(".zero {};\n", ALLOC_STACK_SIZE));
             out.push_str("__stack_alloc_max__:\n");
             out.push_str("__stack_alloc_sp__:\n");
-            out.push_str(".addr64 __stack_alloc_min;\n");
+            out.push_str(".addr64 __stack_alloc_min__;\n");
+            out.push_str("\n");
         }
 
         out.push_str(&("#".repeat(78) + "\n"));

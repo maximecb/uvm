@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::cmp::max;
 use crate::ast::*;
 use crate::parsing::{ParseError};
 
@@ -23,6 +24,9 @@ struct Env
 
     /// Number of local slots needed in the function
     num_locals: usize,
+
+    /// Stack allocation size for the current function
+    stack_alloc_size: usize,
 
     /// Local index for the stack allocation base pointer
     stack_alloc_bp: Option<usize>,
@@ -77,6 +81,7 @@ impl Env
 
         let offset = top_scope.stack_alloc_size;
         top_scope.stack_alloc_size += num_bytes;
+        self.stack_alloc_size = max(self.stack_alloc_size, top_scope.stack_alloc_size);
 
         offset
     }
@@ -282,6 +287,10 @@ impl Unit
         // Resolve symbols in all functions
         for fun in &mut self.fun_decls {
             fun.resolve_syms(&mut env)?;
+
+            if fun.stack_alloc_bp.is_some() {
+                self.stack_alloc = true;
+            }
         }
 
         // Create new globals for each string constant
@@ -309,6 +318,7 @@ impl Function
     {
         // Reset the local variable slot count
         env.num_locals = 0;
+        env.stack_alloc_size = 0;
         env.stack_alloc_bp = None;
 
         env.push_scope();
@@ -337,6 +347,7 @@ impl Function
 
         // Set the local variable slot count for the function
         self.num_locals = env.num_locals;
+        self.stack_alloc_size = env.stack_alloc_size;
         self.stack_alloc_bp = env.stack_alloc_bp;
 
         Ok(())
