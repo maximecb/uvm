@@ -10,8 +10,8 @@ level of C compliance of NCC over time.
 
 Supported features:
 - Global variables
-- Global arrays, N-dimensional arrays
-  - Array initializer syntax
+- Arrays, N-dimensional arrays
+  - Array initializer syntax (global variables only)
 - Structs
 - Integer arithmetic and bitwise operations
 - Signed and unsigned integers, `stdint.h`
@@ -43,12 +43,12 @@ Not yet implemented (TODO):
 - The `const` qualifier
 - The `double` type
 - The `switch` statement
-- Local arrays variables (can only be globals or malloc'ed)
 - Local struct variables (can only be globals or malloc'ed)
+- Initializer syntax for local array variables
 - Pointers to local variables
 - Struct initializer syntax
 
-Caveats:
+Caveats and quirks:
 - You may need to manually insert type casts in places where they aren't required by the C standard.
 - At the moment `malloc()` / `free()` don't use a free list, they just leak memory
   - If you would like to help with this, the implementation is in [`include/stdlib.h`](include/stdlib.h)
@@ -56,7 +56,7 @@ Caveats:
   - Type errors have no line numbers
   - Errors inside macro expansions have incorrect line numbers
 - The [`printf()` function](include/stdio.h) is only partially supported
-  - Help and contributions welcome
+  - Contributions and improvements welcome!
 
 ## Usage
 
