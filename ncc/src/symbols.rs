@@ -51,12 +51,26 @@ impl Env
         self.scopes.pop();
     }
 
+    /// Define a base pointer for stack allocation
+    fn define_bp(&mut self) -> usize
+    {
+        assert!(self.stack_alloc_bp.is_none());
+
+        let num_scopes = self.scopes.len();
+        let top_scope = &mut self.scopes[num_scopes - 1];
+
+        let bp_idx = top_scope.next_idx;
+        top_scope.next_idx += 1;
+        self.stack_alloc_bp = Some(bp_idx);
+        self.num_locals += 1;
+
+        bp_idx
+    }
+
     /// Stack allocate an object and return its offset
     fn alloc(&mut self, num_bytes: usize) -> usize
     {
-        // TODO: make sure to allocate a bp on the function
-        // NOTE: the bp index must be unique, available across all scopes...
-        // Does that mean we have to do a prepass, look for array decls first?
+        assert!(self.stack_alloc_bp.is_some());
 
         let num_scopes = self.scopes.len();
         let top_scope = &mut self.scopes[num_scopes - 1];
@@ -295,6 +309,7 @@ impl Function
     {
         // Reset the local variable slot count
         env.num_locals = 0;
+        env.stack_alloc_bp = None;
 
         env.push_scope();
 
@@ -304,12 +319,25 @@ impl Function
             env.define(param_name, decl);
         }
 
+        // If there are stack-allocated locals in this function,
+        // define a base pointer local
+        self.body.each_stmt(|stmt| {
+            if let Stmt::VarDecl { var_type, .. } = stmt {
+                if let Type::Array { .. } = var_type {
+                    if env.stack_alloc_bp.is_none() {
+                        env.define_bp();
+                    }
+                }
+            }
+        });
+
         self.body.resolve_syms(env)?;
 
         env.pop_scope();
 
         // Set the local variable slot count for the function
         self.num_locals = env.num_locals;
+        self.stack_alloc_bp = env.stack_alloc_bp;
 
         Ok(())
     }

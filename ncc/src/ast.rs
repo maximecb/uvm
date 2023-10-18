@@ -407,6 +407,54 @@ pub enum Stmt
     }
 }
 
+impl Stmt
+{
+    /// Iterate recursively over each statement
+    pub fn each_stmt<F>(&self, mut func: F) where F: FnMut(&Stmt)
+    {
+        func(self);
+
+        match self {
+            Stmt::Expr(expr) => {}
+            Stmt::Break | Stmt::Continue => {}
+            Stmt::ReturnVoid => {}
+            Stmt::ReturnExpr(expr) => {}
+
+            Stmt::If { test_expr, then_stmt, else_stmt } => {
+                func(then_stmt);
+
+                if else_stmt.is_some() {
+                    func(else_stmt.as_ref().unwrap());
+                }
+            }
+
+            Stmt::While { test_expr, body_stmt } => {
+                func(body_stmt);
+            }
+
+            Stmt::DoWhile { test_expr, body_stmt } => {
+                func(body_stmt);
+            }
+
+            Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
+                if init_stmt.is_some() {
+                    func(init_stmt.as_ref().unwrap());
+                }
+
+                func(body_stmt);
+            }
+
+            Stmt::Block(stmts) => {
+                for stmt in stmts {
+                    func(stmt);
+                }
+            }
+
+            _ => panic!()
+        }
+    }
+}
+
 /// Function
 #[derive(Clone, Debug)]
 pub struct Function
