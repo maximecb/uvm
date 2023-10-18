@@ -2,6 +2,7 @@
 #define __UVM_GRAPHICS__
 
 #include <assert.h>
+#include <uvm/syscalls.h>
 
 #define COLOR_BLACK     0xFF_00_00_00
 #define COLOR_WHITE     0xFF_FF_FF_FF
@@ -42,11 +43,11 @@ void fill_rect(
 
     for (u32 j = 0; j < height; ++j)
     {
-        for (u32 i = 0; i < width; ++i)
-        {
-            u32* pix_ptr = fb + fb_width * (ymin + j) + (xmin + i);
-            *pix_ptr = color;
-        }
+        memset32(
+            fb + fb_width * (ymin + j) + xmin,
+            color,
+            width
+        );
     }
 }
 
