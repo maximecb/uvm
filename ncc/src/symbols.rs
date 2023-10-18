@@ -81,6 +81,13 @@ impl Env
 
         let offset = top_scope.stack_alloc_size;
         top_scope.stack_alloc_size += num_bytes;
+
+        // Make sure the alloc size is a multiple of 8 bytes
+        let rem = top_scope.stack_alloc_size % 8;
+        if rem != 0 {
+            top_scope.stack_alloc_size += 8 - rem;
+        }
+
         self.stack_alloc_size = max(self.stack_alloc_size, top_scope.stack_alloc_size);
 
         offset
