@@ -21,4 +21,9 @@ void main()
         assert(alloc_ptrs[i][127] == 101);
         free((void*)alloc_ptrs[i]);
     }
+
+    // Regression: allocate unaligned data, then aligned data again
+    uint8_t* ptr0 = (uint8_t*)malloc(3);
+    uint32_t* ptr1 = (uint32_t*)malloc(4);
+    *ptr1 = 333;
 }

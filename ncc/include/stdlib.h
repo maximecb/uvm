@@ -60,7 +60,7 @@ void* malloc(size_t size)
     // Bump the allocation pointer
     u8* header_ptr = __next_alloc__;
     u8* block_ptr = header_ptr + 8;
-    __next_alloc__ = block_ptr + size;
+    __next_alloc__ = align_ptr(block_ptr + size, 8);
 
     // Resize the heap if needed
     if (__next_alloc__ > __heap_size__)
