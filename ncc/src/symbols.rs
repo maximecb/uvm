@@ -401,12 +401,17 @@ impl Stmt
                 env.define_local(var_name, var_type.clone());
 
                 let decl = env.lookup(var_name).unwrap();
-                let ref_expr = Expr::Ref(decl);
+                let mut ref_expr = Expr::Ref(decl);
 
                 // If this is an array, which will be stack-allocated
-                if let Type::Array { .. } = var_type {
+                if let Type::Array { elem_type, .. } = var_type {
                     if init_expr.is_some() {
                         return ParseError::msg_only("initialization of local array variables not yet implemented");
+                    }
+
+                    // Change the lhs ref type for the assignment
+                    if let Expr::Ref(Decl::Local { ref mut t, .. }) = ref_expr {
+                        *t = Type::Pointer(elem_type.clone());
                     }
 
                     let num_bytes = var_type.sizeof();
