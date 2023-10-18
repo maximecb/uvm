@@ -668,6 +668,7 @@ fn parse_decl(input: &mut Input) -> Result<(Type, String, Option<Expr>), ParseEr
 {
     let var_type = parse_type(input)?;
     let var_name = input.parse_ident()?;
+    let var_type = parse_array_type(input, var_type)?;
 
     // For now, no support for local array variables
     // This would need alloca() to work
