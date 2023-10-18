@@ -10,6 +10,9 @@ struct Scope
     /// Next local variable slot index to assign
     /// this is only used for local variables
     next_idx: usize,
+
+    /// Current stack allocation size
+    stack_alloc_size: usize,
 }
 
 /// Represent an environment with multiple levels of scoping
@@ -20,6 +23,9 @@ struct Env
 
     /// Number of local slots needed in the function
     num_locals: usize,
+
+    /// Local index for the stack allocation base pointer
+    stack_alloc_bp: Option<usize>,
 
     /// Map of strings to global symbols
     string_tbl: HashMap<String, Decl>,
@@ -34,6 +40,7 @@ impl Env
 
         if num_scopes > 0 {
             new_scope.next_idx = self.scopes[num_scopes - 1].next_idx;
+            new_scope.stack_alloc_size = self.scopes[num_scopes - 1].stack_alloc_size;
         }
 
         self.scopes.push(new_scope);
@@ -42,6 +49,22 @@ impl Env
     fn pop_scope(&mut self)
     {
         self.scopes.pop();
+    }
+
+    /// Stack allocate an object and return its offset
+    fn alloc(&mut self, num_bytes: usize) -> usize
+    {
+        // TODO: make sure to allocate a bp on the function
+        // NOTE: the bp index must be unique, available across all scopes...
+        // Does that mean we have to do a prepass, look for array decls first?
+
+        let num_scopes = self.scopes.len();
+        let top_scope = &mut self.scopes[num_scopes - 1];
+
+        let offset = top_scope.stack_alloc_size;
+        top_scope.stack_alloc_size += num_bytes;
+
+        offset
     }
 
     /// Define a new local variable in the topmost scope
@@ -351,6 +374,35 @@ impl Stmt
 
                 let decl = env.lookup(var_name).unwrap();
                 let ref_expr = Expr::Ref(decl);
+
+                // If this is an array, which will be stack-allocated
+                if let Type::Array { .. } = var_type {
+                    if init_expr.is_some() {
+                        return ParseError::msg_only("initialization of local array variables not yet implemented");
+                    }
+
+                    let num_bytes = var_type.sizeof();
+                    let offset = env.alloc(num_bytes);
+
+                    // Compute the address of the array (bp - offset)
+                    let bp_idx = env.stack_alloc_bp.unwrap();
+                    let bp_ref = Expr::Ref(Decl::Local { idx: bp_idx, t: var_type.clone() });
+                    let bp_sub = Expr::Binary {
+                        op: BinOp::Add,
+                        lhs: Box::new(bp_ref),
+                        rhs: Box::new(Expr::Int(offset as i128))
+                    };
+
+                    let assign_expr = Expr::Binary {
+                        op: BinOp::Assign,
+                        lhs: Box::new(ref_expr),
+                        rhs: Box::new(bp_sub),
+                    };
+
+                    *self = Stmt::Expr(assign_expr);
+
+                    return Ok(());
+                }
 
                 // If there is an initialization expression
                 if let Some(init_expr) = init_expr {
