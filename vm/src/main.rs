@@ -6,6 +6,7 @@
 mod vm;
 mod sys;
 mod asm;
+mod utils;
 
 extern crate sdl2;
 extern crate libc;
@@ -17,6 +18,7 @@ use std::sync::{Arc, Mutex};
 use crate::vm::{VM, Value, MemBlock, ExitReason};
 use crate::asm::{Assembler};
 use crate::sys::{SysState};
+use crate::utils::{thousands_sep};
 
 /// Command-line options
 #[derive(Debug, Clone)]
@@ -154,6 +156,13 @@ fn main()
     let vm = result.unwrap();
     let mut mutex = SysState::get_mutex(vm);
     let ret_val = run_program(&mut mutex);
+
+    #[cfg(feature = "count_insns")]
+    {
+        let mut vm = mutex.lock().unwrap();
+        let insn_count = vm.get_insn_count();
+        println!("insns executed: {}", thousands_sep(insn_count));
+    }
 
     exit(ret_val.as_i32());
 }

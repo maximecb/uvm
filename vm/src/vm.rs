@@ -526,6 +526,10 @@ pub struct VM
 
     // List of stack frames (activation records)
     frames: Vec<StackFrame>,
+
+    // Count of executed instructions
+    #[cfg(feature = "count_insns")]
+    insn_count: u64,
 }
 
 impl VM
@@ -545,7 +549,15 @@ impl VM
             heap,
             stack: Vec::default(),
             frames: Vec::default(),
+            #[cfg(feature = "count_insns")]
+            insn_count: 0,
         }
+    }
+
+    #[cfg(feature = "count_insns")]
+    pub fn get_insn_count(&self) -> u64
+    {
+        self.insn_count
     }
 
     pub fn stack_size(&self) -> usize
@@ -676,6 +688,11 @@ impl VM
         // For each instruction to execute
         loop
         {
+            #[cfg(feature = "count_insns")]
+            {
+                self.insn_count += 1;
+            }
+
             if pc >= self.code.len() {
                 panic!("pc outside bounds of code space")
             }

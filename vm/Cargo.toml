@@ -9,6 +9,9 @@ edition = "2021"
 sdl2 = "0.35.2"
 libc = "0.2"
 
+[features]
+count_insns = []
+
 [profile.dev]
 debug = true
 opt-level = 1
