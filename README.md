@@ -36,7 +36,7 @@ Current features:
 - Little-endian byte ordering (like x86, ARM & RISC-V)
 - 32-bit and 64-bit integer ops, 32-bit floating-point support
 - Separate flat, linear address spaces for code and data
-- Built-in, easy to use [assembler](https://github.com/maximecb/uvm/blob/main/vm/src/asm.rs) with a [simple syntax](https://github.com/maximecb/uvm/tree/main/vm/examples)
+- Built-in, easy to use [assembler](vm/src/asm.rs) with a [simple syntax](vm/examples)
 - Event-driven event execution model compatible with async operations
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
 - Easy to use audio output API with no boilerplate
@@ -122,7 +122,7 @@ Run `cargo test` from the `vm`, and `ncc` directories.
 The repository is organized into a 3 different subprojects, each of which is a Rust codebase which can be compiled with `cargo`:
 
 - `/vm` : The implementation of the UVM virtual machine itself
-  - `/vm/examples/*`: Example assembly programs that can be run by UVM
+  - [`/vm/examples/*`](vm/examples): Example assembly programs that can be run by UVM
 - `/ncc`: An implementation of a toy C compiler that outputs UVM assembly
   - [`/ncc/README.md`](ncc/README.md): documentation for the NCC compiler.
   - [`/ncc/examples/*`](ncc/examples): Example C source files that can be compiled by NCC
