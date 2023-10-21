@@ -152,9 +152,9 @@ is to create new example programs showcasing cool things you can do with UVM, or
 If you do report bugs, please provide as much context as possible, and the smallest reproduction you can
 come up with.
 
-You can also search the codebase for TODO notes:
+You can also search the codebase for TODO or FIXME notes:
 ```sh
-grep -IRi "todo"
+grep -IRi "todo" .
 ```
 
 In general, smaller pull requests are easier to review and have a much higher chance of getting merged than large

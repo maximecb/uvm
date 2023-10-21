@@ -16,7 +16,7 @@
 #define COLOR_PURPLE    0xFF_D6_00_FF
 #define COLOR_TURQUOISE 0xFF_40_E0_D0
 
-// Convert RGB values in the range [0, 255] to a u32 encoding
+// Convert RGB/RGBA values in the range [0, 255] to a u32 encoding
 #define rgb32(r, g, b) ((u32)0xFF_00_00_00 | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
 #define rgba32(r, g, b, a) (((u32)a << 24) | ((u32)r << 16) | ((u32)g << 8) | (u32)b)
 
@@ -63,6 +63,8 @@ void draw_line(
     u32 color
 )
 {
+    // FIXME: this function should not trip when parts of the line are
+    // outside of the viewport, it should just not draw them.
     assert(x0 < fb_width && y0 < fb_height);
     assert(x1 < fb_width && y1 < fb_height);
 

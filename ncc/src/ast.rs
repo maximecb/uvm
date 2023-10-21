@@ -515,12 +515,14 @@ pub struct Global
     pub init_expr: Option<Expr>,
 }
 
+pub type TypeDef = Rc<Box<RefCell<Type>>>;
+
 /// Top-level unit (e.g. source file)
 #[derive(Default, Clone, Debug)]
 pub struct Unit
 {
     // Type definitions
-    pub typedefs: Vec<(String, Rc<Box<RefCell<Type>>>)>,
+    pub typedefs: Vec<(String, TypeDef)>,
 
     // Global variables
     pub global_vars: Vec<Global>,

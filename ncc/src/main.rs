@@ -6,8 +6,9 @@
 
 mod parsing;
 mod cpp;
-mod parser;
 mod ast;
+mod parser;
+mod typedefs;
 mod symbols;
 mod types;
 mod casts;
@@ -17,8 +18,9 @@ mod exec_tests;
 use std::env;
 use parsing::*;
 use cpp::*;
-use parser::*;
 use ast::*;
+use parser::*;
+use typedefs::*;
 use symbols::*;
 use types::*;
 use casts::*;
@@ -91,6 +93,7 @@ fn compile_file(file_name: &str, opts: &Options) -> Result<(), ParseError>
     let mut input = Input::new(&output, file_name);
     let mut unit = parse_unit(&mut input)?;
 
+    unit.resolve_types()?;
     unit.resolve_syms()?;
     unit.check_types()?;
     unit.insert_casts()?;

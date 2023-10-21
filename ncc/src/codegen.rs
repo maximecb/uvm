@@ -1192,6 +1192,7 @@ mod tests
         dbg!(src);
         let mut input = Input::new(&src, "src");
         let mut unit = parse_unit(&mut input).unwrap();
+        unit.resolve_types().unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
         unit.insert_casts().unwrap();
@@ -1212,6 +1213,7 @@ mod tests
 
         let mut input = Input::new(&output, file_name);
         let mut unit = parse_unit(&mut input).unwrap();
+        unit.resolve_types().unwrap();
         unit.resolve_syms().unwrap();
         unit.check_types().unwrap();
         unit.insert_casts().unwrap();
