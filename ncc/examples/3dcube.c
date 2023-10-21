@@ -28,6 +28,7 @@ float verts[8][3] = {
 
 vec3 cube_pos = { 0.0f, 0.0f, -6.0f };
 
+// Cube rotation angle
 float angle = 0.0f;
 
 // Perspective projection matrix
@@ -36,18 +37,10 @@ mat44 persp;
 // Translation matrix for the cube
 mat44 trans;
 
-// Rotation matrices for the cube
-mat44 rotx;
-mat44 roty;
-mat44 rot;
-
-mat44 m_cube;
-
-vec3 v_tmp;
-
 // Draw a line between two 3D points
 void draw_line3d(vec3 v0, vec3 v1, u32 color)
 {
+    vec3 v_tmp;
     mat44_transform(persp, v0, v_tmp);
     int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
     int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
@@ -90,9 +83,14 @@ void anim_callback()
 
     angle = angle + 0.01f;
 
+    // Rotation matrices for the cube
+    mat44 rotx;
+    mat44 roty;
     mat44_rotx(angle, rotx);
     mat44_roty(angle, roty);
 
+    mat44 rot;
+    mat44 m_cube;
     mat44_mul(roty, rotx, rot);
     mat44_mul(rot, trans, m_cube);
 

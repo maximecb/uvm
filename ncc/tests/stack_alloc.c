@@ -2,6 +2,17 @@
 #include <string.h>
 #include <stdint.h>
 
+typedef float vec3[3];
+
+// Regression: stack alloc with typedef
+void test_typedef()
+{
+    vec3 v;
+    v[0] = 0;
+    v[2] = 2;
+    assert(v[2] == 2);
+}
+
 void big_alloc()
 {
     int arr[2048];
@@ -69,6 +80,8 @@ int main()
     }
 
     stack_align();
+
+    test_typedef();
 
     return 0;
 }
