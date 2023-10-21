@@ -165,8 +165,6 @@ void mat44_transform(mat44 mat, vec3 in, vec3 out)
     }
 }
 
-// FIXME: ncc doesn't support local array variables yet
-/*
 void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 {
     vec3 forward;
@@ -205,7 +203,6 @@ void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
     result[2][3] = 0.0f;
     result[3][3] = 1.0f;
 }
-*/
 
 // Generate a perspective projection matrix
 // This is used to project coordinates from eye space into clip space.
