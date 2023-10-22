@@ -244,11 +244,13 @@ pub enum Op
     // syscall <syscall_idx:u16> (arg0, arg1, ..., argN)
     syscall,
 
-    // Return to caller function
+    // Return to caller function, or
+    // Return to the UVM event loop without terminating execution
     // ret (value)
     ret,
 
-    // End execution normally
+    // Terminate program execution
+    // This stops the UVM event loop
     // exit (value)
     exit,
 
