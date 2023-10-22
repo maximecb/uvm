@@ -56,10 +56,10 @@ void draw_line(
     u32* fb,
     u32 fb_width,
     u32 fb_height,
-    u32 x0,
-    u32 y0,
-    u32 x1,
-    u32 y1,
+    i32 x0,
+    i32 y0,
+    i32 x1,
+    i32 y1,
     u32 color
 )
 {
