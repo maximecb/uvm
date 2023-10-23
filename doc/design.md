@@ -31,6 +31,26 @@ the parser is likely able to parse hundreds of megabytes of input per second, so
 not much of a concern. The plan is to keep supporting the textual asm input format even when a binary
 image format becomes available.
 
+### The Event Loop
+
+UVM is an event-driven system where the host VM runs an event loop that calls functions in your
+program to handle various events. This is similar to the way JavaScript and nodejs work.
+You can register callbacks to handle events such as keyboard or mouse input, or to be triggered
+amount a certain amount of time.
+
+One advantage of this design is that there is no need to constantly poll for events, engage
+in busy waiting or
+implement your own event loop, which eliminates much boilerplate code.
+UVM calls you to handle an event, you handle the event, and then you
+return back to UVM when you are done If there are no more events to handle, UVM goes to sleep, and
+calls you for the next event. UVM has different opcodes, `ret` and `exit`, such that `ret` will
+return to the external event loop without terminating execution, whereas `exit` means the program
+is completely done running and wants to stop.
+
+In the case of C programs compiled with `ncc`, the `main()` function can act as an initialization
+function, register callbacks and return to the VM without exiting. To get a better idea of how this
+works, you can look at the [paint example](/ncc/examples/paint.c) program.
+
 ## Design Goals
 
 UVM is designed with the following goals in mind.
