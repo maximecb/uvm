@@ -433,7 +433,11 @@ impl Expr
                             let arg_type = args[idx].eval_type()?;
 
                             if !assign_compat(&param_type, &arg_type) {
-                                return ParseError::msg_only("argument type not compatible with parameter type")
+                                return ParseError::msg_only(&format!(
+                                    "argument type {} not compatible with parameter type {}",
+                                    arg_type,
+                                    param_type,
+                                ))
                             }
                         }
 
