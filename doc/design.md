@@ -55,7 +55,8 @@ The architecture is designed to be easy to understand and straightforward. We av
 **Performance**: although untyped, UVM is designed so that its bytecode can be easily JIT-compiled using dynamic binary translation techniques
 so that it can provide a good performance level that will be adequate for most applications.
 
-**Pragmatism**: because of its minimalistic design, UVM will not be suitable for every possible use case. Its main target is software that end users
+**Pragmatism**: UVM is not for everyone, and that's OK. Because of its minimalistic design, UVM will not be suitable for every possible use case.
+Its main target is software that end users
 run, as well as some network services. Those who want to squeeze absolute peak performance out of an application or rely on the latest libraries
 may be disappointed. However, we believe that trying to implement every feature and satisfy every possible use case would only make the design
 more fragile and detract from our design goals.
