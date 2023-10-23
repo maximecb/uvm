@@ -8,6 +8,7 @@
 int puts(char* str)
 {
     asm (str) -> void { syscall print_str; };
+    asm () -> void { syscall print_endl; };
     return 0;
 }
 
