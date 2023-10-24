@@ -152,11 +152,12 @@ impl SysState
     {
         let mut syscalls = HashMap::<String, SysCallFn>::new();
 
+        // Core VM syscalls
+        self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
+        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_1(vm_resize_heap));
         self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
         self.reg_syscall(MEMSET32, SysCallFn::Fn3_0(memset32));
         self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
-        self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
-        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_1(vm_resize_heap));
 
         self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
         self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
@@ -177,6 +178,8 @@ impl SysState
         self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
 
         self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
+
+        // TODO: NET_, networking syscalls
     }
 }
 
