@@ -7,7 +7,7 @@ behind various architectural choices.
 
 UVM is a bytecode VM with a [stack-based](https://en.wikipedia.org/wiki/Stack_machine) interpreter,
 which will eventually integrate a JIT compiler as well.
-It uses a Harvard architecture where the stack, code and data (the heap) are effectively 3 separate address
+It uses a Harvard architecture where the stack, code and data (the heap) are 3 separate address
 spaces. The following sections go in to details to explain more about the
 architecture of UVM and motivate these design choices. You can find a list of supported bytecode
 instructions in [vm/src/vm.rs](/vm/src/vm.rs).
@@ -30,6 +30,22 @@ at the moment, a textual format is easier to develop and refactor. This format i
 the parser is likely able to parse hundreds of megabytes of input per second, so performance is
 not much of a concern. The plan is to keep supporting the textual asm input format even when a binary
 image format becomes available.
+
+### The Heap
+
+The address space used to store data is referred to as the heap. It is a linear address space which
+starts at address 0. There is a system call to expand and resize the heap. For performance reasons,
+UVM may allocate more space than requested, but programs should not rely on this behavior.
+
+One unusual property of the UVM heap is that address 0 is a valid address, meaning that accessing it
+will not fault. If address 0 is to be used for null pointers, in a language such as C, you can simply
+write some dummy data at this address. If you would like accesses to address 0 to panic, then you can
+insert or generate your own null checks in debug builds of your software.
+
+UVM requires heap memory accesses to be aligned, and will panic if they are
+not. This is done for performance reasons, and also because some architectures don't allow
+unaligned memory accesses. In practice, we expect that a JIT compiler will be able to eliminate
+most alignment checks.
 
 ### The Event Loop
 
