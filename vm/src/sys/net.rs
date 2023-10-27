@@ -4,6 +4,38 @@ use crate::vm::{VM, Value};
 
 
 
+/*
+// Syscall to create a TCP listening socket to accept incoming connections
+u64 socket_id = net_listen_tcp(
+  u16 port_no,
+  ip_space, // IPV4 / IPV6
+  const char* net_iface, // Network interface address to listen on, null for any address
+  callback on_new_connection, // Called on new incoming connection
+  u64 flags // optional flags, default 0
+)
+
+// Syscall to accept a new connection
+// Gives you the client address in the buffer you define
+// Will block if there is no incoming connection request
+u64 socket_id = net_accept(u64 socket_id, client_addr_t *client_addr, callback on_incoming_data)
+
+// Syscall to read data from a given socket into a buffer you specify
+u64 num_bytes_read = net_read(u64 socket_id, void* buffer, u64 buf_len)
+
+// Syscall to write data on a given socket
+void net_write(u64 socket_id, void* buffer, u64 buf_len);
+
+// Syscall to close a socket
+net_close(socket_id)
+*/
+
+
+
+
+
+
+
+
 // We could create a thread for the listening socket that accepts connections,
 // and so simply use this socket in blocking mode
 
