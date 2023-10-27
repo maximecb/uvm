@@ -13,6 +13,7 @@ use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM};
 use window::*;
 use audio::*;
+use net::*;
 use time::*;
 use constants::*;
 
@@ -89,8 +90,11 @@ pub struct SysState
     /// Weak reference to a mutex for the VM
     mutex: Weak<Mutex<VM>>,
 
-    /// Time module state
+    /// Time subsystem state
     pub time_state: TimeState,
+
+    /// Network subsystem state
+    pub net_state: NetState,
 }
 
 impl SysState
@@ -101,6 +105,7 @@ impl SysState
             syscalls: [None; SYSCALL_TBL_LEN],
             mutex: Weak::new(),
             time_state: TimeState::new(),
+            net_state: NetState::default(),
         };
 
         sys_state.init_syscalls();
