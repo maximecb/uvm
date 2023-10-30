@@ -6,6 +6,7 @@ use crate::vm::{VM, Value};
 #[derive(Default)]
 pub struct NetState
 {
+    // TODO: need a list/map of open sockets
 }
 
 // Syscall to create a TCP listening socket to accept incoming connections

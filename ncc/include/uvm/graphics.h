@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <uvm/syscalls.h>
+#include <uvm/utils.h>
 
 #define COLOR_BLACK     0xFF_00_00_00
 #define COLOR_WHITE     0xFF_FF_FF_FF
@@ -52,6 +53,7 @@ void fill_rect(
 }
 
 // Draw a line using Bresenham's algorithm
+// This function will panic if coordinates are outside of the viewport
 void draw_line(
     u32* fb,
     u32 fb_width,
@@ -63,8 +65,6 @@ void draw_line(
     u32 color
 )
 {
-    // FIXME: this function should not trip when parts of the line are
-    // outside of the viewport, it should just not draw them.
     assert(x0 < fb_width && y0 < fb_height);
     assert(x1 < fb_width && y1 < fb_height);
 
@@ -126,6 +126,100 @@ void draw_line(
             y0 = y0 + sy;
         }
     }
+}
+
+// Draw a line using Bresenham's algorithm, but also clip
+// the input coordinates so they are inside the viewport first
+void draw_line_clipped(
+    u32* fb,
+    u32 fb_width,
+    u32 fb_height,
+    i32 x0,
+    i32 y0,
+    i32 x1,
+    i32 y1,
+    u32 color
+)
+{
+    // Swap the coordinates so x0 <= x1
+    if (x0 > x1)
+    {
+        i32 tmp = x0;
+        x0 = x1;
+        x1 = tmp;
+
+        tmp = y0;
+        y0 = y1;
+        y1 = tmp;
+    }
+
+    // If the line is out of frame, reject it
+    if (x1 < 0 || x0 >= (i32)fb_width)
+    {
+        return;
+    }
+
+    // If part of the line is to the left of the frame
+    if (x0 < 0)
+    {
+        i32 dx = -x0;
+        x0 = 0;
+        y0 = (y0 * dx + (y1 - y0)) / dx;
+    }
+
+    // If part of the line is to the right of the frame
+    if (x1 >= (i32)fb_width)
+    {
+        i32 dx = (fb_width - 1) - x1;
+        x1 = x1 + dx;
+
+        y0 = (y0 * dx + (y0 - y1)) / dx;
+    }
+
+    // Swap the coordinates so y0 <= y1
+    if (y0 > y1)
+    {
+        i32 tmp = x0;
+        x0 = x1;
+        x1 = tmp;
+
+        tmp = y0;
+        y0 = y1;
+        y1 = tmp;
+    }
+
+    // If the line is out of frame, reject it
+    if (y1 < 0 || y0 >= (i32)fb_height)
+    {
+        return;
+    }
+
+    // If part of the line is to the left of the frame
+    if (y0 < 0)
+    {
+        i32 dy = -y0;
+        y0 = 0;
+        x0 = (x0 * dy + (x1 - x0)) / dy;
+    }
+
+    // If part of the line is to the right of the frame
+    if (y1 >= (i32)fb_height)
+    {
+        i32 dy = (fb_height - 1) - y1;
+        y1 = y1 + dy;
+        x0 = (x0 * dy + (x1 - x0)) / dy;
+    }
+
+    draw_line(
+        fb,
+        fb_width,
+        fb_height,
+        x0,
+        y0,
+        x1,
+        y1,
+        color
+    );
 }
 
 #endif

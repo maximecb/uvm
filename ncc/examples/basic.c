@@ -1,7 +1,7 @@
 //
 // UVM Basic
 // by Abdul Bahajaj
-// 
+//
 // Note to reader: When I authored this VM there were a lot of missing features from the NCC compiler ( e.g. there are no structs, unions, etc...).
 // Keeping this in mind might help you understand why the code is structured in the way it is.
 
@@ -32,9 +32,9 @@
 #ifdef DEBUG
 #define DEBUGS(s) puts(__FILE__ " : "); print_i64(__LINE__); puts(" "); puts(s);
 #define DEBUGI(i) print_i64(i);
-#else 
-#define DEBUGS(s) 
-#define DEBUGI(i) 
+#else
+#define DEBUGS(s)
+#define DEBUGI(i)
 #endif
 #define DEBUG(s) DEBUGS(s "\n");
 
@@ -73,10 +73,10 @@ u32* get_point_ptr(u32* dst, size_t frame_width, size_t x, size_t y)
 }
 
 int white = 0xFFFFFF;
-int blue = 0x0247fe; 
-int red = 0xFF0000; 
-int green = 0x008000; 
-int black = 0x0; 
+int blue = 0x0247fe;
+int red = 0xFF0000;
+int green = 0x008000;
+int black = 0x0;
 
 void textinput(u64 window_id, char ch)
 {
@@ -732,7 +732,7 @@ void console_redraw_line(size_t start_y)
     size_t start = console_get_line_pos(start_y);
     size_t end = console_get_line_pos(start_y + 1) + FONT_MONOGRAM_HEIGHT;
 
-    for(u64 y = start; y < end; ++y) 
+    for(u64 y = start; y < end; ++y)
         memset32(((u32*)frame_buffer) + FRAME_WIDTH * y, blue, console_width);
 }
 
@@ -902,15 +902,14 @@ void canvas_fill(u32 color)
     memset32(frame_buffer, color, sizeof(frame_buffer) / sizeof(u32));
 }
 
-
 //===========================================================================
-/* INTERP */
+/* INTERPRETER */
 
 u64 vm_status = VM_STATUS_DONE;
 
 char vm_command_text_buffer[1024];
 size_t vm_command_text_buffer_cursor =0;
-size_t vm_command_text_buffer_read = 0; 
+size_t vm_command_text_buffer_read = 0;
 
 void vm_command_text_buffer_clear()
 {
@@ -930,16 +929,16 @@ void vm_command_text_buffer_backspace()
 
 #define OP_PUSH 0
 // pops the top of the stack, assigns the value to the var
-#define OP_SET_VAR 1        
+#define OP_SET_VAR 1
 // pushes a var value to the stack
-#define OP_GET_VAR 2        
+#define OP_GET_VAR 2
 
 #define OP_JUMP 3          // jumps to instructions within a command
 #define OP_JUMP_IF 4
 #define OP_JUMP_IF_NOT 5
 
 // binary arth ops pop 2 vals from the stack, push the result to the stack
-#define OP_ADD 6            
+#define OP_ADD 6
 #define OP_SUB 7
 #define OP_MULT 8
 #define OP_DIV 9
@@ -955,7 +954,7 @@ void vm_command_text_buffer_backspace()
 #define OP_PRINT_INT 16
 
 // Jumps to a command, as opposed to jumping to instructions as OP_JUMP does
-#define OP_GOTO 17 
+#define OP_GOTO 17
 
 // draws a pixel at x, y
 #define OP_PLOT 18
@@ -967,7 +966,7 @@ void vm_command_text_buffer_backspace()
 
 #define OP_EXIT 23 // Exits the program
 
-#define OP_SLEEP 24 
+#define OP_SLEEP 24
 #define OP_RAND 25
 #define OP_MOD 26
 #define OP_PRINT_STR 27
@@ -1049,7 +1048,7 @@ u64** vm_command_create(u64 num)
         new_cmd[VM_COMMANDS_NEXT] = (u64*)vm_commands_root;
         vm_commands_root = new_cmd;
         return new_cmd;
-    } 
+    }
 
     DEBUG("Finding command\n");
     u64** prev_cmd = 0;
@@ -1094,9 +1093,9 @@ u64 vm_alloc_var()
 
 // When a symbol is interned a small area of memory that holds some meta data about the symbol is allocated
 // stores the actual string that represents the symbol
-#define SYM_META_STR 0 
+#define SYM_META_STR 0
 // stores the index of the variable in vm_vars. vm_vars[sym_meta[SYM_META_LOC]] = the value of the symbol as set by LET
-#define SYM_META_LOC 1 
+#define SYM_META_LOC 1
 
 u64* vm_alloc_sym_meta()
 {
@@ -1166,7 +1165,7 @@ u64* vm_intern(u8* sym, u64 len, u32 hash)
         if (cursor >= vm_intern_capacity)
         {
             if(idx == 0) break;
-            cursor = 0; 
+            cursor = 0;
         }
 
         DEBUGS("Attempting to locate symbol at index: ");
@@ -1620,7 +1619,7 @@ u64 vm_emit_comparison()
             {
                 op = OP_GT_EQ;
                 read_ch();
-            } 
+            }
         }
         else if('<' == next_ch)
         {
@@ -1683,7 +1682,7 @@ u8 vm_emit_cmd(u64* command)
         {
             DEBUG("Emitting help command");
             vm_bytecode_emit(OP_HELP_ALL, 0);
-        } 
+        }
         else if (sym == vm_commands_sym_let)
             emit_print_str("Assigns the value of the expression to the variable named by the symbol.   LET {symbol} {expression}");
         else if (sym == vm_commands_sym_goto)
@@ -1693,15 +1692,15 @@ u8 vm_emit_cmd(u64* command)
         else if (sym == vm_commands_sym_if)
             emit_print_str("IF {predicate expression} {then command} ELSE {else command}");
         else if (sym == vm_commands_sym_plot)
-            emit_print_str("Plots a dot at x and y.  PLOT {x} {y} {color}"); 
+            emit_print_str("Plots a dot at x and y.  PLOT {x} {y} {color}");
         else if (sym == vm_commands_sym_line)
-            emit_print_str("Draws a line from (x0, y0) to (x1, y1). LINE {x0} {y0} {x1} {y1} {color}"); 
+            emit_print_str("Draws a line from (x0, y0) to (x1, y1). LINE {x0} {y0} {x1} {y1} {color}");
         else if (sym == vm_commands_sym_clear)
-            emit_print_str("Clears the canvas"); 
+            emit_print_str("Clears the canvas");
         else if (sym == vm_commands_sym_halt)
-            emit_print_str("Stops command execution. You can use it to stop loops"); 
+            emit_print_str("Stops command execution. You can use it to stop loops");
         else if (sym == vm_commands_sym_exit)
-            emit_print_str("Exit the program"); 
+            emit_print_str("Exit the program");
         else if (sym == vm_commands_sym_quit)
             emit_print_str("Same as exit");
         else if (sym == vm_commands_sym_fill)
@@ -1901,7 +1900,6 @@ void vm_load_cmd()
     vm_command_text_buffer_clear();
 }
 
-
 i64 vm_pop()
 {
     i64 val = vm_stack[--vm_stack_cursor];
@@ -1975,7 +1973,6 @@ void print_inst(u64 inst)
     PRINT_OP("OP_FILL", OP_FILL)
     PRINT_OP("OP_EXIT", OP_EXIT)
 
-
     puts("\n");
     puts("arg:");
     print_i64(arg);
@@ -2015,7 +2012,7 @@ void vm_exec()
     {
         vm_hand_control_back();
         return;
-    } 
+    }
 
     vm_status = VM_STATUS_RUNNING;
     i64 val1;
@@ -2142,19 +2139,19 @@ void vm_exec()
             u32 x0 = (u32)vm_pop();
             if(canvas_coord_gaurd(x0, y0)) break;
             if(canvas_coord_gaurd(x1, y1)) break;
-            draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT,  console_width + x0, y0,  console_width + x1, y1, color);
+            draw_line((u32*)frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, console_width + x0, y0,  console_width + x1, y1, color);
         }
         BIN_OP(OP_ADD, +)
-            BIN_OP(OP_SUB, -)
-            BIN_OP(OP_MULT, *)
-            BIN_OP(OP_DIV, /)
-            BIN_OP(OP_GT, >)
-            BIN_OP(OP_LT, <)
-            BIN_OP(OP_GT_EQ, >=)
-            BIN_OP(OP_LT_EQ, <=)
-            BIN_OP(OP_EQ, ==)
-            BIN_OP(OP_NOT_EQ, !=)
-            BIN_OP(OP_MOD, %)
+        BIN_OP(OP_SUB, -)
+        BIN_OP(OP_MULT, *)
+        BIN_OP(OP_DIV, /)
+        BIN_OP(OP_GT, >)
+        BIN_OP(OP_LT, <)
+        BIN_OP(OP_GT_EQ, >=)
+        BIN_OP(OP_LT_EQ, <=)
+        BIN_OP(OP_EQ, ==)
+        BIN_OP(OP_NOT_EQ, !=)
+        BIN_OP(OP_MOD, %)
         else
         {
             DEBUG("unrecognized command");

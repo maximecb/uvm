@@ -2,9 +2,18 @@
 #include <uvm/graphics.h>
 #include <uvm/utils.h>
 #include <assert.h>
+#include <stdlib.h>
 
 // Frame buffer
 u32 fb[800][600];
+
+void keydown(u64 window_id, u16 keycode)
+{
+    if (keycode == KEY_ESCAPE)
+    {
+        exit(0);
+    }
+}
 
 int main()
 {
@@ -32,8 +41,16 @@ int main()
         rgb32(255, 255, 255)
     );
 
+    draw_line_clipped(
+        (u32*)fb, 800, 600,
+        -50 , -50,
+        850, 700,
+        rgb32(255, 0, 0)
+    );
+
     /*
     window_create(800, 600, "Graphics Test", 0);
+    window_on_keydown(0, keydown);
     window_draw_frame(0, fb);
     enable_event_loop();
     */
