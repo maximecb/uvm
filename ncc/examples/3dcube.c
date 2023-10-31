@@ -50,8 +50,6 @@ void draw_line3d(vec3 v0, vec3 v1, u32 color)
     int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
     int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
 
-    // TODO: we should handle coordinates that are outside the screen
-
     draw_line(
         (u32*)frame_buffer,
         FRAME_WIDTH,
