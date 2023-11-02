@@ -20,9 +20,9 @@ Contents:
 - [Features](#features)
 - [Build Instructions](#build-instructions)
 - [Codebase Organization](#codebase-organization)
-- [Vision and Motivation](doc/vision.md)
 - [Design and Architecture](doc/design.md)
 - [Subsystems and System Calls](doc/syscalls.md)
+- [Vision and Motivation](doc/vision.md)
 - [Planning and Evolution](doc/planning.md)
 
 If you think that UVM is cool, you can support my work via [GitHub Sponsors](https://github.com/sponsors/maximecb) :heart:
