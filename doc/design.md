@@ -33,6 +33,23 @@ the parser is likely able to parse hundreds of megabytes of input per second, so
 not much of a concern. The plan is to keep supporting the textual asm input format even when a binary
 image format becomes available.
 
+### The Stack
+
+UVM is a stack machine, meaning that there is a value stack on which bytecode instructions can push
+and pop values. Each stack slot can hold one 64-bit value and is untyped. There are instructions
+to push constants on the stack, and to perform simple stack manipulations such as `dup`, `pop` and
+`swap`. 
+It's not possible to directly take the address of something on the value stack. This is because
+allowing arbitrary pointers to stack values could limit the optimizations that a future JIT
+compiler would be able to perform. If you need to take the value of specific stack objects, it's
+possible to maintain your own stack and stack pointer in the heap for those objects.
+
+In addition to the value stack, there is also an implicit stack of activation records that
+maintains return addresses for function calls. Calling a function and returning with the
+`call` and `ret` instructions manipulates this other implicit stack. Returning from a
+function also pops all the values that were pushed by it. Calling a function consumes
+all of its arguments from the stack and leaves only the return value on the value stack.
+
 ### The Heap
 
 The address space used to store data is referred to as the heap. It is a linear address space which
