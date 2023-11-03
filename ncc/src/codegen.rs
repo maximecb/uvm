@@ -565,6 +565,11 @@ impl Expr
                         out.push_str("i32_to_f32;\n");
                     }
 
+                    // UInt to float
+                    (Float(32), UInt(n)) if *n <= 32 => {
+                        out.push_str("i32_to_f32;\n");
+                    }
+
                     // Float to int
                     (Int(m), Float(32)) if *m <= 32 => {
                         out.push_str("f32_to_i32;\n");

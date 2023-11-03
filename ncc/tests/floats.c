@@ -28,6 +28,7 @@ int main()
     assert((short)5000.0f == 5000);
     assert((short)-5000.0f == (short)-5000);
     assert((float)(short)5000 == 5000.0f);
+    assert((float)(unsigned int)700 == 700.0f);
 
     // Global variable access
     assert(g == 3.5f);

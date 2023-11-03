@@ -30,6 +30,7 @@ fn assign_compat(lhs_type: &Type, rhs_type: &Type) -> bool
 
         // Assign int to float with at least as many bits
         (Float(m), Int(n)) if n <= m => true,
+        (Float(m), UInt(n)) if n <= m => true,
 
         // Assigning an integer to a pointer
         // Note: in C, this works but only for the value 0
@@ -224,6 +225,7 @@ impl Expr
 
                     // Int/float casts
                     (Float(32), Int(n)) if *n <= 32 => {},
+                    (Float(32), UInt(n)) if *n <= 32 => {},
                     (Int(m), Float(32)) if *m <= 32 => {},
 
                     // Pointer casts

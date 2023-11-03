@@ -53,7 +53,7 @@ float pc_to_freq(unsigned int note_no, float offset)
     assert(note_no < MIDI_NUM_NOTES);
 
     // F(n) = 440 * 2 ^ ((n-69)/12)
-    float note_exp = (float)(int)(note_no - A4_NOTE_NO) / NOTES_PER_OCTAVE;
+    float note_exp = (float)(note_no - A4_NOTE_NO) / NOTES_PER_OCTAVE;
 
     // b = a * 2 ^ (o / 1200)
     float offset_exp = offset / CENTS_PER_OCTAVE;
