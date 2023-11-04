@@ -41,8 +41,51 @@ void draw_line3d(vec3 v0, vec3 v1, u32 color)
     );
 }
 
+//
+// Converts a HUE to r, g or b.
+// returns float in the set [0, 1].
+//
+float hue2rgb(float p, float q, float t)
+{
+    if (t < 0)
+        t = t + 1;
+    if (t > 1)
+        t = t - 1;
+    if (t < 1.0f / 6)
+        return p + (q - p) * 6 * t;
+    if (t < 1.0f / 2)
+        return q;
+    if (t < 2.0f / 3)
+        return p + (q - p) * (2.0f / 3 - t) * 6;
 
+    return p;
+}
 
+// Converts an HSL color value to RGB. Conversion formula
+// adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+// Assumes h, s, and l are contained in [0, 1] and
+// returns RGB in [0, 255].
+//
+u32 hsl_to_rgb(float h, float s, float l)
+{
+    if (s == 0)
+    {
+        // Achromatic
+        int c = (int)(255 * l);
+        return rgb32(c, c, c);
+    }
+    else
+    {
+        float q = l < 0.5f ? l * (1 + s) : l + s - l * s;
+        float p = 2 * l - q;
+
+        return rgb32(
+            (int)(hue2rgb(p, q, h + 1.0f/3) * 255),
+            (int)(hue2rgb(p, q, h) * 255),
+            (int)(hue2rgb(p, q, h - 1.0f/3) * 255)
+        );
+    }
+}
 
 float line_pos = 1.0f;
 
@@ -53,17 +96,18 @@ void anim_callback()
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, 800 * 600);
 
-
-
     line_pos = line_pos - 0.02f;
     if (line_pos < 0)
         line_pos = line_pos + 1;
 
     printf("line_pos=%f\n", line_pos);
 
-
-
-
+    // Draw sky/horizon
+    for (int i = 0; i < 335; ++i)
+    {
+        u32 color = hsl_to_rgb(0.74f, 1.0f, i / 350.0f);
+        memset32((u32*)frame_buffer[i], color, FRAME_WIDTH);
+    }
 
     vec3 v0;
     vec3 v1;
@@ -95,12 +139,6 @@ void anim_callback()
 
         draw_line3d(v0, v1, COLOR_PURPLE);
     }
-
-
-
-
-
-
 
     window_draw_frame(0, frame_buffer);
 
