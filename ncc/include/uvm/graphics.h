@@ -162,18 +162,18 @@ void draw_line_clipped(
     // If part of the line is to the left of the frame
     if (x0 < 0)
     {
-        i32 dx = -x0;
+        i32 ex = -x0;
+        y0 = y0 + (y1 - y0) * ex / (x1 - x0);
         x0 = 0;
-        y0 = (y0 * dx + (y1 - y0)) / dx;
     }
 
     // If part of the line is to the right of the frame
     if (x1 >= (i32)fb_width)
     {
-        i32 dx = (fb_width - 1) - x1;
-        x1 = x1 + dx;
-
-        y0 = (y0 * dx + (y0 - y1)) / dx;
+        // ex is a negative quantity
+        i32 ex = (fb_width - 1) - x1;
+        y1 = y1 + (y1 - y0) * ex / (x1 - x0);
+        x1 = x1 + ex;
     }
 
     // Swap the coordinates so y0 <= y1
@@ -197,17 +197,18 @@ void draw_line_clipped(
     // If part of the line is to the left of the frame
     if (y0 < 0)
     {
-        i32 dy = -y0;
+        i32 ey = -y0;
+        x0 = x0 + (x1 - x0) * ey / (y1 - y0);
         y0 = 0;
-        x0 = (x0 * dy + (x1 - x0)) / dy;
     }
 
     // If part of the line is to the right of the frame
     if (y1 >= (i32)fb_height)
     {
-        i32 dy = (fb_height - 1) - y1;
-        y1 = y1 + dy;
-        x0 = (x0 * dy + (x1 - x0)) / dy;
+        // ey is a negative quantity
+        i32 ey = (fb_height - 1) - y1;
+        x1 = x1 + (x1 - x0) * ey / (y1 - y0);
+        y1 = y1 + ey;
     }
 
     draw_line(
