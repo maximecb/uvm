@@ -1319,7 +1319,7 @@ mod tests
         // Assignment to a global pointer
         gen_ok("char* s; void f() { s = \"str\"; }");
 
-        gen_ok("size_t strlen(char* p) { size_t l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
+        gen_ok("int strlen(char* p) { int l = 0; while (*(p + l) != 0) l = l + 1; return l; }");
     }
 
     #[test]
@@ -1349,12 +1349,12 @@ mod tests
     #[test]
     fn for_loop()
     {
-        gen_ok("void foo(size_t n) { for (;;) {} }");
-        gen_ok("void foo(size_t n) { for (size_t i = 0;;) {} }");
-        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n;) {} }");
-        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) {} }");
-        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { break; } }");
-        gen_ok("void foo(size_t n) { for (size_t i = 0; i < n; i = i + 1) { continue; } }");
+        gen_ok("void foo(int n) { for (;;) {} }");
+        gen_ok("void foo(int n) { for (int i = 0;;) {} }");
+        gen_ok("void foo(int n) { for (int i = 0; i < n;) {} }");
+        gen_ok("void foo(int n) { for (int i = 0; i < n; i = i + 1) {} }");
+        gen_ok("void foo(int n) { for (int i = 0; i < n; i = i + 1) { break; } }");
+        gen_ok("void foo(int n) { for (int i = 0; i < n; i = i + 1) { continue; } }");
         gen_ok("void foo(int n) { for (int i = 0; i < n; ++i) {} }");
     }
 

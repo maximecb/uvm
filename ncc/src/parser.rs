@@ -865,7 +865,6 @@ fn parse_type_atom(input: &mut Input) -> Result<Type, ParseError>
         "i32" => Ok(Type::Int(32)),
         "i64" => Ok(Type::Int(64)),
 
-        "size_t" => Ok(Type::UInt(64)),
         "char" => Ok(Type::UInt(8)),
         "bool" => Ok(Type::UInt(8)),
 

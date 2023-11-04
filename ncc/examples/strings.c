@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 size_t strlen(char* p)
 {
     size_t l = 0;

@@ -28,23 +28,23 @@ u32 audio_pos = UINT32_MAX;
 // Draw the ball at the current x,y position
 void draw_ball()
 {
-    size_t xmin = px;
-    size_t xmax = px + BALL_RADIUS;
+    uint32_t xmin = px;
+    uint32_t xmax = px + BALL_RADIUS;
     if (px >= BALL_RADIUS) xmin = px - BALL_RADIUS;
     if (xmax >= FRAME_WIDTH) xmax = FRAME_WIDTH;
 
-    size_t ymin = py;
-    size_t ymax = py + BALL_RADIUS;
+    uint32_t ymin = py;
+    uint32_t ymax = py + BALL_RADIUS;
     if (py >= BALL_RADIUS) ymin = py - BALL_RADIUS;
     if (ymax >= FRAME_HEIGHT) ymax = FRAME_HEIGHT;
 
-    for (size_t x = xmin; x < xmax; ++x)
+    for (uint32_t x = xmin; x < xmax; ++x)
     {
-        for (size_t y = ymin; y < ymax; ++y)
+        for (uint32_t y = ymin; y < ymax; ++y)
         {
-            size_t dx = x - px;
-            size_t dy = y - py;
-            size_t dist_sqr = dx * dx + dy * dy;
+            uint32_t dx = x - px;
+            uint32_t dy = y - py;
+            uint32_t dist_sqr = dx * dx + dy * dy;
 
             if (dist_sqr <= BALL_RADIUS * BALL_RADIUS)
             {

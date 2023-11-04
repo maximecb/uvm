@@ -472,7 +472,7 @@ print(ascii_tbl_str)
 SCALE = 2
 
 print(f'''
-void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_y, u8 scale, u32 color)
+void draw_monogram_char(u32* dest, u32 dest_w, char ch, u32 dest_x, u32 dest_y, u8 scale, u32 color)
 {{
     u32 char_idx = monogram_ascii_to_idx[ch];
 
@@ -483,12 +483,12 @@ void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_
 
     u32* d = dest + dest_x + dest_w * dest_y;
 
-    for (u64 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y)
+    for (u32 y = 0; y < FONT_MONOGRAM_HEIGHT; ++y)
     {{
         u8 pixel_bits = font_monogram_data[char_idx][y];
         for (u8 i = 0; i < scale; ++i)
         {{
-            u64 x = 0;
+            u32 x = 0;
             u8 pb = pixel_bits;
 
             while (pb)
@@ -503,8 +503,8 @@ void draw_monogram_char(u32* dest, size_t dest_w, char ch, u64 dest_x, u64 dest_
     }}
 }}
 
-size_t FRAME_WIDTH = {200 * SCALE};
-size_t FRAME_HEIGHT = {200 * SCALE};
+u32 FRAME_WIDTH = {200 * SCALE};
+u32 FRAME_HEIGHT = {200 * SCALE};
 
 u32 frame_buffer[{202 * 200 * SCALE * SCALE}];
 
@@ -515,9 +515,9 @@ void anim_callback()
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
 
-    for (size_t ch = 32; ch < 127; ++ch) {{
-        u64 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
-        u64 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
+    for (u32 ch = 32; ch < 127; ++ch) {{
+        u32 x = ch % 26 * FONT_MONOGRAM_WIDTH * scale;
+        u32 y = ch / 26 * FONT_MONOGRAM_HEIGHT * scale;
 
         // Drop shadow.
         draw_monogram_char(

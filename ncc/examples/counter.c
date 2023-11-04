@@ -2,10 +2,10 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
 
-size_t FRAME_WIDTH = 800;
-size_t FRAME_HEIGHT = 600;
-u32 CH_DOTS_X = 5;
-u32 CH_DOTS_Y = 7;
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
+#define CH_DOTS_X 5
+#define CH_DOTS_Y 7
 
 // RGBA pixels: 800 * 600
 u32 frame_buffer[480_000];

@@ -3,17 +3,11 @@
 
 #include <assert.h>
 
-#ifndef MIN
-#define MIN(a, b) (a < b? a:b)
-#endif
-
-#ifndef MAX
-#define MAX(a, b) (a > b? a:b)
-#endif
-
+// Set a hidden global variable to enable the UVM event loop
+// This will cause your program to continue running after
+// your main() function returns.
 void enable_event_loop()
 {
-    // Set a global variable to enable the event loop
     asm () -> void
     {
         push __EVENT_LOOP_ENABLED__;

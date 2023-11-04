@@ -1,6 +1,8 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
+#include <stddef.h>
+
 int abs(int n)
 {
     if (n < 0)

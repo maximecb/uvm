@@ -1,6 +1,8 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
+#include <stddef.h>
+
 #ifndef memcpy
 #define memcpy(dst, src, num_bytes) asm (dst, src, num_bytes) -> void { syscall memcpy; }
 #endif
