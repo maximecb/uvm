@@ -180,6 +180,7 @@ pub enum Op
 
     // Int/float conversion
     i32_to_f32,
+    i64_to_f32,
     f32_to_i32,
 
     // Load a value at a given adress
@@ -1305,11 +1306,18 @@ impl VM
 
                 // Follows Rust semantics:
                 // - Round ties to even
-                // - Overflow produces infinity (not possible for i32)
                 // - Never panics
                 Op::i32_to_f32 => {
                     let v = self.pop();
                     self.push(v.as_i32() as f32);
+                }
+
+                // Follows Rust semantics:
+                // - Round ties to even
+                // - Never panics
+                Op::i64_to_f32 => {
+                    let v = self.pop();
+                    self.push(v.as_i64() as f32);
                 }
 
                 // Follows Rust semantics:
@@ -1559,7 +1567,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 110);
+        assert!(Op::exit as usize <= 112);
     }
 
     #[test]
