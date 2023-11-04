@@ -7,7 +7,6 @@ and want to help me make it happen.**
 <p align="center">
     <img src="media/the_grid.png" height=180>&nbsp;
     <img src="media/attackers.png" height=180>&nbsp;
-    <img src="media/basic.png" height=180>&nbsp;
     <img src="media/chess.png" height=180>
 </p>
 
