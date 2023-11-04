@@ -410,7 +410,7 @@ pub enum Stmt
 impl Stmt
 {
     /// Iterate recursively over each statement
-    pub fn each_stmt<F>(&self, mut func: F) where F: FnMut(&Stmt)
+    pub fn each_stmt<F>(&self, func: &mut F) where F: FnMut(&Stmt)
     {
         func(self);
 
@@ -419,38 +419,39 @@ impl Stmt
             Stmt::Break | Stmt::Continue => {}
             Stmt::ReturnVoid => {}
             Stmt::ReturnExpr(expr) => {}
+            Stmt::VarDecl { .. } => {}
 
             Stmt::If { test_expr, then_stmt, else_stmt } => {
-                func(then_stmt);
+                then_stmt.each_stmt(func);
 
                 if else_stmt.is_some() {
-                    func(else_stmt.as_ref().unwrap());
+                    else_stmt.as_ref().unwrap().each_stmt(func);
                 }
             }
 
             Stmt::While { test_expr, body_stmt } => {
-                func(body_stmt);
+                body_stmt.each_stmt(func);
             }
 
             Stmt::DoWhile { test_expr, body_stmt } => {
-                func(body_stmt);
+                body_stmt.each_stmt(func);
             }
 
             Stmt::For { init_stmt, test_expr, incr_expr, body_stmt } => {
                 if init_stmt.is_some() {
-                    func(init_stmt.as_ref().unwrap());
+                    init_stmt.as_ref().unwrap().each_stmt(func);
                 }
 
-                func(body_stmt);
+                body_stmt.each_stmt(func);
             }
 
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    func(stmt);
+                    stmt.each_stmt(func);
                 }
             }
 
-            _ => panic!()
+            //_ => panic!("{:?}", self)
         }
     }
 }

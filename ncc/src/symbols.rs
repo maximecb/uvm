@@ -254,7 +254,7 @@ impl Function
 
         // If there are stack-allocated locals in this function,
         // define a base pointer local
-        self.body.each_stmt(|stmt| {
+        self.body.each_stmt(&mut |stmt| {
             if let Stmt::VarDecl { var_type, .. } = stmt {
                 if let Type::Array { .. } = var_type {
                     if env.stack_alloc_bp.is_none() {

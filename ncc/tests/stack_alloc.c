@@ -13,6 +13,15 @@ void test_typedef()
     assert(v[2] == 2);
 }
 
+// Regression: allocation directly inside of a loop
+void loop_alloc()
+{
+    for (int i = 0; i < 10; ++i)
+    {
+        uint32_t arr[3];
+    }
+}
+
 void big_alloc()
 {
     int arr[2048];
@@ -82,6 +91,8 @@ int main()
     stack_align();
 
     test_typedef();
+
+    loop_alloc();
 
     return 0;
 }
