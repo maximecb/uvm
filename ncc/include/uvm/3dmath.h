@@ -204,11 +204,12 @@ void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
     result[3][3] = 1.0f;
 }
 
-// Generate a perspective projection matrix
+// Generate a perspective projection matrix identical to that
+// produced by the gluPerspective() function.
 // This is used to project coordinates from eye space into clip space.
 // We follow OpenGL conventions.
 //
-// aspect = screen width / screen height
+// aspect = screen_width / screen_height
 // fovy is in radians
 //
 // +Y points up,
@@ -217,7 +218,7 @@ void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 //
 // Points are projected such that X/Y are in [-1, 1]
 // Z values between [near, far] get projected into [-1, 1]
-// Points that are behind the camera should be discarded ahead of time
+// Points behind the near plane should be discarded (clipped) ahead of time.
 //
 void perspective(float fovy, float aspect, float near, float far, mat44 result)
 {

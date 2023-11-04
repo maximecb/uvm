@@ -40,17 +40,18 @@ mat44 trans;
 // Draw a line between two 3D points
 void draw_line3d(vec3 v0, vec3 v1, u32 color)
 {
+    // Note that +Y in the image frame goes downwards,
+    // so we have to flip the Y coordinates
     vec3 v_tmp;
     mat44_transform(persp, v0, v_tmp);
-    int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
-    int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
-    //printf("x0=%d, y0=%d\n", x0, y0);
+    int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
 
     mat44_transform(persp, v1, v_tmp);
-    int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
-    int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
+    int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
 
-    draw_line(
+    draw_line_clipped(
         (u32*)frame_buffer,
         FRAME_WIDTH,
         FRAME_HEIGHT,

@@ -20,14 +20,16 @@ mat44 persp;
 // Draw a line between two 3D points
 void draw_line3d(vec3 v0, vec3 v1, u32 color)
 {
+    // Note that +Y in the image frame goes downwards,
+    // so we have to flip the Y coordinates
     vec3 v_tmp;
     mat44_transform(persp, v0, v_tmp);
-    int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
-    int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
+    int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
 
     mat44_transform(persp, v1, v_tmp);
-    int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, 0.0f, (float)FRAME_WIDTH);
-    int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, 0.0f, (float)FRAME_HEIGHT);
+    int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
 
     draw_line_clipped(
         (u32*)frame_buffer,
@@ -116,11 +118,11 @@ void anim_callback()
     for (int i = 0; i < 25; ++i)
     {
         v0[0] = -20;
-        v0[1] = 1;
+        v0[1] = -1;
         v0[2] = -(0.1f + i + line_pos);
 
         v1[0] = 20;
-        v1[1] = 1;
+        v1[1] = -1;
         v1[2] = -(0.1f + i + line_pos);
 
         draw_line3d(v0, v1, COLOR_PURPLE);
@@ -130,11 +132,11 @@ void anim_callback()
     for (int i = 0; i < 20; ++i)
     {
         v0[0] = -10.0f + i;
-        v0[1] = 1;
+        v0[1] = -1;
         v0[2] = -20.0f;
 
         v1[0] = -10.0f + i;
-        v1[1] = 1;
+        v1[1] = -1;
         v1[2] = -0.1f;
 
         draw_line3d(v0, v1, COLOR_PURPLE);
