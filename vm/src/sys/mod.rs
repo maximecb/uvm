@@ -124,6 +124,7 @@ impl SysState
         vm_arc
     }
 
+    /// Register a syscall implementation
     pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
     {
         let desc = SYSCALL_DESCS[const_idx as usize].as_ref().unwrap();

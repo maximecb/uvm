@@ -1,13 +1,33 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{self, Read};
+use std::thread;
+use std::collections::HashMap;
+use std::os::fd::{RawFd, AsRawFd};
+use polling::{Event, Events, Poller, AsRawSource};
 use crate::vm::{VM, Value};
 
-// State for the networking subsystem
+
+
+
+
+/// State for the networking subsystem
 #[derive(Default)]
 pub struct NetState
 {
-    // TODO: need a list/map of open sockets
+    /// Map of open sockets
+    sockets: HashMap<u64, RawFd>,
+
+    /// Next socket id to use
+    next_id: u64,
+
+    /// Poller to poll the sockets
+    poller: Option<Poller>,
 }
+
+
+
+
+
 
 // Syscall to create a TCP listening socket to accept incoming connections
 // u64 socket_id = net_listen_tcp(
@@ -26,8 +46,97 @@ pub fn net_listen_tcp(
     flags: Value,
 ) -> Value
 {
+    let net_state = &vm.sys_state.net_state;
+
+
+
+
     todo!();
 }
+
+
+
+
+
+// Just like the audio thread, this thread will need its own
+// reference to the VM
+/*
+let handle = thread::spawn(|| {
+    for i in 1..10 {
+        println!("hi number {} from the spawned thread!", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+});
+*/
+
+
+
+
+fn test()
+{
+
+    // Create a TCP listener.
+    let socket = TcpListener::bind("127.0.0.1:8000").unwrap();
+    socket.set_nonblocking(true).unwrap();
+    let key = 7; // Arbitrary key identifying the socket.
+
+    // Create a poller and register interest in readability on the socket.
+    let poller = Poller::new().unwrap();
+    unsafe { poller.add(&socket, Event::readable(key)).unwrap() };
+
+    // The event loop.
+    let mut events = Events::new();
+
+
+    let mut sockets: HashMap<usize, RawFd> = HashMap::default();
+
+
+    loop {
+        // Wait for at least one I/O event.
+        events.clear();
+        poller.wait(&mut events, None).unwrap();
+
+        for ev in events.iter() {
+            if ev.key == key {
+                // Perform a non-blocking accept operation.
+                let (stream, addr) = socket.accept().unwrap();
+
+                // Set interest in the next readability event.
+                poller.modify(&socket, Event::readable(key)).unwrap();
+
+
+                let stream_fd = stream.as_raw_fd();
+
+                let new_key = 8;
+                unsafe { poller.add(&stream_fd, Event::readable(new_key)).unwrap() };
+
+                sockets.insert(new_key, stream_fd);
+
+
+
+            }
+        }
+    }
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
