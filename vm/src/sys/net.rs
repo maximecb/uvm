@@ -15,7 +15,8 @@ pub struct Socket
     /// Incoming connections
     incoming: VecDeque<TcpStream>,
 
-    // TODO: read buffer
+    // Read buffer
+    read_buf: Vec<u8>
 }
 
 // State for the networking subsystem
@@ -104,7 +105,8 @@ pub fn net_listen_tcp(
         socket_id,
         Socket {
             fd: socket_fd,
-            incoming: VecDeque::default()
+            incoming: VecDeque::default(),
+            read_buf: Vec::default(),
         }
     );
 
@@ -127,18 +129,40 @@ pub fn net_listen_tcp(
 /// TCP read thread
 fn read_thread(
     vm_mutex: Weak<Mutex<VM>>,
-    stream: TcpStream,
+    mut stream: TcpStream,
     socket_id: u64,
     on_incoming_data: u64
 )
 {
+    loop
+    {
+        let mut buf: [u8; 16384] = [0; 16384];
 
+        match stream.read(&mut buf) {
+            Ok(num_bytes) => {
 
+                let arc = vm_mutex.upgrade().unwrap();
+                let mut vm = arc.lock().unwrap();
 
+                // Append to the read buffer
+                let mut net_state = &mut vm.sys_state.net_state;
+                match net_state.sockets.get_mut(&socket_id) {
+                    Some(socket) => {
+                        socket.read_buf.extend_from_slice(&buf[0..num_bytes]);
+                    }
+                    _ => panic!()
+                }
 
+                // Call on_incoming_data to signal an incoming data
+                match vm.call(on_incoming_data, &[Value::from(num_bytes)]) {
+                    ExitReason::Return(val) => {}
+                    _ => panic!()
+                }
+            }
 
-
-
+            Err(_) => break
+        }
+    }
 }
 
 // Syscall to accept a new connection
@@ -180,7 +204,8 @@ pub fn net_accept(
                 socket_id,
                 Socket {
                     fd: socket_fd,
-                    incoming: VecDeque::default()
+                    incoming: VecDeque::default(),
+                    read_buf: Vec::default(),
                 }
             );
 
@@ -211,6 +236,13 @@ pub fn net_read(
     buf_len: Value,
 ) -> Value
 {
+
+
+
+
+
+
+
     todo!();
 }
 
@@ -223,6 +255,16 @@ pub fn net_write(
     buf_len: Value,
 ) -> Value
 {
+
+
+
+    // stream.write(&[1])?;
+
+
+
+
+
+
     todo!();
 }
 
