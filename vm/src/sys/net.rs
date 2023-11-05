@@ -85,8 +85,6 @@ fn listen_thread(
 // )
 pub fn net_listen_tcp(
     vm: &mut VM,
-    port_no: Value,
-    ip_space: Value,
     bind_address: Value,
     on_new_conn: Value,
 ) -> Value
@@ -126,6 +124,14 @@ pub fn net_listen_tcp(
     Value::from(socket_id)
 }
 
+/// TCP read thread
+fn read_thread(
+    vm_mutex: Weak<Mutex<VM>>,
+    stream: TcpStream,
+    socket_id: u64,
+    on_incoming_data: u64
+)
+{
 
 
 
@@ -133,6 +139,7 @@ pub fn net_listen_tcp(
 
 
 
+}
 
 // Syscall to accept a new connection
 // Writes the client address in the buffer you specify
@@ -162,16 +169,11 @@ pub fn net_accept(
             let stream = socket.incoming.pop_front().unwrap();
             let socket_fd = stream.as_raw_fd();
 
-            //
+            // TODO
             // TODO: we need to write the client address into the buffer
-            //
+            // TODO
 
-
-
-
-            /*
             // Assign a socket id to the socket
-            let mut net_state = &mut vm.sys_state.net_state;
             let socket_id = net_state.next_id;
             net_state.next_id += 1;
             net_state.sockets.insert(
@@ -184,25 +186,17 @@ pub fn net_accept(
 
             // Create a listening thread to accept incoming connections
             let vm_mutex = vm.sys_state.mutex.clone();
-            let on_new_conn = on_new_conn.as_u64();
             thread::spawn(move || {
-                listen_thread(
+                read_thread(
                     vm_mutex,
-                    listener,
+                    stream,
                     socket_id,
-                    on_new_conn,
+                    on_incoming_data,
                 )
             });
-            */
-
 
             // Return the socket id
-            //Value::from(socket_id)
-
-
-            todo!();
-
-
+            Value::from(socket_id)
         }
         _ => panic!()
     }
