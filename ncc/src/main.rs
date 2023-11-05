@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_mut)]
 
+use std::collections::HashMap;
+
 mod parsing;
 mod cpp;
 mod ast;
@@ -35,6 +37,10 @@ struct Options
     // Output file
     out_file: String,
 
+    // Preprocessor definitions
+    // -D<macroname>=<value>
+    defs: HashMap<String, String>,
+
     rest: Vec<String>,
 }
 
@@ -43,6 +49,7 @@ fn parse_args(args: Vec<String>) -> Options
     let mut opts = Options {
         print_cpp_out: false,
         out_file: "out.asm".to_string(),
+        defs: HashMap::new(),
         rest: Vec::default(),
     };
 
@@ -62,19 +69,39 @@ fn parse_args(args: Vec<String>) -> Options
         // Move to the next argument
         idx += 1;
 
-        // Try to match this argument as an option
-        match arg.as_str() {
-            "-E" => {
-                opts.print_cpp_out = true;
-            }
-
-            "-o" => {
-                opts.out_file = args[idx].clone();
-                idx += 1;
-            }
-
-            _ => panic!("unknown option {}", arg)
+        if arg == "-E" {
+            opts.print_cpp_out = true;
+            continue;
         }
+
+        // Output file name
+        if arg == "-o" {
+            opts.out_file = args[idx].clone();
+            idx += 1;
+            continue;
+        }
+
+        // -D<macroname>=<value>
+        if arg.starts_with("-D") {
+            let mut tokens = arg[2..].splitn(2, "=");
+            let name = tokens.next().unwrap();
+
+            if name == "" {
+                panic!("empty name in command-line preprocessor definition");
+            }
+
+            let value = if let Some(value) = tokens.next() {
+                value
+            } else {
+                ""
+            };
+
+            //println!("{}=\"{}\"", name, value);
+            opts.defs.insert(name.to_string(), value.to_string());
+            continue;
+        }
+
+        panic!("unknown option {}", arg);
     }
 
     opts
@@ -84,7 +111,7 @@ fn compile_file(file_name: &str, opts: &Options) -> Result<(), ParseError>
 {
     let mut input = Input::from_file(file_name)?;
 
-    let output = process_input(&mut input)?;
+    let output = process_input_with_defs(&mut input, &opts.defs)?;
 
     if opts.print_cpp_out {
         println!("{}", output);

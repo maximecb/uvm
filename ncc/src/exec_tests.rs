@@ -17,6 +17,7 @@ fn compile_and_run(file_path: &str, run_example: bool)
     // Compile the source file
     let mut command = Command::new("target/debug/ncc");
     command.current_dir(".");
+    command.arg("-DTEST");
     command.arg(file_path);
     println!("{:?}", command);
     let output = command.output().unwrap();
@@ -64,6 +65,7 @@ fn exec_tests()
     run_examples.insert("sdbm_hash.c");
     run_examples.insert("strings.c");
 
+    // Compile the examples, but only run those that don't need a UI window
     for file in fs::read_dir("./examples").unwrap() {
         let file_path = file.unwrap().path();
         let file_name = file_path.file_name().unwrap().to_str().unwrap();
@@ -74,6 +76,7 @@ fn exec_tests()
         }
     }
 
+    // Compile all the tests and run them
     for file in fs::read_dir("./tests").unwrap() {
         let file_path = file.unwrap().path().display().to_string();
         if file_path.ends_with(".c") {

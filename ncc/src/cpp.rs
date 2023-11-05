@@ -445,8 +445,34 @@ fn expand_macro(
 /// Process the input and generate an output string
 pub fn process_input(input: &mut Input) -> Result<String, ParseError>
 {
-    let mut defs = HashMap::new();
+    process_input_with_defs(input, &HashMap::new())
+}
+
+/// Process the input and generate an output string,
+/// Given a map of input definitions
+pub fn process_input_with_defs(
+    input: &mut Input,
+    in_defs: &HashMap<String, String>,
+) -> Result<String, ParseError>
+{
+    // Counter variable accessible through preprocessing
     let mut counter = 0;
+
+    // Create a map of definitions/macros
+    let mut defs = HashMap::new();
+    for (name, value) in in_defs {
+
+        println!("GOT DEF {}={}", name, value);
+
+        defs.insert(
+            name.clone(),
+            Def {
+                name: name.clone(),
+                params: None,
+                text: value.clone(),
+            }
+        );
+    }
 
     let (output, end_keyword) = process_input_rec(
         input,

@@ -48,12 +48,14 @@ int main()
         rgb32(255, 0, 0)
     );
 
-    /*
+    // If this is not running as part of a unit test, create
+    // a window so we can view the output
+    #ifndef TEST
     window_create(800, 600, "Graphics Test", 0);
     window_on_keydown(0, keydown);
     window_draw_frame(0, fb);
     enable_event_loop();
-    */
+    #endif
 
     return 0;
 }
