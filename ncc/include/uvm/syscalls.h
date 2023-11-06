@@ -89,6 +89,26 @@
 // Open an audio output device.
 #define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
 
+// u64 net_listen(const char* listen_addr, void* on_new_conn)
+// Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
+#define net_listen(__listen_addr, __on_new_conn) asm (__listen_addr, __on_new_conn) -> u64 { syscall net_listen; }
+
+// u64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len, void* on_incoming_data)
+// Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket.
+#define net_accept(__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data) asm (__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data) -> u64 { syscall net_accept; }
+
+// u64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
+// Read data from a socket into a buffer with specified capacity. Data can only be read if available.
+#define net_read(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> u64 { syscall net_read; }
+
+// void net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+// Write data to an open socket.
+#define net_write(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> void { syscall net_write; }
+
+// void net_close(u64 socket_id)
+// Close an open socket.
+#define net_close(__socket_id) asm (__socket_id) -> void { syscall net_close; }
+
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10

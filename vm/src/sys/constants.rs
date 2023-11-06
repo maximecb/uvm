@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 21;
+pub const SYSCALL_TBL_LEN: usize = 26;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -27,6 +27,11 @@ pub const VM_RESIZE_HEAP: u16 = 17;
 pub const AUDIO_OPEN_OUTPUT: u16 = 18;
 pub const WINDOW_ON_TEXTINPUT: u16 = 19;
 pub const PRINT_F32: u16 = 20;
+pub const NET_LISTEN: u16 = 21;
+pub const NET_ACCEPT: u16 = 22;
+pub const NET_READ: u16 = 23;
+pub const NET_WRITE: u16 = 24;
+pub const NET_CLOSE: u16 = 25;
 
 pub struct SysCallDesc
 {
@@ -58,6 +63,11 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
     Some(SysCallDesc { name: "window_on_textinput", const_idx: 19, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "print_f32", const_idx: 20, argc: 1, has_ret: false }),
+    Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 2, has_ret: true }),
+    Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 4, has_ret: true }),
+    Some(SysCallDesc { name: "net_read", const_idx: 23, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "net_write", const_idx: 24, argc: 3, has_ret: false }),
+    Some(SysCallDesc { name: "net_close", const_idx: 25, argc: 1, has_ret: false }),
 ];
 
 pub const KEY_BACKSPACE: u16 = 8;

@@ -703,14 +703,127 @@
     ]
   },
   {
-    "subsystem": "fs",
-    "description": "File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.",
-    "syscalls": [],
+    "subsystem": "net",
+    "description": "Network-related functionality.",
+    "syscalls": [
+      {
+        "name": "net_listen",
+        "args": [
+          [
+            "const char*",
+            "listen_addr"
+          ],
+          [
+            "void*",
+            "on_new_conn"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "socket_id"
+        ],
+        "permission": "net_server",
+        "const_idx": 21,
+        "description": "Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received."
+      },
+      {
+        "name": "net_accept",
+        "args": [
+          [
+            "u64",
+            "socket_id"
+          ],
+          [
+            "char*",
+            "client_addr_buf"
+          ],
+          [
+            "u64",
+            "addr_buf_len"
+          ],
+          [
+            "void*",
+            "on_incoming_data"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "socket_id"
+        ],
+        "permission": "net_server",
+        "const_idx": 22,
+        "description": "Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket."
+      },
+      {
+        "name": "net_read",
+        "args": [
+          [
+            "u64",
+            "socket_id"
+          ],
+          [
+            "u8*",
+            "buf_ptr"
+          ],
+          [
+            "u64",
+            "buf_len"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "num_bytes"
+        ],
+        "permission": "net_io",
+        "const_idx": 23,
+        "description": "Read data from a socket into a buffer with specified capacity. Data can only be read if available."
+      },
+      {
+        "name": "net_write",
+        "args": [
+          [
+            "u64",
+            "socket_id"
+          ],
+          [
+            "const u8*",
+            "buf_ptr"
+          ],
+          [
+            "u64",
+            "buf_len"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "net_io",
+        "const_idx": 24,
+        "description": "Write data to an open socket."
+      },
+      {
+        "name": "net_close",
+        "args": [
+          [
+            "u64",
+            "socket_id"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "net_io",
+        "const_idx": 25,
+        "description": "Close an open socket."
+      }
+    ],
     "constants": []
   },
   {
-    "subsystem": "net",
-    "description": "Network-related functionality.",
+    "subsystem": "fs",
+    "description": "File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.",
     "syscalls": [],
     "constants": []
   }

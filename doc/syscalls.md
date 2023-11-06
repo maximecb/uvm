@@ -272,11 +272,57 @@ These are the constants associated with the audio subsystem:
 
 - `u16 AUDIO_FORMAT_I16 = 0`
 
-# fs
-
-File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.
-
 # net
 
 Network-related functionality.
+
+## net_listen
+
+```
+u64 net_listen(const char* listen_addr, void* on_new_conn)
+```
+
+**Returns:** `u64 socket_id`
+
+Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
+
+## net_accept
+
+```
+u64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len, void* on_incoming_data)
+```
+
+**Returns:** `u64 socket_id`
+
+Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket.
+
+## net_read
+
+```
+u64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
+```
+
+**Returns:** `u64 num_bytes`
+
+Read data from a socket into a buffer with specified capacity. Data can only be read if available.
+
+## net_write
+
+```
+void net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+```
+
+Write data to an open socket.
+
+## net_close
+
+```
+void net_close(u64 socket_id)
+```
+
+Close an open socket.
+
+# fs
+
+File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.
 
