@@ -156,7 +156,7 @@ fn read_thread(
                 }
 
                 // Call on_incoming_data to signal an incoming data
-                match vm.call(on_incoming_data, &[Value::from(num_bytes)]) {
+                match vm.call(on_incoming_data, &[Value::from(socket_id), Value::from(num_bytes)]) {
                     ExitReason::Return(val) => {}
                     _ => panic!()
                 }
@@ -173,14 +173,14 @@ fn read_thread(
 pub fn net_accept(
     vm: &mut VM,
     socket_id: Value,
-    client_addr: Value,
-    client_addr_len: Value,
+    client_addr_buf: Value,
+    addr_buf_len: Value,
     on_incoming_data: Value,
 ) -> Value
 {
     let socket_id = socket_id.as_u64();
-    let client_addr = client_addr.as_u64();
-    let client_addr_len = client_addr_len.as_u64();
+    let client_addr_buf = client_addr_buf.as_u64();
+    let addr_buf_len = addr_buf_len.as_u64();
     let on_incoming_data = on_incoming_data.as_u64();
 
     let mut net_state = &mut vm.sys_state.net_state;
@@ -258,7 +258,7 @@ pub fn net_read(
 
             Value::from(num_bytes)
         }
-        _ => panic!()
+        _ => panic!("invalid socket id {} in net_read", socket_id)
     }
 }
 
