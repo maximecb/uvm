@@ -232,18 +232,31 @@ pub fn net_accept(
 pub fn net_read(
     vm: &mut VM,
     socket_id: Value,
-    buffer: Value,
+    buf_ptr: Value,
     buf_len: Value,
 ) -> Value
 {
+    let socket_id = socket_id.as_u64();
+    let buf_len = buf_len.as_usize();
+    let buf_ptr = buf_ptr.as_usize();
+    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr);
 
+    let mut net_state = &mut vm.sys_state.net_state;
+    match net_state.sockets.get_mut(&socket_id) {
+        Some(socket) => {
+            let num_bytes = std::cmp::min(buf_len, socket.read_buf.len());
 
+            unsafe {
+                std::ptr::copy_nonoverlapping(socket.read_buf.as_ptr(), buf_ptr, num_bytes);
+            }
 
+            socket.read_buf.rotate_left(num_bytes);
+            socket.read_buf.truncate(socket.read_buf.len() - num_bytes);
 
-
-
-
-    todo!();
+            Value::from(num_bytes)
+        }
+        _ => panic!()
+    }
 }
 
 // Syscall to write data on a given socket
