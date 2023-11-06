@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
 
@@ -19,8 +20,10 @@ void on_incoming_data(u64 socket_id, u64 num_bytes)
     char read_buf[1024];
     memset(read_buf, 0, 1024);
     net_read(socket_id, read_buf, 1024 - 1);
-
     puts(read_buf);
+
+    char* response = "Hello!\n";
+    net_write(socket_id, response, strlen(response));
 }
 
 void main()
