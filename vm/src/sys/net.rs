@@ -82,11 +82,8 @@ fn listen_thread(
 
 // Syscall to create a TCP listening socket to accept incoming connections
 // u64 socket_id = net_listen_tcp(
-//     u16 port_no,
-//     ip_space, // IPV4 / IPV6
-//     const char* address, // Network interface address to listen on, null for any address
+//     const char* bind_address,   // Network interface address to listen on, null for any address
 //     callback on_new_connection, // Called on new incoming connection
-//     u64 flags // optional flags, default 0
 // )
 pub fn net_listen_tcp(
     vm: &mut VM,
@@ -94,11 +91,11 @@ pub fn net_listen_tcp(
     on_new_conn: Value,
 ) -> Value
 {
-    // TODO: accept input address and port
-    // TODO: VM helper function to read UTF-8 string?
+    // Get the input address and port to listen on
+    let listen_addr = vm.get_heap_str(bind_address.as_usize());
 
     // TODO: return 0 on failure
-    let listener = TcpListener::bind("127.0.0.1:80").unwrap();
+    let listener = TcpListener::bind(listen_addr).unwrap();
     let socket_fd = listener.as_raw_fd();
 
     // Assign a socket id to the socket
