@@ -1,12 +1,14 @@
 use std::collections::{HashMap, VecDeque};
 use std::os::fd::RawFd;
+use std::slice;
 use std::thread;
 use std::net::{TcpListener, TcpStream};
 use std::os::fd::AsRawFd;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{VM, Value, ExitReason};
 
+// TODO: should we split listening, TCP and UDP sockets?
 // State associated with a socket
 pub struct Socket
 {
@@ -14,6 +16,9 @@ pub struct Socket
 
     /// Incoming connections
     incoming: VecDeque<TcpStream>,
+
+    /// Associated TCP stream
+    stream: Option<TcpStream>,
 
     // Read buffer
     read_buf: Vec<u8>
@@ -51,7 +56,6 @@ fn listen_thread(
 {
     // Block until a connection can be accepted
     for result in listener.incoming() {
-
         let arc = vm_mutex.upgrade().unwrap();
         let mut vm = arc.lock().unwrap();
 
@@ -105,6 +109,7 @@ pub fn net_listen_tcp(
         socket_id,
         Socket {
             fd: socket_fd,
+            stream: None,
             incoming: VecDeque::default(),
             read_buf: Vec::default(),
         }
@@ -167,7 +172,7 @@ fn read_thread(
 
 // Syscall to accept a new connection
 // Writes the client address in the buffer you specify
-// u64 socket_id = net_accept(u64 socket_id, client_addr_t *client_addr, callback on_incoming_data)
+// u64 socket_id = net_accept(u64 socket_id, char* client_addr, u64 client_addr_len, callback on_incoming_data)
 pub fn net_accept(
     vm: &mut VM,
     socket_id: Value,
@@ -204,6 +209,7 @@ pub fn net_accept(
                 socket_id,
                 Socket {
                     fd: socket_fd,
+                    stream: Some(stream.try_clone().unwrap()),
                     incoming: VecDeque::default(),
                     read_buf: Vec::default(),
                 }
@@ -228,7 +234,7 @@ pub fn net_accept(
 }
 
 // Syscall to read data from a given socket into a buffer you specify
-// u64 num_bytes_read = net_read(u64 socket_id, void* buffer, u64 buf_len)
+// u64 num_bytes_read = net_read(u64 socket_id, void* buf_ptr, u64 buf_len)
 pub fn net_read(
     vm: &mut VM,
     socket_id: Value,
@@ -260,25 +266,31 @@ pub fn net_read(
 }
 
 // Syscall to write data on a given socket
-// void net_write(u64 socket_id, void* buffer, u64 buf_len);
+// void net_write(u64 socket_id, void* buf_ptr, u64 buf_len);
 pub fn net_write(
     vm: &mut VM,
     socket_id: Value,
-    buffer: Value,
+    buf_ptr: Value,
     buf_len: Value,
 ) -> Value
 {
+    let socket_id = socket_id.as_u64();
+    let buf_len = buf_len.as_usize();
+    let buf_ptr = buf_ptr.as_usize();
+    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr);
 
+    let mut net_state = &mut vm.sys_state.net_state;
+    match net_state.sockets.get_mut(&socket_id) {
+        Some(socket) => {
+            let stream = socket.stream.as_mut().unwrap();
 
+            let mem_slice = unsafe { slice::from_raw_parts(buf_ptr, buf_len) };
+            stream.write(&mem_slice).unwrap();
 
-    // stream.write(&[1])?;
-
-
-
-
-
-
-    todo!();
+            Value::from(0)
+        }
+        _ => panic!()
+    }
 }
 
 // Syscall to close a socket
