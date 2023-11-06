@@ -1461,11 +1461,26 @@ impl VM
                             fun(self, a0, a1)
                         }
 
+                        SysCallFn::Fn2_1(fun) => {
+                            let a1 = self.pop();
+                            let a0 = self.pop();
+                            let v = fun(self, a0, a1);
+                            self.push(v);
+                        }
+
                         SysCallFn::Fn3_0(fun) => {
                             let a2 = self.pop();
                             let a1 = self.pop();
                             let a0 = self.pop();
                             fun(self, a0, a1, a2)
+                        }
+
+                        SysCallFn::Fn3_1(fun) => {
+                            let a2 = self.pop();
+                            let a1 = self.pop();
+                            let a0 = self.pop();
+                            let v = fun(self, a0, a1, a2);
+                            self.push(v);
                         }
 
                         SysCallFn::Fn4_0(fun) => {

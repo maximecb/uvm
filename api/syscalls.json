@@ -795,12 +795,12 @@
           ]
         ],
         "returns": [
-          "void",
-          ""
+          "u64",
+          "num_bytes"
         ],
         "permission": "net_io",
         "const_idx": 24,
-        "description": "Write data to an open socket."
+        "description": "Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full."
       },
       {
         "name": "net_close",

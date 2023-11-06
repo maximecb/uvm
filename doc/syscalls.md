@@ -309,10 +309,12 @@ Read data from a socket into a buffer with specified capacity. Data can only be 
 ## net_write
 
 ```
-void net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+u64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
 ```
 
-Write data to an open socket.
+**Returns:** `u64 num_bytes`
+
+Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full.
 
 ## net_close
 

@@ -66,7 +66,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 4, has_ret: true }),
     Some(SysCallDesc { name: "net_read", const_idx: 23, argc: 3, has_ret: true }),
-    Some(SysCallDesc { name: "net_write", const_idx: 24, argc: 3, has_ret: false }),
+    Some(SysCallDesc { name: "net_write", const_idx: 24, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "net_close", const_idx: 25, argc: 1, has_ret: false }),
 ];
 

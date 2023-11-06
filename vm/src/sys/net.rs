@@ -263,7 +263,7 @@ pub fn net_read(
 }
 
 // Syscall to write data on a given socket
-// void net_write(u64 socket_id, void* buf_ptr, u64 buf_len);
+// u64 num_bytes = net_write(u64 socket_id, void* buf_ptr, u64 buf_len);
 pub fn net_write(
     vm: &mut VM,
     socket_id: Value,
@@ -282,9 +282,9 @@ pub fn net_write(
             let stream = socket.stream.as_mut().unwrap();
 
             let mem_slice = unsafe { slice::from_raw_parts(buf_ptr, buf_len) };
-            stream.write(&mem_slice).unwrap();
+            stream.write_all(&mem_slice).unwrap();
 
-            Value::from(0)
+            Value::from(buf_len)
         }
         _ => panic!()
     }

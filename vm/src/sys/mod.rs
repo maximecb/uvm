@@ -25,10 +25,16 @@ pub enum SysCallFn
 {
     Fn0_0(fn(&mut VM)),
     Fn0_1(fn(&mut VM) -> Value),
+
     Fn1_0(fn(&mut VM, a0: Value)),
     Fn1_1(fn(&mut VM, a0: Value) -> Value),
+
     Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
+    Fn2_1(fn(&mut VM, a0: Value, a1: Value) -> Value),
+
     Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
+    Fn3_1(fn(&mut VM, a0: Value, a1: Value, a2: Value) -> Value),
+
     Fn4_0(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value)),
     Fn4_1(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value) -> Value),
 }
@@ -43,7 +49,9 @@ impl SysCallFn
             Self::Fn1_0(_) => 1,
             Self::Fn1_1(_) => 1,
             Self::Fn2_0(_) => 2,
+            Self::Fn2_1(_) => 2,
             Self::Fn3_0(_) => 3,
+            Self::Fn3_1(_) => 3,
             Self::Fn4_0(_) => 4,
             Self::Fn4_1(_) => 4,
         }
@@ -57,7 +65,9 @@ impl SysCallFn
             Self::Fn1_0(_) => false,
             Self::Fn1_1(_) => true,
             Self::Fn2_0(_) => false,
+            Self::Fn2_1(_) => true,
             Self::Fn3_0(_) => false,
+            Self::Fn3_1(_) => true,
             Self::Fn4_0(_) => false,
             Self::Fn4_1(_) => true,
         }
@@ -185,7 +195,11 @@ impl SysState
 
         self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
 
-        // TODO: NET_, networking syscalls
+        self.reg_syscall(NET_LISTEN, SysCallFn::Fn2_1(net_listen));
+        self.reg_syscall(NET_ACCEPT, SysCallFn::Fn4_1(net_accept));
+        self.reg_syscall(NET_READ, SysCallFn::Fn3_1(net_read));
+        self.reg_syscall(NET_WRITE, SysCallFn::Fn3_1(net_write));
+        self.reg_syscall(NET_CLOSE, SysCallFn::Fn1_0(net_close));
     }
 }
 

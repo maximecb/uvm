@@ -101,9 +101,9 @@
 // Read data from a socket into a buffer with specified capacity. Data can only be read if available.
 #define net_read(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> u64 { syscall net_read; }
 
-// void net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
-// Write data to an open socket.
-#define net_write(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> void { syscall net_write; }
+// u64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+// Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full.
+#define net_write(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> u64 { syscall net_write; }
 
 // void net_close(u64 socket_id)
 // Close an open socket.
