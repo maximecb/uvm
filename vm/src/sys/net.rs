@@ -8,22 +8,6 @@ use std::io::{self, Read, Write};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{VM, Value, ExitReason};
 
-// TODO: should we split listening, TCP and UDP sockets?
-// State associated with a socket
-pub struct Socket
-{
-    fd: RawFd,
-
-    /// Incoming connections
-    incoming: VecDeque<TcpStream>,
-
-    /// Associated TCP stream
-    stream: Option<TcpStream>,
-
-    // Read buffer
-    read_buf: Vec<u8>
-}
-
 // State for the networking subsystem
 pub struct NetState
 {
@@ -43,6 +27,24 @@ impl Default for NetState
             next_id: 0xFF_FF,
             sockets: HashMap::default(),
         }
+    }
+}
+
+// State associated with a socket
+enum Socket
+{
+    Listen {
+        listener: TcpListener,
+
+        /// Incoming connections
+        incoming: VecDeque<TcpStream>,
+    },
+
+    Stream {
+        stream: TcpStream,
+
+        // Read buffer
+        read_buf: Vec<u8>,
     }
 }
 
@@ -66,8 +68,8 @@ fn listen_thread(
         // Add the new connection to the queue
         let mut net_state = &mut vm.sys_state.net_state;
         match net_state.sockets.get_mut(&socket_id) {
-            Some(socket) => {
-                socket.incoming.push_back(stream);
+            Some(Socket::Listen{ incoming, .. }) => {
+                incoming.push_back(stream);
             }
             _ => panic!()
         }
@@ -104,11 +106,9 @@ pub fn net_listen(
     net_state.next_id += 1;
     net_state.sockets.insert(
         socket_id,
-        Socket {
-            fd: socket_fd,
-            stream: None,
+        Socket::Listen {
+            listener: listener.try_clone().unwrap(),
             incoming: VecDeque::default(),
-            read_buf: Vec::default(),
         }
     );
 
@@ -149,8 +149,8 @@ fn read_thread(
                 // Append to the read buffer
                 let mut net_state = &mut vm.sys_state.net_state;
                 match net_state.sockets.get_mut(&socket_id) {
-                    Some(socket) => {
-                        socket.read_buf.extend_from_slice(&buf[0..num_bytes]);
+                    Some(Socket::Stream { read_buf, .. }) => {
+                        read_buf.extend_from_slice(&buf[0..num_bytes]);
                     }
                     _ => panic!()
                 }
@@ -188,13 +188,12 @@ pub fn net_accept(
 
     // If there is a connection waiting
     match net_state.sockets.get_mut(&socket_id) {
-        Some(socket) => {
-            if socket.incoming.len() == 0 {
+        Some(Socket::Listen { incoming, .. }) => {
+            if incoming.len() == 0 {
                 panic!();
             }
 
-            let stream = socket.incoming.pop_front().unwrap();
-            let socket_fd = stream.as_raw_fd();
+            let stream = incoming.pop_front().unwrap();
 
             // TODO: handle the error case here
             // The connection could have dropped
@@ -212,10 +211,8 @@ pub fn net_accept(
             net_state.next_id += 1;
             net_state.sockets.insert(
                 socket_id,
-                Socket {
-                    fd: socket_fd,
-                    stream: Some(stream.try_clone().unwrap()),
-                    incoming: VecDeque::default(),
+                Socket::Stream {
+                    stream: stream.try_clone().unwrap(),
                     read_buf: Vec::default(),
                 }
             );
@@ -254,15 +251,15 @@ pub fn net_read(
 
     let mut net_state = &mut vm.sys_state.net_state;
     match net_state.sockets.get_mut(&socket_id) {
-        Some(socket) => {
-            let num_bytes = std::cmp::min(buf_len, socket.read_buf.len());
+        Some(Socket::Stream { read_buf, .. }) => {
+            let num_bytes = std::cmp::min(buf_len, read_buf.len());
 
             unsafe {
-                std::ptr::copy_nonoverlapping(socket.read_buf.as_ptr(), buf_ptr, num_bytes);
+                std::ptr::copy_nonoverlapping(read_buf.as_ptr(), buf_ptr, num_bytes);
             }
 
-            socket.read_buf.rotate_left(num_bytes);
-            socket.read_buf.truncate(socket.read_buf.len() - num_bytes);
+            read_buf.rotate_left(num_bytes);
+            read_buf.truncate(read_buf.len() - num_bytes);
 
             Value::from(num_bytes)
         }
@@ -286,12 +283,9 @@ pub fn net_write(
 
     let mut net_state = &mut vm.sys_state.net_state;
     match net_state.sockets.get_mut(&socket_id) {
-        Some(socket) => {
-            let stream = socket.stream.as_mut().unwrap();
-
+        Some(Socket::Stream { stream, .. }) => {
             let mem_slice = unsafe { slice::from_raw_parts(buf_ptr, buf_len) };
             stream.write_all(&mem_slice).unwrap();
-
             Value::from(buf_len)
         }
         _ => panic!()
