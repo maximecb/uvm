@@ -461,9 +461,6 @@ pub fn process_input_with_defs(
     // Create a map of definitions/macros
     let mut defs = HashMap::new();
     for (name, value) in in_defs {
-
-        println!("GOT DEF {}={}", name, value);
-
         defs.insert(
             name.clone(),
             Def {
