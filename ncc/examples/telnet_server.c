@@ -24,6 +24,17 @@ void on_incoming_data(u64 socket_id, u64 num_bytes)
     net_read(socket_id, read_buf, 1024 - 1);
     puts(read_buf);
 
+    if (strncmp(read_buf, "exit", 4) == 0)
+    {
+        puts("got exit command");
+        char* response = "Goodbye!\n";
+        net_write(socket_id, response, strlen(response));
+        net_close(socket_id);
+
+        net_close(listen_sock);
+        return;
+    }
+
     char* response = "Hello!\n";
     net_write(socket_id, response, strlen(response));
 }

@@ -152,7 +152,12 @@ fn read_thread(
                     Some(Socket::Stream { read_buf, .. }) => {
                         read_buf.extend_from_slice(&buf[0..num_bytes]);
                     }
-                    _ => panic!()
+
+                    Some(_) => panic!(),
+
+                    // net_close removes the socket
+                    // Stop the read thread
+                    None => break
                 }
 
                 // Call on_incoming_data to signal an incoming data
@@ -296,8 +301,25 @@ pub fn net_write(
 // net_close(u64 socket_id)
 pub fn net_close(
     vm: &mut VM,
-    socked_id: Value,
+    socket_id: Value,
 )
 {
-    todo!();
+    let socket_id = socket_id.as_u64();
+
+    let mut net_state = &mut vm.sys_state.net_state;
+
+    match net_state.sockets.get_mut(&socket_id) {
+        Some(Socket::Stream { stream, .. }) => {
+            stream.shutdown(std::net::Shutdown::Both).unwrap();
+        }
+
+        Some(Socket::Listen { listener, .. }) => {
+            //listener.shutdown(std::net::Shutdown::Both).unwrap();
+        }
+
+        _ => panic!()
+    }
+
+    // This drops the socket
+    net_state.sockets.remove(&socket_id);
 }
