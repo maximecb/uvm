@@ -1619,6 +1619,12 @@ mod tests
     }
 
     #[test]
+    fn test_setlocal()
+    {
+        eval_i64(".code; push 0; push 77; set_local 0; get_local 0; exit;", 77);
+    }
+
+    #[test]
     fn test_floats()
     {
         eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; exit;", 1);
