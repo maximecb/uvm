@@ -82,7 +82,7 @@ fn listen_thread(
 
 // Syscall to create a TCP listening socket to accept incoming connections
 // u64 socket_id = net_listen(
-//     const char* listen_addr,   // Network interface address to listen on, null for any address
+//     const char* listen_addr,    // Network interface address to listen on, null for any address
 //     callback on_new_connection, // Called on new incoming connection
 // )
 pub fn net_listen(
@@ -179,8 +179,9 @@ pub fn net_accept(
 ) -> Value
 {
     let socket_id = socket_id.as_u64();
-    let client_addr_buf = client_addr_buf.as_u64();
-    let addr_buf_len = addr_buf_len.as_u64();
+    let client_addr_buf = client_addr_buf.as_usize();
+    let addr_buf_ptr: *mut u8 = vm.get_heap_ptr(client_addr_buf);
+    let addr_buf_len = addr_buf_len.as_usize();
     let on_incoming_data = on_incoming_data.as_u64();
 
     let mut net_state = &mut vm.sys_state.net_state;
@@ -195,9 +196,16 @@ pub fn net_accept(
             let stream = socket.incoming.pop_front().unwrap();
             let socket_fd = stream.as_raw_fd();
 
-            // TODO
-            // TODO: we need to write the client address into the buffer
-            // TODO
+            // TODO: handle the error case here
+            // The connection could have dropped
+            // Copy the client address into the buffer
+            let peer_addr = stream.peer_addr().unwrap();
+            let mut addr_str = peer_addr.to_string().into_bytes();
+            addr_str.push(0);
+            let num_bytes = std::cmp::min(addr_str.len(), addr_buf_len);
+            unsafe {
+                std::ptr::copy_nonoverlapping(addr_str.as_ptr(), addr_buf_ptr, num_bytes);
+            }
 
             // Assign a socket id to the socket
             let socket_id = net_state.next_id;

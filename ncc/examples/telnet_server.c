@@ -11,6 +11,8 @@ void on_new_conn(u64 socket_id)
 
     char client_addr[128];
     u64 conn_sock = net_accept(socket_id, client_addr, sizeof(client_addr), on_incoming_data);
+
+    printf("client address: %s\n", client_addr);
 }
 
 void on_incoming_data(u64 socket_id, u64 num_bytes)
