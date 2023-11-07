@@ -65,11 +65,13 @@ pub enum Op
     // set_arg <idx:u8> (value)
     set_arg,
 
-    // Get the local variable at a given index
+    // Get the local variable at a given stack slot index
+    // The index is relative to the base of the stack frame
     // get_local <idx:u8>
     get_local,
 
-    // Set the local variable at a given index
+    // Set the local variable at a given stack slot index
+    // The index is relative to the base of the stack frame
     // set_local <idx:u8> (value)
     set_local,
 
