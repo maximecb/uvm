@@ -179,6 +179,10 @@ impl Stmt
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
                 resolve_types(var_type, typedefs, None)?;
+
+                if let Some(expr) = init_expr {
+                    expr.resolve_types(typedefs)?;
+                }
             }
 
             Stmt::Block(stmts) => {
@@ -235,6 +239,7 @@ impl Expr
             }
 
             Expr::SizeofType { t } => {
+                // If this is a reference to a named type
                 if let Type::Named(name) = t {
                     if let Some(dt) = typedefs.get(name) {
                         *t = (**dt).borrow().clone();

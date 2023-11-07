@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdint.h>
+#include <stddef.h>
 
 int int_array[3] = { 7, 1, 2 };
 
@@ -50,6 +51,12 @@ int main()
     // Double array indexing
     array2d[0][0] = 1;
     assert(array2d[0][0] == 1);
+
+    // Regression: sizeof of local array inside var decl
+    char buf[128];
+    sizeof(buf);
+    size_t sz = sizeof(buf);
+    assert(sz == 128);
 
     return 0;
 }

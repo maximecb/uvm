@@ -10,7 +10,7 @@ void on_new_conn(u64 socket_id)
     puts("got new connection");
 
     char client_addr[128];
-    u64 conn_sock = net_accept(socket_id, client_addr, 128, on_incoming_data);
+    u64 conn_sock = net_accept(socket_id, client_addr, sizeof(client_addr), on_incoming_data);
 }
 
 void on_incoming_data(u64 socket_id, u64 num_bytes)
