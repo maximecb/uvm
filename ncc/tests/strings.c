@@ -11,6 +11,9 @@ char dst[32];
 
 char* global_str = "global string pointer";
 
+char null_ch = '\0';
+char* str_with_null = "hello\0null";
+
 int main()
 {
     assert(strlen("") == 0);

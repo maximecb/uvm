@@ -54,8 +54,10 @@ fn gen_global_init(t: &Type, init_expr: &Option<Expr>, out: &mut String) -> Resu
         (Type::Array { elem_type, size_expr }, Some(Expr::String(s))) => {
             match (elem_type.as_ref(), size_expr.as_ref()) {
                 (Type::UInt(8), Expr::Int(n)) => {
-                    assert!(*n as usize == s.bytes().len() + 1);
-                    out.push_str(&format!(".stringz \"{}\";\n", s.escape_default()))
+                    let bytes = s.as_bytes();
+                    assert!(*n as usize == bytes.len() + 1);
+                    let escaped_str = bytes.escape_ascii();
+                    out.push_str(&format!(".stringz \"{}\";\n", escaped_str))
                 }
                 _ => panic!()
             }
