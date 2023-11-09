@@ -41,6 +41,10 @@
 // Print a newline to standard output.
 #define print_endl() asm () -> void { syscall print_endl; }
 
+// i32 putchar(i32 char)
+// Write one byte to standard output. This is a blocking function. The value -1 is returned on end of file or error. Otherwise the byte written is returned.
+#define putchar(__char) asm (__char) -> i32 { syscall putchar; }
+
 // i32 getchar()
 // Read one byte from standard input. This is a blocking function. The value -1 is returned on end of file or error.
 #define getchar() asm () -> i32 { syscall getchar; }

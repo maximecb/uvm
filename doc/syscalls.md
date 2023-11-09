@@ -94,6 +94,16 @@ void print_endl()
 
 Print a newline to standard output.
 
+## putchar
+
+```
+i32 putchar(i32 char)
+```
+
+**Returns:** `i32 char`
+
+Write one byte to standard output. This is a blocking function. The value -1 is returned on end of file or error. Otherwise the byte written is returned.
+
 ## getchar
 
 ```

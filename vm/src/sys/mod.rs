@@ -179,6 +179,7 @@ impl SysState
         self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
         self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
         self.reg_syscall(PRINT_ENDL, SysCallFn::Fn0_0(print_endl));
+        self.reg_syscall(PUTCHAR, SysCallFn::Fn1_1(putchar));
         self.reg_syscall(GETCHAR, SysCallFn::Fn0_1(getchar));
 
         self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
@@ -274,6 +275,20 @@ fn print_str(vm: &mut VM, str_ptr: Value)
 fn print_endl(vm: &mut VM)
 {
     println!();
+}
+
+
+/// Write one byte of input to stdout.
+/// Analogous to C's getchar
+fn putchar(vm: &mut VM, byte: Value) -> Value
+{
+    let byte = byte.as_u8();
+    let bytes = byte.to_le_bytes();
+
+    match stdout().write_all(&bytes) {
+        Ok(_) => Value::from(byte),
+        Err(_) => Value::from(-1 as i64),
+    }
 }
 
 /// Read one byte of input from stdin.

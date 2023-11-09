@@ -12,15 +12,22 @@ int puts(char* str)
     return 0;
 }
 
+#ifndef putchar
+int putchar(char ch)
+{
+    asm (ch) -> int { syscall putchar; };
+}
+#endif
+
+#ifndef getchar
+int getchar()
+{
+    asm () -> int { syscall getchar; };
+}
+#endif
+
 // Internal buffer used by printf
 char* __buffer[32];
-
-void __write_char(char c)
-{
-    __buffer[0] = c;
-    __buffer[1] = 0;
-    asm (__buffer) -> void { syscall print_str; };
-}
 
 int printf(char* format, ...)
 {
@@ -43,7 +50,7 @@ int printf(char* format, ...)
             // Percent character
             if (format[i+1] == '%')
             {
-                __write_char('%');
+                putchar('%');
                 ++i;
                 ++ch_written;
                 continue;
@@ -108,7 +115,7 @@ int printf(char* format, ...)
         // Print this character
         // NOTE: may want to be careful about printing
         // in the middle of a UTF-8 unicode character?
-        __write_char(c);
+        putchar(c);
         ++ch_written;
     }
 

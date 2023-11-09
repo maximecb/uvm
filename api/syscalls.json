@@ -169,6 +169,22 @@
         "description": "Print a newline to standard output."
       },
       {
+        "name": "putchar",
+        "args": [
+          [
+            "i32",
+            "char"
+          ]
+        ],
+        "returns": [
+          "i32",
+          "char"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 26,
+        "description": "Write one byte to standard output. This is a blocking function. The value -1 is returned on end of file or error. Otherwise the byte written is returned."
+      },
+      {
         "name": "getchar",
         "args": [],
         "returns": [
