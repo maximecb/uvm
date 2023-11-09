@@ -973,8 +973,8 @@ fn parse_struct(input: &mut Input) -> Result<Type, ParseError>
 
         // Parse one field name and its type
         let field_type = parse_type(input)?;
-        let field_type = parse_array_type(input, field_type)?;
         let field_name = input.parse_ident()?;
+        let field_type = parse_array_type(input, field_type)?;
         fields.push((field_name, field_type));
         input.expect_token(";")?;
     }
