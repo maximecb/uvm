@@ -90,6 +90,7 @@ u32 hsl_to_rgb(float h, float s, float l)
 }
 
 float line_pos = 1.0f;
+float anim_time = 0.0f;
 
 void anim_callback()
 {
@@ -104,10 +105,15 @@ void anim_callback()
 
     printf("line_pos=%f\n", line_pos);
 
+    // Animate the sky gradient over time
+    float h = 0.70f + 0.05f * sinf(anim_time * 0.30f);
+    float s = 0.95f + 0.05f * sinf(anim_time * 0.20f);
+    float l_max = 0.92f + 0.08f * sinf(anim_time * 0.22f);
+
     // Draw sky/horizon
     for (int i = 0; i < 335; ++i)
     {
-        u32 color = hsl_to_rgb(0.74f, 1.0f, i / 350.0f);
+        u32 color = hsl_to_rgb(h, s, (i / 335.0f) * l_max);
         memset32((u32*)frame_buffer[i], color, FRAME_WIDTH);
     }
 
@@ -149,6 +155,7 @@ void anim_callback()
 
     // Schedule a fixed rate update for the next frame (60fps)
     fixed_rate_update(start_time, 1000 / 60, anim_callback);
+    anim_time = anim_time + (1 / 60.0f);
 }
 
 void keydown(u64 window_id, u16 keycode)
