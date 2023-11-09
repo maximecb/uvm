@@ -17,11 +17,18 @@ void on_new_conn(u64 socket_id)
 
 void on_incoming_data(u64 socket_id, u64 num_bytes)
 {
-    puts("got incoming data");
+    printf("received %d bytes of incoming data\n", num_bytes);
 
     char read_buf[1024];
     memset(read_buf, 0, 1024);
     net_read(socket_id, read_buf, 1024 - 1);
+
+    // If this is a telnet command (non-printable), ignore it
+    if (read_buf[0] & 0x80)
+    {
+        return;
+    }
+
     puts(read_buf);
 
     if (strncmp(read_buf, "exit", 4) == 0)
@@ -30,8 +37,6 @@ void on_incoming_data(u64 socket_id, u64 num_bytes)
         char* response = "Goodbye!\n";
         net_write(socket_id, response, strlen(response));
         net_close(socket_id);
-
-        net_close(listen_sock);
         return;
     }
 

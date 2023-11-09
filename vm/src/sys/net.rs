@@ -58,12 +58,20 @@ fn listen_thread(
 {
     // Block until a connection can be accepted
     for result in listener.incoming() {
+        let stream = match result {
+            Ok(s) => s,
+
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                // Sleep for a bit, then try again
+                thread::sleep(std::time::Duration::from_millis(10));
+                continue;
+            }
+
+            Err(e) => panic!("encountered IO error: {e}"),
+        };
+
         let arc = vm_mutex.upgrade().unwrap();
         let mut vm = arc.lock().unwrap();
-
-        // TODO: note, accepting the connection may error,
-        // for example if the socket was closed
-        let stream = result.unwrap();
 
         // Add the new connection to the queue
         let mut net_state = &mut vm.sys_state.net_state;
@@ -71,7 +79,11 @@ fn listen_thread(
             Some(Socket::Listen{ incoming, .. }) => {
                 incoming.push_back(stream);
             }
-            _ => panic!()
+
+            // Socket closed
+            _ => {
+                break;
+            }
         }
 
         // Call on_new_conn to signal an incoming connection
@@ -99,6 +111,12 @@ pub fn net_listen(
     // TODO: return 0 on failure
     let listener = TcpListener::bind(listen_addr).unwrap();
     let socket_fd = listener.as_raw_fd();
+
+    // Set the listener to non-blocking
+    // We do this because Rust offers us no way to close the TcpListener
+    // from another thread, and so the listening thread has to periodically
+    // check if it should exit.
+    listener.set_nonblocking(true).expect("Cannot set non-blocking");
 
     // Assign a socket id to the socket
     let mut net_state = &mut vm.sys_state.net_state;
@@ -141,8 +159,12 @@ fn read_thread(
         let mut buf: [u8; 16384] = [0; 16384];
 
         match stream.read(&mut buf) {
-            Ok(num_bytes) => {
+            // End of file, connection closed
+            Ok(0) => {
+                break;
+            }
 
+            Ok(num_bytes) => {
                 let arc = vm_mutex.upgrade().unwrap();
                 let mut vm = arc.lock().unwrap();
 
@@ -167,7 +189,10 @@ fn read_thread(
                 }
             }
 
-            Err(_) => break
+            Err(e) => {
+                println!("error in read thread: {e}");
+                break
+            }
         }
     }
 }
@@ -199,6 +224,7 @@ pub fn net_accept(
             }
 
             let stream = incoming.pop_front().unwrap();
+            stream.set_nonblocking(false).expect("could not set stream to blocking");
 
             // TODO: handle the error case here
             // The connection could have dropped
@@ -314,7 +340,8 @@ pub fn net_close(
         }
 
         Some(Socket::Listen { listener, .. }) => {
-            //listener.shutdown(std::net::Shutdown::Both).unwrap();
+            // The listen thread will detect that the socket state
+            // has been removed and exit
         }
 
         _ => panic!()
