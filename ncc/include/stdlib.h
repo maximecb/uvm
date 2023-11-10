@@ -21,13 +21,22 @@ char* itoa(int value, char* str, int base)
 {
     assert(base > 0 && base <= 16);
 
+    // If negative, write a minus sign
+    if (value < 0)
+    {
+        *str = '-';
+        ++str;
+        value = -value;
+    }
+
     // Compute the number of digits
     int num_digits = 0;
-    for (int n = value; n > 0; n = n / base)
+    int n = value;
+    do
     {
-        int digit = value % base;
+        n = n / base;
         ++num_digits;
-    }
+    } while (n > 0);
 
     // The digits have to be written in reverse order
     for (int i = num_digits - 1; i >= 0; --i)

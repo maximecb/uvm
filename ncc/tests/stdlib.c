@@ -32,6 +32,13 @@ void main()
     assert(buf[0] == '1' && buf[1] == '7' && buf[2] == 0);
     itoa(15, buf, 16);
     assert(buf[0] == 'F' && buf[1] == 0);
+    itoa(-77, buf, 10);
+    assert(buf[0] == '-');
+    assert(buf[1] == '7');
+    assert(buf[2] == '7');
+    itoa(0, buf, 10);
+    assert(buf[0] == '0');
+    assert(buf[1] == '\0');
 
     // Test the exit function
     exit(0);
