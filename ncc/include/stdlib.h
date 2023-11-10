@@ -2,6 +2,7 @@
 #define __STDLIB_H__
 
 #include <stddef.h>
+#include <assert.h>
 
 int abs(int n)
 {
@@ -13,6 +14,42 @@ int abs(int n)
 void exit(int status)
 {
     asm (status) -> void { exit; };
+}
+
+// Convert integer to string
+char* itoa(int value, char* str, int base)
+{
+    assert(base > 0 && base <= 16);
+
+    // Compute the number of digits
+    int num_digits = 0;
+    for (int n = value; n > 0; n = n / base)
+    {
+        int digit = value % base;
+        ++num_digits;
+    }
+
+    // The digits have to be written in reverse order
+    for (int i = num_digits - 1; i >= 0; --i)
+    {
+        int digit = value % base;
+        value = value / base;
+
+        char ch;
+        if (digit < 10)
+        {
+            ch = '0' + digit;
+        }
+        else
+        {
+            ch = 'A' + (digit - 10);
+        }
+
+        str[i] = ch;
+    }
+
+    // Write the null terminator
+    str[num_digits] = '\0';
 }
 
 // We define RAND_MAX to be the same as INT32_MAX
