@@ -16,4 +16,14 @@ int isupper(int c)
     return (c >= 'A' && c <= 'Z');
 }
 
+int toupper(int ch)
+{
+    if (islower(ch))
+    {
+        return ch + ('A' - 'a');
+    }
+
+    return ch;
+}
+
 #endif
