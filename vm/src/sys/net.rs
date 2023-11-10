@@ -1,9 +1,7 @@
 use std::collections::{HashMap, VecDeque};
-use std::os::fd::RawFd;
 use std::slice;
 use std::thread;
 use std::net::{TcpListener, TcpStream};
-use std::os::fd::AsRawFd;
 use std::io::{self, Read, Write};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{VM, Value, ExitReason};
@@ -110,7 +108,6 @@ pub fn net_listen(
 
     // TODO: return 0 on failure
     let listener = TcpListener::bind(listen_addr).unwrap();
-    let socket_fd = listener.as_raw_fd();
 
     // Set the listener to non-blocking
     // We do this because Rust offers us no way to close the TcpListener
