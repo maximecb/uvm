@@ -16,8 +16,8 @@ void exit(int status)
     asm (status) -> void { exit; };
 }
 
-// Convert integer to string
-char* itoa(int value, char* str, int base)
+// Convert long int to string
+char* ltoa(long value, char* str, int base)
 {
     assert(base > 0 && base <= 16);
 
@@ -31,7 +31,7 @@ char* itoa(int value, char* str, int base)
 
     // Compute the number of digits
     int num_digits = 0;
-    int n = value;
+    long n = value;
     do
     {
         n = n / base;
@@ -41,7 +41,7 @@ char* itoa(int value, char* str, int base)
     // The digits have to be written in reverse order
     for (int i = num_digits - 1; i >= 0; --i)
     {
-        int digit = value % base;
+        long digit = value % base;
         value = value / base;
 
         char ch;
@@ -59,6 +59,12 @@ char* itoa(int value, char* str, int base)
 
     // Write the null terminator
     str[num_digits] = '\0';
+}
+
+// Convert int to string
+char* itoa(int value, char* str, int base)
+{
+    return ltoa((long)value, str, base);
 }
 
 // We define RAND_MAX to be the same as INT32_MAX
