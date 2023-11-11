@@ -102,6 +102,7 @@ impl Type
         use Type::*;
         match self {
             Void => panic!(),
+
             UInt(num_bits) | Int(num_bits) | Float(num_bits) => num_bits / 8,
             Pointer(_) => 8,
 
@@ -125,6 +126,11 @@ impl Type
                     // Add the field size
                     num_bytes += t.sizeof();
                 }
+
+                // Add the necessary paddingn at the end so the struct
+                // will align with itself if stored in an array
+                let struct_align = self.align_bytes();
+                num_bytes = (num_bytes + (struct_align - 1)) & !(struct_align - 1);
 
                 num_bytes
             }
