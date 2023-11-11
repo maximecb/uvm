@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::slice;
 use std::thread;
 use std::net::{TcpListener, TcpStream};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, Error};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{VM, Value, ExitReason};
 
@@ -78,7 +78,7 @@ fn listen_thread(
                 incoming.push_back(stream);
             }
 
-            // Socket closed
+            // Socket has been closed, stop
             _ => {
                 break;
             }
@@ -156,7 +156,7 @@ fn read_thread(
         let mut buf: [u8; 16384] = [0; 16384];
 
         match stream.read(&mut buf) {
-            // End of file, connection closed
+            // End of file, connection closed, stop
             Ok(0) => {
                 break;
             }
@@ -186,6 +186,14 @@ fn read_thread(
                 }
             }
 
+            // This error indicates blocking read stopped,
+            // but it can be retried
+            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {
+                continue;
+            }
+
+            // Most errors are the result of a lost connection
+            // Stop the read thread
             Err(e) => {
                 println!("error in read thread: {e}");
                 break
