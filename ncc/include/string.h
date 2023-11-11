@@ -2,6 +2,7 @@
 #define __STRING_H__
 
 #include <stddef.h>
+#include <ctype.h>
 
 #ifndef memcpy
 #define memcpy(dst, src, num_bytes) asm (dst, src, num_bytes) -> void { syscall memcpy; }
@@ -24,6 +25,27 @@ int strcmp(char* a, char* b)
     {
         char ch_a = a[i];
         char ch_b = b[i];
+
+        if (ch_a < ch_b)
+            return -1;
+        else if (ch_a > ch_b)
+            return 1;
+
+        if (ch_a == 0)
+            break;
+    }
+
+    return 0;
+}
+
+// Perform case-insensitive string comparison
+// This function is non-standard, but offered by many compilers.
+int strcasecmp(char* a, char* b)
+{
+    for (size_t i = 0;; ++i)
+    {
+        char ch_a = tolower(a[i]);
+        char ch_b = tolower(b[i]);
 
         if (ch_a < ch_b)
             return -1;

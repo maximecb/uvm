@@ -352,16 +352,12 @@ void on_incoming_data(u64 socket_id, u64 num_bytes)
 
     if (p_user->state == STATE_WRITE_MSG)
     {
-        bool done = (
-            strcmp(read_buf, "Done\n") == 0     ||
-            strcmp(read_buf, "Done\r\n") == 0   ||
-            strcmp(read_buf, "done\n") == 0     ||
-            strcmp(read_buf, "done\r\n") == 0
-        );
+        // Strip trailing whitespace from the buffer
+        rstrip_ws(read_buf);
 
-        if (done)
+        if (strcasecmp(read_buf, "done") == 0)
         {
-            // Strip trailing whitespace
+            // Strip trailing whitespace in the message buffer
             rstrip_ws(p_user->msg_buf);
 
             // If this is an empty message, do nothing
@@ -386,9 +382,13 @@ void on_incoming_data(u64 socket_id, u64 num_bytes)
             return;
         }
 
+        // Add back a newline on the message buffer because
+        // we stripped whitespace earlier
+        strncat(p_user->msg_buf, "\n", 1);
+
+        // Append new line to the user's message buffer
         size_t msg_len = strlen(p_user->msg_buf);
         size_t len = strlen(read_buf);
-
         size_t max_chars = MAX_MSG_LEN - 1 - msg_len;
         strncat(p_user->msg_buf, read_buf, max_chars);
 
