@@ -9,7 +9,7 @@
 #define MAX_NAME_LEN 32
 #define MAX_MSG_LEN 2048
 #define MAX_USERS 512
-#define MAX_MESSAGES 64000
+#define MAX_MESSAGES 4096
 
 // User states
 #define STATE_DEFAULT 0
