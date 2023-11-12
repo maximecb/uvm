@@ -45,7 +45,7 @@ pub enum Op
     dup,
     swap,
 
-    // Copy the nth-value from the top of the stack
+    // Push the nth-value (indexed from the stack top) on top of the stack
     // getn 0 is equivalent to dup
     // getn <idx:u8>
     getn,
