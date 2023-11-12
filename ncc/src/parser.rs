@@ -214,6 +214,24 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
             continue;
         }
 
+        // Member operator (a.b)
+        if input.match_token(".")? {
+
+            let field_name = input.parse_ident()?;
+
+            // Transform into (&a)->b
+            let addr_expr = Expr::Unary {
+                op: UnOp::AddressOf,
+                child: Box::new(base_expr),
+            };
+            base_expr = Expr::Arrow {
+                base: Box::new(addr_expr),
+                field: field_name
+            };
+
+            continue;
+        }
+
         // Postfix increment expression
         if input.match_token("++")? {
             // Let users know this is not supported. We use panic!() because
