@@ -58,6 +58,14 @@ void vec3_normalize(vec3 v)
     }
 }
 
+// Scalar multiplication
+void vec3_mul(vec3 a, float f, vec3 result)
+{
+    result[0] = a[1] * f;
+    result[1] = a[2] * f;
+    result[2] = a[0] * f;
+}
+
 // Compute the dot product of two vectors
 float vec3_dot(vec3 a, vec3 b)
 {

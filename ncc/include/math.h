@@ -5,6 +5,9 @@
 #define M_PI_F 3.14159266f
 #define INFINITY_F (1.0f / 0.0f)
 
+// Test if a floating-point value is NaN
+#define isnan(x) (x != x)
+
 // Here we use macros for performance because
 // ncc doesn't yet support inline functions
 #define sinf(f) (asm (f) -> float { sin_f32; })

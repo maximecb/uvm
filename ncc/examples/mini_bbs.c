@@ -141,11 +141,9 @@ void post_message(user_t* p_user)
     assert(num_messages <= MAX_MESSAGES);
     message_t* p_message = &messages[msg_idx];
 
+    // Initialize the message struct
     p_message->timestamp = time_current_ms();
-
     memcpy(p_message->username, p_user->name, MAX_NAME_LEN);
-
-    //p_user->msg_buf[MAX_MSG_LEN - 1] = '\0';
     memcpy(p_message->text, p_user->msg_buf, sizeof(p_user->msg_buf));
 }
 

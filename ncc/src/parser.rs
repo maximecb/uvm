@@ -210,6 +210,8 @@ fn parse_postfix(input: &mut Input) -> Result<Expr, ParseError>
                 base: Box::new(base_expr),
                 field: field_name
             };
+
+            continue;
         }
 
         // Postfix increment expression
@@ -1372,5 +1374,11 @@ mod tests
     {
         parse_ok("void main() { if (1) { foo(); } }");
         parse_ok("void main() { if (1) { foo(); } else { bar(); } }");
+    }
+
+    #[test]
+    fn regress_ptr_buf_idx()
+    {
+        parse_ok("void main(user_t* p_user) { p_user->msg_buf[0]; }");
     }
 }
