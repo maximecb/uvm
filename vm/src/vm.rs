@@ -50,6 +50,11 @@ pub enum Op
     // getn <idx:u8>
     getn,
 
+    // Pop the stack top and set the nth stack slot from the top to this value
+    // setn 0 is equivalent to removing the value below the current stack top
+    // setn <idx:u8>
+    setn,
+
     // Get the argument count for the current stack frame
     get_argc,
 
@@ -719,6 +724,13 @@ impl VM
                     let n = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.stack[self.stack.len() - (1 + n)];
                     self.push(val);
+                }
+
+                Op::setn => {
+                    let n = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let val = self.pop();
+                    let len = self.stack.len();
+                    self.stack[len - (1 + n)] = val;
                 }
 
                 Op::dup => {
@@ -1644,6 +1656,13 @@ mod tests
     {
         // Store instruction
         eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; exit;", 11);
+    }
+
+    #[test]
+    fn test_setn()
+    {
+        // Store instruction
+        eval_i64(".code; push 3; push 0; push 7; setn 1; pop; exit;", 7);
     }
 
     #[test]
