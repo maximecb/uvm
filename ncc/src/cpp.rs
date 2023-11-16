@@ -326,6 +326,9 @@ fn expand_macro(
     def: &Def,
 ) -> Result<String, ParseError>
 {
+    // Position we're expanding at
+    let expand_pos = input.get_pos();
+
     let mut text = def.text.clone();
 
     // If this is a macro with arguments
@@ -373,7 +376,6 @@ fn expand_macro(
             param_to_arg.insert(param, &args[idx]);
         }
 
-        // TODO: use the src name/loc from the macro definition
         let mut input = Input::new(&text, &input.src_name);
         let mut output = String::new();
 
@@ -428,6 +430,8 @@ fn expand_macro(
 
     // Process macros in text recursively
     let mut input = Input::new(&text, &input.src_name);
+    input.set_pos(expand_pos);
+
     let (sub_input, end_keyword) = process_input_rec(
         &mut input,
         defs,
