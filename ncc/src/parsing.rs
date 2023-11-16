@@ -1,11 +1,20 @@
 use std::fs;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub struct SrcPos
 {
     line_no: u32,
     col_no: u32,
+    file_id: u32,
+}
+
+impl fmt::Display for SrcPos
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: map file id to file name
+        write!(f, "{}:{}", self.line_no, self.col_no)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -106,6 +115,15 @@ impl Input
             idx: 0,
             line_no: 1,
             col_no: 1
+        }
+    }
+
+    pub fn get_pos(&self) -> SrcPos
+    {
+        SrcPos {
+            line_no: self.line_no,
+            col_no: self.col_no,
+            file_id: 0
         }
     }
 
