@@ -4,30 +4,6 @@
     "description": "Core functionality provided by the VM that isn't related to any kind of I/O.",
     "syscalls": [
       {
-        "name": "memcpy",
-        "args": [
-          [
-            "u8*",
-            "dst"
-          ],
-          [
-            "const u8*",
-            "src"
-          ],
-          [
-            "u64",
-            "num_bytes"
-          ]
-        ],
-        "returns": [
-          "void",
-          ""
-        ],
-        "permission": "default_allowed",
-        "const_idx": 3,
-        "description": "Copy a block of memory in the heap from a source address to a destination address."
-      },
-      {
         "name": "memset",
         "args": [
           [
@@ -74,6 +50,54 @@
         "permission": "default_allowed",
         "const_idx": 16,
         "description": "Fill a region of memory with 32-bit values. This is useful for some graphics operations."
+      },
+      {
+        "name": "memcpy",
+        "args": [
+          [
+            "u8*",
+            "dst"
+          ],
+          [
+            "const u8*",
+            "src"
+          ],
+          [
+            "u64",
+            "num_bytes"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 3,
+        "description": "Copy a block of memory in the heap from a source address to a destination address."
+      },
+      {
+        "name": "memcmp",
+        "args": [
+          [
+            "const u8*",
+            "p_a"
+          ],
+          [
+            "const u8*",
+            "p_b"
+          ],
+          [
+            "u64",
+            "num_bytes"
+          ]
+        ],
+        "returns": [
+          "u32",
+          "result"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 27,
+        "description": "Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in p_a, 1 if greater."
       },
       {
         "name": "vm_heap_size",

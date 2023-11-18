@@ -14,14 +14,6 @@ The syscalls with a `void` return type do not output anything.
 
 Core functionality provided by the VM that isn't related to any kind of I/O.
 
-## memcpy
-
-```
-void memcpy(u8* dst, const u8* src, u64 num_bytes)
-```
-
-Copy a block of memory in the heap from a source address to a destination address.
-
 ## memset
 
 ```
@@ -37,6 +29,24 @@ void memset32(u32* dst, u32 word, u64 num_words)
 ```
 
 Fill a region of memory with 32-bit values. This is useful for some graphics operations.
+
+## memcpy
+
+```
+void memcpy(u8* dst, const u8* src, u64 num_bytes)
+```
+
+Copy a block of memory in the heap from a source address to a destination address.
+
+## memcmp
+
+```
+u32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+```
+
+**Returns:** `u32 result`
+
+Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in p_a, 1 if greater.
 
 ## vm_heap_size
 

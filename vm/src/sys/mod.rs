@@ -174,6 +174,7 @@ impl SysState
         self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
         self.reg_syscall(MEMSET32, SysCallFn::Fn3_0(memset32));
         self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
+        self.reg_syscall(MEMCMP, SysCallFn::Fn3_1(memcmp));
 
         self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
         self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
@@ -252,6 +253,20 @@ fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
     }
 }
 
+fn memcmp(vm: &mut VM, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
+{
+    let num_bytes = num_bytes.as_usize();
+
+    unsafe {
+        let ptr_a: *const libc::c_void = vm.get_heap_ptr(ptr_a.as_usize());
+        let ptr_b: *const libc::c_void  = vm.get_heap_ptr(ptr_b.as_usize());
+
+        let result = libc::memcmp(ptr_a, ptr_b, num_bytes);
+
+        Value::from(result as u64)
+    }
+}
+
 fn print_i64(vm: &mut VM, v: Value)
 {
     let v = v.as_i64();
@@ -276,7 +291,6 @@ fn print_endl(vm: &mut VM)
 {
     println!();
 }
-
 
 /// Write one byte of input to stdout.
 /// Analogous to C's getchar

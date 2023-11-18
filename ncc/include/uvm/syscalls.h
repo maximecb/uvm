@@ -5,10 +5,6 @@
 #ifndef __UVM_SYSCALLS__
 #define __UVM_SYSCALLS__
 
-// void memcpy(u8* dst, const u8* src, u64 num_bytes)
-// Copy a block of memory in the heap from a source address to a destination address.
-#define memcpy(__dst, __src, __num_bytes) asm (__dst, __src, __num_bytes) -> void { syscall memcpy; }
-
 // void memset(u8* dst, u8 value, u64 num_bytes)
 // Fill a block of bytes in the heap with a given value.
 #define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
@@ -16,6 +12,14 @@
 // void memset32(u32* dst, u32 word, u64 num_words)
 // Fill a region of memory with 32-bit values. This is useful for some graphics operations.
 #define memset32(__dst, __word, __num_words) asm (__dst, __word, __num_words) -> void { syscall memset32; }
+
+// void memcpy(u8* dst, const u8* src, u64 num_bytes)
+// Copy a block of memory in the heap from a source address to a destination address.
+#define memcpy(__dst, __src, __num_bytes) asm (__dst, __src, __num_bytes) -> void { syscall memcpy; }
+
+// u32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+// Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in p_a, 1 if greater.
+#define memcmp(__p_a, __p_b, __num_bytes) asm (__p_a, __p_b, __num_bytes) -> u32 { syscall memcmp; }
 
 // u64 vm_heap_size()
 // Report the current heap size in bytes.
