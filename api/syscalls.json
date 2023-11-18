@@ -97,7 +97,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 27,
-        "description": "Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in p_a, 1 if greater."
+        "description": "Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in `p_a`, 1 if greater."
       },
       {
         "name": "vm_heap_size",
