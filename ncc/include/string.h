@@ -4,12 +4,16 @@
 #include <stddef.h>
 #include <ctype.h>
 
+#ifndef memset
+#define memset(dst, value, num_bytes) asm (dst, value, num_bytes) -> void { syscall memset; }
+#endif
+
 #ifndef memcpy
 #define memcpy(dst, src, num_bytes) asm (dst, src, num_bytes) -> void { syscall memcpy; }
 #endif
 
-#ifndef memset
-#define memset(dst, value, num_bytes) asm (dst, value, num_bytes) -> void { syscall memset; }
+#ifndef memcmp
+#define memcmp(ptr_a, ptr_b, num_bytes) asm (ptr_a, ptr_b, num_bytes) -> int { syscall memcmp; }
 #endif
 
 size_t strlen(char* p)
