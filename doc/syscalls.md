@@ -46,7 +46,7 @@ u32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
 
 **Returns:** `u32 result`
 
-Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in p_a, 1 if greater.
+Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in `p_a`, 1 if greater.
 
 ## vm_heap_size
 
