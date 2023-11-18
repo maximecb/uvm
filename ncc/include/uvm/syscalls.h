@@ -17,9 +17,9 @@
 // Copy a block of memory in the heap from a source address to a destination address.
 #define memcpy(__dst, __src, __num_bytes) asm (__dst, __src, __num_bytes) -> void { syscall memcpy; }
 
-// u32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+// i32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
 // Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in `p_a`, 1 if greater.
-#define memcmp(__p_a, __p_b, __num_bytes) asm (__p_a, __p_b, __num_bytes) -> u32 { syscall memcmp; }
+#define memcmp(__p_a, __p_b, __num_bytes) asm (__p_a, __p_b, __num_bytes) -> i32 { syscall memcmp; }
 
 // u64 vm_heap_size()
 // Report the current heap size in bytes.
