@@ -3,13 +3,15 @@
 
 // assert() macro
 #ifndef NDEBUG
-#define assert(test_val) if (!(test_val)) { unsigned int line_no = __LINE__; \
+#define assert(test_expr) if (!(test_expr)) { unsigned int line_no = __LINE__; \
     asm ("assertion failed in ") -> void { syscall print_str; };\
     asm (__FILE__) -> void { syscall print_str; };\
     asm ("@") -> void { syscall print_str; };\
     asm (line_no) -> void { syscall print_i64; };\
     asm () -> void { syscall print_endl; };\
-    asm () -> void { panic; };\
+    asm ("assert(" #test_expr ")") -> void { syscall print_str; };\
+    asm () -> void { syscall print_endl; };\
+    asm () -> void { push -1; exit; };\
 }
 #else
 #define assert(test_val) {}

@@ -422,6 +422,23 @@ fn expand_macro(
                 continue;
             }
 
+            // Stringify argument
+            if ch == '#' {
+                input.eat_ch();
+                let ident = input.parse_ident()?;
+
+                // If we have a definition for this identifier
+                if let Some(arg_val) = param_to_arg.get(&ident) {
+                    let bytes = arg_val.as_bytes();
+                    let escaped_str = bytes.escape_ascii();
+                    output += &format!("\"{}\"", escaped_str);
+                } else {
+                    return input.parse_error("stray '#' character in macro text");
+                }
+
+                continue;
+            }
+
             output.push(input.eat_ch());
         }
 
@@ -587,6 +604,8 @@ fn process_input_rec(
                     "unknown preprocessor directive {}", directive
                 ));
             }
+
+            continue;
         }
 
         // If this is a character string or character literal

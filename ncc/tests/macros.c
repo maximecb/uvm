@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 
 #define FOO()
 #define BAR(x) x
@@ -27,6 +28,9 @@
 // Regression: macro replacement should not happen within a string
 #define SUB_STR_MACRO "foo"
 #define STR_MACRO "macro SUB_STR_MACRO"
+
+// Stringify argument
+#define STR(s) #s
 
 // Regression: argument names contain parameter name
 #define rgba32(b, a) (b | a)
@@ -100,4 +104,8 @@ void main()
     #else
     assert(false);
     #endif
+
+    // Stringification
+    assert(strcmp(STR(1), "1") == 0);
+    assert(strcmp(STR(BIF), "BIF") == 0);
 }
