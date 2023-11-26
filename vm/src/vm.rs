@@ -600,14 +600,13 @@ impl VM
         self.heap.resize(num_bytes)
     }
 
+    // FIXME: this function should be marked unsafe
+    //
     /// Get a pointer to an address/offset in the heap
-    pub fn get_heap_ptr<T>(&mut self, addr: usize) -> *mut T
+    pub fn get_heap_ptr<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
     {
-        if addr + size_of::<T>() > self.heap.len() {
-            panic!(
-                "attempting to access data of type {} past end of heap",
-                std::any::type_name::<T>()
-            );
+        if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
+            panic!("attempting to access memory slice past end of heap");
         }
 
         if addr & (size_of::<T>() - 1) != 0 {
@@ -639,9 +638,7 @@ impl VM
 
         unsafe {
             let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
-
             let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
-
             std::slice::from_raw_parts_mut(start_ptr, num_elems)
         }
     }
@@ -667,7 +664,7 @@ impl VM
         }
 
         // Convert the string to a Rust string
-        let char_ptr = self.get_heap_ptr(str_ptr);
+        let char_ptr = self.get_heap_ptr(str_ptr, str_len);
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
         rust_str
@@ -1346,28 +1343,28 @@ impl VM
 
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     let val: u8 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u16 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     let val: u16 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     let val: u32 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u64 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     let val: u64 = unsafe { *heap_ptr };
                     self.push(val);
                 }
@@ -1375,28 +1372,28 @@ impl VM
                 Op::store_u8 => {
                     let val = self.pop().as_u8();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u16 => {
                     let val = self.pop().as_u16();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u32 => {
                     let val = self.pop().as_u32();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u64 => {
                     let val = self.pop().as_u64();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr);
+                    let heap_ptr = self.get_heap_ptr(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
@@ -1723,5 +1720,13 @@ mod tests
     fn test_memset_oob()
     {
         eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 100_000_000; syscall memset; push 0; exit;");
+    }
+
+    // Regression: this used to segfault
+    #[test]
+    #[should_panic]
+    fn test_memcmp_n1()
+    {
+        eval_src(".data; A: .zero 10; B: .zero 10; .code; push A; push B; push -1; syscall memcpy;");
     }
 }

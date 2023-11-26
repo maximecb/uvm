@@ -126,10 +126,11 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
 
 pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
 {
-    // Get the address to copy pixel data from
-    let data_ptr = vm.get_heap_ptr(src_addr.as_usize());
-
     let window = get_window(window_id.as_u32());
+
+    // Get the address to copy pixel data from
+    let data_len = (4 * window.width * window.height) as usize;
+    let data_ptr = vm.get_heap_ptr(src_addr.as_usize(), data_len);
 
     // If no frame has been drawn yet
     if window.texture.is_none() {
@@ -150,7 +151,6 @@ pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
 
     // Update the texture
     let pitch = 4 * window.width as usize;
-    let data_len = (4 * window.width * window.height) as usize;
     let pixel_slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
     window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
 

@@ -245,10 +245,10 @@ fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
 
     // TODO: panic if slices are overlapping
 
-    let dst_ptr: *mut u8 = vm.get_heap_ptr(dst_ptr);
-    let src_ptr: *mut u8 = vm.get_heap_ptr(src_ptr);
-
     unsafe {
+        let dst_ptr: *mut u8 = vm.get_heap_ptr(dst_ptr, num_bytes);
+        let src_ptr: *mut u8 = vm.get_heap_ptr(src_ptr, num_bytes);
+
         std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, num_bytes);
     }
 }
@@ -258,8 +258,8 @@ fn memcmp(vm: &mut VM, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
     let num_bytes = num_bytes.as_usize();
 
     unsafe {
-        let ptr_a: *const libc::c_void = vm.get_heap_ptr(ptr_a.as_usize());
-        let ptr_b: *const libc::c_void  = vm.get_heap_ptr(ptr_b.as_usize());
+        let ptr_a: *const libc::c_void = vm.get_heap_ptr(ptr_a.as_usize(), num_bytes);
+        let ptr_b: *const libc::c_void  = vm.get_heap_ptr(ptr_b.as_usize(), num_bytes);
 
         let result = libc::memcmp(ptr_a, ptr_b, num_bytes);
 

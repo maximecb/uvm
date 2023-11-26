@@ -215,8 +215,8 @@ pub fn net_accept(
 {
     let socket_id = socket_id.as_u64();
     let client_addr_buf = client_addr_buf.as_usize();
-    let addr_buf_ptr: *mut u8 = vm.get_heap_ptr(client_addr_buf);
     let addr_buf_len = addr_buf_len.as_usize();
+    let addr_buf_ptr: *mut u8 = vm.get_heap_ptr(client_addr_buf, addr_buf_len);
     let on_incoming_data = on_incoming_data.as_u64();
 
     let mut net_state = &mut vm.sys_state.net_state;
@@ -283,7 +283,7 @@ pub fn net_read(
     let socket_id = socket_id.as_u64();
     let buf_len = buf_len.as_usize();
     let buf_ptr = buf_ptr.as_usize();
-    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr);
+    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr, buf_len);
 
     let mut net_state = &mut vm.sys_state.net_state;
     match net_state.sockets.get_mut(&socket_id) {
@@ -315,7 +315,7 @@ pub fn net_write(
     let socket_id = socket_id.as_u64();
     let buf_len = buf_len.as_usize();
     let buf_ptr = buf_ptr.as_usize();
-    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr);
+    let buf_ptr: *mut u8 = vm.get_heap_ptr(buf_ptr, buf_len);
 
     let mut net_state = &mut vm.sys_state.net_state;
     match net_state.sockets.get_mut(&socket_id) {
