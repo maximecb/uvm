@@ -244,8 +244,8 @@ pub enum Op
     call,
 
     // Call a function pointer passed as argument
-    // call <num_args:u8> (f_ptr, arg0, arg1, ..., argN)
-    //call_fp,
+    // call <num_args:u8> (arg0, arg1, ..., argN, f_ptr)
+    call_fp,
 
     // Call into a host function
     // For example, to set up a device or to allocate more memory
@@ -1440,6 +1440,26 @@ impl VM
                     pc = ((pc as isize) + offset) as usize;
                 }
 
+                // call <num_args:u8> (arg0, arg1, ..., argN, f_ptr)
+                Op::call_fp => {
+                    // Absolute address of the function to call
+                    let fp = self.pop();
+
+                    // Argument count
+                    let num_args = self.code.read_pc::<u8>(&mut pc) as usize;
+                    assert!(num_args <= self.stack.len() - bp);
+
+                    self.frames.push(StackFrame {
+                        prev_bp: bp,
+                        ret_addr: pc,
+                        argc: num_args,
+                    });
+
+                    // The base pointer will point at the first local
+                    bp = self.stack.len();
+                    pc = fp.as_usize();
+                }
+
                 Op::syscall => {
                     let syscall_idx = self.code.read_pc::<u16>(&mut pc);
                     let syscall_fn = self.sys_state.get_syscall(syscall_idx);
@@ -1593,7 +1613,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 112);
+        assert!(Op::exit as usize <= 113);
     }
 
     #[test]
@@ -1679,6 +1699,12 @@ mod tests
 
         // Regression: stack corruption
         eval_i64("push 5; call foo, 0; pop; exit; foo: push 2; push 0; ret;", 5);
+    }
+
+    #[test]
+    fn test_call_fp()
+    {
+        eval_i64(" push FN; call_fp 0; exit; FN: push_i8 33; ret;", 33);
     }
 
     #[test]

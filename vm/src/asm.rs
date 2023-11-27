@@ -1154,6 +1154,7 @@ impl Assembler
                 self.code.push_u16(syscall_idx);
             }
 
+            // Call label
             "call" => {
                 let label_name = input.parse_ident()?;
                 input.expect_token(",")?;
@@ -1161,6 +1162,13 @@ impl Assembler
 
                 self.code.push_op(Op::call);
                 self.add_label_ref(input, label_name, LabelRefKind::Offset32(1));
+                self.code.push_u8(argc);
+            }
+
+            // Call function pointer
+            "call_fp" => {
+                let argc: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::call_fp);
                 self.code.push_u8(argc);
             }
 
