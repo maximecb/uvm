@@ -1,8 +1,6 @@
 #ifndef __UVM_MATH_H__
 #define __UVM_MATH_H__
 
-//#include <assert.h>
-
 // Minimum of two values
 #ifndef MIN
 #define MIN(a, b) (a < b? a:b)
@@ -17,6 +15,11 @@
 #ifndef CLAMP
 #define CLAMP(x, min, max) MIN(MAX(x, min), max)
 #endif
+
+// Linear interpolation between two values
+#ifndef LERP
+#define LERP(a, b, x) ((1 - x) * a + (x * b))
+#define LERP
 
 // Remap a value from range [a0, a1] into range [b0, b1]
 #ifndef REMAP
