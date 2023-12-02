@@ -56,11 +56,13 @@ fn exec_tests()
     let output = command.output().unwrap();
     assert!(output.status.success(), "execution failed");
 
+    // We only run a subset of examples
     // Some examples involve creating a UI window
     // We parse/validate those without executing them
     let mut run_examples = HashSet::new();
     run_examples.insert("fib.c");
     run_examples.insert("crc32.c");
+    run_examples.insert("inthash.c");
     run_examples.insert("helloworld.c");
     run_examples.insert("sdbm_hash.c");
     run_examples.insert("strings.c");
