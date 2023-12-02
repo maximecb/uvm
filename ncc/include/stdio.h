@@ -71,7 +71,7 @@ int printf(char* format, ...)
                 continue;
             }
 
-            // Decimal integer
+            // Signed decimal integer
             if (format[i+1] == 'd' || format[i+1] == 'i')
             {
                 ++i;
@@ -79,6 +79,24 @@ int printf(char* format, ...)
                 // Get the integer argument and print it
                 asm (var_arg_idx) -> void {
                     get_var_arg;
+                    trunc_u32;
+                    sx_i32_i64;
+                    syscall print_i64;
+                };
+                ++var_arg_idx;
+
+                continue;
+            }
+
+            // Unsigned decimal integer
+            if (format[i+1] == 'u')
+            {
+                ++i;
+
+                // Get the integer argument and print it
+                asm (var_arg_idx) -> void {
+                    get_var_arg;
+                    trunc_u32;
                     syscall print_i64;
                 };
                 ++var_arg_idx;
@@ -89,8 +107,6 @@ int printf(char* format, ...)
             // TODO: %x %X for printing hexadecimal integers
 
             // TODO: %p for printing pointers
-
-            // TODO: %f for printing floats
 
             // Floats (f32)
             if (format[i+1] == 'f')
