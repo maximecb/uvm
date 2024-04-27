@@ -35,7 +35,7 @@ Current features:
 - Untyped design for simplicity
 - Little-endian byte ordering (like x86, ARM & RISC-V)
 - 32-bit and 64-bit integer ops, 32-bit floating-point support
-- Separate flat, linear address spaces for code and data
+- [Separate flat, linear address spaces for code and data](https://en.wikipedia.org/wiki/Harvard_architecture)
 - Built-in, easy to use [assembler](vm/src/asm.rs) with a [simple syntax](vm/examples)
 - Event-driven event execution model compatible with async operations
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
