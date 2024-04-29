@@ -1,7 +1,13 @@
 use std::mem::{transmute, size_of};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::ffi::CStr;
 use crate::sys::*;
+
+macro_rules! program_error {
+    ($vm:expr, $($arg:tt)*) => {
+        panic!("{} at {}:{}-{}", format!($($arg)*), $vm.meta[&$vm.pc].line_no, $vm.meta[&$vm.pc].col_no, $vm.meta[&$vm.pc].col_no + $vm.meta[&$vm.pc].len)
+    };
+}
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
@@ -506,6 +512,22 @@ struct StackFrame
     argc: usize,
 }
 
+pub struct OpMeta {
+    line_no: usize,
+    col_no: usize,
+    len: usize,
+}
+
+impl OpMeta {
+    pub fn new(line_no: usize, col_no: usize, len: usize) -> Self {
+        Self {
+            line_no,
+            col_no,
+            len
+        }
+    }
+}
+
 pub enum ExitReason
 {
     Return(Value),
@@ -540,11 +562,13 @@ pub struct VM
     // Count of executed instructions
     #[cfg(feature = "count_insns")]
     insn_count: u64,
+    pc: u64,
+    meta: HashMap<u64, OpMeta>,
 }
 
 impl VM
 {
-    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Self
+    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>, meta: HashMap<u64, OpMeta>) -> Self
     {
         // Initialize the system state
         let sys_state = SysState::new();
@@ -561,6 +585,8 @@ impl VM
             frames: Vec::default(),
             #[cfg(feature = "count_insns")]
             insn_count: 0,
+            meta,
+            pc: 0
         }
     }
 
@@ -584,7 +610,7 @@ impl VM
     {
         match self.stack.pop() {
             Some(val) => val,
-            None => panic!("tried to pop when the stack is empty")
+            None => program_error!(self, "tried to pop when the stack is empty")
         }
     }
 
@@ -701,8 +727,10 @@ impl VM
             }
 
             if pc >= self.code.len() {
-                panic!("pc outside bounds of code space")
+                program_error!(self, "pc outside bounds of code space")
             }
+
+            self.pc = pc as u64;
 
             let op = self.code.read_pc::<Op>(&mut pc);
             //dbg!(op);
@@ -748,7 +776,7 @@ impl VM
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
-                        panic!("invalid index in get_arg, idx={}, argc={}", idx, argc);
+                        program_error!(self, "invalid index in get_arg, idx={}, argc={}", idx, argc);
                     }
 
                     // Last argument is at bp - 1 (if there are arguments)
@@ -761,7 +789,7 @@ impl VM
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
-                        panic!("invalid index in get_arg, idx={}, argc={}", idx, argc);
+                        program_error!(self, "invalid index in get_arg, idx={}, argc={}", idx, argc);
                     }
 
                     // Last argument is at bp - 1 (if there are arguments)
@@ -774,7 +802,7 @@ impl VM
 
                     let argc = self.frames[self.frames.len() - 1].argc;
                     if idx >= argc {
-                        panic!("invalid index in set_arg, idx={}, argc={}", idx, argc);
+                        program_error!(self, "invalid index in set_arg, idx={}, argc={}", idx, argc);
                     }
 
                     // Last argument is at bp - 1 (if there are arguments)
@@ -787,7 +815,7 @@ impl VM
                     let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
                     if bp + idx >= self.stack.len() {
-                        panic!("invalid index {} in get_local", idx);
+                        program_error!(self, "invalid index {} in get_local", idx);
                     }
 
                     self.push(self.stack[bp + idx]);
@@ -798,7 +826,7 @@ impl VM
                     let val = self.pop();
 
                     if bp + idx >= self.stack.len() {
-                        panic!("invalid index in set_local");
+                        program_error!(self, "invalid index in set_local");
                     }
 
                     self.stack[bp + idx] = val;
@@ -1535,7 +1563,7 @@ impl VM
 
                 Op::exit => {
                     if self.stack.len() <= bp {
-                        panic!("exit with no return value on stack");
+                        program_error!(self, "exit with no return value on stack");
                     }
 
                     let val = self.pop();
@@ -1546,7 +1574,7 @@ impl VM
 
                 Op::ret => {
                     if self.stack.len() <= bp {
-                        panic!("ret with no return value on stack");
+                        program_error!(self, "ret with no return value on stack");
                     }
 
                     let ret_val = self.pop();
@@ -1572,7 +1600,7 @@ impl VM
                     self.push(ret_val);
                 }
 
-                _ => panic!("unknown opcode {:?}", op),
+                _ => program_error!(self, "unknown opcode {:?}", op),
             }
         }
     }

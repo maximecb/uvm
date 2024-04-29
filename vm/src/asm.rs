@@ -3,7 +3,7 @@ use std::convert::{TryFrom};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem::transmute;
-use crate::vm::{VM, MemBlock, Op};
+use crate::vm::{VM, MemBlock, Op, OpMeta};
 
 #[derive(Debug)]
 pub struct ParseError
@@ -498,6 +498,9 @@ pub struct Assembler
 
     /// Current section
     section: Section,
+
+    // Code Metadata
+    meta: HashMap<u64, OpMeta>,
 }
 
 impl Assembler
@@ -534,6 +537,7 @@ impl Assembler
             label_defs: HashMap::default(),
             label_refs: Vec::default(),
             section: Section::Code,
+            meta: HashMap::default(),
         }
     }
 
@@ -605,7 +609,7 @@ impl Assembler
             }
         }
 
-        Ok(VM::new(self.code, self.data, self.syscall_set))
+        Ok(VM::new(self.code, self.data, self.syscall_set, self.meta))
     }
 
     pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
@@ -723,7 +727,12 @@ impl Assembler
 
         // If this is the start of an identifier
         if ch.is_ascii_alphabetic() || ch == '_' {
+            let line_no = input.line_no;
+            let col_start = input.col_no;
+
             let ident = input.parse_ident()?;
+
+            let new_instr_pc: u64 = (self.code.len()) as u64;
 
             input.expect_sep()?;
             input.eat_ws()?;
@@ -747,6 +756,7 @@ impl Assembler
             else if self.section == Section::Code
             {
                 self.parse_insn(input, ident)?;
+                self.meta.insert(new_instr_pc, OpMeta::new(line_no, col_start, input.col_no - col_start));
             }
 
             return Ok(());
