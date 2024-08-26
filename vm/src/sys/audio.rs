@@ -52,6 +52,9 @@ impl AudioCallback for AudioCB
 /// the Send trait, and so can't be referenced from another thread
 static mut DEVICE: Option<AudioDevice<AudioCB>> = None;
 
+
+
+/*
 // NOTE: this can only be called from the main thread since it uses SDL
 // However, it creates a new thread to generate audio sample, this thread
 // could be given a reference to another VM instance
@@ -104,3 +107,4 @@ pub fn audio_open_output(vm: &mut VM, sample_rate: Value, num_channels: Value, f
     // TODO: return the device_id (u32)
     Value::from(0)
 }
+*/

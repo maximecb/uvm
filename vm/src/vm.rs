@@ -514,7 +514,7 @@ struct StackFrame
 pub struct Thread
 {
     // Thread id
-    pub tid: u64,
+    pub id: u64,
 
     // Parent VM
     pub vm: Arc<Mutex<VM>>,
@@ -526,6 +526,13 @@ pub struct Thread
     frames: Vec<StackFrame>,
 }
 
+impl Thread
+{
+
+
+
+}
+
 
 
 
@@ -534,9 +541,6 @@ pub struct Thread
 
 pub struct VM
 {
-    // Host system state
-    pub sys_state: SysState,
-
     // Heap memory space
     heap: MemBlock,
 
@@ -548,25 +552,17 @@ pub struct VM
 
     // List of stack frames (activation records)
     frames: Vec<StackFrame>,
-
-    // Count of executed instructions
-    //#[cfg(feature = "count_insns")]
-    //insn_count: u64,
 }
 
 impl VM
 {
     pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Self
     {
-        // Initialize the system state
-        let sys_state = SysState::new();
-
         // Resize the code and heap space to a page size multiple
         code.resize(code.len());
         heap.resize(heap.len());
 
         Self {
-            sys_state,
             code,
             heap,
             stack: Vec::default(),
@@ -1474,7 +1470,7 @@ impl VM
 
                 Op::syscall => {
                     let syscall_idx = self.code.read_pc::<u16>(&mut pc);
-                    let syscall_fn = self.sys_state.get_syscall(syscall_idx);
+                    let syscall_fn = get_syscall(syscall_idx);
 
                     match syscall_fn
                     {

@@ -92,106 +92,36 @@ pub fn get_sdl_context() -> &'static mut sdl2::Sdl
     }
 }
 
-pub struct SysState
+/// Get the syscall with a given index
+pub fn get_syscall(const_idx: u16) -> SysCallFn
 {
-    /// Map of indices to syscall functions
-    syscalls: [Option<SysCallFn>; SYSCALL_TBL_LEN],
-
-    /// Weak reference to a mutex for the VM
-    mutex: Weak<Mutex<VM>>,
-
-
-
-}
-
-impl SysState
-{
-    pub fn new() -> Self
-    {
-        let mut sys_state = Self {
-            syscalls: [None; SYSCALL_TBL_LEN],
-            mutex: Weak::new(),
-            //net_state: NetState::default(),
-        };
-
-        sys_state.init_syscalls();
-
-        sys_state
-    }
-
-    pub fn get_mutex(vm: VM) -> Arc<Mutex<VM>>
-    {
-        // Move the VM into a mutex
-        let vm_arc = Arc::new(Mutex::new(vm));
-
-        // Store a weak reference to the mutex into the sys state
-        vm_arc.lock().unwrap().sys_state.mutex = Arc::downgrade(&vm_arc);
-
-        vm_arc
-    }
-
-    /// Register a syscall implementation
-    pub fn reg_syscall(&mut self, const_idx: u16, fun: SysCallFn)
-    {
-        let desc = SYSCALL_DESCS[const_idx as usize].as_ref().unwrap();
-
-        assert!(
-            fun.argc() == desc.argc,
-            "{} should accept {} args but implementation has {} params",
-            desc.name,
-            desc.argc,
-            fun.argc()
-        );
-
-        assert!(fun.has_ret() == desc.has_ret);
-
-        self.syscalls[const_idx as usize] = Some(fun);
-    }
-
-    /// Get the syscall with a given index
-    pub fn get_syscall(&self, const_idx: u16) -> SysCallFn
-    {
-        if let Some(syscall_fn) = self.syscalls[const_idx as usize] {
-            return syscall_fn;
-        }
-        else
-        {
-            panic!("unknown syscall \"{}\"", const_idx);
-        }
-    }
-
-    fn init_syscalls(&mut self)
-    {
-        let mut syscalls = HashMap::<String, SysCallFn>::new();
-
+    match const_idx {
         // Core VM syscalls
-        self.reg_syscall(VM_HEAP_SIZE, SysCallFn::Fn0_1(vm_heap_size));
-        self.reg_syscall(VM_RESIZE_HEAP, SysCallFn::Fn1_1(vm_resize_heap));
-        self.reg_syscall(MEMSET, SysCallFn::Fn3_0(memset));
-        self.reg_syscall(MEMSET32, SysCallFn::Fn3_0(memset32));
-        self.reg_syscall(MEMCPY, SysCallFn::Fn3_0(memcpy));
-        self.reg_syscall(MEMCMP, SysCallFn::Fn3_1(memcmp));
+        VM_HEAP_SIZE => SysCallFn::Fn0_1(vm_heap_size),
+        VM_RESIZE_HEAP => SysCallFn::Fn1_1(vm_resize_heap),
+        MEMSET => SysCallFn::Fn3_0(memset),
+        MEMSET32 => SysCallFn::Fn3_0(memset32),
+        MEMCPY => SysCallFn::Fn3_0(memcpy),
+        MEMCMP => SysCallFn::Fn3_1(memcmp),
 
-        self.reg_syscall(PRINT_I64, SysCallFn::Fn1_0(print_i64));
-        self.reg_syscall(PRINT_F32, SysCallFn::Fn1_0(print_f32));
-        self.reg_syscall(PRINT_STR, SysCallFn::Fn1_0(print_str));
-        self.reg_syscall(PRINT_ENDL, SysCallFn::Fn0_0(print_endl));
-        self.reg_syscall(PUTCHAR, SysCallFn::Fn1_1(putchar));
-        self.reg_syscall(GETCHAR, SysCallFn::Fn0_1(getchar));
+        // Console I/O
+        PRINT_I64 => SysCallFn::Fn1_0(print_i64),
+        PRINT_F32 => SysCallFn::Fn1_0(print_f32),
+        PRINT_STR => SysCallFn::Fn1_0(print_str),
+        PRINT_ENDL => SysCallFn::Fn0_0(print_endl),
+        PUTCHAR => SysCallFn::Fn1_1(putchar),
+        GETCHAR => SysCallFn::Fn0_1(getchar),
 
+        /*
         self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
-        //self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
 
         self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
         self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
 
         self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
+        */
 
-        //self.reg_syscall(NET_LISTEN, SysCallFn::Fn2_1(net_listen));
-        //self.reg_syscall(NET_ACCEPT, SysCallFn::Fn4_1(net_accept));
-        //self.reg_syscall(NET_READ, SysCallFn::Fn3_1(net_read));
-        //self.reg_syscall(NET_WRITE, SysCallFn::Fn3_1(net_write));
-        //self.reg_syscall(NET_CLOSE, SysCallFn::Fn1_0(net_close));
+        _ => panic!("unknown syscall \"{}\"", const_idx),
     }
 }
 

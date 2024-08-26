@@ -17,7 +17,6 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use crate::vm::{VM, Value, MemBlock};
 use crate::asm::{Assembler};
-use crate::sys::{SysState};
 use crate::utils::{thousands_sep};
 
 /// Command-line options
@@ -150,7 +149,7 @@ fn main()
     }
 
     let vm = result.unwrap();
-    let mut mutex = SysState::get_mutex(vm);
+    let mut mutex = Arc::new(Mutex::new(vm));
     let ret_val = run_program(&mut mutex);
 
     #[cfg(feature = "count_insns")]
