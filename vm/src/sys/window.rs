@@ -13,7 +13,7 @@ use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
 
 use crate::sys::{SysState, get_sdl_context};
-use crate::vm::{VM, Value, ExitReason};
+use crate::vm::{VM, Value};
 
 /// SDL video subsystem
 /// This is a global variable because it doesn't implement

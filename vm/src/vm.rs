@@ -507,21 +507,6 @@ struct StackFrame
     argc: usize,
 }
 
-pub enum ExitReason
-{
-    Return(Value),
-    Exit(Value),
-    //Panic,
-}
-
-impl Default for ExitReason
-{
-    fn default() -> ExitReason {
-        ExitReason::Return(Value::from(0))
-    }
-}
-
-
 
 
 
@@ -698,7 +683,7 @@ impl VM
     }
 
     /// Call a function at a given address
-    pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> ExitReason
+    pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> Value
     {
         assert!(self.stack.len() == 0);
         assert!(self.frames.len() == 0);
@@ -1568,7 +1553,7 @@ impl VM
                     let val = self.pop();
                     self.stack.clear();
                     self.frames.clear();
-                    return ExitReason::Exit(val);
+                    return val;
                 }
 
                 Op::ret => {
@@ -1582,7 +1567,7 @@ impl VM
                     if self.frames.len() == 1 {
                         self.stack.clear();
                         self.frames.clear();
-                        return ExitReason::Return(ret_val);
+                        return ret_val;
                     }
 
                     assert!(self.frames.len() > 0);
@@ -1619,11 +1604,7 @@ mod tests
         let result = vm.call(0, &[]);
         assert!(vm.stack.len() == 0 && vm.frames.len() == 0);
 
-        match result
-        {
-            ExitReason::Exit(value) => value,
-            ExitReason::Return(value) => value,
-        }
+        result
     }
 
     fn eval_i64(src: &str, expected: i64)

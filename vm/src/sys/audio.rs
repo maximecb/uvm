@@ -1,6 +1,6 @@
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use std::sync::{Arc, Weak, Mutex};
-use crate::vm::{Value, VM, ExitReason};
+use crate::vm::{Value, VM};
 use crate::sys::{get_sdl_context};
 use crate::sys::constants::*;
 
@@ -34,6 +34,7 @@ impl AudioCallback for AudioCB
         let arc = self.vm.upgrade().unwrap();
         let mut vm = arc.lock().unwrap();
 
+        /*
         match vm.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]) {
             ExitReason::Return(ptr) => {
                 let mem_slice: &[i16] = vm.get_heap_slice(ptr.as_usize(), output_len);
@@ -41,6 +42,7 @@ impl AudioCallback for AudioCB
             }
             _ => panic!()
         }
+        */
     }
 }
 

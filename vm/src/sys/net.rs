@@ -4,7 +4,7 @@ use std::thread;
 use std::net::{TcpListener, TcpStream};
 use std::io::{self, Read, Write, Error};
 use std::sync::{Arc, Weak, Mutex};
-use crate::vm::{VM, Value, ExitReason};
+use crate::vm::{VM, Value};
 
 /*
 // State for the networking subsystem

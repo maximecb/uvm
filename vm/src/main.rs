@@ -15,7 +15,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
-use crate::vm::{VM, Value, MemBlock, ExitReason};
+use crate::vm::{VM, Value, MemBlock};
 use crate::asm::{Assembler};
 use crate::sys::{SysState};
 use crate::utils::{thousands_sep};
@@ -74,16 +74,7 @@ fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
 {
     let mut vm = mutex.lock().unwrap();
 
-    match vm.call(0, &[])
-    {
-        ExitReason::Exit(val) => {
-            return val;
-        }
-
-        // Keep processig events
-        ExitReason::Return(val) => {
-        }
-    }
+    let result = vm.call(0, &[]);
 
     drop(vm);
 
