@@ -1472,6 +1472,9 @@ impl VM
                     let syscall_idx = self.code.read_pc::<u16>(&mut pc);
                     let syscall_fn = get_syscall(syscall_idx);
 
+                    todo!();
+
+                    /*
                     match syscall_fn
                     {
                         SysCallFn::Fn0_0(fun) => {
@@ -1539,6 +1542,7 @@ impl VM
                             self.push(v);
                         }
                     }
+                    */
                 }
 
                 Op::exit => {

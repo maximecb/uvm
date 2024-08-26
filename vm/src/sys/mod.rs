@@ -10,7 +10,7 @@ use std::io::Write;
 use std::io::Read;
 use std::io::{stdout, stdin};
 use std::sync::{Arc, Weak, Mutex};
-use crate::vm::{Value, VM};
+use crate::vm::{Value, VM, Thread};
 use window::*;
 use audio::*;
 use net::*;
@@ -23,20 +23,20 @@ use constants::*;
 #[derive(Copy, Clone)]
 pub enum SysCallFn
 {
-    Fn0_0(fn(&mut VM)),
-    Fn0_1(fn(&mut VM) -> Value),
+    Fn0_0(fn(&mut Thread)),
+    Fn0_1(fn(&mut Thread) -> Value),
 
-    Fn1_0(fn(&mut VM, a0: Value)),
-    Fn1_1(fn(&mut VM, a0: Value) -> Value),
+    Fn1_0(fn(&mut Thread, a0: Value)),
+    Fn1_1(fn(&mut Thread, a0: Value) -> Value),
 
-    Fn2_0(fn(&mut VM, a0: Value, a1: Value)),
-    Fn2_1(fn(&mut VM, a0: Value, a1: Value) -> Value),
+    Fn2_0(fn(&mut Thread, a0: Value, a1: Value)),
+    Fn2_1(fn(&mut Thread, a0: Value, a1: Value) -> Value),
 
-    Fn3_0(fn(&mut VM, a0: Value, a1: Value, a2: Value)),
-    Fn3_1(fn(&mut VM, a0: Value, a1: Value, a2: Value) -> Value),
+    Fn3_0(fn(&mut Thread, a0: Value, a1: Value, a2: Value)),
+    Fn3_1(fn(&mut Thread, a0: Value, a1: Value, a2: Value) -> Value),
 
-    Fn4_0(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value)),
-    Fn4_1(fn(&mut VM, a0: Value, a1: Value, a2: Value, a3: Value) -> Value),
+    Fn4_0(fn(&mut Thread, a0: Value, a1: Value, a2: Value, a3: Value)),
+    Fn4_1(fn(&mut Thread, a0: Value, a1: Value, a2: Value, a3: Value) -> Value),
 }
 
 impl SysCallFn
@@ -125,40 +125,57 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
     }
 }
 
-fn vm_heap_size(vm: &mut VM) -> Value
+fn vm_heap_size(thread: &mut Thread) -> Value
 {
-    Value::from(vm.heap_size())
+    todo!();
+
+    //Value::from(vm.heap_size())
 }
 
-fn vm_resize_heap(vm: &mut VM, num_bytes: Value) -> Value
+fn vm_resize_heap(thread: &mut Thread, num_bytes: Value) -> Value
 {
+    todo!();
+
+    /*
     let num_bytes = num_bytes.as_usize();
     let new_size = vm.resize_heap(num_bytes);
     Value::from(new_size)
+    */
 }
 
-fn memset(vm: &mut VM, dst_ptr: Value, val: Value, num_bytes: Value)
+fn memset(thread: &mut Thread, dst_ptr: Value, val: Value, num_bytes: Value)
 {
+    todo!();
+
+    /*
     let dst_ptr = dst_ptr.as_usize();
     let val = val.as_u8();
     let num_bytes = num_bytes.as_usize();
 
     let mem_slice: &mut [u8] = vm.get_heap_slice(dst_ptr, num_bytes);
     mem_slice.fill(val);
+    */
 }
 
-fn memset32(vm: &mut VM, dst_ptr: Value, word: Value, num_words: Value)
+fn memset32(thread: &mut Thread, dst_ptr: Value, word: Value, num_words: Value)
 {
+    todo!();
+
+    /*
     let dst_ptr = dst_ptr.as_usize();
     let word = word.as_u32();
     let num_words = num_words.as_usize();
 
     let mem_slice: &mut [u32] = vm.get_heap_slice(dst_ptr, num_words);
     mem_slice.fill(word);
+    */
 }
 
-fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
+fn memcpy(thread: &mut Thread, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
 {
+    todo!();
+
+    /*
     let dst_ptr = dst_ptr.as_usize();
     let src_ptr = src_ptr.as_usize();
     let num_bytes = num_bytes.as_usize();
@@ -171,10 +188,14 @@ fn memcpy(vm: &mut VM, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
 
         std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, num_bytes);
     }
+    */
 }
 
-fn memcmp(vm: &mut VM, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
+fn memcmp(thread: &mut Thread, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
 {
+    todo!();
+
+    /*
     let num_bytes = num_bytes.as_usize();
 
     unsafe {
@@ -185,36 +206,41 @@ fn memcmp(vm: &mut VM, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
 
         Value::from(result as u64)
     }
+    */
 }
 
-fn print_i64(vm: &mut VM, v: Value)
+fn print_i64(thread: &mut Thread, v: Value)
 {
     let v = v.as_i64();
     print!("{}", v);
 }
 
-fn print_f32(vm: &mut VM, v: Value)
+fn print_f32(thread: &mut Thread, v: Value)
 {
     let v = v.as_f32();
     print!("{}", v);
 }
 
 /// Print a null-terminated UTF-8 string to stdout
-fn print_str(vm: &mut VM, str_ptr: Value)
+fn print_str(thread: &mut Thread, str_ptr: Value)
 {
+    todo!();
+
+    /*
     let rust_str = vm.get_heap_str(str_ptr.as_usize());
     print!("{}", rust_str);
+    */
 }
 
 /// Print a newline characted to stdout
-fn print_endl(vm: &mut VM)
+fn print_endl(thread: &mut Thread)
 {
     println!();
 }
 
 /// Write one byte of input to stdout.
 /// Analogous to C's getchar
-fn putchar(vm: &mut VM, byte: Value) -> Value
+fn putchar(thread: &mut Thread, byte: Value) -> Value
 {
     let byte = byte.as_u8();
     let bytes = byte.to_le_bytes();
@@ -227,7 +253,7 @@ fn putchar(vm: &mut VM, byte: Value) -> Value
 
 /// Read one byte of input from stdin.
 /// Analogous to C's getchar
-fn getchar(vm: &mut VM) -> Value
+fn getchar(thread: &mut Thread) -> Value
 {
     let ch = stdin().bytes().next();
 
