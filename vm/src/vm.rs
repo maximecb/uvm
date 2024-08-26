@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use std::mem::{transmute, size_of};
 use std::collections::HashSet;
 use std::ffi::CStr;
@@ -520,6 +521,32 @@ impl Default for ExitReason
     }
 }
 
+
+
+
+
+
+pub struct Thread
+{
+    // Thread id
+    pub tid: u64,
+
+    // Parent VM
+    pub vm: Arc<Mutex<VM>>,
+
+    // Value stack
+    stack: Vec<Value>,
+
+    // List of stack frames (activation records)
+    frames: Vec<StackFrame>,
+}
+
+
+
+
+
+
+
 pub struct VM
 {
     // Host system state
@@ -538,8 +565,8 @@ pub struct VM
     frames: Vec<StackFrame>,
 
     // Count of executed instructions
-    #[cfg(feature = "count_insns")]
-    insn_count: u64,
+    //#[cfg(feature = "count_insns")]
+    //insn_count: u64,
 }
 
 impl VM

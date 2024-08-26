@@ -45,16 +45,6 @@ struct Window<'a>
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
     texture: Option<Texture<'a>>,
-
-    // Callbacks for mouse events
-    cb_mousemove: u64,
-    cb_mousedown: u64,
-    cb_mouseup: u64,
-
-    // Callbacks for keyboard events
-    cb_keydown: u64,
-    cb_keyup: u64,
-    cb_textinput: u64,
 }
 
 // Note: we're leaving this global to avoid the Window lifetime
@@ -108,12 +98,6 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
         canvas,
         texture_creator,
         texture: None,
-        cb_mousemove: 0,
-        cb_mousedown: 0,
-        cb_mouseup: 0,
-        cb_keydown: 0,
-        cb_keyup: 0,
-        cb_textinput: 0,
     };
 
     unsafe {
@@ -165,44 +149,11 @@ pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
     window.canvas.present();
 }
 
-pub fn window_on_mousemove(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.cb_mousemove = cb.as_u64();
-}
 
-pub fn window_on_mousedown(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.cb_mousedown = cb.as_u64();
-}
 
-pub fn window_on_mouseup(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.cb_mouseup = cb.as_u64();
-}
 
-pub fn window_on_keydown(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.cb_keydown = cb.as_u64();
-}
 
-pub fn window_on_keyup(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    window.cb_keyup = cb.as_u64();
-}
-
-pub fn window_on_textinput(vm: &mut VM, window_id: Value, cb: Value)
-{
-    let window = get_window(window_id.as_u32());
-    let video_subsystem = get_video_subsystem();
-    video_subsystem.text_input().start();
-    window.cb_textinput = cb.as_u64();
-}
-
+/*
 /// Process SDL events
 pub fn process_events(vm: &mut VM) -> ExitReason
 {
@@ -262,102 +213,13 @@ pub fn process_events(vm: &mut VM) -> ExitReason
 
     return ExitReason::default();
 }
+*/
 
-// TODO: functions to process window-related events
-// TODO: we should return the exit reason?
-// this is gonna be awkward if we have audio processing threads/processes and such?
-// though I suppose exit would just end those processes
 
-// TODO: this is just for testing
-// we should handle window-related events here instead
-fn window_call_mousemove(vm: &mut VM, window_id: u32, x: i32, y: i32) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_mousemove;
 
-    if cb == 0 {
-        return ExitReason::default();
-    }
 
-    vm.call(cb, &[Value::from(window.window_id), Value::from(x), Value::from(y)])
-}
 
 /*
-MouseButtonDown {
-    timestamp: u32,
-    window_id: u32,
-    which: u32, => this is a mouse id
-    mouse_btn: MouseButton,
-    x: i32,
-    y: i32,
-},
-*/
-fn window_call_mousedown(vm: &mut VM, window_id: u32, mouse_btn: MouseButton, x: i32, y: i32) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_mousedown;
-
-    if cb == 0 {
-        return ExitReason::default();
-    }
-
-    // TODO: ignore SDL_TOUCH_MOUSEID
-    // where is that defined in Rust?
-    // or only support mouse id 0?
-    //println!("mouse_id={}", mouse_id);
-
-    let btn_id = match mouse_btn {
-        MouseButton::Left => 0,
-        MouseButton::Middle => 1,
-        MouseButton::Right => 2,
-        MouseButton::X1 => 3,
-        MouseButton::X2 => 4,
-        MouseButton::Unknown => {
-            return ExitReason::default();
-        }
-    };
-
-    vm.call(cb, &[
-        Value::from(window.window_id),
-        Value::from(btn_id),
-        Value::from(x),
-        Value::from(y),
-    ])
-}
-
-fn window_call_mouseup(vm: &mut VM, window_id: u32, mouse_btn: MouseButton, x: i32, y: i32) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_mouseup;
-
-    if cb == 0 {
-        return ExitReason::default();
-    }
-
-    // TODO: ignore SDL_TOUCH_MOUSEID
-    // where is that defined in Rust?
-    // or only support mouse id 0?
-    //println!("mouse_id={}", mouse_id);
-
-    let btn_id = match mouse_btn {
-        MouseButton::Left => 0,
-        MouseButton::Middle => 1,
-        MouseButton::Right => 2,
-        MouseButton::X1 => 3,
-        MouseButton::X2 => 4,
-        MouseButton::Unknown => {
-            return ExitReason::default();
-        }
-    };
-
-    vm.call(cb, &[
-        Value::from(window.window_id),
-        Value::from(btn_id),
-        Value::from(x),
-        Value::from(y),
-    ])
-}
-
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {
     use crate::sys::constants::*;
@@ -425,51 +287,4 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         _ => None
     }
 }
-
-fn window_call_keydown(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_keydown;
-
-    if cb == 0 {
-        return ExitReason::default();
-    }
-
-    let keycode = translate_keycode(keycode);
-
-    if let Some(keycode) = keycode {
-        vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
-    } else {
-        ExitReason::default()
-    }
-}
-
-fn window_call_keyup(vm: &mut VM, window_id: u32, keycode: Keycode) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_keyup;
-
-    if cb == 0 {
-        return ExitReason::default();
-    }
-
-    let keycode = translate_keycode(keycode);
-
-    if let Some(keycode) = keycode {
-        vm.call(cb, &[Value::from(window.window_id), Value::from(keycode)])
-    } else {
-        ExitReason::default()
-    }
-}
-
-fn window_call_textinput(vm: &mut VM, window_id: u32, utf8_byte: u8) -> ExitReason
-{
-    let window = get_window(0);
-    let cb = window.cb_textinput;
-
-    if cb == 0 {
-        return ExitReason::default();
-    }
-
-    vm.call(cb, &[Value::from(window.window_id), Value::from(utf8_byte)])
-}
+*/

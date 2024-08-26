@@ -100,11 +100,8 @@ pub struct SysState
     /// Weak reference to a mutex for the VM
     mutex: Weak<Mutex<VM>>,
 
-    /// Time subsystem state
-    pub time_state: TimeState,
 
-    /// Network subsystem state
-    pub net_state: NetState,
+
 }
 
 impl SysState
@@ -114,8 +111,7 @@ impl SysState
         let mut sys_state = Self {
             syscalls: [None; SYSCALL_TBL_LEN],
             mutex: Weak::new(),
-            time_state: TimeState::new(),
-            net_state: NetState::default(),
+            //net_state: NetState::default(),
         };
 
         sys_state.init_syscalls();
@@ -184,24 +180,18 @@ impl SysState
         self.reg_syscall(GETCHAR, SysCallFn::Fn0_1(getchar));
 
         self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
-        self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
+        //self.reg_syscall(TIME_DELAY_CB, SysCallFn::Fn2_0(time_delay_cb));
 
         self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
         self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
-        self.reg_syscall(WINDOW_ON_MOUSEMOVE, SysCallFn::Fn2_0(window_on_mousemove));
-        self.reg_syscall(WINDOW_ON_MOUSEDOWN, SysCallFn::Fn2_0(window_on_mousedown));
-        self.reg_syscall(WINDOW_ON_MOUSEUP, SysCallFn::Fn2_0(window_on_mouseup));
-        self.reg_syscall(WINDOW_ON_KEYDOWN, SysCallFn::Fn2_0(window_on_keydown));
-        self.reg_syscall(WINDOW_ON_KEYUP, SysCallFn::Fn2_0(window_on_keyup));
-        self.reg_syscall(WINDOW_ON_TEXTINPUT, SysCallFn::Fn2_0(window_on_textinput));
 
         self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
 
-        self.reg_syscall(NET_LISTEN, SysCallFn::Fn2_1(net_listen));
-        self.reg_syscall(NET_ACCEPT, SysCallFn::Fn4_1(net_accept));
-        self.reg_syscall(NET_READ, SysCallFn::Fn3_1(net_read));
-        self.reg_syscall(NET_WRITE, SysCallFn::Fn3_1(net_write));
-        self.reg_syscall(NET_CLOSE, SysCallFn::Fn1_0(net_close));
+        //self.reg_syscall(NET_LISTEN, SysCallFn::Fn2_1(net_listen));
+        //self.reg_syscall(NET_ACCEPT, SysCallFn::Fn4_1(net_accept));
+        //self.reg_syscall(NET_READ, SysCallFn::Fn3_1(net_read));
+        //self.reg_syscall(NET_WRITE, SysCallFn::Fn3_1(net_write));
+        //self.reg_syscall(NET_CLOSE, SysCallFn::Fn1_0(net_close));
     }
 }
 

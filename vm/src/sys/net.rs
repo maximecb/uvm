@@ -6,6 +6,7 @@ use std::io::{self, Read, Write, Error};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{VM, Value, ExitReason};
 
+/*
 // State for the networking subsystem
 pub struct NetState
 {
@@ -15,7 +16,9 @@ pub struct NetState
     /// Map of open sockets
     sockets: HashMap<u64, Socket>,
 }
+*/
 
+/*
 impl Default for NetState
 {
     fn default() -> Self
@@ -27,25 +30,9 @@ impl Default for NetState
         }
     }
 }
+*/
 
-// State associated with a socket
-enum Socket
-{
-    Listen {
-        listener: TcpListener,
-
-        /// Incoming connections
-        incoming: VecDeque<TcpStream>,
-    },
-
-    Stream {
-        stream: TcpStream,
-
-        // Read buffer
-        read_buf: Vec<u8>,
-    }
-}
-
+/*
 /// TCP listening thread
 fn listen_thread(
     vm_mutex: Weak<Mutex<VM>>,
@@ -91,7 +78,9 @@ fn listen_thread(
         }
     }
 }
+*/
 
+/*
 // Syscall to create a TCP listening socket to accept incoming connections
 // u64 socket_id = net_listen(
 //     const char* listen_addr,    // Network interface address to listen on, null for any address
@@ -142,7 +131,9 @@ pub fn net_listen(
     // Return the socket id
     Value::from(socket_id)
 }
+*/
 
+/*
 /// TCP read thread
 fn read_thread(
     vm_mutex: Weak<Mutex<VM>>,
@@ -201,7 +192,9 @@ fn read_thread(
         }
     }
 }
+*/
 
+/*
 // Syscall to accept a new connection
 // Writes the client address in the buffer you specify
 // u64 socket_id = net_accept(u64 socket_id, char* client_addr, u64 client_addr_len, callback on_incoming_data)
@@ -270,7 +263,9 @@ pub fn net_accept(
         _ => panic!()
     }
 }
+*/
 
+/*
 // Syscall to read data from a given socket into a buffer you specify
 // u64 num_bytes_read = net_read(u64 socket_id, void* buf_ptr, u64 buf_len)
 pub fn net_read(
@@ -302,7 +297,9 @@ pub fn net_read(
         _ => panic!("invalid socket id {} in net_read", socket_id)
     }
 }
+*/
 
+/*
 // Syscall to write data on a given socket
 // u64 num_bytes = net_write(u64 socket_id, void* buf_ptr, u64 buf_len);
 pub fn net_write(
@@ -327,7 +324,9 @@ pub fn net_write(
         _ => panic!()
     }
 }
+*/
 
+/*
 // Syscall to close a socket
 // net_close(u64 socket_id)
 pub fn net_close(
@@ -355,3 +354,4 @@ pub fn net_close(
     // This drops the socket
     net_state.sockets.remove(&socket_id);
 }
+*/

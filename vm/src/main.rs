@@ -87,6 +87,7 @@ fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
 
     drop(vm);
 
+    /*
     loop
     {
         let mut vm = mutex.lock().unwrap();
@@ -126,6 +127,10 @@ fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
             }
         }
     }
+    */
+
+
+    todo!();
 }
 
 fn main()
