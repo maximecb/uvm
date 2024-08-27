@@ -104,6 +104,14 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
         MEMCPY => SysCallFn::Fn3_0(memcpy),
         MEMCMP => SysCallFn::Fn3_1(memcmp),
 
+
+        //thread_id
+        //thread_sleep
+        //thread_spawn
+        //thread_join
+
+
+
         // Console I/O
         PRINT_I64 => SysCallFn::Fn1_0(print_i64),
         PRINT_F32 => SysCallFn::Fn1_0(print_f32),
@@ -131,6 +139,48 @@ fn vm_heap_size(thread: &mut Thread) -> Value
 
     //Value::from(vm.heap_size())
 }
+
+fn thread_id(thread: &mut Thread) -> Value
+{
+    Value::from(thread.id)
+}
+
+// Make the current thread sleep
+fn thread_sleep(thread: &mut Thread, msecs: Value)
+{
+    use std::thread;
+    use std::time::Duration;
+    let msecs = msecs.as_u64();
+    thread::sleep(Duration::from_millis(msecs));
+}
+
+// Spawn a new thread
+// Takes a function to call as argument
+// Returns a thread id
+fn thread_spawn(thread: &mut Thread, fun: Value) -> Value
+{
+    //let tid = VM::new_thread(&actor.vm, fun, vec![]);
+    //Value::from(tid)
+
+    todo!();
+}
+
+// Wait for a thread to terminatr, produce the return value
+fn thread_join(thread: &mut Thread, tid: Value) -> Value
+{
+    let tid = tid.as_u64();
+    //VM::join_thread(&actor.vm, tid)
+
+    todo!();
+}
+
+
+
+
+
+
+
+
 
 fn vm_resize_heap(thread: &mut Thread, num_bytes: Value) -> Value
 {
