@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::mem::{transmute, size_of};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+use std::thread;
 use std::ffi::CStr;
 use crate::sys::*;
 
@@ -552,24 +553,51 @@ pub struct VM
 
     // List of stack frames (activation records)
     frames: Vec<StackFrame>,
+
+
+
+
+    // Next thread id to assign
+    next_tid: u64,
+
+    // Map from actor ids to thread join handles
+    threads: HashMap<u64, thread::JoinHandle<Value>>,
+
+    // Reference to self
+    // Needed to instantiate actors
+    vm: Option<Arc<Mutex<VM>>>,
 }
+
+// Needed to send Arc<Mutex<VM>> to thread
+unsafe impl Send for VM {}
 
 impl VM
 {
-    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Self
+    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Arc<Mutex<VM>>
     {
         // Resize the code and heap space to a page size multiple
         code.resize(code.len());
         heap.resize(heap.len());
 
-        Self {
+        let vm = Self {
             code,
             heap,
             stack: Vec::default(),
             frames: Vec::default(),
-            #[cfg(feature = "count_insns")]
-            insn_count: 0,
-        }
+
+
+            next_tid: 0,
+            threads: HashMap::default(),
+            vm: None,
+        };
+
+        let vm = Arc::new(Mutex::new(vm));
+
+        // Store a reference to the mutex on the VM
+        // This is so we can pass this reference to threads
+        vm.lock().unwrap().vm = Some(vm.clone());
+
+        vm
     }
 
     #[cfg(feature = "count_insns")]
@@ -1588,6 +1616,84 @@ impl VM
             }
         }
     }
+
+
+
+
+
+
+    // Create a new thread
+    pub fn new_thread(vm: &Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> u64
+    {
+        /*
+        let vm_mutex = vm.clone();
+
+        // Assign an actor id
+        let mut vm_ref = vm.lock().unwrap();
+        let actor_id = vm_ref.next_actor_id;
+        vm_ref.next_actor_id += 1;
+        drop(vm_ref);
+
+        // Create a message queue for the actor
+        let (queue_tx, queue_rx) = mpsc::channel::<Message>();
+
+        // Spawn a new thread for the actor
+        let handle = thread::spawn(move || {
+            let mut actor = Actor::new(actor_id, vm_mutex, queue_rx);
+            actor.call(fun, &args)
+        });
+
+        // Store the join handles and queue endpoints on the VM
+        let mut vm_ref = vm.lock().unwrap();
+        vm_ref.threads.insert(actor_id, handle);
+        vm_ref.actor_txs.insert(actor_id, queue_tx);
+        drop(vm_ref);
+
+        tid
+        */
+
+        todo!();
+    }
+
+    // Wait for a thread to produce a result and return it
+    pub fn join_thread(vm: &Arc<Mutex<VM>>, tid: u64) -> Value
+    {
+        /*
+        // Get the join handle, then release the VM lock
+        let mut vm = vm.lock().unwrap();
+        let mut handle = vm.threads.remove(&tid).unwrap();
+        drop(vm);
+
+        // Note: there is no need to copy data when joining,
+        // because the actor sending the data is done running
+        handle.join().expect(&format!("could not actor thread with id {}", tid))
+        */
+
+        todo!();
+    }
+
+    /*
+    // Call a function in the main actor
+    pub fn call(vm: &mut Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> Value
+    {
+        let vm_mutex = vm.clone();
+
+        // Create a message queue for the actor
+        let (queue_tx, queue_rx) = mpsc::channel::<Message>();
+
+        // Assign an actor id
+        // Store the queue endpoints on the VM
+        let mut vm_ref = vm.lock().unwrap();
+        let actor_id = vm_ref.next_actor_id;
+        assert!(actor_id == 0);
+        vm_ref.next_actor_id += 1;
+        vm_ref.actor_txs.insert(actor_id, queue_tx);
+        drop(vm_ref);
+
+        let mut actor = Actor::new(actor_id, vm_mutex, queue_rx);
+        actor.call(fun, &args)
+    }
+    */
 }
 
 #[cfg(test)]

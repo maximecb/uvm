@@ -605,7 +605,9 @@ impl Assembler
             }
         }
 
-        Ok(VM::new(self.code, self.data, self.syscall_set))
+        // FIXME: we need a concept of program or image separate from VM here
+        //Ok(VM::new(self.code, self.data, self.syscall_set))
+        todo!();
     }
 
     pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>

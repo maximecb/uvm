@@ -140,6 +140,17 @@ fn vm_heap_size(thread: &mut Thread) -> Value
     //Value::from(vm.heap_size())
 }
 
+fn vm_resize_heap(thread: &mut Thread, num_bytes: Value) -> Value
+{
+    todo!();
+
+    /*
+    let num_bytes = num_bytes.as_usize();
+    let new_size = vm.resize_heap(num_bytes);
+    Value::from(new_size)
+    */
+}
+
 fn thread_id(thread: &mut Thread) -> Value
 {
     Value::from(thread.id)
@@ -159,38 +170,15 @@ fn thread_sleep(thread: &mut Thread, msecs: Value)
 // Returns a thread id
 fn thread_spawn(thread: &mut Thread, fun: Value) -> Value
 {
-    //let tid = VM::new_thread(&actor.vm, fun, vec![]);
-    //Value::from(tid)
-
-    todo!();
+    let tid = VM::new_thread(&thread.vm, fun, vec![]);
+    Value::from(tid)
 }
 
 // Wait for a thread to terminatr, produce the return value
 fn thread_join(thread: &mut Thread, tid: Value) -> Value
 {
     let tid = tid.as_u64();
-    //VM::join_thread(&actor.vm, tid)
-
-    todo!();
-}
-
-
-
-
-
-
-
-
-
-fn vm_resize_heap(thread: &mut Thread, num_bytes: Value) -> Value
-{
-    todo!();
-
-    /*
-    let num_bytes = num_bytes.as_usize();
-    let new_size = vm.resize_heap(num_bytes);
-    Value::from(new_size)
-    */
+    VM::join_thread(&thread.vm, tid)
 }
 
 fn memset(thread: &mut Thread, dst_ptr: Value, val: Value, num_bytes: Value)

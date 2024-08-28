@@ -152,12 +152,5 @@ fn main()
     let mut mutex = Arc::new(Mutex::new(vm));
     let ret_val = run_program(&mut mutex);
 
-    #[cfg(feature = "count_insns")]
-    {
-        let mut vm = mutex.lock().unwrap();
-        let insn_count = vm.get_insn_count();
-        println!("insns executed: {}", thousands_sep(insn_count));
-    }
-
     exit(ret_val.as_i32());
 }
