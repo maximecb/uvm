@@ -532,79 +532,6 @@ impl Thread
 
 
 
-}
-
-
-
-
-
-
-
-pub struct VM
-{
-    // Heap memory space
-    heap: MemBlock,
-
-    // Code memory space
-    code: MemBlock,
-
-    // Value stack
-    stack: Vec<Value>,
-
-    // List of stack frames (activation records)
-    frames: Vec<StackFrame>,
-
-
-
-
-    // Next thread id to assign
-    next_tid: u64,
-
-    // Map from actor ids to thread join handles
-    threads: HashMap<u64, thread::JoinHandle<Value>>,
-
-    // Reference to self
-    // Needed to instantiate actors
-    vm: Option<Arc<Mutex<VM>>>,
-}
-
-// Needed to send Arc<Mutex<VM>> to thread
-unsafe impl Send for VM {}
-
-impl VM
-{
-    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Arc<Mutex<VM>>
-    {
-        // Resize the code and heap space to a page size multiple
-        code.resize(code.len());
-        heap.resize(heap.len());
-
-        let vm = Self {
-            code,
-            heap,
-            stack: Vec::default(),
-            frames: Vec::default(),
-
-
-            next_tid: 0,
-            threads: HashMap::default(),
-            vm: None,
-        };
-
-        let vm = Arc::new(Mutex::new(vm));
-
-        // Store a reference to the mutex on the VM
-        // This is so we can pass this reference to threads
-        vm.lock().unwrap().vm = Some(vm.clone());
-
-        vm
-    }
-
-    #[cfg(feature = "count_insns")]
-    pub fn get_insn_count(&self) -> u64
-    {
-        self.insn_count
-    }
 
     pub fn stack_size(&self) -> usize
     {
@@ -627,20 +554,17 @@ impl VM
     /// Get the current size of the heap in bytes
     pub fn heap_size(&self) -> usize
     {
-        self.heap.len()
+        todo!();
+
+        //self.heap.len()
     }
 
-    /// Resize the heap to a new size in bytes
-    pub fn resize_heap(&mut self, num_bytes: usize) -> usize
-    {
-        self.heap.resize(num_bytes)
-    }
-
-    // FIXME: this function should be marked unsafe
-    //
     /// Get a pointer to an address/offset in the heap
     pub fn get_heap_ptr<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
     {
+        todo!();
+
+        /*
         if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
             panic!("attempting to access memory slice past end of heap");
         }
@@ -656,11 +580,15 @@ impl VM
             let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
             transmute::<*mut u8 , *mut T>(heap_ptr)
         }
+        */
     }
 
     /// Get a mutable slice to access a memory region in the heap
     pub fn get_heap_slice<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
     {
+        todo!();
+
+        /*
         if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
             panic!("attempting to access memory slice past end of heap");
         }
@@ -677,11 +605,15 @@ impl VM
             let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
             std::slice::from_raw_parts_mut(start_ptr, num_elems)
         }
+        */
     }
 
     /// Copy an UTF-8 string at a given address in the heap
     pub fn get_heap_str(&mut self, str_ptr: usize) -> &str
     {
+        todo!();
+
+        /*
         // Verify that there is a null-terminator for this string
         // within the bounds of the heap
         let mut str_len = 0;
@@ -704,6 +636,7 @@ impl VM
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
         rust_str
+        */
     }
 
     /// Call a function at a given address
@@ -728,6 +661,7 @@ impl VM
         let mut bp = self.stack.len();
         let mut pc = callee_pc as usize;
 
+        /*
         // For each instruction to execute
         loop
         {
@@ -1615,12 +1549,75 @@ impl VM
                 _ => panic!("unknown opcode {:?}", op),
             }
         }
+        */
+
+        todo!();
     }
 
 
 
+}
 
 
+
+
+
+
+
+pub struct VM
+{
+    // Heap memory space
+    heap: MemBlock,
+
+    // Code memory space
+    code: MemBlock,
+
+    // Next thread id to assign
+    next_tid: u64,
+
+    // Map from actor ids to thread join handles
+    threads: HashMap<u64, thread::JoinHandle<Value>>,
+
+    // Reference to self
+    // Needed to instantiate actors
+    vm: Option<Arc<Mutex<VM>>>,
+}
+
+// Needed to send Arc<Mutex<VM>> to thread
+unsafe impl Send for VM {}
+
+impl VM
+{
+    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Arc<Mutex<VM>>
+    {
+        // Resize the code and heap space to a page size multiple
+        code.resize(code.len());
+        heap.resize(heap.len());
+
+        let vm = Self {
+            code,
+            heap,
+            next_tid: 0,
+            threads: HashMap::default(),
+            vm: None,
+        };
+
+        let vm = Arc::new(Mutex::new(vm));
+
+        // Store a reference to the mutex on the VM
+        // This is so we can pass this reference to threads
+        vm.lock().unwrap().vm = Some(vm.clone());
+
+        vm
+    }
+
+    /*
+    /// Resize the heap to a new size in bytes
+    pub fn resize_heap(&mut self, num_bytes: usize) -> usize
+    {
+        self.heap.resize(num_bytes)
+    }
+    */
 
     // Create a new thread
     pub fn new_thread(vm: &Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> u64

@@ -13,7 +13,7 @@ use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
 
 use crate::sys::{get_sdl_context};
-use crate::vm::{VM, Value};
+use crate::vm::{VM, Thread, Value};
 
 /// SDL video subsystem
 /// This is a global variable because it doesn't implement
@@ -63,7 +63,7 @@ fn get_window(window_id: u32) -> &'static mut Window<'static>
     }
 }
 
-pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, flags: Value) -> Value
+pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Value, flags: Value) -> Value
 {
     unsafe {
         if WINDOW.is_some() {
@@ -73,7 +73,7 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
 
     let width: u32 = width.as_usize().try_into().unwrap();
     let height: u32 = height.as_usize().try_into().unwrap();
-    let title_str = vm.get_heap_str(title.as_usize()).to_owned();
+    let title_str = thread.get_heap_str(title.as_usize()).to_owned();
 
     let video_subsystem = get_video_subsystem();
 
@@ -108,13 +108,17 @@ pub fn window_create(vm: &mut VM, width: Value, height: Value, title: Value, fla
     Value::from(0)
 }
 
-pub fn window_draw_frame(vm: &mut VM, window_id: Value, src_addr: Value)
+pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
 {
+
+    // TODO: test thread id
+
+
     let window = get_window(window_id.as_u32());
 
     // Get the address to copy pixel data from
     let data_len = (4 * window.width * window.height) as usize;
-    let data_ptr = vm.get_heap_ptr(src_addr.as_usize(), data_len);
+    let data_ptr = thread.get_heap_ptr(src_addr.as_usize(), data_len);
 
     // If no frame has been drawn yet
     if window.texture.is_none() {
