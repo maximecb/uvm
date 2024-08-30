@@ -4,6 +4,7 @@ use std::collections::{HashSet, HashMap};
 use std::thread;
 use std::ffi::CStr;
 use crate::sys::*;
+use crate::program::Program;
 
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
@@ -394,108 +395,6 @@ impl From<f32> for Value {
     }
 }
 
-pub struct MemBlock
-{
-    data: Vec<u8>
-}
-
-impl MemBlock
-{
-    pub fn new() -> Self
-    {
-        Self {
-            data: Vec::default()
-        }
-    }
-
-    /// Get the memory block size in bytes
-    pub fn len(&self) -> usize
-    {
-        self.data.len()
-    }
-
-    /// Resize to a new size in bytes
-    pub fn resize(&mut self, mut num_bytes: usize) -> usize
-    {
-        // Round up to a page size multiple
-        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
-        assert!(page_size % 8 == 0);
-        let rem = num_bytes % page_size;
-        if rem != 0 {
-            num_bytes += page_size - rem;
-        }
-
-        assert!(num_bytes % page_size == 0);
-        self.data.resize(num_bytes, 0);
-
-        num_bytes
-    }
-
-    pub fn push_op(&mut self, op: Op)
-    {
-        self.data.push(op as u8);
-    }
-
-    pub fn push_u8(&mut self, val: u8)
-    {
-        self.data.push(val);
-    }
-
-    pub fn push_u16(&mut self, val: u16)
-    {
-        for byte in val.to_le_bytes() {
-            self.data.push(byte);
-        }
-    }
-
-    pub fn push_i8(&mut self, val: i8)
-    {
-        self.data.push(val as u8);
-    }
-
-    pub fn push_i32(&mut self, val: i32)
-    {
-        for byte in val.to_le_bytes() {
-            self.data.push(byte);
-        }
-    }
-
-    pub fn push_u32(&mut self, val: u32)
-    {
-        for byte in val.to_le_bytes() {
-            self.data.push(byte);
-        }
-    }
-
-    pub fn push_u64(&mut self, val: u64)
-    {
-        for byte in val.to_le_bytes() {
-            self.data.push(byte);
-        }
-    }
-
-    /// Write a value at the given address
-    pub fn write<T>(&mut self, pos: usize, val: T) where T: Copy
-    {
-        unsafe {
-            let buf_ptr = self.data.as_mut_ptr();
-            let val_ptr = transmute::<*mut u8 , *mut T>(buf_ptr.add(pos));
-            std::ptr::write_unaligned(val_ptr, val);
-        }
-    }
-
-    /// Read a value at the current PC and then increment the PC
-    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
-    {
-        unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
-            *pc += size_of::<T>();
-            std::ptr::read_unaligned(val_ptr)
-        }
-    }
-}
-
 struct StackFrame
 {
     // Previous base pointer at the time of call
@@ -671,10 +570,12 @@ impl Thread
         // For each instruction to execute
         loop
         {
+            /*
             #[cfg(feature = "count_insns")]
             {
                 self.insn_count += 1;
             }
+            */
 
             if pc >= self.code.len() {
                 panic!("pc outside bounds of code space")
@@ -1559,9 +1460,6 @@ impl Thread
 
         todo!();
     }
-
-
-
 }
 
 
@@ -1573,10 +1471,10 @@ impl Thread
 pub struct VM
 {
     // Heap memory space
-    heap: MemBlock,
+    //heap: MemBlock,
 
     // Code memory space
-    code: MemBlock,
+    //code: MemBlock,
 
     // Next thread id to assign
     next_tid: u64,
@@ -1594,15 +1492,14 @@ unsafe impl Send for VM {}
 
 impl VM
 {
-    pub fn new(mut code: MemBlock, mut heap: MemBlock, syscalls: HashSet<u16>) -> Arc<Mutex<VM>>
+    pub fn new(prog: Program) -> Arc<Mutex<VM>>
     {
-        // Resize the code and heap space to a page size multiple
-        code.resize(code.len());
-        heap.resize(heap.len());
+
+
 
         let vm = Self {
-            code,
-            heap,
+            //code,
+            //heap,
             next_tid: 0,
             threads: HashMap::default(),
             vm: None,

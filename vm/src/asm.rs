@@ -3,7 +3,8 @@ use std::convert::{TryFrom};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem::transmute;
-use crate::vm::{VM, MemBlock, Op};
+use crate::vm::{Op};
+use crate::program::*;
 
 #[derive(Debug)]
 pub struct ParseError
@@ -485,10 +486,10 @@ pub struct Assembler
     syscall_set: HashSet<u16>,
 
     // Generated code
-    code: MemBlock,
+    code: ByteArray,
 
     // Data section
-    data: MemBlock,
+    data: ByteArray,
 
     /// Label definitions (name, position)
     label_defs: HashMap<String, LabelDef>,
@@ -504,18 +505,6 @@ impl Assembler
 {
     pub fn new() -> Self
     {
-        /*
-        // Populate the available constants
-        use crate::sys::constants::SYSCALL_DESCS;
-        let mut const_map = HashMap::new();
-        for syscall in SYSCALL_DESCS {
-            const_map.insert(
-                syscall.name.to_uppercase(),
-                syscall.const_idx as i128
-            );
-        }
-        */
-
         /// Populate the available syscalls
         use crate::sys::constants::SYSCALL_DESCS;
         let mut syscall_map = HashMap::new();
@@ -529,15 +518,15 @@ impl Assembler
             const_map: HashMap::new(),
             syscall_map: syscall_map,
             syscall_set: HashSet::new(),
-            code: MemBlock::new(),
-            data: MemBlock::new(),
+            code: ByteArray::new(),
+            data: ByteArray::new(),
             label_defs: HashMap::default(),
             label_refs: Vec::default(),
             section: Section::Code,
         }
     }
 
-    fn parse_input(mut self, input: &mut Input) -> Result<VM, ParseError>
+    fn parse_input(mut self, input: &mut Input) -> Result<Program, ParseError>
     {
         // Until we've reached the end of the input
         loop
@@ -605,12 +594,14 @@ impl Assembler
             }
         }
 
-        // FIXME: we need a concept of program or image separate from VM here
-        //Ok(VM::new(self.code, self.data, self.syscall_set))
-        todo!();
+        Ok(Program {
+            code: self.code,
+            data: self.data,
+            syscalls: self.syscall_set,
+        })
     }
 
-    pub fn parse_file(mut self, file_name: &str) -> Result<VM, ParseError>
+    pub fn parse_file(mut self, file_name: &str) -> Result<Program, ParseError>
     {
         match std::fs::read_to_string(file_name) {
             Err(_) => {
@@ -624,7 +615,7 @@ impl Assembler
     }
 
     /// Parse a string of source code
-    pub fn parse_str(mut self, src: &str) -> Result<VM, ParseError>
+    pub fn parse_str(mut self, src: &str) -> Result<Program, ParseError>
     {
         let mut input = Input::new(src.to_string());
         return self.parse_input(&mut input);
@@ -667,8 +658,8 @@ impl Assembler
         input.parse_error("expected integer argument")
     }
 
-    /// Get the memory block for the current section
-    fn mem(&mut self) -> &mut MemBlock
+    /// Get the byte array for the current section
+    fn mem(&mut self) -> &mut ByteArray
     {
         match self.section {
             Section::Code => &mut self.code,

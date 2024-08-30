@@ -6,6 +6,7 @@
 mod vm;
 mod sys;
 mod asm;
+mod program;
 mod utils;
 
 extern crate sdl2;
@@ -15,7 +16,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
-use crate::vm::{VM, Value, MemBlock};
+use crate::vm::{VM, Value};
 use crate::asm::{Assembler};
 use crate::utils::{thousands_sep};
 
@@ -69,56 +70,6 @@ fn parse_args(args: Vec<String>) -> Options
     opts
 }
 
-fn run_program(vm: &mut Arc<Mutex<VM>>) -> Value
-{
-    let result = VM::call(vm, 0, vec![]);
-
-    /*
-    loop
-    {
-        let mut vm = mutex.lock().unwrap();
-
-        if let ExitReason::Exit(val) = sys::window::process_events(&mut vm) {
-            return val;
-        }
-
-        let next_cb_time = sys::time::time_until_next_cb(&mut vm);
-
-        // Unlock the VM mutex before going to sleep, so that other threads,
-        // such as the audio thread, may use the VM
-        drop(vm);
-
-        // Sleep until the next callback
-        if let Some(delay_ms) = next_cb_time {
-            let min_delay = std::cmp::min(delay_ms, 10);
-            sleep(Duration::from_millis(min_delay));
-        }
-        else
-        {
-            sleep(Duration::from_millis(10));
-        }
-
-        let mut vm = mutex.lock().unwrap();
-
-        // For each callback to run
-        for pc in sys::time::get_cbs_to_run(&mut vm)
-        {
-            match vm.call(pc, &[])
-            {
-                ExitReason::Exit(val) => {
-                    return val;
-                }
-                ExitReason::Return(val) => {
-                }
-            }
-        }
-    }
-    */
-
-
-    todo!();
-}
-
 fn main()
 {
     let opts = parse_args(env::args().collect());
@@ -132,9 +83,9 @@ fn main()
 
     // Parse/compile the program
     let asm = Assembler::new();
-    let result = asm.parse_file(file_name);
+    let program = asm.parse_file(file_name);
 
-    if let Err(error) = &result {
+    if let Err(error) = program {
         println!("Error: {}", error);
         exit(-1);
     }
@@ -144,9 +95,9 @@ fn main()
         exit(0);
     }
 
-    let vm = result.unwrap();
-    let mut mutex = Arc::new(Mutex::new(vm));
-    let ret_val = run_program(&mut mutex);
+    let program = program.unwrap();
+    let mut vm = VM::new(program);
+    let ret_val = VM::call(&mut vm, 0, vec![]);
 
     exit(ret_val.as_i32());
 }
