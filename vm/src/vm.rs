@@ -423,8 +423,8 @@ struct MemBlock
     // System page size
     page_size: usize,
 
-    // Currently accessible size
-    size_bytes: usize,
+    // Currently visible/accessible size
+    cur_size: usize,
 }
 
 impl MemBlock
@@ -462,35 +462,61 @@ impl MemBlock
 
         assert!(alloc_size >= 1024);
 
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        assert!(page_size % 8 == 0);
+
         MemBlock {
             mem_block: unsafe { transmute(mem_block) },
             mapping_size: alloc_size,
-            page_size: unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize,
-            size_bytes: 0,
+            page_size,
+            cur_size: 0,
         }
     }
 
 
 
-
-    /*
     /// Resize to a new size in bytes
-    pub fn resize(&mut self, mut num_bytes: usize) -> usize
+    pub fn resize(&mut self, mut new_size: usize) -> usize
     {
         // Round up to a page size multiple
-        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
-        assert!(page_size % 8 == 0);
-        let rem = num_bytes % page_size;
+        let rem = new_size % self.page_size;
         if rem != 0 {
-            num_bytes += page_size - rem;
+            new_size += self.page_size - rem;
+        }
+        assert!(new_size % self.page_size == 0);
+
+        // Growing the memory block, need to map as read | write
+        if new_size > self.cur_size {
+            let start_ofs = self.cur_size;
+            let map_addr = unsafe { transmute(self.mem_block.add(start_ofs)) };
+
+            let map_size = new_size - self.cur_size;
+            assert!(map_size % self.page_size == 0);
+
+            let mem_block = unsafe {libc::mmap(
+                map_addr,
+                map_size,
+                libc::PROT_WRITE | libc::PROT_READ,
+                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
+                -1,
+                0
+            )};
+
+            if mem_block == libc::MAP_FAILED {
+                panic!();
+            }
+        } else {
+            todo!();
         }
 
-        assert!(num_bytes % page_size == 0);
-        self.data.resize(num_bytes, 0);
 
-        num_bytes
+        // TODO: update accessible size
+
+
+
+        //new_size
+        todo!();
     }
-    */
 
 
 
