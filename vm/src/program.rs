@@ -74,38 +74,6 @@ impl ByteArray
             std::ptr::write_unaligned(val_ptr, val);
         }
     }
-
-    /*
-    /// Resize to a new size in bytes
-    pub fn resize(&mut self, mut num_bytes: usize) -> usize
-    {
-        // Round up to a page size multiple
-        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
-        assert!(page_size % 8 == 0);
-        let rem = num_bytes % page_size;
-        if rem != 0 {
-            num_bytes += page_size - rem;
-        }
-
-        assert!(num_bytes % page_size == 0);
-        self.data.resize(num_bytes, 0);
-
-        num_bytes
-    }
-    */
-
-    /*
-    /// Read a value at the current PC and then increment the PC
-    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
-    {
-        unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
-            *pc += size_of::<T>();
-            std::ptr::read_unaligned(val_ptr)
-        }
-    }
-    */
 }
 
 pub struct Program

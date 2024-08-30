@@ -411,6 +411,114 @@ struct StackFrame
 
 
 
+
+struct MemBlock
+{
+    // Underlying memory block
+    mem_block: *mut u8,
+
+    // Total size of the mapped memory block
+    mapping_size: usize,
+
+    // System page size
+    page_size: usize,
+
+    // Currently accessible size
+    size_bytes: usize,
+}
+
+impl MemBlock
+{
+    pub fn new() -> MemBlock
+    {
+        // Try to allocate a very large block first (512GB)
+        let start_size: usize = 512 * 1024 * 1024 * 1024;
+
+        let mut alloc_size = start_size;
+
+        let mut mem_block;
+
+        // Try to allocate a contiguous block of memory that is
+        // as large as possible
+        loop {
+            // PROT_NONE means the data cannot be accessed yet
+            mem_block = unsafe {libc::mmap(
+                std::ptr::null_mut(),
+                alloc_size,
+                libc::PROT_NONE,
+                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
+                -1,
+                0
+            )};
+
+            if mem_block != libc::MAP_FAILED {
+                println!("mmap successful {}", alloc_size);
+                break;
+            }
+
+            // Try again with a smaller alloc size
+            alloc_size /= 2;
+        }
+
+        assert!(alloc_size >= 1024);
+
+        MemBlock {
+            mem_block: unsafe { transmute(mem_block) },
+            mapping_size: alloc_size,
+            page_size: unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize,
+            size_bytes: 0,
+        }
+    }
+
+
+
+
+    /*
+    /// Resize to a new size in bytes
+    pub fn resize(&mut self, mut num_bytes: usize) -> usize
+    {
+        // Round up to a page size multiple
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        assert!(page_size % 8 == 0);
+        let rem = num_bytes % page_size;
+        if rem != 0 {
+            num_bytes += page_size - rem;
+        }
+
+        assert!(num_bytes % page_size == 0);
+        self.data.resize(num_bytes, 0);
+
+        num_bytes
+    }
+    */
+
+
+
+
+    // NOTE: this will need to be a macro on threads
+    /*
+    /// Read a value at the current PC and then increment the PC
+    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
+    {
+        unsafe {
+            let buf_ptr = self.data.as_ptr();
+            let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
+            *pc += size_of::<T>();
+            std::ptr::read_unaligned(val_ptr)
+        }
+    }
+    */
+
+
+}
+
+
+
+
+
+
+
+
 pub struct Thread
 {
     // Thread id
