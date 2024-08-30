@@ -69,13 +69,9 @@ fn parse_args(args: Vec<String>) -> Options
     opts
 }
 
-fn run_program(mutex: &mut Arc<Mutex<VM>>) -> Value
+fn run_program(vm: &mut Arc<Mutex<VM>>) -> Value
 {
-    let mut vm = mutex.lock().unwrap();
-
-    let result = vm.call(0, &[]);
-
-    drop(vm);
+    let result = VM::call(vm, 0, vec![]);
 
     /*
     loop

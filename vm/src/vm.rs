@@ -529,9 +529,15 @@ pub struct Thread
 
 impl Thread
 {
-
-
-
+    pub fn new(tid: u64, vm: Arc<Mutex<VM>>) -> Self
+    {
+        Self {
+            id: tid,
+            vm,
+            stack: Vec::default(),
+            frames: Vec::default(),
+        }
+    }
 
     pub fn stack_size(&self) -> usize
     {
@@ -640,7 +646,7 @@ impl Thread
     }
 
     /// Call a function at a given address
-    pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> Value
+    pub fn call(&mut self, callee_pc: u64, args: Vec<Value>) -> Value
     {
         assert!(self.stack.len() == 0);
         assert!(self.frames.len() == 0);
@@ -654,7 +660,7 @@ impl Thread
 
         // Push the arguments on the stack
         for arg in args {
-            self.stack.push(*arg);
+            self.stack.push(arg);
         }
 
         // The base pointer will point at the first local
@@ -1669,28 +1675,22 @@ impl VM
         todo!();
     }
 
-    /*
     // Call a function in the main actor
-    pub fn call(vm: &mut Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> Value
+    pub fn call(vm: &mut Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> Value
     {
         let vm_mutex = vm.clone();
-
-        // Create a message queue for the actor
-        let (queue_tx, queue_rx) = mpsc::channel::<Message>();
 
         // Assign an actor id
         // Store the queue endpoints on the VM
         let mut vm_ref = vm.lock().unwrap();
-        let actor_id = vm_ref.next_actor_id;
-        assert!(actor_id == 0);
-        vm_ref.next_actor_id += 1;
-        vm_ref.actor_txs.insert(actor_id, queue_tx);
+        let tid = vm_ref.next_tid;
+        assert!(tid == 0);
+        vm_ref.next_tid += 1;
         drop(vm_ref);
 
-        let mut actor = Actor::new(actor_id, vm_mutex, queue_rx);
-        actor.call(fun, &args)
+        let mut thread = Thread::new(tid, vm_mutex);
+        thread.call(callee_pc, args)
     }
-    */
 }
 
 #[cfg(test)]
