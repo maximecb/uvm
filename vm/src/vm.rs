@@ -458,8 +458,11 @@ impl MemBlock
                 break;
             }
 
+            println!("mmap failed, trying again");
+
             // Try again with a smaller alloc size
             alloc_size /= 2;
+            assert!(alloc_size > 1);
         }
 
         assert!(alloc_size >= 1024);
@@ -753,7 +756,7 @@ impl Thread
     }
 
     /// Call a function at a given address
-    pub fn call(&mut self, callee_pc: u64, args: Vec<Value>) -> Value
+    pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> Value
     {
         assert!(self.stack.len() == 0);
         assert!(self.frames.len() == 0);
@@ -767,7 +770,7 @@ impl Thread
 
         // Push the arguments on the stack
         for arg in args {
-            self.stack.push(arg);
+            self.stack.push(*arg);
         }
 
         // The base pointer will point at the first local
@@ -1742,7 +1745,7 @@ impl VM
         // Spawn a new thread
         let handle = thread::spawn(move || {
             let mut thread = Thread::new(tid, vm_mutex, code, heap);
-            thread.call(callee_pc, args)
+            thread.call(callee_pc, args.as_slice())
         });
 
 
@@ -1779,7 +1782,7 @@ impl VM
     }
 
     // Call a function in the main actor
-    pub fn call(vm: &mut Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> Value
+    pub fn call(vm: &mut Arc<Mutex<VM>>, callee_pc: u64, args: &[Value]) -> Value
     {
         // Assign a thread id
         let mut vm_ref = vm.lock().unwrap();
@@ -1809,9 +1812,9 @@ mod tests
     {
         dbg!(src);
         let asm = Assembler::new();
-        let mut vm = asm.parse_str(src).unwrap();
-        let result = vm.call(0, &[]);
-        assert!(vm.stack.len() == 0 && vm.frames.len() == 0);
+        let prog = asm.parse_str(src).unwrap();
+        let mut vm = VM::new(prog);
+        let result = VM::call(&mut vm, 0, &[]);
 
         result
     }

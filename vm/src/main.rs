@@ -97,7 +97,7 @@ fn main()
 
     let program = program.unwrap();
     let mut vm = VM::new(program);
-    let ret_val = VM::call(&mut vm, 0, vec![]);
+    let ret_val = VM::call(&mut vm, 0, &[]);
 
     exit(ret_val.as_i32());
 }
