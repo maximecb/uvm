@@ -652,11 +652,6 @@ impl Thread
         }
     }
 
-    pub fn stack_size(&self) -> usize
-    {
-        self.stack.len()
-    }
-
     pub fn push<T>(&mut self, val: T) where Value: From<T>
     {
         self.stack.push(Value::from(val));
@@ -676,28 +671,10 @@ impl Thread
         self.heap.size_bytes()
     }
 
-    /// Get a pointer to an address/offset in the heap
-    pub fn get_heap_ptr<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
+    /// Get a mutable pointer to an address/offset in the heap
+    pub fn get_heap_ptr_mut<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
     {
-        todo!();
-
-        /*
-        if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
-            panic!("attempting to access memory slice past end of heap");
-        }
-
-        if addr & (size_of::<T>() - 1) != 0 {
-            panic!(
-                "attempting to access data of type {} at unaligned address",
-                std::any::type_name::<T>()
-            );
-        }
-
-        unsafe {
-            let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
-            transmute::<*mut u8 , *mut T>(heap_ptr)
-        }
-        */
+        self.heap.get_ptr_mut(addr, num_elems)
     }
 
     /// Get a mutable slice to access a memory region in the heap
@@ -725,7 +702,7 @@ impl Thread
         */
     }
 
-    /// Copy an UTF-8 string at a given address in the heap
+    /// Read an UTF-8 string at a given address in the heap into a Rust string
     pub fn get_heap_str(&mut self, str_ptr: usize) -> &str
     {
         todo!();
@@ -749,7 +726,7 @@ impl Thread
         }
 
         // Convert the string to a Rust string
-        let char_ptr = self.get_heap_ptr(str_ptr, str_len);
+        let char_ptr = self.get_heap_ptr_mut(str_ptr, str_len);
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
         rust_str
@@ -1420,28 +1397,28 @@ impl Thread
 
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let val: u8 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u16 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let val: u16 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let val: u32 = unsafe { *heap_ptr };
                     self.push(val);
                 }
 
                 Op::load_u64 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let val: u64 = unsafe { *heap_ptr };
                     self.push(val);
                 }
@@ -1449,28 +1426,28 @@ impl Thread
                 Op::store_u8 => {
                     let val = self.pop().as_u8();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u16 => {
                     let val = self.pop().as_u16();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u32 => {
                     let val = self.pop().as_u32();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 
                 Op::store_u64 => {
                     let val = self.pop().as_u64();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr(addr, 1);
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     unsafe { *heap_ptr = val; }
                 }
 

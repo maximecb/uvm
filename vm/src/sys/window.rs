@@ -65,6 +65,10 @@ fn get_window(window_id: u32) -> &'static mut Window<'static>
 
 pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Value, flags: Value) -> Value
 {
+    if thread.id != 0 {
+        panic!("window functions should only be called from the main thread");
+    }
+
     unsafe {
         if WINDOW.is_some() {
             panic!("for now, only one window supported");
@@ -110,15 +114,15 @@ pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Va
 
 pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
 {
-
-    // TODO: test thread id
-
+    if thread.id != 0 {
+        panic!("window functions should only be called from the main thread");
+    }
 
     let window = get_window(window_id.as_u32());
 
     // Get the address to copy pixel data from
     let data_len = (4 * window.width * window.height) as usize;
-    let data_ptr = thread.get_heap_ptr(src_addr.as_usize(), data_len);
+    let data_ptr = thread.get_heap_ptr_mut(src_addr.as_usize(), data_len);
 
     // If no frame has been drawn yet
     if window.texture.is_none() {
