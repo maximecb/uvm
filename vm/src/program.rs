@@ -16,6 +16,11 @@ impl ByteArray
         }
     }
 
+    pub fn as_slice(&self) -> &[u8]
+    {
+        &self.data[..]
+    }
+
     /// Get the memory block size in bytes
     pub fn len(&self) -> usize
     {

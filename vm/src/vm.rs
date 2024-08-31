@@ -569,6 +569,30 @@ impl MemView
         }
     }
 
+    /// Get a mutable slice inside this memory block
+    pub fn get_slice_mut<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
+    {
+        // Check that the slice is within bounds
+        let cur_size = unsafe { *self.cur_size };
+        if addr + std::mem::size_of::<T>() * num_elems > cur_size {
+            panic!("attempting to access memory slice past end of heap");
+        }
+
+        // Check that the address is aligned
+        if addr & (size_of::<T>() - 1) != 0 {
+            panic!(
+                "attempting to access unaligned memory slice of type {}",
+                std::any::type_name::<T>()
+            );
+        }
+
+        unsafe {
+            let heap_ptr: *mut u8 = self.mem_block.add(addr);
+            let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
+            std::slice::from_raw_parts_mut(start_ptr, num_elems)
+        }
+    }
+
     /// Read a value at the current PC and then increment the PC
     pub fn read_at_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
@@ -1663,13 +1687,22 @@ impl VM
 {
     pub fn new(prog: Program) -> Arc<Mutex<VM>>
     {
-        let code = MemBlock::new();
-        let heap = MemBlock::new();
+        let mut code = MemBlock::new();
+        let mut heap = MemBlock::new();
 
-        // TODO: resize code and heap memblock, copy program data
+        // Resize the code and memory blocks to accomodate the program
+        code.grow(prog.code.len());
+        heap.grow(prog.data.len());
 
+        // Copy the program code
+        let mut code_view = code.new_view();
+        let mut code_slice: &mut [u8] = code_view.get_slice_mut(0, prog.code.len());
+        code_slice.clone_from_slice(prog.code.as_slice());
 
-
+        // Copy the program data
+        let mut heap_view = heap.new_view();
+        let mut heap_slice: &mut [u8] = heap_view.get_slice_mut(0, prog.data.len());
+        heap_slice.clone_from_slice(prog.data.as_slice());
 
         let vm = Self {
             code,
