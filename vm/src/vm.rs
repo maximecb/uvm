@@ -473,10 +473,12 @@ impl MemBlock
         }
     }
 
-
-
-    /// Resize to a new size in bytes
-    pub fn resize(&mut self, mut new_size: usize) -> usize
+    /// Grow to a new size in bytes
+    /// This operation is a no-op if the existing size
+    /// is greater or equal to the requested size
+    ///
+    /// Note: this operation must be guarded by the VM
+    pub fn grow(&mut self, mut new_size: usize) -> usize
     {
         // Round up to a page size multiple
         let rem = new_size % self.page_size;
@@ -486,42 +488,63 @@ impl MemBlock
         assert!(new_size % self.page_size == 0);
 
         // Growing the memory block, need to map as read | write
-        if new_size > self.cur_size {
-            let start_ofs = self.cur_size;
-            let map_addr = unsafe { transmute(self.mem_block.add(start_ofs)) };
-
-            let map_size = new_size - self.cur_size;
-            assert!(map_size % self.page_size == 0);
-
-            let mem_block = unsafe {libc::mmap(
-                map_addr,
-                map_size,
-                libc::PROT_WRITE | libc::PROT_READ,
-                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
-                -1,
-                0
-            )};
-
-            if mem_block == libc::MAP_FAILED {
-                panic!();
-            }
-        } else {
-            todo!();
+        if new_size <= self.cur_size {
+            return self.cur_size;
         }
 
+        let start_ofs = self.cur_size;
+        let map_addr = unsafe { transmute(self.mem_block.add(start_ofs)) };
 
-        // TODO: update accessible size
+        let map_size = new_size - self.cur_size;
+        assert!(map_size % self.page_size == 0);
 
+        let mem_block = unsafe {libc::mmap(
+            map_addr,
+            map_size,
+            libc::PROT_WRITE | libc::PROT_READ,
+            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
+            -1,
+            0
+        )};
 
+        if mem_block == libc::MAP_FAILED {
+            panic!();
+        }
 
-        //new_size
-        todo!();
+        // Update the currently accessible size
+        self.cur_size = new_size;
+
+        new_size
     }
 
 
+    // TODO: method to create MemView
 
 
-    // NOTE: this will need to be a macro on threads
+
+
+
+}
+
+
+struct MemView
+{
+    // Underlying memory block
+    mem_block: *mut u8,
+
+    // TODO: pointer to atomic var
+
+
+}
+
+impl MemView
+{
+
+
+
+    // TODO:
+
+
     /*
     /// Read a value at the current PC and then increment the PC
     pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
@@ -534,7 +557,6 @@ impl MemBlock
         }
     }
     */
-
 
 }
 
