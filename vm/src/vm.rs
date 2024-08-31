@@ -499,6 +499,7 @@ impl MemBlock
             return cur_size;
         }
 
+        // Compute the address from which to mmap
         let map_addr = unsafe { transmute(self.mem_block.add(cur_size)) };
 
         let map_size = new_size - cur_size;
@@ -508,7 +509,7 @@ impl MemBlock
             map_addr,
             map_size,
             libc::PROT_WRITE | libc::PROT_READ,
-            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
+            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_FIXED,
             -1,
             0
         )};
