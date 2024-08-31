@@ -253,12 +253,8 @@ fn print_f32(thread: &mut Thread, v: Value)
 /// Print a null-terminated UTF-8 string to stdout
 fn print_str(thread: &mut Thread, str_ptr: Value)
 {
-    todo!();
-
-    /*
-    let rust_str = vm.get_heap_str(str_ptr.as_usize());
+    let rust_str = thread.get_heap_str(str_ptr.as_usize());
     print!("{}", rust_str);
-    */
 }
 
 /// Print a newline characted to stdout

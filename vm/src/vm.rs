@@ -575,10 +575,10 @@ impl MemView
         }
     }
 
-    /// Get a mutable slice inside this memory block
-    pub fn get_slice_mut<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
+    /// Get a constant pointer to an address/offset
+    pub fn get_ptr<T>(&self, addr: usize, num_elems: usize) -> *const T
     {
-        // Check that the slice is within bounds
+        // Check that the address is within bounds
         let cur_size = unsafe { *self.cur_size };
         if addr + std::mem::size_of::<T>() * num_elems > cur_size {
             panic!("attempting to access memory slice past end of heap");
@@ -587,14 +587,22 @@ impl MemView
         // Check that the address is aligned
         if addr & (size_of::<T>() - 1) != 0 {
             panic!(
-                "attempting to access unaligned memory slice of type {}",
+                "attempting to access data of type {} at unaligned address",
                 std::any::type_name::<T>()
             );
         }
 
         unsafe {
-            let heap_ptr: *mut u8 = self.mem_block.add(addr);
-            let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
+            let ptr: *mut u8 = self.mem_block.add(addr);
+            transmute::<*mut u8 , *const T>(ptr)
+        }
+    }
+
+    /// Get a mutable slice inside this memory block
+    pub fn get_slice_mut<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
+    {
+        unsafe {
+            let start_ptr = self.get_ptr_mut(addr, num_elems);
             std::slice::from_raw_parts_mut(start_ptr, num_elems)
         }
     }
@@ -684,22 +692,20 @@ impl Thread
     }
 
     /// Read an UTF-8 string at a given address in the heap into a Rust string
-    pub fn get_heap_str(&mut self, str_ptr: usize) -> &str
+    pub fn get_heap_str(&self, str_ptr: usize) -> &str
     {
-        todo!();
-
-        /*
         // Verify that there is a null-terminator for this string
         // within the bounds of the heap
         let mut str_len = 0;
         loop
         {
-            let char_idx = str_ptr + str_len;
-            if char_idx >= self.heap.len() {
+            let char_ptr = str_ptr + str_len;
+            if char_ptr >= self.heap.size_bytes() {
                 panic!("string is not properly null-terminated");
             }
 
-            if self.heap.data[char_idx] == 0 {
+            let byte_ptr: *const u8 = self.heap.get_ptr(char_ptr, 1);
+            if unsafe { *byte_ptr } == 0 {
                 break;
             }
 
@@ -707,11 +713,10 @@ impl Thread
         }
 
         // Convert the string to a Rust string
-        let char_ptr = self.get_heap_ptr_mut(str_ptr, str_len);
+        let char_ptr = self.heap.get_ptr(str_ptr, str_len);
         let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
         let rust_str = c_str.to_str().unwrap();
         rust_str
-        */
     }
 
     /// Call a function at a given address
