@@ -539,6 +539,8 @@ struct MemView
     cur_size: *const usize,
 }
 
+unsafe impl Send for MemView {}
+
 impl MemView
 {
     pub fn size_bytes(&self) -> usize
@@ -612,6 +614,12 @@ pub struct Thread
     // Parent VM
     pub vm: Arc<Mutex<VM>>,
 
+    // Code memory block
+    code: MemView,
+
+    // Heap memory block
+    heap: MemView,
+
     // Value stack
     stack: Vec<Value>,
 
@@ -621,11 +629,13 @@ pub struct Thread
 
 impl Thread
 {
-    pub fn new(tid: u64, vm: Arc<Mutex<VM>>) -> Self
+    fn new(tid: u64, vm: Arc<Mutex<VM>>, code: MemView, heap: MemView) -> Self
     {
         Self {
             id: tid,
             vm,
+            code,
+            heap,
             stack: Vec::default(),
             frames: Vec::default(),
         }
@@ -652,9 +662,7 @@ impl Thread
     /// Get the current size of the heap in bytes
     pub fn heap_size(&self) -> usize
     {
-        todo!();
-
-        //self.heap.len()
+        self.heap.size_bytes()
     }
 
     /// Get a pointer to an address/offset in the heap
@@ -1655,12 +1663,6 @@ impl Thread
     }
 }
 
-
-
-
-
-
-
 pub struct VM
 {
     // Heap memory space
@@ -1730,36 +1732,41 @@ impl VM
     }
 
     // Create a new thread
-    pub fn new_thread(vm: &Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> u64
+    pub fn new_thread(vm: &Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> u64
     {
-        /*
-        let vm_mutex = vm.clone();
-
-        // Assign an actor id
+        // Assign a thread id
         let mut vm_ref = vm.lock().unwrap();
-        let actor_id = vm_ref.next_actor_id;
-        vm_ref.next_actor_id += 1;
+        let tid = vm_ref.next_tid;
+        vm_ref.next_tid += 1;
+
+        // Create thread-local code and heap memory block views
+        let code = vm_ref.code.new_view();
+        let heap = vm_ref.heap.new_view();
+
         drop(vm_ref);
 
-        // Create a message queue for the actor
-        let (queue_tx, queue_rx) = mpsc::channel::<Message>();
+        let vm_mutex = vm.clone();
 
-        // Spawn a new thread for the actor
+        // Spawn a new thread
         let handle = thread::spawn(move || {
-            let mut actor = Actor::new(actor_id, vm_mutex, queue_rx);
-            actor.call(fun, &args)
+            let mut thread = Thread::new(tid, vm_mutex, code, heap);
+            thread.call(callee_pc, args)
         });
 
+
+
+        // TODO
+        /*
         // Store the join handles and queue endpoints on the VM
         let mut vm_ref = vm.lock().unwrap();
         vm_ref.threads.insert(actor_id, handle);
         vm_ref.actor_txs.insert(actor_id, queue_tx);
         drop(vm_ref);
-
-        tid
         */
 
-        todo!();
+
+
+        tid
     }
 
     // Wait for a thread to produce a result and return it
@@ -1782,17 +1789,20 @@ impl VM
     // Call a function in the main actor
     pub fn call(vm: &mut Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> Value
     {
-        let vm_mutex = vm.clone();
-
-        // Assign an actor id
-        // Store the queue endpoints on the VM
+        // Assign a thread id
         let mut vm_ref = vm.lock().unwrap();
         let tid = vm_ref.next_tid;
         assert!(tid == 0);
         vm_ref.next_tid += 1;
+
+        // Create thread-local code and heap memory block views
+        let code = vm_ref.code.new_view();
+        let heap = vm_ref.heap.new_view();
+
         drop(vm_ref);
 
-        let mut thread = Thread::new(tid, vm_mutex);
+        let vm_mutex = vm.clone();
+        let mut thread = Thread::new(tid, vm_mutex, code, heap);
         thread.call(callee_pc, args)
     }
 }

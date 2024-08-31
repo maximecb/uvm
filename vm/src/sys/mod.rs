@@ -134,9 +134,7 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
 
 fn vm_heap_size(thread: &mut Thread) -> Value
 {
-    todo!();
-
-    //Value::from(vm.heap_size())
+    Value::from(thread.heap_size())
 }
 
 fn vm_grow_heap(thread: &mut Thread, num_bytes: Value) -> Value
@@ -166,7 +164,8 @@ fn thread_sleep(thread: &mut Thread, msecs: Value)
 // Returns a thread id
 fn thread_spawn(thread: &mut Thread, fun: Value) -> Value
 {
-    let tid = VM::new_thread(&thread.vm, fun, vec![]);
+    let callee_pc = fun.as_u64();
+    let tid = VM::new_thread(&thread.vm, callee_pc, vec![]);
     Value::from(tid)
 }
 
