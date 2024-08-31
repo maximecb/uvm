@@ -678,28 +678,9 @@ impl Thread
     }
 
     /// Get a mutable slice to access a memory region in the heap
-    pub fn get_heap_slice<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
+    pub fn get_heap_slice_mut<T>(&mut self, addr: usize, num_elems: usize) -> &mut [T]
     {
-        todo!();
-
-        /*
-        if addr + std::mem::size_of::<T>() * num_elems > self.heap.len() {
-            panic!("attempting to access memory slice past end of heap");
-        }
-
-        if addr & (size_of::<T>() - 1) != 0 {
-            panic!(
-                "attempting to access unaligned memory slice of type {}",
-                std::any::type_name::<T>()
-            );
-        }
-
-        unsafe {
-            let heap_ptr: *mut u8 = self.heap.data.as_mut_ptr().add(addr);
-            let start_ptr = transmute::<*mut u8 , *mut T>(heap_ptr);
-            std::slice::from_raw_parts_mut(start_ptr, num_elems)
-        }
-        */
+        self.heap.get_slice_mut(addr, num_elems)
     }
 
     /// Read an UTF-8 string at a given address in the heap into a Rust string
@@ -1518,9 +1499,6 @@ impl Thread
                     let syscall_idx = self.code.read_pc::<u16>(&mut pc);
                     let syscall_fn = get_syscall(syscall_idx);
 
-                    todo!();
-
-                    /*
                     match syscall_fn
                     {
                         SysCallFn::Fn0_0(fun) => {
@@ -1588,7 +1566,6 @@ impl Thread
                             self.push(v);
                         }
                     }
-                    */
                 }
 
                 Op::exit => {

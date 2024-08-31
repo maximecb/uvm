@@ -178,16 +178,12 @@ fn thread_join(thread: &mut Thread, tid: Value) -> Value
 
 fn memset(thread: &mut Thread, dst_ptr: Value, val: Value, num_bytes: Value)
 {
-    todo!();
-
-    /*
     let dst_ptr = dst_ptr.as_usize();
     let val = val.as_u8();
     let num_bytes = num_bytes.as_usize();
 
-    let mem_slice: &mut [u8] = vm.get_heap_slice(dst_ptr, num_bytes);
+    let mem_slice: &mut [u8] = thread.get_heap_slice_mut(dst_ptr, num_bytes);
     mem_slice.fill(val);
-    */
 }
 
 fn memset32(thread: &mut Thread, dst_ptr: Value, word: Value, num_words: Value)
