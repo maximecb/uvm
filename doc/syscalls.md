@@ -58,15 +58,15 @@ u64 vm_heap_size()
 
 Report the current heap size in bytes.
 
-## vm_resize_heap
+## vm_grow_heap
 
 ```
-u64 vm_resize_heap(u64 num_bytes)
+u64 vm_grow_heap(u64 num_bytes)
 ```
 
 **Returns:** `u64 new_size`
 
-Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. Returns the new heap size in bytes if successful, or `UINT64_MAX` on failure.
+Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes.
 
 # io
 

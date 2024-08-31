@@ -111,7 +111,7 @@
         "description": "Report the current heap size in bytes."
       },
       {
-        "name": "vm_resize_heap",
+        "name": "vm_grow_heap",
         "args": [
           [
             "u64",
@@ -124,7 +124,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 17,
-        "description": "Resize the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. Returns the new heap size in bytes if successful, or `UINT64_MAX` on failure."
+        "description": "Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes."
       }
     ],
     "constants": []

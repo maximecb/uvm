@@ -1670,13 +1670,13 @@ impl VM
         vm
     }
 
-    /*
-    /// Resize the heap to a new size in bytes
-    pub fn resize_heap(&mut self, num_bytes: usize) -> usize
+    /// Grow the heap to a new size in bytes
+    pub fn grow_heap(&mut self, num_bytes: usize) -> usize
     {
-        self.heap.resize(num_bytes)
+        todo!();
+
+        //self.heap.resize(num_bytes)
     }
-    */
 
     // Create a new thread
     pub fn new_thread(vm: &Arc<Mutex<VM>>, fun: Value, args: Vec<Value>) -> u64

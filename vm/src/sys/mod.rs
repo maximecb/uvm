@@ -98,12 +98,11 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
     match const_idx {
         // Core VM syscalls
         VM_HEAP_SIZE => SysCallFn::Fn0_1(vm_heap_size),
-        VM_RESIZE_HEAP => SysCallFn::Fn1_1(vm_resize_heap),
+        VM_GROW_HEAP => SysCallFn::Fn1_1(vm_grow_heap),
         MEMSET => SysCallFn::Fn3_0(memset),
         MEMSET32 => SysCallFn::Fn3_0(memset32),
         MEMCPY => SysCallFn::Fn3_0(memcpy),
         MEMCMP => SysCallFn::Fn3_1(memcmp),
-
 
         //thread_id
         //thread_sleep
@@ -140,15 +139,12 @@ fn vm_heap_size(thread: &mut Thread) -> Value
     //Value::from(vm.heap_size())
 }
 
-fn vm_resize_heap(thread: &mut Thread, num_bytes: Value) -> Value
+fn vm_grow_heap(thread: &mut Thread, num_bytes: Value) -> Value
 {
-    todo!();
-
-    /*
+    let mut vm = thread.vm.lock().unwrap();
     let num_bytes = num_bytes.as_usize();
-    let new_size = vm.resize_heap(num_bytes);
+    let new_size = vm.grow_heap(num_bytes);
     Value::from(new_size)
-    */
 }
 
 fn thread_id(thread: &mut Thread) -> Value
