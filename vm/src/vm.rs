@@ -541,44 +541,44 @@ struct MemView
 
 impl MemView
 {
-
-
-
-
-    /*
-    /// Write a value at the given address
-    pub fn write<T>(&mut self, pos: usize, val: T) where T: Copy
+    pub fn size_bytes(&self) -> usize
     {
+        unsafe { *self.cur_size }
+    }
+
+    /// Get a mutable pointer to an address/offset
+    pub fn get_ptr_mut<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
+    {
+        // Check that the address is within bounds
+        let cur_size = unsafe { *self.cur_size };
+        if addr + std::mem::size_of::<T>() * num_elems > cur_size {
+            panic!("attempting to access memory slice past end of heap");
+        }
+
+        // Check that the address is aligned
+        if addr & (size_of::<T>() - 1) != 0 {
+            panic!(
+                "attempting to access data of type {} at unaligned address",
+                std::any::type_name::<T>()
+            );
+        }
+
         unsafe {
-            let buf_ptr = self.data.as_mut_ptr();
-            let val_ptr = transmute::<*mut u8 , *mut T>(buf_ptr.add(pos));
-            std::ptr::write_unaligned(val_ptr, val);
+            let ptr: *mut u8 = self.mem_block.add(addr);
+            transmute::<*mut u8 , *mut T>(ptr)
         }
     }
-    */
 
-
-    /*
     /// Read a value at the current PC and then increment the PC
     pub fn read_at_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
         unsafe {
-            let buf_ptr = self.data.as_ptr();
-            let val_ptr = transmute::<*const u8 , *const T>(buf_ptr.add(*pc));
+            let val_ptr = transmute::<*const u8 , *const T>(self.mem_block.add(*pc));
             *pc += size_of::<T>();
             std::ptr::read_unaligned(val_ptr)
         }
     }
-    */
-
 }
-
-
-
-
-
-
-
 
 pub struct Thread
 {
@@ -1640,10 +1640,10 @@ impl Thread
 pub struct VM
 {
     // Heap memory space
-    //heap: MemBlock,
+    heap: MemBlock,
 
     // Code memory space
-    //code: MemBlock,
+    code: MemBlock,
 
     // Next thread id to assign
     next_tid: u64,
@@ -1663,12 +1663,17 @@ impl VM
 {
     pub fn new(prog: Program) -> Arc<Mutex<VM>>
     {
+        let code = MemBlock::new();
+        let heap = MemBlock::new();
+
+        // TODO: resize code and heap memblock, copy program data
+
 
 
 
         let vm = Self {
-            //code,
-            //heap,
+            code,
+            heap,
             next_tid: 0,
             threads: HashMap::default(),
             vm: None,
