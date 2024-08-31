@@ -424,7 +424,9 @@ struct MemBlock
     page_size: usize,
 
     // Currently visible/accessible size
-    cur_size: usize,
+    // This is a box because we need a pointer
+    // To access this value from threads using MemView
+    cur_size: Box<usize>,
 }
 
 impl MemBlock
@@ -469,7 +471,7 @@ impl MemBlock
             mem_block: unsafe { transmute(mem_block) },
             mapping_size: alloc_size,
             page_size,
-            cur_size: 0,
+            cur_size: Box::new(0),
         }
     }
 
@@ -487,15 +489,16 @@ impl MemBlock
         }
         assert!(new_size % self.page_size == 0);
 
+        let cur_size = *self.cur_size;
+
         // Growing the memory block, need to map as read | write
-        if new_size <= self.cur_size {
-            return self.cur_size;
+        if new_size <= cur_size {
+            return cur_size;
         }
 
-        let start_ofs = self.cur_size;
-        let map_addr = unsafe { transmute(self.mem_block.add(start_ofs)) };
+        let map_addr = unsafe { transmute(self.mem_block.add(cur_size)) };
 
-        let map_size = new_size - self.cur_size;
+        let map_size = new_size - cur_size;
         assert!(map_size % self.page_size == 0);
 
         let mem_block = unsafe {libc::mmap(
@@ -512,29 +515,28 @@ impl MemBlock
         }
 
         // Update the currently accessible size
-        self.cur_size = new_size;
+        *self.cur_size = new_size;
 
         new_size
     }
 
-
-    // TODO: method to create MemView
-
-
-
-
-
+    // Create a new thread-local view on this memory block
+    fn new_view(&self) -> MemView
+    {
+        MemView {
+            mem_block: self.mem_block,
+            cur_size: &*self.cur_size,
+        }
+    }
 }
-
 
 struct MemView
 {
     // Underlying memory block
     mem_block: *mut u8,
 
-    // TODO: pointer to atomic var
-
-
+    // Pointer to size variable from parent MemBlock
+    cur_size: *const usize,
 }
 
 impl MemView
@@ -542,12 +544,23 @@ impl MemView
 
 
 
-    // TODO:
+
+    /*
+    /// Write a value at the given address
+    pub fn write<T>(&mut self, pos: usize, val: T) where T: Copy
+    {
+        unsafe {
+            let buf_ptr = self.data.as_mut_ptr();
+            let val_ptr = transmute::<*mut u8 , *mut T>(buf_ptr.add(pos));
+            std::ptr::write_unaligned(val_ptr, val);
+        }
+    }
+    */
 
 
     /*
     /// Read a value at the current PC and then increment the PC
-    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
+    pub fn read_at_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
         unsafe {
             let buf_ptr = self.data.as_ptr();
