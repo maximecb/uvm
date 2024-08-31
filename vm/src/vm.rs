@@ -596,8 +596,15 @@ impl MemView
     }
 
     /// Read a value at the current PC and then increment the PC
-    pub fn read_at_pc<T>(&self, pc: &mut usize) -> T where T: Copy
+    pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
+        // Check that the address is within bounds
+        let cur_size = unsafe { *self.cur_size };
+        if *pc + std::mem::size_of::<T>() > cur_size {
+            // TODO: output name of type being read
+            panic!("pc outside of bounds of code space");
+        }
+
         unsafe {
             let val_ptr = transmute::<*const u8 , *const T>(self.mem_block.add(*pc));
             *pc += size_of::<T>();
@@ -767,21 +774,9 @@ impl Thread
         let mut bp = self.stack.len();
         let mut pc = callee_pc as usize;
 
-        /*
         // For each instruction to execute
         loop
         {
-            /*
-            #[cfg(feature = "count_insns")]
-            {
-                self.insn_count += 1;
-            }
-            */
-
-            if pc >= self.code.len() {
-                panic!("pc outside bounds of code space")
-            }
-
             let op = self.code.read_pc::<Op>(&mut pc);
             //dbg!(op);
 
@@ -1657,9 +1652,6 @@ impl Thread
                 _ => panic!("unknown opcode {:?}", op),
             }
         }
-        */
-
-        todo!();
     }
 }
 
