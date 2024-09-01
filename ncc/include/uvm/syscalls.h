@@ -29,6 +29,22 @@
 // Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes.
 #define vm_grow_heap(__num_bytes) asm (__num_bytes) -> u64 { syscall vm_grow_heap; }
 
+// u64 thread_spawn(void* fptr)
+// Spawn a new thread running the given function.
+#define thread_spawn(__fptr) asm (__fptr) -> u64 { syscall thread_spawn; }
+
+// u64 thread_id()
+// Get the id of the current thread.
+#define thread_id() asm () -> u64 { syscall thread_id; }
+
+// void thread_sleep(u64 time_ms)
+// Make the current thread sleep for at least the given time in milliseconds.
+#define thread_sleep(__time_ms) asm (__time_ms) -> void { syscall thread_sleep; }
+
+// void thread_join(u64 tid)
+// Join on the thread with the given id.
+#define thread_join(__tid) asm (__tid) -> void { syscall thread_join; }
+
 // void print_i64(i64 val)
 // Print an i64 value to standard output.
 #define print_i64(__val) asm (__val) -> void { syscall print_i64; }

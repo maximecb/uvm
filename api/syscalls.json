@@ -125,6 +125,65 @@
         "permission": "default_allowed",
         "const_idx": 17,
         "description": "Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes."
+      },
+      {
+        "name": "thread_spawn",
+        "args": [
+          [
+            "void*",
+            "fptr"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "tid"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 29,
+        "description": "Spawn a new thread running the given function."
+      },
+      {
+        "name": "thread_id",
+        "args": [],
+        "returns": [
+          "u64",
+          "tid"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 28,
+        "description": "Get the id of the current thread."
+      },
+      {
+        "name": "thread_sleep",
+        "args": [
+          [
+            "u64",
+            "time_ms"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "default_allowed",
+        "const_idx": 30,
+        "description": "Make the current thread sleep for at least the given time in milliseconds."
+      },
+      {
+        "name": "thread_join",
+        "args": [
+          [
+            "u64",
+            "tid"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "val"
+        ],
+        "permission": "default_allowed",
+        "const_idx": 31,
+        "description": "Join on the thread with the given id. Produces the return value for the thread."
       }
     ],
     "constants": []

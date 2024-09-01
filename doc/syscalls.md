@@ -68,6 +68,42 @@ u64 vm_grow_heap(u64 num_bytes)
 
 Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes.
 
+## thread_spawn
+
+```
+u64 thread_spawn(void* fptr)
+```
+
+**Returns:** `u64 tid`
+
+Spawn a new thread running the given function.
+
+## thread_id
+
+```
+u64 thread_id()
+```
+
+**Returns:** `u64 tid`
+
+Get the id of the current thread.
+
+## thread_sleep
+
+```
+void thread_sleep(u64 time_ms)
+```
+
+Make the current thread sleep for at least the given time in milliseconds.
+
+## thread_join
+
+```
+void thread_join(u64 tid)
+```
+
+Join on the thread with the given id.
+
 # io
 
 Stream I/O functionality.

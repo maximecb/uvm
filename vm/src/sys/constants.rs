@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 28;
+pub const SYSCALL_TBL_LEN: usize = 32;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -34,6 +34,10 @@ pub const NET_WRITE: u16 = 24;
 pub const NET_CLOSE: u16 = 25;
 pub const PUTCHAR: u16 = 26;
 pub const MEMCMP: u16 = 27;
+pub const THREAD_ID: u16 = 28;
+pub const THREAD_SPAWN: u16 = 29;
+pub const THREAD_SLEEP: u16 = 30;
+pub const THREAD_JOIN: u16 = 31;
 
 pub struct SysCallDesc
 {
@@ -72,6 +76,10 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "net_close", const_idx: 25, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "putchar", const_idx: 26, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "memcmp", const_idx: 27, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "thread_id", const_idx: 28, argc: 0, has_ret: true }),
+    Some(SysCallDesc { name: "thread_spawn", const_idx: 29, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "thread_sleep", const_idx: 30, argc: 1, has_ret: false }),
+    Some(SysCallDesc { name: "thread_join", const_idx: 31, argc: 1, has_ret: false }),
 ];
 
 pub const KEY_BACKSPACE: u16 = 8;

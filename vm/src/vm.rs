@@ -454,7 +454,6 @@ impl MemBlock
             )};
 
             if mem_block != libc::MAP_FAILED {
-                println!("mmap successful {}", alloc_size);
                 break;
             }
 
@@ -1708,18 +1707,10 @@ impl VM
             thread.call(callee_pc, args.as_slice())
         });
 
-
-
-        // TODO
-        /*
-        // Store the join handles and queue endpoints on the VM
+        // Store the join handle on the VM
         let mut vm_ref = vm.lock().unwrap();
-        vm_ref.threads.insert(actor_id, handle);
-        vm_ref.actor_txs.insert(actor_id, queue_tx);
+        vm_ref.threads.insert(tid, handle);
         drop(vm_ref);
-        */
-
-
 
         tid
     }
@@ -1727,18 +1718,12 @@ impl VM
     // Wait for a thread to produce a result and return it
     pub fn join_thread(vm: &Arc<Mutex<VM>>, tid: u64) -> Value
     {
-        /*
         // Get the join handle, then release the VM lock
         let mut vm = vm.lock().unwrap();
         let mut handle = vm.threads.remove(&tid).unwrap();
         drop(vm);
 
-        // Note: there is no need to copy data when joining,
-        // because the actor sending the data is done running
-        handle.join().expect(&format!("could not actor thread with id {}", tid))
-        */
-
-        todo!();
+        handle.join().expect(&format!("could join thread with id {}", tid))
     }
 
     // Call a function in the main actor

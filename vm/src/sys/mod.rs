@@ -104,12 +104,10 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
         MEMCPY => SysCallFn::Fn3_0(memcpy),
         MEMCMP => SysCallFn::Fn3_1(memcmp),
 
-        //thread_id
-        //thread_sleep
-        //thread_spawn
-        //thread_join
-
-
+        THREAD_SPAWN => SysCallFn::Fn1_1(thread_spawn),
+        THREAD_JOIN => SysCallFn::Fn1_1(thread_join),
+        THREAD_ID => SysCallFn::Fn0_1(thread_id),
+        THREAD_SLEEP => SysCallFn::Fn1_0(thread_sleep),
 
         // Console I/O
         PRINT_I64 => SysCallFn::Fn1_0(print_i64),
@@ -119,14 +117,12 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
         PUTCHAR => SysCallFn::Fn1_1(putchar),
         GETCHAR => SysCallFn::Fn0_1(getchar),
 
-        /*
-        self.reg_syscall(TIME_CURRENT_MS, SysCallFn::Fn0_1(time_current_ms));
+        TIME_CURRENT_MS => SysCallFn::Fn0_1(time_current_ms),
 
-        self.reg_syscall(WINDOW_CREATE, SysCallFn::Fn4_1(window_create));
-        self.reg_syscall(WINDOW_DRAW_FRAME, SysCallFn::Fn2_0(window_draw_frame));
+        //WINDOW_CREATE => SysCallFn::Fn4_1(window_create),
+        //WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
 
-        self.reg_syscall(AUDIO_OPEN_OUTPUT, SysCallFn::Fn4_1(audio_open_output));
-        */
+        //AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
 
         _ => panic!("unknown syscall \"{}\"", const_idx),
     }
