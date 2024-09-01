@@ -1680,9 +1680,7 @@ impl VM
     /// Grow the heap to a new size in bytes
     pub fn grow_heap(&mut self, num_bytes: usize) -> usize
     {
-        todo!();
-
-        //self.heap.resize(num_bytes)
+        self.heap.grow(num_bytes)
     }
 
     // Create a new thread

@@ -119,7 +119,7 @@ void* malloc(size_t size)
     // Resize the heap if needed
     if (__next_alloc__ > __heap_size__)
     {
-        __heap_size__ = asm (__next_alloc__) -> u64 { syscall vm_resize_heap; };
+        __heap_size__ = asm (__next_alloc__) -> u64 { syscall vm_grow_heap; };
     }
 
     // Write a magic word at the beginning of the block for safety checks
