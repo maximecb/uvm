@@ -206,9 +206,21 @@ void window_draw_frame(u32 window_id, const u8* pixel_data)
 
 Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address.
 
+## window_poll_event
+
+```
+bool window_poll_event(void* p_event)
+```
+
+**Returns:** `bool event_read`
+
+Try to read an event from the windowing system if available. The event is read into an event struct. Boolean true is returned if an event was read, false if not.
+
 ## Constants
 These are the constants associated with the window subsystem:
 
+- `u16 EVENT_QUIT = 0`
+- `u16 EVENT_KEYDOWN = 1`
 - `u16 KEY_BACKSPACE = 8`
 - `u16 KEY_TAB = 9`
 - `u16 KEY_RETURN = 10`

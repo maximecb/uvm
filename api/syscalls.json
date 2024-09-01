@@ -370,9 +370,35 @@
         "permission": "window_display",
         "const_idx": 10,
         "description": "Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address."
+      },
+      {
+        "name": "window_poll_event",
+        "args": [
+          [
+            "void*",
+            "p_event"
+          ]
+        ],
+        "returns": [
+          "bool",
+          "event_read"
+        ],
+        "permission": "window_display",
+        "const_idx": 9,
+        "description": "Try to read an event from the windowing system if available. The event is read into an event struct. Boolean true is returned if an event was read, false if not."
       }
     ],
     "constants": [
+      [
+        "EVENT_QUIT",
+        "u16",
+        0
+      ],
+      [
+        "EVENT_KEYDOWN",
+        "u16",
+        1
+      ],
       [
         "KEY_BACKSPACE",
         "u16",

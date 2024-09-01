@@ -10,6 +10,7 @@ use sdl2::render::Texture;
 use sdl2::render::TextureAccess;
 use sdl2::pixels::PixelFormatEnum;
 
+use std::mem::size_of;
 use std::time::Duration;
 
 use crate::sys::{get_sdl_context};
@@ -157,15 +158,56 @@ pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
     window.canvas.present();
 }
 
-
-
-
-pub fn window_poll_event(thread: &mut Thread) -> Value
+// C event struct
+#[repr(C)]
+struct CEvent
 {
+    kind: u16,
+    window_id: u16,
+    keycode: u16,
+    btn_id: u16,
+}
 
+/// Takes a pointer ot an event struct as argument
+/// Returns true if an event was read
+pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
+{
+    use crate::sys::constants::*;
 
+    let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event.as_usize(), size_of::<CEvent>());
+    let mut c_event = unsafe { &mut *p_event };
 
-    todo!();
+    let mut event_pump = get_sdl_context().event_pump().unwrap();
+    let event = event_pump.poll_event();
+
+    // If no event is available
+    if event.is_none() {
+        return Value::from(false);
+    }
+
+    let event_read = match event.unwrap() {
+        Event::Quit { .. } => {
+            c_event.kind = EVENT_QUIT;
+            true
+        }
+
+        Event::KeyDown { window_id, keycode: Some(keycode), .. } => {
+            match translate_keycode(keycode) {
+                Some(keycode) => {
+                    c_event.kind = EVENT_KEYDOWN;
+                    c_event.window_id = 0;
+                    c_event.keycode = keycode;
+                    true
+                }
+
+                None => false
+            }
+        }
+
+        _ => false
+    };
+
+    Value::from(event_read)
 }
 
 
@@ -183,10 +225,6 @@ pub fn process_events(vm: &mut VM) -> ExitReason
     // TODO: we probably want to process window/input related events in window.rs ?
     for event in event_pump.poll_iter() {
         match event {
-            Event::Quit { .. } => {
-                return ExitReason::Exit(Value::from(0));
-            }
-
             Event::MouseMotion { window_id, x, y, .. } => {
                 if let ExitReason::Exit(val) = window_call_mousemove(vm, window_id, x, y) {
                     return ExitReason::Exit(val);
@@ -201,12 +239,6 @@ pub fn process_events(vm: &mut VM) -> ExitReason
 
             Event::MouseButtonUp { window_id, which, mouse_btn, x, y, .. } => {
                 if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, mouse_btn, x, y) {
-                    return ExitReason::Exit(val);
-                }
-            }
-
-            Event::KeyDown { window_id, keycode: Some(keycode), .. } => {
-                if let ExitReason::Exit(val) = window_call_keydown(vm, window_id, keycode) {
                     return ExitReason::Exit(val);
                 }
             }
@@ -238,7 +270,6 @@ pub fn process_events(vm: &mut VM) -> ExitReason
 
 
 
-/*
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {
     use crate::sys::constants::*;
@@ -306,4 +337,3 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         _ => None
     }
 }
-*/

@@ -85,6 +85,10 @@
 // Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address.
 #define window_draw_frame(__window_id, __pixel_data) asm (__window_id, __pixel_data) -> void { syscall window_draw_frame; }
 
+// bool window_poll_event(void* p_event)
+// Try to read an event from the windowing system if available. The event is read into an event struct. Boolean true is returned if an event was read, false if not.
+#define window_poll_event(__p_event) asm (__p_event) -> bool { syscall window_poll_event; }
+
 // u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
 // Open an audio output device.
 #define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
@@ -109,6 +113,8 @@
 // Close an open socket.
 #define net_close(__socket_id) asm (__socket_id) -> void { syscall net_close; }
 
+#define EVENT_QUIT 0
+#define EVENT_KEYDOWN 1
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10

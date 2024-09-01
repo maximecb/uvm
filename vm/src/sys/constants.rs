@@ -15,6 +15,7 @@ pub const PRINT_I64: u16 = 5;
 pub const PRINT_STR: u16 = 6;
 pub const PRINT_ENDL: u16 = 7;
 pub const GETCHAR: u16 = 8;
+pub const WINDOW_POLL_EVENT: u16 = 9;
 pub const WINDOW_DRAW_FRAME: u16 = 10;
 pub const VM_HEAP_SIZE: u16 = 14;
 pub const MEMSET32: u16 = 16;
@@ -51,7 +52,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "print_str", const_idx: 6, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_endl", const_idx: 7, argc: 0, has_ret: false }),
     Some(SysCallDesc { name: "getchar", const_idx: 8, argc: 0, has_ret: true }),
-    None,
+    Some(SysCallDesc { name: "window_poll_event", const_idx: 9, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false }),
     None,
     None,
@@ -76,6 +77,8 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "thread_join", const_idx: 31, argc: 1, has_ret: true }),
 ];
 
+pub const EVENT_QUIT: u16 = 0;
+pub const EVENT_KEYDOWN: u16 = 1;
 pub const KEY_BACKSPACE: u16 = 8;
 pub const KEY_TAB: u16 = 9;
 pub const KEY_RETURN: u16 = 10;
