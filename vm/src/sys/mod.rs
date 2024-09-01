@@ -119,8 +119,9 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
 
         TIME_CURRENT_MS => SysCallFn::Fn0_1(time_current_ms),
 
-        //WINDOW_CREATE => SysCallFn::Fn4_1(window_create),
-        //WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
+        WINDOW_CREATE => SysCallFn::Fn4_1(window_create),
+        WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
+        // TODO
 
         //AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
 
