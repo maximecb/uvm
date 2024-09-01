@@ -123,10 +123,6 @@ impl Unit
         out.push_str(".u64 0xBADADD5EFEFEFEFE;\n");
         out.push_str("\n");
 
-        out.push_str("__EVENT_LOOP_ENABLED__:\n");
-        out.push_str(".u8 0;\n");
-        out.push_str("\n");
-
         // Global variable initialization
         for global in &self.global_vars {
             // Align the data
@@ -169,17 +165,12 @@ impl Unit
 
             out.push_str("# call the main function and then exit\n");
             out.push_str("call main, 0;\n");
-            out.push_str("push __EVENT_LOOP_ENABLED__;\n");
-            out.push_str("load_u8;\n");
-            out.push_str("jnz __ret_to_event_loop__;\n");
             out.push_str("exit;\n");
-            out.push_str("__ret_to_event_loop__:\n");
-            out.push_str("ret;\n");
             out.push_str("\n");
         }
         else
         {
-            // If there is no main function, the unit should exit (do nothing)
+            // If there is no main function, the unit should just exit (do nothing)
             out.push_str("push 0;\n");
             out.push_str("exit;\n");
             out.push_str("\n");

@@ -56,6 +56,14 @@ fn exec_tests()
     let output = command.output().unwrap();
     assert!(output.status.success(), "execution failed");
 
+    // Compile all the tests and run them
+    for file in fs::read_dir("./tests").unwrap() {
+        let file_path = file.unwrap().path().display().to_string();
+        if file_path.ends_with(".c") {
+            compile_and_run(&file_path, true);
+        }
+    }
+
     // We only run a subset of examples
     // Some examples involve creating a UI window
     // We parse/validate those without executing them
@@ -75,14 +83,6 @@ fn exec_tests()
             let run_example = run_examples.get(file_name).is_some();
             let file_path = file_path.display().to_string();
             compile_and_run(&file_path, run_example);
-        }
-    }
-
-    // Compile all the tests and run them
-    for file in fs::read_dir("./tests").unwrap() {
-        let file_path = file.unwrap().path().display().to_string();
-        if file_path.ends_with(".c") {
-            compile_and_run(&file_path, true);
         }
     }
 }
