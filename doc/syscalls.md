@@ -99,10 +99,12 @@ Make the current thread sleep for at least the given time in milliseconds.
 ## thread_join
 
 ```
-void thread_join(u64 tid)
+u64 thread_join(u64 tid)
 ```
 
-Join on the thread with the given id.
+**Returns:** `u64 val`
+
+Join on the thread with the given id. Produces the return value for the thread.
 
 # io
 

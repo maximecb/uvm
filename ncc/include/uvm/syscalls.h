@@ -41,9 +41,9 @@
 // Make the current thread sleep for at least the given time in milliseconds.
 #define thread_sleep(__time_ms) asm (__time_ms) -> void { syscall thread_sleep; }
 
-// void thread_join(u64 tid)
-// Join on the thread with the given id.
-#define thread_join(__tid) asm (__tid) -> void { syscall thread_join; }
+// u64 thread_join(u64 tid)
+// Join on the thread with the given id. Produces the return value for the thread.
+#define thread_join(__tid) asm (__tid) -> u64 { syscall thread_join; }
 
 // void print_i64(i64 val)
 // Print an i64 value to standard output.
