@@ -1,5 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -131,14 +132,6 @@ void keydown(u64 window_id, u16 keycode)
         exit(0);
     }
 }
-
-typedef struct
-{
-    u16 kind;
-    u16 window_id;
-    u16 keycode;
-    u16 btn_id;
-} Event;
 
 void main()
 {

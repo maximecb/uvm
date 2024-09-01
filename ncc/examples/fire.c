@@ -3,8 +3,8 @@
 // https://lodev.org/cgtutor/fire.html
 
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
 #include <uvm/graphics.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
@@ -67,7 +67,7 @@ u32 hsl_to_rgb(float h, float s, float l)
     }
 }
 
-void anim_callback()
+void update()
 {
     u64 frame_start_time = time_current_ms();
 
@@ -108,16 +108,8 @@ void anim_callback()
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame (40fps)
-    fixed_rate_update(frame_start_time, 1000 / 40, anim_callback);
-}
-
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
+    // Sleep to cap the update rate at 40fps
+    thread_sleep(1000 / 40);
 }
 
 void main()
@@ -135,9 +127,24 @@ void main()
     }
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Demoscene Fire Effect", 0);
-    window_on_keydown(0, keydown);
 
-    time_delay_cb(0, anim_callback);
+    Event event;
 
-    enable_event_loop();
+    for (;;)
+    {
+        if (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                break;
+            }
+
+            if (event.kind == EVENT_KEYDOWN && event.keycode == KEY_ESCAPE)
+            {
+                break;
+            }
+        }
+
+        update();
+    }
 }
