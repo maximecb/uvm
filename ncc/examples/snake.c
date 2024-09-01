@@ -1,5 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -95,7 +96,7 @@ void spawn_apple()
     }
 }
 
-void anim_callback()
+void update()
 {
     u64 start_time = time_current_ms();
 
@@ -175,36 +176,53 @@ void anim_callback()
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame
-    fixed_rate_update(start_time, 100, anim_callback);
+    thread_sleep(100);
 }
 
-void keydown(u64 window_id, u16 keycode)
+void read_keys()
 {
-    int sdx = snake_xs[1] - snake_xs[0];
-    int sdy = snake_ys[1] - snake_ys[0];
+    Event event;
 
-    if (keycode == KEY_ESCAPE)
+    if (!window_poll_event(&event))
+    {
+        return;
+    }
+
+    if (event.kind == EVENT_QUIT)
     {
         exit(0);
     }
 
-    if (keycode == KEY_LEFT && sdx != -1)
+    if (event.kind != EVENT_KEYDOWN)
+    {
+        return;
+    }
+
+    // Current snake x/y direction
+    int sdx = snake_xs[1] - snake_xs[0];
+    int sdy = snake_ys[1] - snake_ys[0];
+
+    if (event.keycode == KEY_ESCAPE)
+    {
+        exit(0);
+    }
+
+    if (event.keycode == KEY_LEFT && sdx != -1)
     {
         dx = -1;
         dy = 0;
     }
-    else if (keycode == KEY_RIGHT && sdx != 1)
+    else if (event.keycode == KEY_RIGHT && sdx != 1)
     {
         dx = 1;
         dy = 0;
     }
-    else if (keycode == KEY_UP && sdy != -1)
+    else if (event.keycode == KEY_UP && sdy != -1)
     {
         dx = 0;
         dy = -1;
     }
-    else if (keycode == KEY_DOWN && sdy != 1)
+    else if (event.keycode == KEY_DOWN && sdy != 1)
     {
         dx = 0;
         dy = 1;
@@ -214,14 +232,17 @@ void keydown(u64 window_id, u16 keycode)
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Snake Game Example", 0);
-    window_on_keydown(0, keydown);
 
+    // Initialize the snake positions
     for (int i = 0; i < snake_len; ++i)
     {
         snake_xs[i] = GRID_WIDTH / 2;
         snake_ys[i] = (GRID_HEIGHT / 4) - i;
     }
 
-    time_delay_cb(0, anim_callback);
-    enable_event_loop();
+    for (;;)
+    {
+        read_keys();
+        update();
+    }
 }
