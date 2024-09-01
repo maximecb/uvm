@@ -204,6 +204,19 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
             }
         }
 
+        Event::KeyUp { window_id, keycode: Some(keycode), .. } => {
+            match translate_keycode(keycode) {
+                Some(keycode) => {
+                    c_event.kind = EVENT_KEYUP;
+                    c_event.window_id = 0;
+                    c_event.keycode = keycode;
+                    true
+                }
+
+                None => false
+            }
+        }
+
         _ => false
     };
 

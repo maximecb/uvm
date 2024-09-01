@@ -400,6 +400,11 @@
         1
       ],
       [
+        "EVENT_KEYUP",
+        "u16",
+        2
+      ],
+      [
         "KEY_BACKSPACE",
         "u16",
         8

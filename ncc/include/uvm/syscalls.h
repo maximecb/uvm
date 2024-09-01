@@ -115,6 +115,7 @@
 
 #define EVENT_QUIT 0
 #define EVENT_KEYDOWN 1
+#define EVENT_KEYUP 2
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10

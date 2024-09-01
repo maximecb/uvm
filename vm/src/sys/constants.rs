@@ -79,6 +79,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
 
 pub const EVENT_QUIT: u16 = 0;
 pub const EVENT_KEYDOWN: u16 = 1;
+pub const EVENT_KEYUP: u16 = 2;
 pub const KEY_BACKSPACE: u16 = 8;
 pub const KEY_TAB: u16 = 9;
 pub const KEY_RETURN: u16 = 10;
