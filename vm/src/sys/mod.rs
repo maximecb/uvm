@@ -185,54 +185,48 @@ fn memset(thread: &mut Thread, dst_ptr: Value, val: Value, num_bytes: Value)
 
 fn memset32(thread: &mut Thread, dst_ptr: Value, word: Value, num_words: Value)
 {
-    todo!();
-
-    /*
     let dst_ptr = dst_ptr.as_usize();
     let word = word.as_u32();
     let num_words = num_words.as_usize();
 
-    let mem_slice: &mut [u32] = vm.get_heap_slice(dst_ptr, num_words);
+    let mem_slice: &mut [u32] = thread.get_heap_slice_mut(dst_ptr, num_words);
     mem_slice.fill(word);
-    */
 }
 
 fn memcpy(thread: &mut Thread, dst_ptr: Value, src_ptr: Value, num_bytes: Value)
 {
-    todo!();
-
-    /*
     let dst_ptr = dst_ptr.as_usize();
     let src_ptr = src_ptr.as_usize();
     let num_bytes = num_bytes.as_usize();
 
-    // TODO: panic if slices are overlapping
+    let overlap = (
+        (dst_ptr >= src_ptr && dst_ptr < src_ptr + num_bytes) ||
+        (src_ptr >= dst_ptr && src_ptr < dst_ptr + num_bytes)
+    );
+
+    if overlap {
+        panic!("memcpy to/from overlapping regions");
+    }
 
     unsafe {
-        let dst_ptr: *mut u8 = vm.get_heap_ptr(dst_ptr, num_bytes);
-        let src_ptr: *mut u8 = vm.get_heap_ptr(src_ptr, num_bytes);
+        let dst_ptr: *mut u8 = thread.get_heap_ptr_mut(dst_ptr, num_bytes);
+        let src_ptr: *mut u8 = thread.get_heap_ptr_mut(src_ptr, num_bytes);
 
         std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, num_bytes);
     }
-    */
 }
 
 fn memcmp(thread: &mut Thread, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> Value
 {
-    todo!();
-
-    /*
     let num_bytes = num_bytes.as_usize();
 
     unsafe {
-        let ptr_a: *const libc::c_void = vm.get_heap_ptr(ptr_a.as_usize(), num_bytes);
-        let ptr_b: *const libc::c_void  = vm.get_heap_ptr(ptr_b.as_usize(), num_bytes);
+        let ptr_a: *const libc::c_void = thread.get_heap_ptr_mut(ptr_a.as_usize(), num_bytes);
+        let ptr_b: *const libc::c_void  = thread.get_heap_ptr_mut(ptr_b.as_usize(), num_bytes);
 
         let result = libc::memcmp(ptr_a, ptr_b, num_bytes);
-
         Value::from(result as u64)
     }
-    */
 }
 
 fn print_i64(thread: &mut Thread, v: Value)
