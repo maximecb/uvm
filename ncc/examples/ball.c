@@ -90,8 +90,8 @@ void update()
 
     window_draw_frame(0, frame_buffer);
 
-    // Schedule a fixed rate update for the next frame (60fps)
-    //fixed_rate_update(start_time, 1000 / 60, anim_callback);
+    // Sleep for at least 16ms (max 60fps)
+    thread_sleep(16);
 }
 
 /*
@@ -132,27 +132,37 @@ void keydown(u64 window_id, u16 keycode)
     }
 }
 
+typedef struct
+{
+    u16 kind;
+    u16 window_id;
+    u16 keycode;
+    u16 btn_id;
+} Event;
+
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
 
-
+    Event event;
 
     for (;;)
     {
-        update();
+        if (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                break;
+            }
 
+            if (event.kind == EVENT_KEYDOWN && event.keycode == KEY_ESCAPE)
+            {
+                break;
+            }
+        }
+
+        update();
     }
 
-
-
-    //window_on_keydown(0, keydown);
-
-    //time_delay_cb(0, anim_callback);
-
     //audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
-
-
-
-
 }
