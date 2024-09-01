@@ -160,6 +160,17 @@ pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
 
 
 
+pub fn window_poll_event(thread: &mut Thread) -> Value
+{
+
+
+
+    todo!();
+}
+
+
+
+
 
 /*
 /// Process SDL events

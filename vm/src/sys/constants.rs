@@ -15,17 +15,11 @@ pub const PRINT_I64: u16 = 5;
 pub const PRINT_STR: u16 = 6;
 pub const PRINT_ENDL: u16 = 7;
 pub const GETCHAR: u16 = 8;
-pub const WINDOW_ON_KEYDOWN: u16 = 9;
 pub const WINDOW_DRAW_FRAME: u16 = 10;
-pub const WINDOW_ON_MOUSEMOVE: u16 = 11;
-pub const WINDOW_ON_MOUSEDOWN: u16 = 12;
-pub const WINDOW_ON_MOUSEUP: u16 = 13;
 pub const VM_HEAP_SIZE: u16 = 14;
-pub const WINDOW_ON_KEYUP: u16 = 15;
 pub const MEMSET32: u16 = 16;
 pub const VM_GROW_HEAP: u16 = 17;
 pub const AUDIO_OPEN_OUTPUT: u16 = 18;
-pub const WINDOW_ON_TEXTINPUT: u16 = 19;
 pub const PRINT_F32: u16 = 20;
 pub const NET_LISTEN: u16 = 21;
 pub const NET_ACCEPT: u16 = 22;
@@ -57,17 +51,17 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "print_str", const_idx: 6, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_endl", const_idx: 7, argc: 0, has_ret: false }),
     Some(SysCallDesc { name: "getchar", const_idx: 8, argc: 0, has_ret: true }),
-    Some(SysCallDesc { name: "window_on_keydown", const_idx: 9, argc: 2, has_ret: false }),
+    None,
     Some(SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false }),
-    Some(SysCallDesc { name: "window_on_mousemove", const_idx: 11, argc: 2, has_ret: false }),
-    Some(SysCallDesc { name: "window_on_mousedown", const_idx: 12, argc: 2, has_ret: false }),
-    Some(SysCallDesc { name: "window_on_mouseup", const_idx: 13, argc: 2, has_ret: false }),
+    None,
+    None,
+    None,
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
-    Some(SysCallDesc { name: "window_on_keyup", const_idx: 15, argc: 2, has_ret: false }),
+    None,
     Some(SysCallDesc { name: "memset32", const_idx: 16, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "vm_grow_heap", const_idx: 17, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
-    Some(SysCallDesc { name: "window_on_textinput", const_idx: 19, argc: 2, has_ret: false }),
+    None,
     Some(SysCallDesc { name: "print_f32", const_idx: 20, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 4, has_ret: true }),

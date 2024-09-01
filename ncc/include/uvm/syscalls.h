@@ -85,30 +85,6 @@
 // Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address.
 #define window_draw_frame(__window_id, __pixel_data) asm (__window_id, __pixel_data) -> void { syscall window_draw_frame; }
 
-// void window_on_mousemove(u32 window_id, void* callback)
-// Register a callback for mouse movement. Mouse x/y coordinates are relative to the top-left corner of the window and may be negative if outside of the window.
-#define window_on_mousemove(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mousemove; }
-
-// void window_on_mousedown(u32 window_id, void* callback)
-// Register a callback for mouse button press events.
-#define window_on_mousedown(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mousedown; }
-
-// void window_on_mouseup(u32 window_id, void* callback)
-// Register a callback for mouse button release events.
-#define window_on_mouseup(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_mouseup; }
-
-// void window_on_keydown(u32 window_id, void* callback)
-// Register a callback for key press event.
-#define window_on_keydown(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_keydown; }
-
-// void window_on_keyup(u32 window_id, void* callback)
-// Register a callback for key release event.
-#define window_on_keyup(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_keyup; }
-
-// void window_on_textinput(u32 window_id, void* callback)
-// Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input.
-#define window_on_textinput(__window_id, __callback) asm (__window_id, __callback) -> void { syscall window_on_textinput; }
-
 // u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
 // Open an audio output device.
 #define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }

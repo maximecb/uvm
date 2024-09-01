@@ -206,54 +206,6 @@ void window_draw_frame(u32 window_id, const u8* pixel_data)
 
 Copy a frame of pixels to be displayed into the window. The frame must have the same width and height as the window. The pixel format is 32 bits per pixel in BGRA byte order, with 8 bits for each component and the B byte at the lowest address.
 
-## window_on_mousemove
-
-```
-void window_on_mousemove(u32 window_id, void* callback)
-```
-
-Register a callback for mouse movement. Mouse x/y coordinates are relative to the top-left corner of the window and may be negative if outside of the window.
-
-## window_on_mousedown
-
-```
-void window_on_mousedown(u32 window_id, void* callback)
-```
-
-Register a callback for mouse button press events.
-
-## window_on_mouseup
-
-```
-void window_on_mouseup(u32 window_id, void* callback)
-```
-
-Register a callback for mouse button release events.
-
-## window_on_keydown
-
-```
-void window_on_keydown(u32 window_id, void* callback)
-```
-
-Register a callback for key press event.
-
-## window_on_keyup
-
-```
-void window_on_keyup(u32 window_id, void* callback)
-```
-
-Register a callback for key release event.
-
-## window_on_textinput
-
-```
-void window_on_textinput(u32 window_id, void* callback)
-```
-
-Register a callback to receive text input. The text is encoded as UTF-8 and the callback is called for each byte input.
-
 ## Constants
 These are the constants associated with the window subsystem:
 

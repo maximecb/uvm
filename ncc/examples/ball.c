@@ -54,7 +54,7 @@ void draw_ball()
     }
 }
 
-void anim_callback()
+void update()
 {
     u64 start_time = time_current_ms();
 
@@ -91,9 +91,10 @@ void anim_callback()
     window_draw_frame(0, frame_buffer);
 
     // Schedule a fixed rate update for the next frame (60fps)
-    fixed_rate_update(start_time, 1000 / 60, anim_callback);
+    //fixed_rate_update(start_time, 1000 / 60, anim_callback);
 }
 
+/*
 u16* audio_cb(u16 num_channels, u32 num_samples)
 {
     assert(num_channels == 1);
@@ -121,6 +122,7 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
     return AUDIO_BUFFER;
 }
+*/
 
 void keydown(u64 window_id, u16 keycode)
 {
@@ -133,11 +135,24 @@ void keydown(u64 window_id, u16 keycode)
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
-    window_on_keydown(0, keydown);
 
-    time_delay_cb(0, anim_callback);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 
-    enable_event_loop();
+    for (;;)
+    {
+        update();
+
+    }
+
+
+
+    //window_on_keydown(0, keydown);
+
+    //time_delay_cb(0, anim_callback);
+
+    //audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+
+
+
+
 }
