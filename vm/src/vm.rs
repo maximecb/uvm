@@ -1683,8 +1683,8 @@ impl VM
         self.heap.grow(num_bytes)
     }
 
-    // Create a new thread
-    pub fn new_thread(vm: &Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> u64
+    // Create a new thread object without beginning execution
+    pub fn new_thread(vm: &Arc<Mutex<VM>>) -> Thread
     {
         // Assign a thread id
         let mut vm_ref = vm.lock().unwrap();
@@ -1699,9 +1699,17 @@ impl VM
 
         let vm_mutex = vm.clone();
 
+        Thread::new(tid, vm_mutex, code, heap)
+    }
+
+    // Spawn a new thread and begin executing the specified function
+    pub fn spawn_thread(vm: &Arc<Mutex<VM>>, callee_pc: u64, args: Vec<Value>) -> u64
+    {
+        let mut thread = VM::new_thread(vm);
+        let tid = thread.id;
+
         // Spawn a new thread
         let handle = thread::spawn(move || {
-            let mut thread = Thread::new(tid, vm_mutex, code, heap);
             thread.call(callee_pc, args.as_slice())
         });
 

@@ -1,21 +1,19 @@
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use std::sync::{Arc, Weak, Mutex};
-use crate::vm::{Value, VM};
+use crate::vm::{Value, VM, Thread};
 use crate::sys::{get_sdl_context};
 use crate::sys::constants::*;
 
-#[derive(Clone)]
 struct AudioCB
 {
-    // Weak reference to the VM, guarded by a mutex
-    // We use this to call the VM to generate audio
-    vm: Weak<Mutex<VM>>,
+    // Number of audio output channels
+    num_channels: usize,
+
+    // VM thread in which to execute the audio callback
+    thread: Thread,
 
     // Callback function pointer
     cb: u64,
-
-    // Number of audio output channels
-    num_channels: usize,
 }
 
 impl AudioCallback for AudioCB
@@ -31,18 +29,11 @@ impl AudioCallback for AudioCB
         assert!(output_len % self.num_channels == 0);
         let samples_per_chan = output_len / self.num_channels;
 
-        let arc = self.vm.upgrade().unwrap();
-        let mut vm = arc.lock().unwrap();
+        // Run the audio callback
+        let ptr = self.thread.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]);
 
-        /*
-        match vm.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]) {
-            ExitReason::Return(ptr) => {
-                let mem_slice: &[i16] = vm.get_heap_slice(ptr.as_usize(), output_len);
-                out.copy_from_slice(&mem_slice);
-            }
-            _ => panic!()
-        }
-        */
+        let mem_slice: &[i16] = self.thread.get_heap_slice_mut(ptr.as_usize(), output_len);
+        out.copy_from_slice(&mem_slice);
     }
 }
 
@@ -52,13 +43,10 @@ impl AudioCallback for AudioCB
 /// the Send trait, and so can't be referenced from another thread
 static mut DEVICE: Option<AudioDevice<AudioCB>> = None;
 
-
-
-/*
 // NOTE: this can only be called from the main thread since it uses SDL
 // However, it creates a new thread to generate audio sample, this thread
 // could be given a reference to another VM instance
-pub fn audio_open_output(vm: &mut VM, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
+pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
 {
     let sample_rate = sample_rate.as_u32();
     let num_channels = num_channels.as_u16();
@@ -87,12 +75,15 @@ pub fn audio_open_output(vm: &mut VM, sample_rate: Value, num_channels: Value, f
         samples: Some(1024) // buffer size, 1024 samples
     };
 
+    // Create a new VM thread in which to run the audio callback
+    let audio_thread = VM::new_thread(&thread.vm);
+
     let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
         // initialize the audio callback
         AudioCB {
-            vm: vm.sys_state.mutex.clone(),
+            num_channels: num_channels.into(),
+            thread: audio_thread,
             cb: cb,
-            num_channels: num_channels.into()
         }
     }).unwrap();
 
@@ -107,4 +98,3 @@ pub fn audio_open_output(vm: &mut VM, sample_rate: Value, num_channels: Value, f
     // TODO: return the device_id (u32)
     Value::from(0)
 }
-*/

@@ -1,5 +1,5 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <uvm/graphics.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -154,23 +154,22 @@ void mousedown(u64 window_id, u8 btn_id, i32 x, i32 y)
     redraw();
 }
 
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
-}
-
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Pentatonic Sequencer", 0);
-    window_on_keydown(0, keydown);
-    window_on_mousedown(0, mousedown);
 
-    enable_event_loop();
+    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 
     redraw();
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+
+
+
+
+
+    //window_on_keydown(0, keydown);
+    //window_on_mousedown(0, mousedown);
+
+
+
 }

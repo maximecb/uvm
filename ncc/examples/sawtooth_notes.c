@@ -1,5 +1,4 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -23,11 +22,6 @@ size_t sample_idx = 0;
 
 // Oscillator phase
 float phase = 0.0f;
-
-void anim_callback()
-{
-    exit(0);
-}
 
 u16* audio_cb(u16 num_channels, u32 num_samples)
 {
@@ -67,9 +61,8 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
 void main()
 {
-    time_delay_cb(8_000, anim_callback);
-
     audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 
-    enable_event_loop();
+    // Keep the program running until audio is done playing
+    thread_sleep(8000);
 }

@@ -123,7 +123,7 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
         WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
         WINDOW_POLL_EVENT => SysCallFn::Fn1_1(window_poll_event),
 
-        //AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
+        AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
 
         _ => panic!("unknown syscall \"{}\"", const_idx),
     }
@@ -162,7 +162,7 @@ fn thread_sleep(thread: &mut Thread, msecs: Value)
 fn thread_spawn(thread: &mut Thread, fun: Value) -> Value
 {
     let callee_pc = fun.as_u64();
-    let tid = VM::new_thread(&thread.vm, callee_pc, vec![]);
+    let tid = VM::spawn_thread(&thread.vm, callee_pc, vec![]);
     Value::from(tid)
 }
 
