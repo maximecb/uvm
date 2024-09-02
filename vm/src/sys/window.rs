@@ -166,6 +166,8 @@ struct CEvent
     window_id: u16,
     keycode: u16,
     btn_id: u16,
+    x: i32,
+    y: i32,
 }
 
 /// Takes a pointer ot an event struct as argument

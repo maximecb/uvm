@@ -10,14 +10,9 @@ typedef struct
     u16 window_id;
     u16 keycode;
     u16 btn_id;
+    i32 x;
+    i32 y;
 } Event;
-
-
-
-//void (*functionPtr)();
-//typedef void (*UpdateFn)();
-
-
 
 // Simple event loop that tries to update rendering at a fixed rate
 // until the user closes the window or presses the escape key
