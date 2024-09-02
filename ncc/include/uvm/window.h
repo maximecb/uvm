@@ -9,7 +9,7 @@ typedef struct
     u16 kind;
     u16 window_id;
     u16 key;
-    u16 btn;
+    u16 button;
     i32 x;
     i32 y;
 } Event;

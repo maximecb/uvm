@@ -405,6 +405,16 @@
         2
       ],
       [
+        "EVENT_MOUSEDOWN",
+        "u16",
+        3
+      ],
+      [
+        "EVENT_MOUSEUP",
+        "u16",
+        4
+      ],
+      [
         "KEY_BACKSPACE",
         "u16",
         8

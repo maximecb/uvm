@@ -165,7 +165,7 @@ struct CEvent
     kind: u16,
     window_id: u16,
     key: u16,
-    btn: u16,
+    button: u16,
     x: i32,
     y: i32,
 }
@@ -201,7 +201,6 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
                     c_event.key = keycode;
                     true
                 }
-
                 None => false
             }
         }
@@ -214,7 +213,20 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
                     c_event.key = keycode;
                     true
                 }
+                None => false
+            }
+        }
 
+        Event::MouseButtonDown { window_id, which, mouse_btn, x, y, .. } => {
+            match translate_mouse_button(mouse_btn) {
+                Some(button) => {
+                    c_event.kind = EVENT_MOUSEDOWN;
+                    c_event.window_id = 0;
+                    c_event.button = button;
+                    c_event.x = x;
+                    c_event.y = y;
+                    true
+                }
                 None => false
             }
         }
@@ -224,8 +236,6 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 
     Value::from(event_read)
 }
-
-
 
 
 
@@ -245,21 +255,8 @@ pub fn process_events(vm: &mut VM) -> ExitReason
                     return ExitReason::Exit(val);
                 }
             }
-
-            Event::MouseButtonDown { window_id, which, mouse_btn, x, y, .. } => {
-                if let ExitReason::Exit(val) = window_call_mousedown(vm, window_id, mouse_btn, x, y) {
-                    return ExitReason::Exit(val);
-                }
-            }
-
             Event::MouseButtonUp { window_id, which, mouse_btn, x, y, .. } => {
                 if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, mouse_btn, x, y) {
-                    return ExitReason::Exit(val);
-                }
-            }
-
-            Event::KeyUp { window_id, keycode: Some(keycode), .. } => {
-                if let ExitReason::Exit(val) = window_call_keyup(vm, window_id, keycode) {
                     return ExitReason::Exit(val);
                 }
             }
@@ -280,8 +277,6 @@ pub fn process_events(vm: &mut VM) -> ExitReason
     return ExitReason::default();
 }
 */
-
-
 
 
 
@@ -350,5 +345,19 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
         Keycode::Tab => Some(KEY_TAB),
 
         _ => None
+    }
+}
+
+fn translate_mouse_button(mouse_btn: MouseButton) -> Option<u16>
+{
+    use crate::sys::constants::*;
+
+    match mouse_btn {
+        MouseButton::Left => Some(0),
+        MouseButton::Middle => Some(1),
+        MouseButton::Right => Some(2),
+        MouseButton::X1 => Some(3),
+        MouseButton::X2 => Some(4),
+        MouseButton::Unknown => None
     }
 }

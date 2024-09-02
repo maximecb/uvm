@@ -92,6 +92,7 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
         for (int j = 0; j < NUM_ROWS; ++j)
         {
+            // If there is no note at this position
             if (!grid[j][step_idx])
                 continue;
 
@@ -122,16 +123,13 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
             // Move to the next step
             step_idx = (step_idx + 1) % NUM_STEPS;
             sample_idx = 0;
-
-            // Schedule redrawing as soon as we are done generating audio
-            //time_delay_cb(0, redraw);
         }
     }
 
-   return audio_buffer;
+    return audio_buffer;
 }
 
-void mousedown(u64 window_id, u8 btn_id, i32 x, i32 y)
+void mousedown(u8 btn_id, i32 x, i32 y)
 {
     if (btn_id != 0)
     {
@@ -178,14 +176,13 @@ void main()
                 exit(0);
             }
 
-
-
-
-
-
-
+            if (event.kind = EVENT_MOUSEDOWN)
+            {
+                mousedown(event.button, event.x, event.y);
+            }
         }
 
         thread_sleep(25);
+        redraw();
     }
 }
