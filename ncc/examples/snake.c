@@ -197,27 +197,27 @@ void read_keys()
         int sdx = snake_xs[1] - snake_xs[0];
         int sdy = snake_ys[1] - snake_ys[0];
 
-        if (event.keycode == KEY_ESCAPE)
+        if (event.key == KEY_ESCAPE)
         {
             exit(0);
         }
 
-        if (event.keycode == KEY_LEFT && sdx != -1)
+        if (event.key == KEY_LEFT && sdx != -1)
         {
             dx = -1;
             dy = 0;
         }
-        else if (event.keycode == KEY_RIGHT && sdx != 1)
+        else if (event.key == KEY_RIGHT && sdx != 1)
         {
             dx = 1;
             dy = 0;
         }
-        else if (event.keycode == KEY_UP && sdy != -1)
+        else if (event.key == KEY_UP && sdy != -1)
         {
             dx = 0;
             dy = -1;
         }
-        else if (event.keycode == KEY_DOWN && sdy != 1)
+        else if (event.key == KEY_DOWN && sdy != 1)
         {
             dx = 0;
             dy = 1;

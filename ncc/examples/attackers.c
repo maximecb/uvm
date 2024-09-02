@@ -318,19 +318,19 @@ void main()
 
             if (event.kind == EVENT_KEYDOWN)
             {
-                if (event.keycode == KEY_ESCAPE)
+                if (event.key == KEY_ESCAPE)
                 {
                     exit(0);
                 }
-                else if (event.keycode == KEY_LEFT)
+                else if (event.key == KEY_LEFT)
                 {
                     left_down = true;
                 }
-                else if (event.keycode == KEY_RIGHT)
+                else if (event.key == KEY_RIGHT)
                 {
                     right_down = true;
                 }
-                else if (event.keycode == KEY_SPACE)
+                else if (event.key == KEY_SPACE)
                 {
                     fire_bolt();
                 }
@@ -338,11 +338,11 @@ void main()
 
             if (event.kind == EVENT_KEYUP)
             {
-                if (event.keycode == KEY_LEFT)
+                if (event.key == KEY_LEFT)
                 {
                     left_down = false;
                 }
-                else if (event.keycode == KEY_RIGHT)
+                else if (event.key == KEY_RIGHT)
                 {
                     right_down = false;
                 }

@@ -8,8 +8,8 @@ typedef struct
 {
     u16 kind;
     u16 window_id;
-    u16 keycode;
-    u16 btn_id;
+    u16 key;
+    u16 btn;
     i32 x;
     i32 y;
 } Event;
@@ -33,7 +33,7 @@ void anim_event_loop(u64 max_fps, void* update_fn)
                 return;
             }
 
-            if (event.kind == EVENT_KEYDOWN && event.keycode == KEY_ESCAPE)
+            if (event.kind == EVENT_KEYDOWN && event.key == KEY_ESCAPE)
             {
                 return;
             }

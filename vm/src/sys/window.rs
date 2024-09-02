@@ -164,8 +164,8 @@ struct CEvent
 {
     kind: u16,
     window_id: u16,
-    keycode: u16,
-    btn_id: u16,
+    key: u16,
+    btn: u16,
     x: i32,
     y: i32,
 }
@@ -198,7 +198,7 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
                 Some(keycode) => {
                     c_event.kind = EVENT_KEYDOWN;
                     c_event.window_id = 0;
-                    c_event.keycode = keycode;
+                    c_event.key = keycode;
                     true
                 }
 
@@ -211,7 +211,7 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
                 Some(keycode) => {
                     c_event.kind = EVENT_KEYUP;
                     c_event.window_id = 0;
-                    c_event.keycode = keycode;
+                    c_event.key = keycode;
                     true
                 }
 

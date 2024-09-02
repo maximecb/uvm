@@ -124,7 +124,7 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
             sample_idx = 0;
 
             // Schedule redrawing as soon as we are done generating audio
-            time_delay_cb(0, redraw);
+            //time_delay_cb(0, redraw);
         }
     }
 
@@ -162,14 +162,30 @@ void main()
 
     redraw();
 
+    for (;;)
+    {
+        Event event;
+
+        while (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                exit(0);
+            }
+
+            if (event.kind == EVENT_KEYDOWN && event.key == KEY_ESCAPE)
+            {
+                exit(0);
+            }
 
 
 
 
 
-    //window_on_keydown(0, keydown);
-    //window_on_mousedown(0, mousedown);
 
 
+        }
 
+        thread_sleep(25);
+    }
 }
