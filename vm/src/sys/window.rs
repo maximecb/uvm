@@ -176,7 +176,9 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 {
     use crate::sys::constants::*;
 
-    let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event.as_usize(), size_of::<CEvent>());
+    let p_event = p_event.as_usize();
+    assert!(p_event != 0);
+    let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event, size_of::<CEvent>());
     let mut c_event = unsafe { &mut *p_event };
 
     let mut event_pump = get_sdl_context().event_pump().unwrap();

@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use std::mem::{transmute, size_of};
+use std::mem::{transmute, size_of, align_of};
 use std::collections::{HashSet, HashMap};
 use std::thread;
 use std::ffi::CStr;
@@ -561,7 +561,7 @@ impl MemView
         }
 
         // Check that the address is aligned
-        if addr & (size_of::<T>() - 1) != 0 {
+        if addr & (align_of::<T>() - 1) != 0 {
             panic!(
                 "attempting to access data of type {} at unaligned address",
                 std::any::type_name::<T>()

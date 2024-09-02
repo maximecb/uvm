@@ -30,6 +30,7 @@ u32 step_idx = 0;
 u32 sample_idx = 0;
 
 // Frequencies for musical notes on the pentatonic scale
+// Notes at the top (lowest index) have the highest frequency
 float NOTE_FREQS[6] = {
     330.0f,
     294.0f,
@@ -85,11 +86,12 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
     u64 steps_per_sec = beats_per_sec * steps_per_beat;
     u64 samples_per_step = 44100 / steps_per_sec;
 
-    // For each sample to generate
-    for (int i = 0; i < num_samples; ++i)
+    // For each sample to write in the audio buffer
+    for (int buf_idx = 0; buf_idx < num_samples; ++buf_idx)
     {
         float out = 0.0f;
 
+        // For each row of the sequencer
         for (int j = 0; j < NUM_ROWS; ++j)
         {
             // If there is no note at this position
@@ -105,15 +107,16 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
             // Use a square wave for a retro sound
             float osc_val = (cycle_pos < 0.5f)? 1.0f:-1.0f;
 
-            // Convert the output to signed 16-bit i16 samples
             out = out + osc_val * 0.3f;
         }
 
+        // Decay envelope
         float env = 1.0f - (float)(i32)sample_idx / 12000.0f;
         if (env < 0.0f)
             env = 0.0f;
 
-        audio_buffer[i] = (i16)(5000.0f * out * env);
+        // Convert the output to signed 16-bit i16 samples
+        audio_buffer[buf_idx] = (i16)(5000.0f * out * env);
 
         sample_idx = sample_idx + 1;
 
@@ -131,6 +134,7 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
 void mousedown(u8 btn_id, i32 x, i32 y)
 {
+    // Only handle left clicks
     if (btn_id != 0)
     {
         return;
@@ -152,6 +156,8 @@ void mousedown(u8 btn_id, i32 x, i32 y)
     redraw();
 }
 
+Event event;
+
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Pentatonic Sequencer", 0);
@@ -162,8 +168,6 @@ void main()
 
     for (;;)
     {
-        Event event;
-
         while (window_poll_event(&event))
         {
             if (event.kind == EVENT_QUIT)
@@ -176,7 +180,7 @@ void main()
                 exit(0);
             }
 
-            if (event.kind = EVENT_MOUSEDOWN)
+            if (event.kind == EVENT_MOUSEDOWN)
             {
                 mousedown(event.button, event.x, event.y);
             }
