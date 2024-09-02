@@ -1,5 +1,5 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -182,10 +182,8 @@ void fire_bolt()
     bolt_y = ship_y - 14;
 }
 
-void anim_callback()
+void update_anim()
 {
-    u64 start_time = time_current_ms();
-
     if (left_down && !right_down)
     {
         if (ship_x > 20)
@@ -273,13 +271,10 @@ void anim_callback()
     }
 
     window_draw_frame(0, frame_buffer);
-
-    // Schedule a fixed rate update for the next frame (40fps)
-    fixed_rate_update(start_time, 1000 / 40, anim_callback);
 }
 
 // Enemy movement update
-void enemy_callback()
+void update_enemies()
 {
     if (enemies_live == 0)
     {
@@ -300,46 +295,8 @@ void enemy_callback()
         enemy_j = enemy_j + 1;
     }
 
-    // Schedule the next update
-    int delay = 500 - 50 * enemy_j;
-    if (delay <= 0) delay = 50;
-    time_delay_cb(delay, enemy_callback);
-
     // Update the step count
     enemy_steps = enemy_steps + 1;
-}
-
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
-
-    if (keycode == KEY_LEFT)
-    {
-        left_down = true;
-    }
-    else if (keycode == KEY_RIGHT)
-    {
-        right_down = true;
-    }
-    else if (keycode == KEY_SPACE)
-    {
-        fire_bolt();
-    }
-}
-
-void keyup(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_LEFT)
-    {
-        left_down = false;
-    }
-    else if (keycode == KEY_RIGHT)
-    {
-        right_down = false;
-    }
 }
 
 void main()
@@ -347,11 +304,61 @@ void main()
     init();
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Galactic Attackers", 0);
-    window_on_keydown(0, keydown);
-    window_on_keyup(0, keyup);
 
-    time_delay_cb(0, anim_callback);
-    time_delay_cb(1500, enemy_callback);
+    Event event;
 
-    enable_event_loop();
+    for (u64 frame_idx = 0;; frame_idx = frame_idx + 1)
+    {
+        while (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                exit(0);
+            }
+
+            if (event.kind == EVENT_KEYDOWN)
+            {
+                if (event.keycode == KEY_ESCAPE)
+                {
+                    exit(0);
+                }
+                else if (event.keycode == KEY_LEFT)
+                {
+                    left_down = true;
+                }
+                else if (event.keycode == KEY_RIGHT)
+                {
+                    right_down = true;
+                }
+                else if (event.keycode == KEY_SPACE)
+                {
+                    fire_bolt();
+                }
+            }
+
+            if (event.kind == EVENT_KEYUP)
+            {
+                if (event.keycode == KEY_LEFT)
+                {
+                    left_down = false;
+                }
+                else if (event.keycode == KEY_RIGHT)
+                {
+                    right_down = false;
+                }
+            }
+        }
+
+        update_anim();
+
+        // Enemy update rate
+        int enemy_rate = 18 - 2 * enemy_j;
+        if (enemy_rate <= 2) enemy_rate = 2;
+
+        if (frame_idx > 40 && frame_idx % enemy_rate == 0)
+            update_enemies();
+
+        // 60fps max
+        thread_sleep(1000 / 60);
+    }
 }
