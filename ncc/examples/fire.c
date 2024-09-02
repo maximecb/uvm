@@ -69,8 +69,6 @@ u32 hsl_to_rgb(float h, float s, float l)
 
 void update()
 {
-    u64 frame_start_time = time_current_ms();
-
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, sizeof(frame_buffer) / 4);
 
@@ -107,9 +105,6 @@ void update()
     }
 
     window_draw_frame(0, frame_buffer);
-
-    // Sleep to cap the update rate at 40fps
-    thread_sleep(1000 / 40);
 }
 
 void main()
@@ -128,23 +123,5 @@ void main()
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Demoscene Fire Effect", 0);
 
-    Event event;
-
-    for (;;)
-    {
-        if (window_poll_event(&event))
-        {
-            if (event.kind == EVENT_QUIT)
-            {
-                break;
-            }
-
-            if (event.kind == EVENT_KEYDOWN && event.keycode == KEY_ESCAPE)
-            {
-                break;
-            }
-        }
-
-        update();
-    }
+    anim_event_loop(40, update);
 }

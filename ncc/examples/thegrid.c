@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <uvm/math.h>
 #include <uvm/3dmath.h>
 #include <uvm/graphics.h>
@@ -92,7 +92,7 @@ u32 hsl_to_rgb(float h, float s, float l)
 float line_pos = 1.0f;
 float anim_time = 0.0f;
 
-void anim_callback()
+void update()
 {
     u64 start_time = time_current_ms();
 
@@ -153,25 +153,12 @@ void anim_callback()
     u64 end_time = time_current_ms();
     printf("render time: %dms\n", end_time - start_time);
 
-    // Schedule a fixed rate update for the next frame (60fps)
-    fixed_rate_update(start_time, 1000 / 60, anim_callback);
     anim_time = anim_time + (1 / 60.0f);
-}
-
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
 }
 
 int main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "The Grid", 0);
-    window_on_keydown(0, keydown);
-    time_delay_cb(0, anim_callback);
-    enable_event_loop();
 
     // Set up the perspective projection matrix
     perspective(
@@ -181,6 +168,8 @@ int main()
         100.0f, // far,
         persp
     );
+
+    anim_event_loop(60, update);
 
     return 0;
 }

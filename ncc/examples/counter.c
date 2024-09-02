@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 
 #define FRAME_WIDTH 800
 #define FRAME_HEIGHT 600
@@ -217,7 +217,7 @@ void draw_number(int xmax, int ymin, int dot_size, int number)
     }
 }
 
-void anim_callback()
+void update()
 {
     // Clear the screen
     memset(frame_buffer, 0, sizeof(frame_buffer));
@@ -228,7 +228,6 @@ void anim_callback()
     draw_number(500, 200, 10, (int)seconds);
 
     window_draw_frame(0, frame_buffer);
-    time_delay_cb(25, anim_callback);
 }
 
 void main()
@@ -239,6 +238,5 @@ void main()
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Counter", 0);
 
-    time_delay_cb(0, anim_callback);
-    enable_event_loop();
+    anim_event_loop(40, update);
 }

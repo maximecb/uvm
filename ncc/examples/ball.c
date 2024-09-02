@@ -57,8 +57,6 @@ void draw_ball()
 
 void update()
 {
-    u64 start_time = time_current_ms();
-
     // Clear the frame buffer, set all pixels to black
     memset32(frame_buffer, 0, 800 * 600);
 
@@ -90,9 +88,6 @@ void update()
     }
 
     window_draw_frame(0, frame_buffer);
-
-    // Sleep for at least 16ms (max 60fps)
-    thread_sleep(16);
 }
 
 /*
@@ -125,37 +120,11 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 }
 */
 
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
-}
-
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
 
-    Event event;
-
-    for (;;)
-    {
-        if (window_poll_event(&event))
-        {
-            if (event.kind == EVENT_QUIT)
-            {
-                break;
-            }
-
-            if (event.kind == EVENT_KEYDOWN && event.keycode == KEY_ESCAPE)
-            {
-                break;
-            }
-        }
-
-        update();
-    }
+    anim_event_loop(60, update);
 
     //audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 }

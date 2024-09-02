@@ -98,8 +98,6 @@ void spawn_apple()
 
 void update()
 {
-    u64 start_time = time_current_ms();
-
     // Move the snake body forward
     // We do this from tail to head
     for (int i = snake_len - 1; i > 0; i = i - 1)
@@ -183,49 +181,47 @@ void read_keys()
 {
     Event event;
 
-    if (!window_poll_event(&event))
+    while (window_poll_event(&event))
     {
-        return;
-    }
+        if (event.kind == EVENT_QUIT)
+        {
+            exit(0);
+        }
 
-    if (event.kind == EVENT_QUIT)
-    {
-        exit(0);
-    }
+        if (event.kind != EVENT_KEYDOWN)
+        {
+            continue;
+        }
 
-    if (event.kind != EVENT_KEYDOWN)
-    {
-        return;
-    }
+        // Current snake x/y direction
+        int sdx = snake_xs[1] - snake_xs[0];
+        int sdy = snake_ys[1] - snake_ys[0];
 
-    // Current snake x/y direction
-    int sdx = snake_xs[1] - snake_xs[0];
-    int sdy = snake_ys[1] - snake_ys[0];
+        if (event.keycode == KEY_ESCAPE)
+        {
+            exit(0);
+        }
 
-    if (event.keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
-
-    if (event.keycode == KEY_LEFT && sdx != -1)
-    {
-        dx = -1;
-        dy = 0;
-    }
-    else if (event.keycode == KEY_RIGHT && sdx != 1)
-    {
-        dx = 1;
-        dy = 0;
-    }
-    else if (event.keycode == KEY_UP && sdy != -1)
-    {
-        dx = 0;
-        dy = -1;
-    }
-    else if (event.keycode == KEY_DOWN && sdy != 1)
-    {
-        dx = 0;
-        dy = 1;
+        if (event.keycode == KEY_LEFT && sdx != -1)
+        {
+            dx = -1;
+            dy = 0;
+        }
+        else if (event.keycode == KEY_RIGHT && sdx != 1)
+        {
+            dx = 1;
+            dy = 0;
+        }
+        else if (event.keycode == KEY_UP && sdy != -1)
+        {
+            dx = 0;
+            dy = -1;
+        }
+        else if (event.keycode == KEY_DOWN && sdy != 1)
+        {
+            dx = 0;
+            dy = 1;
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 #include <uvm/syscalls.h>
 #include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -103,14 +104,9 @@ void update()
     window_draw_frame(0, frame_buffer);
 }
 
-void anim_callback()
+void bench_update()
 {
-    u64 start_time = time_current_ms();
-
     benchmark(update());
-
-    // Schedule a fixed rate update for the next frame (20fps)
-    fixed_rate_update(start_time, 1000 / 20, anim_callback);
 }
 
 void main()
@@ -127,6 +123,5 @@ void main()
         }
     }
 
-    time_delay_cb(0, anim_callback);
-    enable_event_loop();
+    anim_event_loop(20, bench_update);
 }

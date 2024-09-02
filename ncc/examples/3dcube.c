@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <uvm/math.h>
 #include <uvm/3dmath.h>
 #include <uvm/graphics.h>
@@ -73,7 +73,7 @@ void trans_line3d(mat44 trans, vec3 _v0, vec3 _v1)
     draw_line3d(v0, v1, COLOR_PURPLE);
 }
 
-void anim_callback()
+void update()
 {
     u64 start_time = time_current_ms();
 
@@ -112,25 +112,11 @@ void anim_callback()
 
     u64 end_time = time_current_ms();
     printf("render time: %dms\n", end_time - start_time);
-
-    // Schedule a fixed rate update for the next frame (60fps)
-    fixed_rate_update(start_time, 1000 / 60, anim_callback);
-}
-
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
 }
 
 int main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Rotating 3D Cube Example", 0);
-    window_on_keydown(0, keydown);
-    time_delay_cb(0, anim_callback);
-    enable_event_loop();
 
     // Setup the perspective projection matrix
     perspective(
@@ -143,6 +129,8 @@ int main()
 
     // Translation matrix for the cube
     mat44_translate(cube_pos, trans);
+
+    anim_event_loop(60, update);
 
     return 0;
 }
