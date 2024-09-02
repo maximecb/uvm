@@ -118,6 +118,7 @@
 #define EVENT_KEYUP 2
 #define EVENT_MOUSEDOWN 3
 #define EVENT_MOUSEUP 4
+#define EVENT_MOUSEMOVE 5
 #define KEY_BACKSPACE 8
 #define KEY_TAB 9
 #define KEY_RETURN 10

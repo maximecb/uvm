@@ -233,54 +233,46 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
             }
         }
 
+        Event::MouseButtonUp { window_id, which, mouse_btn, x, y, .. } => {
+            match translate_mouse_button(mouse_btn) {
+                Some(button) => {
+                    c_event.kind = EVENT_MOUSEUP;
+                    c_event.window_id = 0;
+                    c_event.button = button;
+                    c_event.x = x;
+                    c_event.y = y;
+                    true
+                }
+                None => false
+            }
+        }
+
+        Event::MouseMotion { window_id, x, y, .. } => {
+            c_event.kind = EVENT_MOUSEMOVE;
+            c_event.window_id = 0;
+            c_event.x = x;
+            c_event.y = y;
+            true
+        }
+
+
+        /*
+        Event::TextInput { window_id, text, .. } => {
+            // For each UTF-8 byte of input
+            for ch in text.bytes() {
+                if let ExitReason::Exit(val) = window_call_textinput(vm, window_id, ch) {
+                    return ExitReason::Exit(val);
+                }
+            }
+        }
+        */
+
+
         _ => false
     };
 
     Value::from(event_read)
 }
-
-
-
-/*
-/// Process SDL events
-pub fn process_events(vm: &mut VM) -> ExitReason
-{
-    let mut event_pump = get_sdl_context().event_pump().unwrap();
-
-    // Process all pending events
-    // See: https://docs.rs/sdl2/0.30.0/sdl2/event/enum.Event.html
-    // TODO: we probably want to process window/input related events in window.rs ?
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::MouseMotion { window_id, x, y, .. } => {
-                if let ExitReason::Exit(val) = window_call_mousemove(vm, window_id, x, y) {
-                    return ExitReason::Exit(val);
-                }
-            }
-            Event::MouseButtonUp { window_id, which, mouse_btn, x, y, .. } => {
-                if let ExitReason::Exit(val) = window_call_mouseup(vm, window_id, mouse_btn, x, y) {
-                    return ExitReason::Exit(val);
-                }
-            }
-
-            Event::TextInput { window_id, text, .. } => {
-                // For each UTF-8 byte of input
-                for ch in text.bytes() {
-                    if let ExitReason::Exit(val) = window_call_textinput(vm, window_id, ch) {
-                        return ExitReason::Exit(val);
-                    }
-                }
-            }
-
-            _ => {}
-        }
-    }
-
-    return ExitReason::default();
-}
-*/
-
-
 
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {

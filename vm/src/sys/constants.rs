@@ -82,6 +82,7 @@ pub const EVENT_KEYDOWN: u16 = 1;
 pub const EVENT_KEYUP: u16 = 2;
 pub const EVENT_MOUSEDOWN: u16 = 3;
 pub const EVENT_MOUSEUP: u16 = 4;
+pub const EVENT_MOUSEMOVE: u16 = 5;
 pub const KEY_BACKSPACE: u16 = 8;
 pub const KEY_TAB: u16 = 9;
 pub const KEY_RETURN: u16 = 10;

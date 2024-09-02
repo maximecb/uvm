@@ -415,6 +415,11 @@
         4
       ],
       [
+        "EVENT_MOUSEMOVE",
+        "u16",
+        5
+      ],
+      [
         "KEY_BACKSPACE",
         "u16",
         8
