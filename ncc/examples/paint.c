@@ -1,5 +1,5 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 
 #define FRAME_WIDTH 800
@@ -120,7 +120,7 @@ void draw_palette()
 }
 
 // Mouve movement callback
-void mousemove(u64 window_id, int new_x, int new_y)
+void mousemove(int new_x, int new_y)
 {
     if (drawing)
     {
@@ -148,7 +148,7 @@ void mousemove(u64 window_id, int new_x, int new_y)
     window_draw_frame(0, frame_buffer);
 }
 
-void mousedown(u64 window_id, u8 btn_id)
+void mousedown(u16 btn_id)
 {
     if (btn_id == 0)
     {
@@ -167,13 +167,15 @@ void mousedown(u64 window_id, u8 btn_id)
     window_draw_frame(0, frame_buffer);
 }
 
-void mouseup(u64 window_id, u8 btn_id)
+void mouseup(u16 btn_id)
 {
     if (btn_id == 0)
     {
         drawing = false;
     }
 }
+
+Event event;
 
 void main()
 {
@@ -193,12 +195,30 @@ void main()
 
     draw_palette();
 
-    // Register mouse event callbacks
-    window_on_mousemove(0, mousemove);
-    window_on_mousedown(0, mousedown);
-    window_on_mouseup(0, mouseup);
-
     window_draw_frame(0, frame_buffer);
 
-    enable_event_loop();
+    for (;;)
+    {
+        window_wait_event(&event);
+
+        if (event.kind == EVENT_QUIT)
+        {
+            exit(0);
+        }
+
+        if (event.kind == EVENT_MOUSEDOWN)
+        {
+            mousedown(event.button);
+        }
+
+        if (event.kind == EVENT_MOUSEUP)
+        {
+            mouseup(event.button);
+        }
+
+        if (event.kind == EVENT_MOUSEMOVE)
+        {
+            mousemove(event.x, event.y);
+        }
+    }
 }

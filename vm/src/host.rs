@@ -116,6 +116,7 @@ pub fn get_syscall(const_idx: u16) -> SysCallFn
         WINDOW_CREATE => SysCallFn::Fn4_1(window_create),
         WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
         WINDOW_POLL_EVENT => SysCallFn::Fn1_1(window_poll_event),
+        WINDOW_WAIT_EVENT => SysCallFn::Fn1_0(window_wait_event),
 
         AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
 

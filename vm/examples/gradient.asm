@@ -118,6 +118,14 @@ push 0;
 push PIXEL_BUFFER;
 syscall window_draw_frame;
 
+
+
+#syscall window_wait_event;
+
+
+
+
+
 # Return to the event loop
 push 0;
 ret;

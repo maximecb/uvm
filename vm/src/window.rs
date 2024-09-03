@@ -168,12 +168,10 @@ struct CEvent
     y: i32,
 }
 
-/// Takes a pointer ot an event struct as argument
+/// Takes a pointer ot an event struct to write into
 /// Returns true if an event was read
 pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 {
-    use crate::constants::*;
-
     let p_event = p_event.as_usize();
     assert!(p_event != 0);
     let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event, size_of::<CEvent>());
@@ -187,7 +185,37 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
         return Value::from(false);
     }
 
-    let event_read = match event.unwrap() {
+    let event_read = translate_event(event.unwrap(), c_event);
+    Value::from(event_read)
+}
+
+/// Takes a pointer ot an event struct as argument
+/// Blocks until an event is read
+pub fn window_wait_event(thread: &mut Thread, p_event: Value)
+{
+    let p_event = p_event.as_usize();
+    assert!(p_event != 0);
+    let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event, size_of::<CEvent>());
+    let mut c_event = unsafe { &mut *p_event };
+
+    let mut event_pump = get_sdl_context().event_pump().unwrap();
+
+    loop
+    {
+        let event = event_pump.wait_event();
+
+        if translate_event(event, c_event) {
+            break;
+        }
+    }
+}
+
+/// Translate an SDL event and write the result to an event struct in memory
+fn translate_event(sdl_event: Event, c_event: &mut CEvent) -> bool
+{
+    use crate::constants::*;
+
+    match sdl_event {
         Event::Quit { .. } => {
             c_event.kind = EVENT_QUIT;
             true
@@ -253,7 +281,6 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
             true
         }
 
-
         /*
         Event::TextInput { window_id, text, .. } => {
             // For each UTF-8 byte of input
@@ -265,11 +292,8 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
         }
         */
 
-
         _ => false
-    };
-
-    Value::from(event_read)
+    }
 }
 
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>

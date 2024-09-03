@@ -208,6 +208,14 @@ bool window_poll_event(void* p_event)
 
 Try to read an event from the windowing system if available. The event is read into an event struct. Boolean true is returned if an event was read, false if not.
 
+## window_wait_event
+
+```
+void window_wait_event(void* p_event)
+```
+
+Block until an window event is available.
+
 ## Constants
 These are the constants associated with the window subsystem:
 

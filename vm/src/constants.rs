@@ -8,6 +8,7 @@ pub const SYSCALL_TBL_LEN: usize = 32;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
+pub const WINDOW_WAIT_EVENT: u16 = 2;
 pub const MEMCPY: u16 = 3;
 pub const MEMSET: u16 = 4;
 pub const PRINT_I64: u16 = 5;
@@ -44,7 +45,7 @@ pub struct SysCallDesc
 pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "time_current_ms", const_idx: 0, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "window_create", const_idx: 1, argc: 4, has_ret: true }),
-    None,
+    Some(SysCallDesc { name: "window_wait_event", const_idx: 2, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "memcpy", const_idx: 3, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "memset", const_idx: 4, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "print_i64", const_idx: 5, argc: 1, has_ret: false }),

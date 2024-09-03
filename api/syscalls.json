@@ -366,6 +366,22 @@
         "permission": "window_display",
         "const_idx": 9,
         "description": "Try to read an event from the windowing system if available. The event is read into an event struct. Boolean true is returned if an event was read, false if not."
+      },
+      {
+        "name": "window_wait_event",
+        "args": [
+          [
+            "void*",
+            "p_event"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "window_display",
+        "const_idx": 2,
+        "description": "Block until an window event is available."
       }
     ],
     "constants": [
