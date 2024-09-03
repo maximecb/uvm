@@ -5,6 +5,9 @@
 PIXEL_BUFFER:
 .zero 1_920_000;
 
+EVENT:
+.zero 256;
+
 WINDOW_TITLE:
 .stringz "UVM Gradient Example";
 
@@ -118,14 +121,17 @@ push 0;
 push PIXEL_BUFFER;
 syscall window_draw_frame;
 
+# Wait until the user closes the window
+WAIT_FOR_EVENT:
+push EVENT;
+syscall window_wait_event;
+push EVENT;
+load_u16;
+# Check for EVENT_QUIT
+push_u32 0;
+eq_u64;
+jz WAIT_FOR_EVENT;
 
-
-#syscall window_wait_event;
-
-
-
-
-
-# Return to the event loop
+# End program
 push 0;
 ret;

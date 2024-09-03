@@ -514,6 +514,9 @@ impl Assembler
             }
         }
 
+        // TODO:
+        // Populate the available constants
+
         Self {
             const_map: HashMap::new(),
             syscall_map: syscall_map,
