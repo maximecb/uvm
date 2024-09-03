@@ -1505,47 +1505,47 @@ impl Thread
 
                     match syscall_fn
                     {
-                        SysCallFn::Fn0_0(fun) => {
+                        HostFn::Fn0_0(fun) => {
                             fun(self)
                         }
 
-                        SysCallFn::Fn0_1(fun) => {
+                        HostFn::Fn0_1(fun) => {
                             let v = fun(self);
                             self.push(v);
                         }
 
-                        SysCallFn::Fn1_0(fun) => {
+                        HostFn::Fn1_0(fun) => {
                             let a0 = self.pop();
                             fun(self, a0)
                         }
 
-                        SysCallFn::Fn1_1(fun) => {
+                        HostFn::Fn1_1(fun) => {
                             let a0 = self.pop();
                             let v = fun(self, a0);
                             self.push(v);
                         }
 
-                        SysCallFn::Fn2_0(fun) => {
+                        HostFn::Fn2_0(fun) => {
                             let a1 = self.pop();
                             let a0 = self.pop();
                             fun(self, a0, a1)
                         }
 
-                        SysCallFn::Fn2_1(fun) => {
+                        HostFn::Fn2_1(fun) => {
                             let a1 = self.pop();
                             let a0 = self.pop();
                             let v = fun(self, a0, a1);
                             self.push(v);
                         }
 
-                        SysCallFn::Fn3_0(fun) => {
+                        HostFn::Fn3_0(fun) => {
                             let a2 = self.pop();
                             let a1 = self.pop();
                             let a0 = self.pop();
                             fun(self, a0, a1, a2)
                         }
 
-                        SysCallFn::Fn3_1(fun) => {
+                        HostFn::Fn3_1(fun) => {
                             let a2 = self.pop();
                             let a1 = self.pop();
                             let a0 = self.pop();
@@ -1553,7 +1553,7 @@ impl Thread
                             self.push(v);
                         }
 
-                        SysCallFn::Fn4_0(fun) => {
+                        HostFn::Fn4_0(fun) => {
                             let a3 = self.pop();
                             let a2 = self.pop();
                             let a1 = self.pop();
@@ -1561,7 +1561,7 @@ impl Thread
                             fun(self, a0, a1, a2, a3)
                         }
 
-                        SysCallFn::Fn4_1(fun) => {
+                        HostFn::Fn4_1(fun) => {
                             let a3 = self.pop();
                             let a2 = self.pop();
                             let a1 = self.pop();

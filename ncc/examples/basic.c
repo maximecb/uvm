@@ -91,7 +91,6 @@ void textinput(u64 window_id, char ch)
 
 void keydown(u64 window_id, u16 keycode)
 {
-
     if(vm_status != VM_STATUS_DONE)
     {
         if(keycode == KEY_ESCAPE) vm_status = VM_STATUS_HALT;

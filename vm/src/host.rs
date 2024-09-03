@@ -15,7 +15,7 @@ use crate::constants::*;
 /// Note: the in/out arg count should be fixed so
 ///       that we can JIT syscalls efficiently
 #[derive(Copy, Clone)]
-pub enum SysCallFn
+pub enum HostFn
 {
     Fn0_0(fn(&mut Thread)),
     Fn0_1(fn(&mut Thread) -> Value),
@@ -33,7 +33,7 @@ pub enum SysCallFn
     Fn4_1(fn(&mut Thread, a0: Value, a1: Value, a2: Value, a3: Value) -> Value),
 }
 
-impl SysCallFn
+impl HostFn
 {
     fn argc(&self) -> usize
     {
@@ -87,38 +87,38 @@ pub fn get_sdl_context() -> &'static mut sdl2::Sdl
 }
 
 /// Get the syscall with a given index
-pub fn get_syscall(const_idx: u16) -> SysCallFn
+pub fn get_syscall(const_idx: u16) -> HostFn
 {
     match const_idx {
         // Core VM syscalls
-        VM_HEAP_SIZE => SysCallFn::Fn0_1(vm_heap_size),
-        VM_GROW_HEAP => SysCallFn::Fn1_1(vm_grow_heap),
-        MEMSET => SysCallFn::Fn3_0(memset),
-        MEMSET32 => SysCallFn::Fn3_0(memset32),
-        MEMCPY => SysCallFn::Fn3_0(memcpy),
-        MEMCMP => SysCallFn::Fn3_1(memcmp),
+        VM_HEAP_SIZE => HostFn::Fn0_1(vm_heap_size),
+        VM_GROW_HEAP => HostFn::Fn1_1(vm_grow_heap),
+        MEMSET => HostFn::Fn3_0(memset),
+        MEMSET32 => HostFn::Fn3_0(memset32),
+        MEMCPY => HostFn::Fn3_0(memcpy),
+        MEMCMP => HostFn::Fn3_1(memcmp),
 
-        THREAD_SPAWN => SysCallFn::Fn1_1(thread_spawn),
-        THREAD_JOIN => SysCallFn::Fn1_1(thread_join),
-        THREAD_ID => SysCallFn::Fn0_1(thread_id),
-        THREAD_SLEEP => SysCallFn::Fn1_0(thread_sleep),
+        THREAD_SPAWN => HostFn::Fn1_1(thread_spawn),
+        THREAD_JOIN => HostFn::Fn1_1(thread_join),
+        THREAD_ID => HostFn::Fn0_1(thread_id),
+        THREAD_SLEEP => HostFn::Fn1_0(thread_sleep),
 
         // Console I/O
-        PRINT_I64 => SysCallFn::Fn1_0(print_i64),
-        PRINT_F32 => SysCallFn::Fn1_0(print_f32),
-        PRINT_STR => SysCallFn::Fn1_0(print_str),
-        PRINT_ENDL => SysCallFn::Fn0_0(print_endl),
-        PUTCHAR => SysCallFn::Fn1_1(putchar),
-        GETCHAR => SysCallFn::Fn0_1(getchar),
+        PRINT_I64 => HostFn::Fn1_0(print_i64),
+        PRINT_F32 => HostFn::Fn1_0(print_f32),
+        PRINT_STR => HostFn::Fn1_0(print_str),
+        PRINT_ENDL => HostFn::Fn0_0(print_endl),
+        PUTCHAR => HostFn::Fn1_1(putchar),
+        GETCHAR => HostFn::Fn0_1(getchar),
 
-        TIME_CURRENT_MS => SysCallFn::Fn0_1(time_current_ms),
+        TIME_CURRENT_MS => HostFn::Fn0_1(time_current_ms),
 
-        WINDOW_CREATE => SysCallFn::Fn4_1(window_create),
-        WINDOW_DRAW_FRAME => SysCallFn::Fn2_0(window_draw_frame),
-        WINDOW_POLL_EVENT => SysCallFn::Fn1_1(window_poll_event),
-        WINDOW_WAIT_EVENT => SysCallFn::Fn1_0(window_wait_event),
+        WINDOW_CREATE => HostFn::Fn4_1(window_create),
+        WINDOW_DRAW_FRAME => HostFn::Fn2_0(window_draw_frame),
+        WINDOW_POLL_EVENT => HostFn::Fn1_1(window_poll_event),
+        WINDOW_WAIT_EVENT => HostFn::Fn1_0(window_wait_event),
 
-        AUDIO_OPEN_OUTPUT => SysCallFn::Fn4_1(audio_open_output),
+        AUDIO_OPEN_OUTPUT => HostFn::Fn4_1(audio_open_output),
 
         _ => panic!("unknown syscall \"{}\"", const_idx),
     }
