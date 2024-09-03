@@ -99,7 +99,7 @@ cd vm
 cargo build
 ```
 
-To run an asm file with UVM:
+To run an [asm file](vm/examples) with UVM:
 ```sh
 cargo run examples/fizzbuzz.asm
 ```
