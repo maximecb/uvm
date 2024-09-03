@@ -7,7 +7,7 @@
 //
 
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -429,7 +429,7 @@ void computer_callback()
     X(0,0,0,21,u,1);
 }
 
-void anim_callback()
+void draw_board()
 {
     if (left_key) {
         left_key = false;
@@ -473,7 +473,10 @@ void anim_callback()
             X(0,0,0,21,u,1);
             selected = 0;
             if (y != prev_turn) {
-                time_delay_cb(100, computer_callback);
+                // Draw the newly moved piece
+                draw_board();
+                // Let the computer do its move
+                computer_callback();
             }
         }
     }
@@ -566,10 +569,9 @@ void anim_callback()
     }
 
     window_draw_frame(0, frame_buffer);
-    time_delay_cb(33, anim_callback);
 }
 
-void keydown(u64 window_id, u16 keycode)
+void keydown(u16 keycode)
 {
     if (keycode == KEY_LEFT)
     {
@@ -593,7 +595,7 @@ void keydown(u64 window_id, u16 keycode)
     }
 }
 
-void keyup(u64 window_id, u16 keycode)
+void keyup(u16 keycode)
 {
     if (keycode == KEY_LEFT)
     {
@@ -617,15 +619,35 @@ void keyup(u64 window_id, u16 keycode)
     }
 }
 
+Event event;
+
 void main()
 {
     init();
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Toledo Nanochess for UVM", 0);
-    window_on_keydown(0, keydown);
-    window_on_keyup(0, keyup);
 
-    time_delay_cb(0, anim_callback);
+    draw_board();
 
-    enable_event_loop();
+    for (;;)
+    {
+        window_wait_event(&event);
+
+        if (event.kind == EVENT_QUIT)
+        {
+            exit(0);
+        }
+
+        if (event.kind == EVENT_KEYDOWN)
+        {
+            keydown(event.key);
+        }
+
+        if (event.kind == EVENT_KEYUP)
+        {
+            keyup(event.key);
+        }
+
+        draw_board();
+    }
 }
