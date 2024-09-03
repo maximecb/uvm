@@ -40,14 +40,11 @@ Current features:
 - Event-driven event execution model compatible with async operations
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
 - Easy to use audio output API with no boilerplate
+- Thread-based parallelism
 
 Planned future features:
-- Async file and network I/O with callbacks
-  - Synchronous I/O possible as well
-- Fast JIT compiler based on dynamic binary translation and basic block versioning
-  - Expected performance ~80% of native speed (maybe more?)
-  - Near-instant warmup
-- Permission system to safely sandbox apps without granting access to entire computer
+- Simple networking API
+- Capability system to safely sandbox apps without granting access to entire computer
 - Ability to compile without SDL and without graphics/audio for headless server-side use
 - Ability to encode metadata such as author name and app icon into app image files
 - Ability to suspend running programs and save them to a new app image file
