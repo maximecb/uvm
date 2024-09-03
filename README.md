@@ -35,7 +35,7 @@ Current features:
 - Untyped design for simplicity
 - Little-endian byte ordering (like x86, ARM & RISC-V)
 - 32-bit and 64-bit integer ops, 32-bit floating-point support
-- Separate flat, linear address spaces for code and data (Harvard architecture)
+- Separate flat, linear address spaces for code and data ([Harvard architecture](https://en.wikipedia.org/wiki/Harvard_architecture))
 - Thread-based parallelism
 - Built-in, easy to use [assembler](vm/src/asm.rs) with a [simple syntax](vm/examples)
 - Event-driven event execution model compatible with async operations
@@ -125,6 +125,8 @@ The repository is organized into a 3 different subprojects, each of which is a R
   - [`/ncc/examples/*`](ncc/examples): Example C source files that can be compiled by NCC
 - `/api`: A system to document and automatically export bindings for UVM system calls and constants.
   - `/api/syscalls.json`: Declarative list of system calls exposed by UVM.
+- `/doc`: Markdown documentation for UVM
+  - [`/doc/syscalls.json`](doc/syscalls.md): List of system calls and constants accessible to UVM programs
 
 The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
 was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over
