@@ -1,5 +1,5 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <uvm/math.h>
 #include <uvm/graphics.h>
 #include <stdlib.h>
@@ -212,7 +212,7 @@ void paint_column(int col_idx, float dx, float dy, float frame_dst, float ray_ds
     }
 }
 
-void anim_callback()
+void draw_frame()
 {
     u64 frame_start_time = time_current_ms();
 
@@ -340,12 +340,9 @@ void anim_callback()
     printf("render time %d ms\n", frame_end_time - frame_start_time);
 
     window_draw_frame(0, frame_buffer);
-
-    // Schedule a fixed rate update for the next frame (30fps)
-    fixed_rate_update(frame_start_time, 1000 / 30, anim_callback);
 }
 
-void keydown(u64 window_id, u16 keycode)
+void keydown(u16 keycode)
 {
     if (keycode == KEY_ESCAPE)
     {
@@ -385,12 +382,27 @@ void keydown(u64 window_id, u16 keycode)
     }
 }
 
+Event event;
+
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Ray-Casting Example", 0);
-    window_on_keydown(0, keydown);
 
-    time_delay_cb(0, anim_callback);
+    for (;;)
+    {
+        while (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                exit(0);
+            }
 
-    enable_event_loop();
+            if (event.kind == EVENT_KEYDOWN)
+            {
+                keydown(event.key);
+            }
+        }
+
+        draw_frame();
+    }
 }
