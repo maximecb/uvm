@@ -3,7 +3,7 @@ use std::mem::{transmute, size_of, align_of};
 use std::collections::{HashSet, HashMap};
 use std::thread;
 use std::ffi::CStr;
-use crate::sys::*;
+use crate::host::*;
 use crate::program::Program;
 
 /// Instruction opcodes

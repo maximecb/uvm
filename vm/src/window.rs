@@ -9,11 +9,9 @@ use sdl2::surface::Surface;
 use sdl2::render::Texture;
 use sdl2::render::TextureAccess;
 use sdl2::pixels::PixelFormatEnum;
-
 use std::mem::size_of;
 use std::time::Duration;
-
-use crate::sys::{get_sdl_context};
+use crate::host::{get_sdl_context};
 use crate::vm::{VM, Thread, Value};
 
 /// SDL video subsystem
@@ -174,7 +172,7 @@ struct CEvent
 /// Returns true if an event was read
 pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 {
-    use crate::sys::constants::*;
+    use crate::constants::*;
 
     let p_event = p_event.as_usize();
     assert!(p_event != 0);
@@ -276,7 +274,7 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 
 fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 {
-    use crate::sys::constants::*;
+    use crate::constants::*;
 
     // https://docs.rs/sdl2/0.30.0/sdl2/keyboard/enum.Keycode.html
     match sdl_keycode {
@@ -344,7 +342,7 @@ fn translate_keycode(sdl_keycode: Keycode) -> Option<u16>
 
 fn translate_mouse_button(mouse_btn: MouseButton) -> Option<u16>
 {
-    use crate::sys::constants::*;
+    use crate::constants::*;
 
     match mouse_btn {
         MouseButton::Left => Some(0),

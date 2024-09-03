@@ -179,7 +179,7 @@ fn main()
     let mut file = File::create("syscalls.json").unwrap();
     file.write_all(json_output.as_bytes()).unwrap();
 
-    gen_rust_bindings("../vm/src/sys/constants.rs", &subsystems, &idx_to_name);
+    gen_rust_bindings("../vm/src/constants.rs", &subsystems, &idx_to_name);
     gen_c_bindings("../ncc/include/uvm/syscalls.h", &subsystems);
     gen_markdown("../doc/syscalls.md", &subsystems);
 }

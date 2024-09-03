@@ -506,7 +506,7 @@ impl Assembler
     pub fn new() -> Self
     {
         /// Populate the available syscalls
-        use crate::sys::constants::SYSCALL_DESCS;
+        use crate::constants::SYSCALL_DESCS;
         let mut syscall_map = HashMap::new();
         for syscall in SYSCALL_DESCS {
             if let Some(syscall) = syscall {

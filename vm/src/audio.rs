@@ -1,8 +1,8 @@
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM, Thread};
-use crate::sys::{get_sdl_context};
-use crate::sys::constants::*;
+use crate::host::{get_sdl_context};
+use crate::constants::*;
 
 struct AudioCB
 {

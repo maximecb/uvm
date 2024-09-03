@@ -1,9 +1,3 @@
-pub mod window;
-pub mod audio;
-pub mod net;
-pub mod time;
-pub mod constants;
-
 extern crate sdl2;
 use std::collections::HashMap;
 use std::io::Write;
@@ -11,11 +5,11 @@ use std::io::Read;
 use std::io::{stdout, stdin};
 use std::sync::{Arc, Weak, Mutex};
 use crate::vm::{Value, VM, Thread};
-use window::*;
-use audio::*;
-use net::*;
-use time::*;
-use constants::*;
+use crate::window::*;
+use crate::audio::*;
+use crate::net::*;
+use crate::time::*;
+use crate::constants::*;
 
 /// System call function signature
 /// Note: the in/out arg count should be fixed so

@@ -4,8 +4,13 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
+mod window;
+mod audio;
+mod net;
+mod time;
+mod constants;
+mod host;
 mod vm;
-mod sys;
 mod asm;
 mod program;
 mod utils;
