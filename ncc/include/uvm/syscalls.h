@@ -73,10 +73,6 @@
 // Get the UNIX time stamp in milliseconds.
 #define time_current_ms() asm () -> u64 { syscall time_current_ms; }
 
-// void time_delay_cb(u64 delay_ms, void* callback)
-// Schedule a callback to be called once after a given delay.
-#define time_delay_cb(__delay_ms, __callback) asm (__delay_ms, __callback) -> void { syscall time_delay_cb; }
-
 // u32 window_create(u32 width, u32 height, const char* title, u64 flags)
 // Create a new window with a frame buffer to draw into. The window is initially hidden when created, and will appear as soon as the first frame of image data is drawn.
 #define window_create(__width, __height, __title, __flags) asm (__width, __height, __title, __flags) -> u32 { syscall window_create; }
