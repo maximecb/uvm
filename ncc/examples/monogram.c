@@ -2,7 +2,7 @@
 // Monogram 12x7 pixel font
 
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 
 
 // > # MONOGRAM FONT
@@ -585,7 +585,7 @@ u32 FRAME_HEIGHT = 400;
 
 u32 frame_buffer[161600];
 
-void anim_callback()
+void draw()
 {
     u8 scale = 2;
 
@@ -620,15 +620,12 @@ void anim_callback()
     }
 
     window_draw_frame(0, frame_buffer);
-    time_delay_cb(10, anim_callback);
 }
 
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
 
-    time_delay_cb(0, anim_callback);
-
-    enable_event_loop();
+    anim_event_loop(10, draw);
 }
 

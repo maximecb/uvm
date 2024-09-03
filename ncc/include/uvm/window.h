@@ -14,6 +14,9 @@ typedef struct
     i32 y;
 } Event;
 
+// Stack allocation of structs not yet supported
+Event __event__;
+
 // Simple event loop that tries to update rendering at a fixed rate
 // until the user closes the window or presses the escape key
 void anim_event_loop(u64 max_fps, void* update_fn)
@@ -22,18 +25,16 @@ void anim_event_loop(u64 max_fps, void* update_fn)
 
     u64 frame_time = 1000 / max_fps;
 
-    Event event;
-
     for (;;)
     {
-        while (window_poll_event(&event))
+        while (window_poll_event(&__event__))
         {
-            if (event.kind == EVENT_QUIT)
+            if (__event__.kind == EVENT_QUIT)
             {
                 return;
             }
 
-            if (event.kind == EVENT_KEYDOWN && event.key == KEY_ESCAPE)
+            if (__event__.kind == EVENT_KEYDOWN && __event__.key == KEY_ESCAPE)
             {
                 return;
             }

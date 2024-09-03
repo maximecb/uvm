@@ -299,13 +299,13 @@ void update_enemies()
     enemy_steps = enemy_steps + 1;
 }
 
+Event event;
+
 void main()
 {
     init();
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Galactic Attackers", 0);
-
-    Event event;
 
     for (u64 frame_idx = 0;; frame_idx = frame_idx + 1)
     {

@@ -177,10 +177,10 @@ void update()
     thread_sleep(100);
 }
 
+Event event;
+
 void read_keys()
 {
-    Event event;
-
     while (window_poll_event(&event))
     {
         if (event.kind == EVENT_QUIT)
