@@ -1,19 +1,13 @@
 #include <uvm/syscalls.h>
 #include <uvm/graphics.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 #include <assert.h>
 #include <stdlib.h>
 
 // Frame buffer
 u32 fb[800][600];
 
-void keydown(u64 window_id, u16 keycode)
-{
-    if (keycode == KEY_ESCAPE)
-    {
-        exit(0);
-    }
-}
+Event event;
 
 int main()
 {
@@ -52,9 +46,13 @@ int main()
     // a window so we can view the output
     #ifndef TEST
     window_create(800, 600, "Graphics Test", 0);
-    window_on_keydown(0, keydown);
     window_draw_frame(0, fb);
-    enable_event_loop();
+    for (;;)
+    {
+        window_wait_event(&event);
+        if (event.kind == EVENT_KEYDOWN)
+            break;
+    }
     #endif
 
     return 0;
