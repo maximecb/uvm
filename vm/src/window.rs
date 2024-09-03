@@ -287,11 +287,12 @@ fn translate_event(sdl_event: Event, c_event: &mut CEvent) -> bool
         Event::TextInput { window_id, text, .. } => {
             c_event.kind = EVENT_TEXTINPUT;
             c_event.window_id = 0;
+            c_event.text.fill(0);
 
             let text_bytes = text.bytes();
 
             // This should never happen
-            if text_bytes.len() > EVENT_TEXT_MAX_BYTES {
+            if text_bytes.len() > EVENT_TEXT_MAX_BYTES - 1 {
                 panic!();
             }
 

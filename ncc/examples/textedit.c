@@ -1,6 +1,8 @@
 #include <uvm/syscalls.h>
+#include <uvm/window.h>
 #include <uvm/utils.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 
@@ -30,7 +32,7 @@ size_t row_len(size_t row_idx)
     return NUM_COLS;
 }
 
-void textinput(u64 window_id, char ch)
+void textinput(char ch)
 {
     //print_i64(ch);
     //print_endl();
@@ -50,7 +52,7 @@ void textinput(u64 window_id, char ch)
     redraw();
 }
 
-void keydown(u64 window_id, u16 keycode)
+void keydown(u16 keycode)
 {
     if (keycode == KEY_ESCAPE)
     {
@@ -131,12 +133,7 @@ void redraw()
     window_draw_frame(0, frame_buffer);
 }
 
-void anim_callback()
-{
-    benchmark(redraw());
-
-    time_delay_cb(400, anim_callback);
-}
+Event event;
 
 void main()
 {
@@ -144,12 +141,33 @@ void main()
 
     redraw();
 
-    window_on_keydown(0, keydown);
-    window_on_textinput(0, textinput);
+    for (;;)
+    {
+        while (window_poll_event(&event))
+        {
+            if (event.kind == EVENT_QUIT)
+            {
+                exit(0);
+            }
 
-    time_delay_cb(0, anim_callback);
+            if (event.kind == EVENT_KEYDOWN)
+            {
+                keydown(event.key);
+            }
 
-    enable_event_loop();
+            if (event.kind == EVENT_TEXTINPUT)
+            {
+                size_t len = strlen(event.text);
+                for (size_t i = 0; i < len; ++i)
+                {
+                    textinput(event.text[i]);
+                }
+            }
+        }
+
+        benchmark(redraw());
+        thread_sleep(20);
+    }
 }
 
 //===========================================================================
