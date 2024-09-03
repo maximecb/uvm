@@ -416,6 +416,11 @@
         5
       ],
       [
+        "EVENT_TEXTINPUT",
+        "u16",
+        6
+      ],
+      [
         "KEY_BACKSPACE",
         "u16",
         8

@@ -225,6 +225,7 @@ These are the constants associated with the window subsystem:
 - `u16 EVENT_MOUSEDOWN = 3`
 - `u16 EVENT_MOUSEUP = 4`
 - `u16 EVENT_MOUSEMOVE = 5`
+- `u16 EVENT_TEXTINPUT = 6`
 - `u16 KEY_BACKSPACE = 8`
 - `u16 KEY_TAB = 9`
 - `u16 KEY_RETURN = 10`

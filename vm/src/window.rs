@@ -156,6 +156,8 @@ pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
     window.canvas.present();
 }
 
+const EVENT_TEXT_MAX_BYTES: usize = 64;
+
 // C event struct
 #[repr(C)]
 struct CEvent
@@ -166,6 +168,7 @@ struct CEvent
     button: u16,
     x: i32,
     y: i32,
+    text: [u8; EVENT_TEXT_MAX_BYTES],
 }
 
 /// Takes a pointer ot an event struct to write into
@@ -281,16 +284,24 @@ fn translate_event(sdl_event: Event, c_event: &mut CEvent) -> bool
             true
         }
 
-        /*
         Event::TextInput { window_id, text, .. } => {
-            // For each UTF-8 byte of input
-            for ch in text.bytes() {
-                if let ExitReason::Exit(val) = window_call_textinput(vm, window_id, ch) {
-                    return ExitReason::Exit(val);
-                }
+            c_event.kind = EVENT_TEXTINPUT;
+            c_event.window_id = 0;
+
+            let text_bytes = text.bytes();
+
+            // This should never happen
+            if text_bytes.len() > EVENT_TEXT_MAX_BYTES {
+                panic!();
             }
+
+            // For each UTF-8 byte of input
+            for (i, ch) in text_bytes.enumerate() {
+                c_event.text[i] = ch;
+            }
+
+            true
         }
-        */
 
         _ => false
     }

@@ -12,6 +12,7 @@ typedef struct
     u16 button;
     i32 x;
     i32 y;
+    char text[64];
 } Event;
 
 // Stack allocation of structs not yet supported
