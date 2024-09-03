@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <uvm/graphics.h>
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
+#include <uvm/window.h>
 
 size_t FRAME_WIDTH = 400;
 size_t FRAME_HEIGHT = 400;
@@ -296,14 +296,7 @@ void draw_wu_line_fourth_octant(u32* fb, u32 fb_width, u32 fb_height, u32 x0, u3
     }
 }
 
-void mousemove(u64 window_id, u64 new_x, u64 new_y)
-{
-    // Update the mouse position
-    pos_x = new_x;
-    pos_y = new_y;
-}
-
-void anim_callback()
+void draw()
 {
     // Grey background.
     memset(frame_buffer, 0x7f, sizeof(frame_buffer));
@@ -320,17 +313,32 @@ void anim_callback()
     draw_wu_line(frame_buffer, FRAME_WIDTH, FRAME_HEIGHT, h - pos_y, pos_x, w, 0, COLOR_YELLOW );
 
     window_draw_frame(0, frame_buffer);
-
-    time_delay_cb(10, anim_callback);
 }
+
+Event event;
 
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Wu Anti-Aliased Line Example", 0);
 
-    window_on_mousemove(0, mousemove);
+    draw();
 
-    time_delay_cb(0, anim_callback);
+    for (;;)
+    {
+        window_wait_event(&event);
 
-    enable_event_loop();
+        if (event.kind == EVENT_QUIT || (event.kind == EVENT_KEYDOWN && event.key == KEY_ESCAPE))
+        {
+            exit(0);
+        }
+
+        if (event.kind == EVENT_MOUSEMOVE)
+        {
+            // Update the mouse position
+            pos_x = event.x;
+            pos_y = event.y;
+        }
+
+        draw();
+    }
 }
