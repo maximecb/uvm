@@ -216,6 +216,14 @@ pub enum Op
     load_global_u64 <addr:u24>
     */
 
+    // Set thread-local variable
+    // thread_set <idx:u16> (val)
+    thread_set,
+
+    // Get thread-local variable
+    // thread_get <idx:u16>
+    thread_get,
+
     // NOTE: may want to wait for this because it's not RISC,
     //       but it could help reduce code flag
     // NOTE: should this insn have a jump offset built in?
@@ -643,6 +651,9 @@ pub struct Thread
 
     // List of stack frames (activation records)
     frames: Vec<StackFrame>,
+
+    // Thread-local variables
+    locals: Vec<Value>,
 }
 
 impl Thread
@@ -656,6 +667,7 @@ impl Thread
             heap,
             stack: Vec::default(),
             frames: Vec::default(),
+            locals: Vec::default(),
         }
     }
 
@@ -1436,6 +1448,27 @@ impl Thread
                     unsafe { *heap_ptr = val; }
                 }
 
+                Op::thread_set => {
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let val = self.pop();
+
+                    if idx >= self.locals.len() {
+                        self.locals.resize(idx + 1, Value::from(0));
+                    }
+
+                    self.locals[idx] = val;
+                }
+
+                Op::thread_get => {
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+
+                    if idx >= self.locals.len() {
+                        self.push(Value::from(0));
+                    } else {
+                        self.push(self.locals[idx])
+                    }
+                }
+
                 Op::jmp => {
                     let offset = self.code.read_pc::<i32>(&mut pc) as isize;
                     pc = ((pc as isize) + offset) as usize;
@@ -1784,7 +1817,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 113);
+        assert!(Op::exit as usize <= 115);
     }
 
     #[test]
