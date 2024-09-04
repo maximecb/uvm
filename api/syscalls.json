@@ -132,6 +132,10 @@
           [
             "void*",
             "fptr"
+          ],
+          [
+            "void*",
+            "arg"
           ]
         ],
         "returns": [
@@ -140,7 +144,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 29,
-        "description": "Spawn a new thread running the given function."
+        "description": "Spawn a new thread running the given function with the argument value `arg`."
       },
       {
         "name": "thread_id",

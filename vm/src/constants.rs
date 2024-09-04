@@ -72,7 +72,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "putchar", const_idx: 26, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "memcmp", const_idx: 27, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "thread_id", const_idx: 28, argc: 0, has_ret: true }),
-    Some(SysCallDesc { name: "thread_spawn", const_idx: 29, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "thread_spawn", const_idx: 29, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "thread_sleep", const_idx: 30, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "thread_join", const_idx: 31, argc: 1, has_ret: true }),
 ];

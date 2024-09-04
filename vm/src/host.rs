@@ -98,7 +98,7 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         MEMCPY => HostFn::Fn3_0(memcpy),
         MEMCMP => HostFn::Fn3_1(memcmp),
 
-        THREAD_SPAWN => HostFn::Fn1_1(thread_spawn),
+        THREAD_SPAWN => HostFn::Fn2_1(thread_spawn),
         THREAD_JOIN => HostFn::Fn1_1(thread_join),
         THREAD_ID => HostFn::Fn0_1(thread_id),
         THREAD_SLEEP => HostFn::Fn1_0(thread_sleep),
@@ -154,10 +154,10 @@ fn thread_sleep(thread: &mut Thread, msecs: Value)
 // Spawn a new thread
 // Takes a function to call as argument
 // Returns a thread id
-fn thread_spawn(thread: &mut Thread, fun: Value) -> Value
+fn thread_spawn(thread: &mut Thread, fun: Value, arg: Value) -> Value
 {
     let callee_pc = fun.as_u64();
-    let tid = VM::spawn_thread(&thread.vm, callee_pc, vec![]);
+    let tid = VM::spawn_thread(&thread.vm, callee_pc, vec![arg]);
     Value::from(tid)
 }
 

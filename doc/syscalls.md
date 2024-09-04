@@ -71,12 +71,12 @@ Grow the heap to a new size given in bytes. This is similar to the `brk()` syste
 ## thread_spawn
 
 ```
-u64 thread_spawn(void* fptr)
+u64 thread_spawn(void* fptr, void* arg)
 ```
 
 **Returns:** `u64 tid`
 
-Spawn a new thread running the given function.
+Spawn a new thread running the given function with the argument value `arg`.
 
 ## thread_id
 
