@@ -721,7 +721,7 @@
         ],
         "permission": "audio_output",
         "const_idx": 18,
-        "description": "Open an audio output device."
+        "description": "Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples."
       }
     ],
     "constants": [

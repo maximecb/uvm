@@ -90,7 +90,7 @@
 #define window_wait_event(__p_event) asm (__p_event) -> void { syscall window_wait_event; }
 
 // u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
-// Open an audio output device.
+// Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
 #define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
 
 // u64 net_listen(const char* listen_addr, void* on_new_conn)
