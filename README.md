@@ -1,7 +1,7 @@
 # UVM
 
 **NOTE: this project is very much a work in progress. You're likely to run
-into bugs and missing features. I'm looking for collaborators who share the vision
+into bugs and missing features. I would like to find collaborators who share the vision
 and want to help me make it happen.**
 
 <p align="center">
@@ -10,10 +10,10 @@ and want to help me make it happen.**
     <img src="media/chess.png" height=180>
 </p>
 
-A minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
-programs that will not break and to combat code rot. It also aims to be conceptually simple, easy to understand, easy
-to target, fun to work with and approachable to newcomers. It may also be valuable as a teaching tool. There is a short
-4-minute [overview of UVM](https://www.youtube.com/watch?v=q9-o45B_qsA)
+A simple, minimalistic virtual machine designed to run self-contained applications. UVM is intended as a platform to distribute
+programs that will not break and to combat code rot. It aims to be conceptually simple, easy to understand, easy
+to target, fun to work with and approachable to newcomers. It may also be valuable as a teaching tool or as a platform
+to experiment with. There is a short 4-minute [overview of UVM](https://www.youtube.com/watch?v=q9-o45B_qsA)
 on YouTube if you'd like to see a quick survey.
 
 Contents:
