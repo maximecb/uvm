@@ -217,11 +217,11 @@ pub enum Op
     */
 
     // Set thread-local variable
-    // thread_set <idx:u16> (val)
+    // thread_set <idx:u8> (val)
     thread_set,
 
     // Get thread-local variable
-    // thread_get <idx:u16>
+    // thread_get <idx:u8>
     thread_get,
 
     // NOTE: may want to wait for this because it's not RISC,
@@ -1443,7 +1443,7 @@ impl Thread
                 }
 
                 Op::thread_set => {
-                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.pop();
 
                     if idx >= self.locals.len() {
@@ -1454,7 +1454,7 @@ impl Thread
                 }
 
                 Op::thread_get => {
-                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
                     if idx >= self.locals.len() {
                         self.push(Value::from(0));
