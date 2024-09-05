@@ -22,7 +22,7 @@ syscall print_i64;
 syscall print_endl;
 
 push 0;
-exit;
+ret;
 
 #### fact(n) ####
 FACT:

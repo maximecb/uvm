@@ -11,7 +11,7 @@
     asm () -> void { syscall print_endl; };\
     asm ("assert(" #test_expr ")") -> void { syscall print_str; };\
     asm () -> void { syscall print_endl; };\
-    asm () -> void { push -1; exit; };\
+    asm () -> void { push -1; syscall exit; };\
 }
 #else
 #define assert(test_val) {}

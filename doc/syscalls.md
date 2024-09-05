@@ -68,6 +68,14 @@ u64 vm_grow_heap(u64 num_bytes)
 
 Grow the heap to a new size given in bytes. This is similar to the `brk()` system call on POSIX systems. Note that the heap may be resized to a size larger than requested. The heap size is guaranteed to be a multiple of 8 bytes. If the requested size is smaller than the current heap size, this is a no-op. Returns the new heap size in bytes.
 
+## exit
+
+```
+void exit(i8 status)
+```
+
+End program execution with the specified exit status.
+
 ## thread_spawn
 
 ```

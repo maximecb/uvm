@@ -263,15 +263,9 @@ pub enum Op
     // syscall <syscall_idx:u16> (arg0, arg1, ..., argN)
     syscall,
 
-    // Return to caller function, or
-    // Return to the UVM event loop without terminating execution
+    // Return to caller function or end thread
     // ret (value)
     ret,
-
-    // Terminate program execution
-    // This stops the UVM event loop
-    // exit (value)
-    exit,
 
     // NOTE: last opcode must have value < 255
     // Currently, every opcode is just one byte long,
@@ -1605,17 +1599,6 @@ impl Thread
                     }
                 }
 
-                Op::exit => {
-                    if self.stack.len() <= bp {
-                        panic!("exit with no return value on stack");
-                    }
-
-                    let val = self.pop();
-                    self.stack.clear();
-                    self.frames.clear();
-                    return val;
-                }
-
                 Op::ret => {
                     if self.stack.len() <= bp {
                         panic!("ret with no return value on stack");
@@ -1813,143 +1796,143 @@ mod tests
     fn test_opcodes()
     {
         // We can have at most 254 short single-byte opcodes
-        assert!(Op::exit as usize <= 254);
+        assert!(Op::ret as usize <= 254);
 
         // Keep track of how many short opcodes we have so far
-        dbg!(Op::exit as usize);
-        assert!(Op::exit as usize <= 115);
+        dbg!(Op::ret as usize);
+        assert!(Op::ret as usize <= 114);
     }
 
     #[test]
     fn test_basics()
     {
         // Integer literals
-        eval_i64("push_i8 1; exit;", 1);
-        eval_i64("push_i8 -3; exit;", -3);
-        eval_i64("push_u64 1_333_444; exit;", 1_333_444);
-        eval_i64("push_u64 0xFF; exit;", 0xFF);
-        eval_i64("push_u64 0b1101; exit;", 0b1101);
+        eval_i64("push_i8 1; ret;", 1);
+        eval_i64("push_i8 -3; ret;", -3);
+        eval_i64("push_u64 1_333_444; ret;", 1_333_444);
+        eval_i64("push_u64 0xFF; ret;", 0xFF);
+        eval_i64("push_u64 0b1101; ret;", 0b1101);
 
         // Push mnemonic
-        eval_i64("push 0; exit;", 0);
-        eval_i64("push 1; exit;", 1);
-        eval_i64("push -1; exit;", -1);
-        eval_i64("push 0xFFFF; exit;", 0xFFFF);
-        eval_i64(".data; LABEL: .u64 0; .code; push LABEL; exit;", 0);
+        eval_i64("push 0; ret;", 0);
+        eval_i64("push 1; ret;", 1);
+        eval_i64("push -1; ret;", -1);
+        eval_i64("push 0xFFFF; ret;", 0xFFFF);
+        eval_i64(".data; LABEL: .u64 0; .code; push LABEL; ret;", 0);
 
         // Stack manipulation
-        eval_i64("push_i8 7; push_i8 3; swap; exit;", 7);
-        eval_i64("push_i8 7; push_i8 3; swap; swap; pop; exit;", 7);
+        eval_i64("push_i8 7; push_i8 3; swap; ret;", 7);
+        eval_i64("push_i8 7; push_i8 3; swap; swap; pop; ret;", 7);
 
         // Integer arithmetic
-        eval_i64("push_i8 1; push_i8 10; add_u64; exit;", 11);
-        eval_i64("push_i8 5; push_i8 10; sub_u64; exit;", -5);
-        eval_i64("push_i8 10; push_i8 2; sub_u64; exit;", 8);
-        eval_i64("push 5; push_i8 -6; mul_u64; exit;", -30);
-        eval_i64("push 1; push 2; lshift_u64; exit;", 4);
+        eval_i64("push_i8 1; push_i8 10; add_u64; ret;", 11);
+        eval_i64("push_i8 5; push_i8 10; sub_u64; ret;", -5);
+        eval_i64("push_i8 10; push_i8 2; sub_u64; ret;", 8);
+        eval_i64("push 5; push_i8 -6; mul_u64; ret;", -30);
+        eval_i64("push 1; push 2; lshift_u64; ret;", 4);
 
         // Comparisons
-        eval_i64("push_i8 1; push_i8 10; lt_i64; exit;", 1);
-        eval_i64("push_i8 11; push_i8 1; lt_i64; exit;", 0);
+        eval_i64("push_i8 1; push_i8 10; lt_i64; ret;", 1);
+        eval_i64("push_i8 11; push_i8 1; lt_i64; ret;", 0);
     }
 
     #[test]
     fn test_setlocal()
     {
-        eval_i64(".code; push 0; push 77; set_local 0; get_local 0; exit;", 77);
+        eval_i64(".code; push 0; push 77; set_local 0; get_local 0; ret;", 77);
     }
 
     #[test]
     fn test_floats()
     {
-        eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; exit;", 1);
+        eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; ret;", 1);
     }
 
     #[test]
     fn test_loop()
     {
         // Simple loop
-        eval_i64("push_i8 0; LOOP: push_i8 1; add_u64; dup; push_i8 10; eq_u64; jz LOOP; exit;", 10);
+        eval_i64("push_i8 0; LOOP: push_i8 1; add_u64; dup; push_i8 10; eq_u64; jz LOOP; ret;", 10);
     }
 
     #[test]
     fn test_load_store()
     {
         // Store instruction
-        eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; exit;", 11);
+        eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; ret;", 11);
     }
 
     #[test]
     fn test_setn()
     {
         // Store instruction
-        eval_i64(".code; push 3; push 0; push 7; setn 1; pop; exit;", 7);
+        eval_i64(".code; push 3; push 0; push 7; setn 1; pop; ret;", 7);
     }
 
     #[test]
     fn test_call_ret()
     {
-        eval_i64("call FN, 0; exit; FN: push_i8 33; ret;", 33);
-        eval_i64("push_i8 3; call FN, 1; exit; FN: get_arg 0; push_i8 1; add_u64; ret;", 4);
+        eval_i64("call FN, 0; ret; FN: push_i8 33; ret;", 33);
+        eval_i64("push_i8 3; call FN, 1; ret; FN: get_arg 0; push_i8 1; add_u64; ret;", 4);
 
         // set_arg
-        eval_i64("push_i8 3; call FN, 1; exit; FN: push 7; set_arg 0; get_arg 0; ret;", 7);
+        eval_i64("push_i8 3; call FN, 1; ret; FN: push 7; set_arg 0; get_arg 0; ret;", 7);
 
         // Two arguments and subtract (order of arguments matters)
-        eval_i64("push_i8 7; push 5; call FN, 2; exit; FN: get_arg 0; get_arg 1; sub_u64; ret;", 2);
+        eval_i64("push_i8 7; push 5; call FN, 2; ret; FN: get_arg 0; get_arg 1; sub_u64; ret;", 2);
 
         // Recursive decrement function
-        eval_i64("push 10; call DEC, 1; exit; DEC: get_arg 0; dup; jz ZERO; push 1; sub_u64; call DEC, 1; ret; ZERO: ret;", 0);
+        eval_i64("push 10; call DEC, 1; ret; DEC: get_arg 0; dup; jz ZERO; push 1; sub_u64; call DEC, 1; ret; ZERO: ret;", 0);
 
         // Regression: stack corruption
-        eval_i64("push 5; call foo, 0; pop; exit; foo: push 2; push 0; ret;", 5);
+        eval_i64("push 5; call foo, 0; pop; ret; foo: push 2; push 0; ret;", 5);
     }
 
     #[test]
     fn test_call_fp()
     {
-        eval_i64(" push FN; call_fp 0; exit; FN: push_i8 33; ret;", 33);
+        eval_i64(" push FN; call_fp 0; ret; FN: push_i8 33; ret;", 33);
     }
 
     #[test]
     fn test_syscalls()
     {
-        eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; exit;");
+        eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; ret;");
     }
 
     #[test]
     #[should_panic]
     fn test_div_zero()
     {
-        eval_src("push 8; push 0; div_u64; exit;");
+        eval_src("push 8; push 0; div_u64; ret;");
     }
 
     #[test]
     #[should_panic]
     fn test_ret_none()
     {
-        eval_src("call FN, 0; exit; FN: ret;");
+        eval_src("call FN, 0; ret; FN: ret;");
     }
 
     #[test]
     #[should_panic]
     fn test_get_arg_none()
     {
-        eval_src("call FN, 0; exit; FN: get_arg 0; push 0; ret;");
+        eval_src("call FN, 0; ret; FN: get_arg 0; push 0; ret;");
     }
 
     #[test]
     #[should_panic]
     fn test_load_oob()
     {
-        eval_src(".data; .fill 1000, 0; .code; push 100_000_000; load_u64; exit;");
+        eval_src(".data; .fill 1000, 0; .code; push 100_000_000; load_u64; ret;");
     }
 
     #[test]
     #[should_panic]
     fn test_memset_oob()
     {
-        eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 100_000_000; syscall memset; push 0; exit;");
+        eval_src(".data; LABEL: .zero 1; .code; push LABEL; push 255; push 100_000_000; syscall memset; push 0; ret;");
     }
 
     // Regression: this used to segfault

@@ -58,4 +58,4 @@ push 101;
 lt_i64; # l0 < COUNT
 jnz LOOP;
 
-exit;
+ret;

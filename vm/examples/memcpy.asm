@@ -73,4 +73,4 @@ push FPS_STR;
 syscall print_str;
 syscall print_endl;
 
-exit;
+ret;

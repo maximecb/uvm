@@ -1169,7 +1169,6 @@ impl Assembler
             }
 
             "ret" => self.code.push_op(Op::ret),
-            "exit" => self.code.push_op(Op::exit),
 
             _ => {
                 return input.parse_error(&format!("unknown instruction opcode \"{}\"", op_name))
@@ -1323,7 +1322,7 @@ mod tests
         parse_ok(" FOO_BAR:   jmp  FOO_BAR; ");
 
         // Callback label
-        parse_ok("CB: ret; push_p32 CB; exit;");
+        parse_ok("CB: ret; push_p32 CB; ret;");
     }
 
     #[test]

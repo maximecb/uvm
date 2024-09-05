@@ -97,6 +97,7 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         MEMSET32 => HostFn::Fn3_0(memset32),
         MEMCPY => HostFn::Fn3_0(memcpy),
         MEMCMP => HostFn::Fn3_1(memcmp),
+        EXIT => HostFn::Fn1_0(exit),
 
         THREAD_SPAWN => HostFn::Fn2_1(thread_spawn),
         THREAD_JOIN => HostFn::Fn1_1(thread_join),
@@ -222,6 +223,12 @@ fn memcmp(thread: &mut Thread, ptr_a: Value, ptr_b: Value, num_bytes: Value) -> 
         let result = libc::memcmp(ptr_a, ptr_b, num_bytes);
         Value::from(result as u64)
     }
+}
+
+// End program execution
+fn exit(thread: &mut Thread, val: Value)
+{
+    unsafe { libc::exit(val.as_i32() & 0xFF) };
 }
 
 fn print_i64(thread: &mut Thread, v: Value)

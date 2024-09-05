@@ -11,9 +11,10 @@ int abs(int n)
     return n;
 }
 
+#undef exit
 void exit(int status)
 {
-    asm (status) -> void { exit; };
+    asm (status) -> void { syscall exit; };
 }
 
 // Convert long int to string
