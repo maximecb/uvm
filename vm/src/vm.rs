@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{Ordering, AtomicU64};
 use std::mem::{transmute, size_of, align_of};
 use std::collections::{HashSet, HashMap};
 use std::thread;
@@ -215,6 +216,22 @@ pub enum Op
     // If we save 24 bits for the offset, then that gives us quite a lot
     load_global_u64 <addr:u24>
     */
+
+    // Atomic load with acquire semantics
+    // atomic_load (addr)
+    atomic_load_u64,
+
+    // Atomic store with release semantics
+    // atomic_store (addr) (value)
+    atomic_store_u64,
+
+    // Compare-and-swap
+    // Uses acquire semantics on success, relaxed on failure.
+    // Store has relaxed semantics.
+    // This instruction can be used to implement spin locks.
+    // atomic_cas (addr) (cmp-val) (store-val)
+    // Pushes the value found at the memory address
+    atomic_cas_u64,
 
     // Set thread-local variable
     // thread_set <idx:u8> (val)
@@ -1442,6 +1459,49 @@ impl Thread
                     unsafe { *heap_ptr = val; }
                 }
 
+                Op::atomic_load_u64 => {
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
+                    let atomic = unsafe {AtomicU64::from_ptr(heap_ptr) };
+                    let val = atomic.load(Ordering::Acquire);
+                    self.push(Value::from(val));
+                }
+
+                Op::atomic_store_u64 => {
+                    let val = self.pop().as_u64();
+                    let addr = self.pop().as_usize();
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
+                    let atomic = unsafe {AtomicU64::from_ptr(heap_ptr) };
+                    atomic.store(1, Ordering::Release);
+                }
+
+                // Compare-and-swap
+                // Uses acquire semantics on success, relaxed on failure.
+                // Store has relaxed semantics.
+                // This instruction can be used to implement spin locks.
+                // atomic_cas (addr) (cmp-val) (store-val)
+                // Pushes the value found at the memory address
+                Op::atomic_cas_u64 => {
+                    let addr = self.pop().as_usize();
+                    let cmp_val = self.pop().as_u64();
+                    let store_val = self.pop().as_u64();
+
+                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
+                    let atomic = unsafe {AtomicU64::from_ptr(heap_ptr) };
+
+                    let result = atomic.compare_exchange(
+                        cmp_val,
+                        store_val,
+                        Ordering::Acquire,
+                        Ordering::Relaxed,
+                    );
+
+                    match result {
+                        Ok(val) => self.push(Value::from(val)),
+                        Err(actual_val) => self.push(Value::from(actual_val)),
+                    }
+                }
+
                 Op::thread_set => {
                     let idx = self.code.read_pc::<u8>(&mut pc) as usize;
                     let val = self.pop();
@@ -1800,7 +1860,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 114);
+        assert!(Op::ret as usize <= 117);
     }
 
     #[test]
