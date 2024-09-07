@@ -1111,6 +1111,10 @@ impl Assembler
             "store_u32" => self.code.push_op(Op::store_u32),
             "store_u64" => self.code.push_op(Op::store_u64),
 
+            "atomic_load_u64" => self.code.push_op(Op::atomic_load_u64),
+            "atomic_store_u64" => self.code.push_op(Op::atomic_store_u64),
+            "atomic_cas_u64" => self.code.push_op(Op::atomic_cas_u64),
+
             "jmp" => {
                 self.code.push_op(Op::jmp);
                 let label_name = input.parse_ident()?;

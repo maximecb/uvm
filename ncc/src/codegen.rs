@@ -632,6 +632,13 @@ impl Expr
                         child.gen_code(sym, out)?;
                         return Ok(());
                     }
+
+                    // If this is a reference to a global
+                    if let Expr::Ref(Decl::Global { name, t }) = child.as_ref() {
+                        // Push the address
+                        out.push_str(&format!("push {};\n", name));
+                        return Ok(());
+                    }
                 }
 
                 child.gen_code(sym, out)?;

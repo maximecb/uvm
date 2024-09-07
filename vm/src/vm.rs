@@ -582,8 +582,9 @@ impl MemView
         // Check that the address is aligned
         if addr & (align_of::<T>() - 1) != 0 {
             panic!(
-                "attempting to access data of type {} at unaligned address",
-                std::any::type_name::<T>()
+                "attempting to access data of type {} at unaligned address {}",
+                std::any::type_name::<T>(),
+                addr
             );
         }
 
@@ -1472,7 +1473,7 @@ impl Thread
                     let addr = self.pop().as_usize();
                     let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let atomic = unsafe {AtomicU64::from_ptr(heap_ptr) };
-                    atomic.store(1, Ordering::Release);
+                    atomic.store(val, Ordering::Release);
                 }
 
                 // Compare-and-swap
@@ -1482,9 +1483,9 @@ impl Thread
                 // atomic_cas (addr) (cmp-val) (store-val)
                 // Pushes the value found at the memory address
                 Op::atomic_cas_u64 => {
-                    let addr = self.pop().as_usize();
-                    let cmp_val = self.pop().as_u64();
                     let store_val = self.pop().as_u64();
+                    let cmp_val = self.pop().as_u64();
+                    let addr = self.pop().as_usize();
 
                     let heap_ptr = self.get_heap_ptr_mut(addr, 1);
                     let atomic = unsafe {AtomicU64::from_ptr(heap_ptr) };
