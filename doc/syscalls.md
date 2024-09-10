@@ -312,6 +312,14 @@ u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callba
 
 Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
 
+## audio_read_samples
+
+```
+void audio_read_samples(i16* dst_buf, u32 num_samples)
+```
+
+Read available input samples. Must be called from the audio input thread.
+
 ## Constants
 These are the constants associated with the audio subsystem:
 

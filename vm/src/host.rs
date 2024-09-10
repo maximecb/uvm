@@ -120,6 +120,8 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         WINDOW_WAIT_EVENT => HostFn::Fn1_0(window_wait_event),
 
         AUDIO_OPEN_OUTPUT => HostFn::Fn4_1(audio_open_output),
+        AUDIO_OPEN_INPUT => HostFn::Fn4_1(audio_open_input),
+        AUDIO_READ_SAMPLES => HostFn::Fn2_0(audio_read_samples),
 
         _ => panic!("unknown syscall \"{}\"", const_idx),
     }

@@ -766,6 +766,26 @@
         "permission": "audio_input",
         "const_idx": 12,
         "description": "Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples."
+      },
+      {
+        "name": "audio_read_samples",
+        "args": [
+          [
+            "i16*",
+            "dst_buf"
+          ],
+          [
+            "u32",
+            "num_samples"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "audio_input",
+        "const_idx": 13,
+        "description": "Read available input samples. Must be called from the audio input thread."
       }
     ],
     "constants": [

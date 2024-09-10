@@ -240,3 +240,26 @@ pub fn audio_open_input(thread: &mut Thread, sample_rate: Value, num_channels: V
     // FIXME: return the device_id (u32)
     Value::from(1)
 }
+
+/// Read audio samples from an audio input thread
+pub fn audio_read_samples(thread: &mut Thread, dst_ptr: Value, num_samples: Value)
+{
+    let dst_ptr = dst_ptr.as_usize();
+    let num_samples = num_samples.as_usize();
+
+    INPUT_STATE.with_borrow_mut(|s| {
+        if s.input_tid != thread.id {
+            panic!("can only read audio samples from audio input thread");
+        }
+
+        // For now, force reading all available samples
+        if num_samples != s.samples.len() {
+            panic!("must read all available samples");
+        }
+
+        let dst_buf: &mut [i16] = thread.get_heap_slice_mut(dst_ptr, num_samples);
+        dst_buf.copy_from_slice(&s.samples);
+
+        s.samples.clear();
+    });
+}
