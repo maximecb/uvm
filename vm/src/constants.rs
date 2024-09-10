@@ -18,6 +18,7 @@ pub const GETCHAR: u16 = 8;
 pub const WINDOW_POLL_EVENT: u16 = 9;
 pub const WINDOW_DRAW_FRAME: u16 = 10;
 pub const EXIT: u16 = 11;
+pub const AUDIO_OPEN_INPUT: u16 = 12;
 pub const VM_HEAP_SIZE: u16 = 14;
 pub const MEMSET32: u16 = 16;
 pub const VM_GROW_HEAP: u16 = 17;
@@ -56,7 +57,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "window_poll_event", const_idx: 9, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "exit", const_idx: 11, argc: 1, has_ret: false }),
-    None,
+    Some(SysCallDesc { name: "audio_open_input", const_idx: 12, argc: 4, has_ret: true }),
     None,
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
     None,

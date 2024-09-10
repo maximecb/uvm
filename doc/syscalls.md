@@ -302,6 +302,16 @@ u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callb
 
 Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
 
+## audio_open_input
+
+```
+u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+```
+
+**Returns:** `u32 device_id`
+
+Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
+
 ## Constants
 These are the constants associated with the audio subsystem:
 

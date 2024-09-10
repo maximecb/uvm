@@ -90,7 +90,6 @@ void update()
     window_draw_frame(0, frame_buffer);
 }
 
-/*
 u16* audio_cb(u16 num_channels, u32 num_samples)
 {
     assert(num_channels == 1);
@@ -110,7 +109,9 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
         // The intensity decreases over time
         u32 intensity = INT16_MAX - (audio_pos * INT16_MAX / AUDIO_LEN);
 
-        u32 sawtooth = 4000 * (i % 128) / 128;
+        u32 period = 128 - (audio_pos * 64 / AUDIO_LEN);
+
+        u32 sawtooth = 4000 * (i % period) / period;
         AUDIO_BUFFER[i] = intensity * sawtooth / INT16_MAX;
 
         ++audio_pos;
@@ -118,13 +119,12 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
 
     return AUDIO_BUFFER;
 }
-*/
 
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
 
-    anim_event_loop(60, update);
+    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
 
-    //audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+    anim_event_loop(60, update);
 }

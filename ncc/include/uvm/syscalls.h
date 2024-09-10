@@ -97,6 +97,10 @@
 // Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
 #define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
 
+// u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+// Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
+#define audio_open_input(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_input; }
+
 // u64 net_listen(const char* listen_addr, void* on_new_conn)
 // Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
 #define net_listen(__listen_addr, __on_new_conn) asm (__listen_addr, __on_new_conn) -> u64 { syscall net_listen; }

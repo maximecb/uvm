@@ -738,6 +738,34 @@
         "permission": "audio_output",
         "const_idx": 18,
         "description": "Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples."
+      },
+      {
+        "name": "audio_open_input",
+        "args": [
+          [
+            "u32",
+            "sample_rate"
+          ],
+          [
+            "u16",
+            "num_channels"
+          ],
+          [
+            "u16",
+            "format"
+          ],
+          [
+            "void*",
+            "callback"
+          ]
+        ],
+        "returns": [
+          "u32",
+          "device_id"
+        ],
+        "permission": "audio_input",
+        "const_idx": 12,
+        "description": "Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples."
       }
     ],
     "constants": [

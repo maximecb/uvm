@@ -175,6 +175,10 @@ struct CEvent
 /// Returns true if an event was read
 pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 {
+    if thread.id != 0 {
+        panic!("window functions should only be called from the main thread");
+    }
+
     let p_event = p_event.as_usize();
     assert!(p_event != 0);
     let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event, size_of::<CEvent>());
@@ -196,6 +200,10 @@ pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 /// Blocks until an event is read
 pub fn window_wait_event(thread: &mut Thread, p_event: Value)
 {
+    if thread.id != 0 {
+        panic!("window functions should only be called from the main thread");
+    }
+
     let p_event = p_event.as_usize();
     assert!(p_event != 0);
     let p_event: *mut CEvent = thread.get_heap_ptr_mut(p_event, size_of::<CEvent>());
