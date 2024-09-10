@@ -6,10 +6,14 @@ use crate::vm::{Value, VM, Thread};
 use crate::host::{get_sdl_context};
 use crate::constants::*;
 
-struct AudioCB
+// Audio output callback
+struct OutputCB
 {
     // Number of audio output channels
     num_channels: usize,
+
+    // Expected buffer size
+    buf_size: usize,
 
     // VM thread in which to execute the audio callback
     thread: Thread,
@@ -18,18 +22,20 @@ struct AudioCB
     cb: u64,
 }
 
-impl AudioCallback for AudioCB
+impl AudioCallback for OutputCB
 {
-    // Signed 16-bit samples
+    // Using signed 16-bit samples
     type Channel = i16;
 
     fn callback(&mut self, out: &mut [i16])
     {
-        out.fill(0);
-
         let output_len = out.len();
         assert!(output_len % self.num_channels == 0);
         let samples_per_chan = output_len / self.num_channels;
+        assert!(samples_per_chan == self.buf_size);
+
+        // Clear the buffer
+        out.fill(0);
 
         // Run the audio callback
         let ptr = self.thread.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]);
@@ -39,17 +45,75 @@ impl AudioCallback for AudioCB
     }
 }
 
+// Audio input callback
+struct InputCB
+{
+    // Number of audio input channels
+    num_channels: usize,
+
+    // Expected buffer size
+    buf_size: usize,
+
+    // VM thread in which to execute the audio callback
+    thread: Thread,
+
+    // Callback function pointer
+    cb: u64,
+}
+
+impl AudioCallback for InputCB
+{
+    // Using signed 16-bit samples
+    type Channel = i16;
+
+    // Receives a buffer of input samples
+    fn callback(&mut self, buf: &mut [i16])
+    {
+        assert!(buf.len() % self.num_channels == 0);
+        let samples_per_chan = buf.len() / self.num_channels;
+        assert!(samples_per_chan == self.buf_size);
+
+        // Copy the samples to make them accessible to the audio thread
+        INPUT_STATE.with_borrow_mut(|s| {
+            s.input_tid = self.thread.id;
+            s.samples.clear();
+            s.samples.copy_from_slice(buf);
+        });
+
+        // Run the audio callback
+        let ptr = self.thread.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]);
+    }
+}
+
 #[derive(Default)]
 struct AudioState
 {
-    input_dev: Option<AudioDevice<AudioCB>>,
-    output_dev: Option<AudioDevice<AudioCB>>,
+    output_dev: Option<AudioDevice<OutputCB>>,
+    input_dev: Option<AudioDevice<InputCB>>,
 }
 
-// This is only accessed from the main thread
-thread_local! {
-    static AUDIO_STATE: RefCell<AudioState> = RefCell::new(AudioState::default());
+#[derive(Default)]
+struct InputState
+{
+    // Thread doing the audio input
+    input_tid: u64,
+
+    // Samples available to read
+    samples: Vec<i16>,
 }
+
+thread_local! {
+    // This is only accessed from the main thread
+    static AUDIO_STATE: RefCell<AudioState> = RefCell::new(AudioState::default());
+
+    // Audio input state. Accessed from the input thread.
+    static INPUT_STATE: RefCell<InputState> = RefCell::new(InputState::default());
+}
+
+
+
+
+
 
 pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
 {
@@ -94,9 +158,9 @@ pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: 
     let audio_subsystem = sdl.audio().unwrap();
 
     let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
-        // initialize the audio callback
-        AudioCB {
+        OutputCB {
             num_channels: num_channels.into(),
+            buf_size: desired_spec.samples.unwrap() as usize,
             thread: audio_thread,
             cb: cb,
         }
@@ -157,9 +221,9 @@ pub fn audio_open_input(thread: &mut Thread, sample_rate: Value, num_channels: V
     let audio_subsystem = sdl.audio().unwrap();
 
     let device = audio_subsystem.open_capture(None, &desired_spec, |spec| {
-        // initialize the audio callback
-        AudioCB {
+        InputCB {
             num_channels: num_channels.into(),
+            buf_size: desired_spec.samples.unwrap() as usize,
             thread: audio_thread,
             cb: cb,
         }

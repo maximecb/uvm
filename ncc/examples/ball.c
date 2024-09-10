@@ -10,7 +10,7 @@
 #define AUDIO_LEN 8_000
 
 // RGBA pixels: 800 * 600
-u32 frame_buffer[600][800];
+u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
 
 // Current ball position
 int px = 200;
