@@ -76,7 +76,7 @@ impl AudioCallback for InputCB
         // Copy the samples to make them accessible to the audio thread
         INPUT_STATE.with_borrow_mut(|s| {
             s.input_tid = self.thread.id;
-            s.samples.clear();
+            s.samples.resize(buf.len(), 0);
             s.samples.copy_from_slice(buf);
         });
 
@@ -109,11 +109,6 @@ thread_local! {
     // Audio input state. Accessed from the input thread.
     static INPUT_STATE: RefCell<InputState> = RefCell::new(InputState::default());
 }
-
-
-
-
-
 
 pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
 {

@@ -9,7 +9,7 @@
 #define BALL_RADIUS 20
 #define AUDIO_LEN 8_000
 
-// RGBA pixels: 800 * 600
+// RGBA pixels
 u32 frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
 
 // Current ball position
@@ -58,7 +58,7 @@ void draw_ball()
 void update()
 {
     // Clear the frame buffer, set all pixels to black
-    memset32(frame_buffer, 0, 800 * 600);
+    memset32(frame_buffer, 0, sizeof(frame_buffer) / sizeof(u32));
 
     draw_ball();
 
