@@ -86,7 +86,7 @@ pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Va
         .build()
         .unwrap();
 
-    let mut canvas = window.into_canvas().build().unwrap();
+    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
@@ -139,6 +139,9 @@ pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
         window.canvas.window_mut().show();
         window.canvas.window_mut().raise();
     }
+
+    // Clear the canvas
+    window.canvas.clear();
 
     // Update the texture
     let pitch = 4 * window.width as usize;
