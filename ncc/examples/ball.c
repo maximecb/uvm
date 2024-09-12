@@ -1,5 +1,4 @@
 #include <uvm/syscalls.h>
-#include <uvm/utils.h>
 #include <uvm/window.h>
 #include <stdlib.h>
 #include <stdint.h>
