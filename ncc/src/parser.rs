@@ -39,9 +39,9 @@ fn parse_atom(input: &mut Input) -> Result<Expr, ParseError>
         let float_val: f32 = num_str.parse().unwrap();
 
         if !input.match_char('f') {
-            return input.parse_error(&concat!("
-                only floats are supported for now, ",
-                "e.g. 3.5f (float), not 3.5 (double)"
+            return input.parse_error(&format!(
+                "only floats are supported for now, try {}f (float) instead of {} (double)",
+                num_str, num_str
             ));
         }
 
