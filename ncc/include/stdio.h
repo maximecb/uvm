@@ -26,9 +26,6 @@ int getchar()
 }
 #endif
 
-// Internal buffer used by printf
-char* __buffer[32];
-
 int printf(char* format, ...)
 {
     unsigned int ch_written = 0;

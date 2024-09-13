@@ -93,6 +93,14 @@ impl Env
         offset
     }
 
+    /// Check if a local with this name is already defined
+    fn local_defined(&self, name: &str) -> bool
+    {
+        let num_scopes = self.scopes.len();
+        let top_scope = &self.scopes[num_scopes - 1];
+        top_scope.decls.get(name).is_some()
+    }
+
     /// Define a new local variable in the topmost scope
     fn define_local(&mut self, name: &str, var_type: Type)
     {
@@ -330,6 +338,13 @@ impl Stmt
 
             // Local variable declaration
             Stmt::VarDecl { var_type, var_name, init_expr } => {
+                if env.local_defined(var_name) {
+                    return ParseError::msg_only(&format!(
+                        "local with name \"{}\" already exists",
+                        var_name
+                    ));
+                }
+
                 env.define_local(var_name, var_type.clone());
 
                 let decl = env.lookup(var_name).unwrap();
