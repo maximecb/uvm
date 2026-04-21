@@ -174,7 +174,7 @@ struct CEvent
     text: [u8; EVENT_TEXT_MAX_BYTES],
 }
 
-/// Takes a pointer ot an event struct to write into
+/// Takes a pointer to an event struct to write into
 /// Returns true if an event was read
 pub fn window_poll_event(thread: &mut Thread, p_event: Value) -> Value
 {
