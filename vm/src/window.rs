@@ -8,33 +8,41 @@ use sdl2::mouse::MouseButton;
 use sdl2::surface::Surface;
 use sdl2::render::Texture;
 use sdl2::render::TextureAccess;
+use sdl2::render::TextureCreator;
+use sdl2::video::WindowContext;
 use sdl2::pixels::PixelFormatEnum;
+use std::cell::RefCell;
 use std::mem::size_of;
 use std::time::Duration;
 use crate::host::{get_sdl_context};
 use crate::vm::{VM, Thread, Value};
 
-/// SDL video subsystem
-/// This is a global variable because it doesn't implement
-/// the Send trait, and so can't be referenced from another thread
-static mut SDL_VIDEO: Option<sdl2::VideoSubsystem> = None;
+thread_local! {
+    /// SDL video subsystem
+    /// This is thread-local because it doesn't implement the Send trait,
+    /// and so can't be referenced from another thread
+    static SDL_VIDEO: RefCell<Option<sdl2::VideoSubsystem>> = RefCell::new(None);
 
-/// Lazily initialize the SDL video subsystem
-fn get_video_subsystem() -> &'static mut sdl2::VideoSubsystem
-{
-    unsafe
-    {
-        let sdl = get_sdl_context();
-
-        if SDL_VIDEO.is_none() {
-            SDL_VIDEO = Some(sdl.video().unwrap());
-        }
-
-        SDL_VIDEO.as_mut().unwrap()
-    }
+    // Note: we're keeping this as a thread-local global to avoid the
+    // Window type bubbling up everywhere.
+    // TODO: eventually we will likely want to allow multiple windows
+    static WINDOW: RefCell<Option<Window>> = RefCell::new(None);
 }
 
-struct Window<'a>
+/// Get a handle to the SDL video subsystem, lazily initializing it
+/// VideoSubsystem is a cheap reference-counted handle, returned by value
+fn get_video_subsystem() -> sdl2::VideoSubsystem
+{
+    SDL_VIDEO.with_borrow_mut(|video| {
+        if video.is_none() {
+            *video = Some(get_sdl_context().video().unwrap());
+        }
+
+        video.as_ref().unwrap().clone()
+    })
+}
+
+struct Window
 {
     width: u32,
     height: u32,
@@ -42,24 +50,12 @@ struct Window<'a>
 
     // SDL canvas to draw into
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
-    texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
-    texture: Option<Texture<'a>>,
-}
 
-// Note: we're leaving this global to avoid the Window lifetime
-// bubbling up everywhere.
-// TODO: eventually we will likely want to allow multiple windows
-static mut WINDOW: Option<Window> = None;
-
-fn get_window(window_id: u32) -> &'static mut Window<'static>
-{
-    if window_id != 0 {
-        panic!("for now, only one window supported");
-    }
-
-    unsafe {
-        WINDOW.as_mut().unwrap()
-    }
+    // Texture creator for the canvas. This is leaked to give it a 'static
+    // lifetime: it lives as long as the window, which exists for the entire
+    // duration of the program. This lets the texture below be 'static too.
+    texture_creator: &'static TextureCreator<WindowContext>,
+    texture: Option<Texture<'static>>,
 }
 
 pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Value, flags: Value) -> Value
@@ -68,10 +64,8 @@ pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Va
         panic!("window functions should only be called from the main thread");
     }
 
-    unsafe {
-        if WINDOW.is_some() {
-            panic!("for now, only one window supported");
-        }
+    if WINDOW.with_borrow(|w| w.is_some()) {
+        panic!("for now, only one window supported");
     }
 
     let width: u32 = width.as_usize().try_into().unwrap();
@@ -92,7 +86,10 @@ pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Va
     canvas.clear();
     canvas.present();
 
-    let texture_creator = canvas.texture_creator();
+    // Leak the texture creator so it has a 'static lifetime. It lives as long
+    // as the window, which exists for the entire duration of the program.
+    let texture_creator: &'static TextureCreator<WindowContext> =
+        Box::leak(Box::new(canvas.texture_creator()));
 
     let window = Window {
         width,
@@ -103,9 +100,7 @@ pub fn window_create(thread: &mut Thread, width: Value, height: Value, title: Va
         texture: None,
     };
 
-    unsafe {
-        WINDOW = Some(window)
-    }
+    WINDOW.with_borrow_mut(|w| *w = Some(window));
 
     // TODO: return unique window id
     Value::from(0)
@@ -117,46 +112,52 @@ pub fn window_draw_frame(thread: &mut Thread, window_id: Value, src_addr: Value)
         panic!("window functions should only be called from the main thread");
     }
 
-    let window = get_window(window_id.as_u32());
-
-    // Get the address to copy pixel data from
-    let data_len = (4 * window.width * window.height) as usize;
-    let data_ptr = thread.get_heap_ptr_mut(src_addr.as_usize(), data_len);
-
-    // If no frame has been drawn yet
-    if window.texture.is_none() {
-        // Creat the texture to render into
-        // Pixels use the BGRA byte order (0xAA_RR_GG_BB on a little-endian machine)
-        window.texture = Some(window.texture_creator.create_texture(
-            PixelFormatEnum::BGRA32,
-            TextureAccess::Streaming,
-            window.width,
-            window.height
-        ).unwrap());
-
-        // We show and raise the window at the moment the first frame is drawn
-        // This avoids showing a blank window too early
-        window.canvas.window_mut().show();
-        window.canvas.window_mut().raise();
+    if window_id.as_u32() != 0 {
+        panic!("for now, only one window supported");
     }
 
-    // Clear the canvas
-    window.canvas.clear();
+    WINDOW.with_borrow_mut(|window| {
+        let window = window.as_mut().unwrap();
 
-    // Update the texture
-    let pitch = 4 * window.width as usize;
-    let pixel_slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
-    window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
+        // Get the address to copy pixel data from
+        let data_len = (4 * window.width * window.height) as usize;
+        let data_ptr = thread.get_heap_ptr_mut(src_addr.as_usize(), data_len);
 
-    // Copy the texture into the canvas
-    window.canvas.copy(
-        &window.texture.as_ref().unwrap(),
-        None,
-        None
-    ).unwrap();
+        // If no frame has been drawn yet
+        if window.texture.is_none() {
+            // Creat the texture to render into
+            // Pixels use the BGRA byte order (0xAA_RR_GG_BB on a little-endian machine)
+            window.texture = Some(window.texture_creator.create_texture(
+                PixelFormatEnum::BGRA32,
+                TextureAccess::Streaming,
+                window.width,
+                window.height
+            ).unwrap());
 
-    // Update the screen with any rendering performed since the previous call
-    window.canvas.present();
+            // We show and raise the window at the moment the first frame is drawn
+            // This avoids showing a blank window too early
+            window.canvas.window_mut().show();
+            window.canvas.window_mut().raise();
+        }
+
+        // Clear the canvas
+        window.canvas.clear();
+
+        // Update the texture
+        let pitch = 4 * window.width as usize;
+        let pixel_slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
+        window.texture.as_mut().unwrap().update(None, pixel_slice, pitch).unwrap();
+
+        // Copy the texture into the canvas
+        window.canvas.copy(
+            &window.texture.as_ref().unwrap(),
+            None,
+            None
+        ).unwrap();
+
+        // Update the screen with any rendering performed since the previous call
+        window.canvas.present();
+    });
 }
 
 const EVENT_TEXT_MAX_BYTES: usize = 64;

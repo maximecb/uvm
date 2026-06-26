@@ -1,5 +1,6 @@
 extern crate sdl2;
 use std::collections::HashMap;
+use std::cell::RefCell;
 use std::io::Write;
 use std::io::Read;
 use std::io::{stdout, stdin};
@@ -68,22 +69,24 @@ impl HostFn
     }
 }
 
-/// SDL context (used for UI and audio)
-/// This is a global variable because it doesn't implement
-/// the Send trait, and so can't be referenced from another thread
-static mut SDL: Option<sdl2::Sdl> = None;
+thread_local! {
+    /// SDL context (used for UI and audio)
+    /// This is thread-local because it doesn't implement the Send trait,
+    /// and so can't be referenced from another thread
+    static SDL: RefCell<Option<sdl2::Sdl>> = RefCell::new(None);
+}
 
-pub fn get_sdl_context() -> &'static mut sdl2::Sdl
+/// Get a handle to the SDL context, lazily initializing it
+/// Sdl is a cheap reference-counted handle, so we return it by value
+pub fn get_sdl_context() -> sdl2::Sdl
 {
-    unsafe
-    {
-        // Lazily initialize the SDL context
-        if SDL.is_none() {
-            SDL = Some(sdl2::init().unwrap());
+    SDL.with_borrow_mut(|sdl| {
+        if sdl.is_none() {
+            *sdl = Some(sdl2::init().unwrap());
         }
 
-        SDL.as_mut().unwrap()
-    }
+        sdl.as_ref().unwrap().clone()
+    })
 }
 
 /// Get the syscall with a given index
