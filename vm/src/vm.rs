@@ -498,7 +498,7 @@ impl MemBlock
 
     /// Grow to a new size in bytes
     /// This operation is a no-op if the existing size
-    /// is greater or equal to the requested size
+    /// is less than or equal to the requested size
     ///
     /// Note: this operation must be guarded by the VM
     pub fn grow(&mut self, mut new_size: usize) -> usize
@@ -512,7 +512,6 @@ impl MemBlock
 
         let cur_size = *self.cur_size;
 
-        // Growing the memory block, need to map as read | write
         if new_size <= cur_size {
             return cur_size;
         }
@@ -523,6 +522,7 @@ impl MemBlock
         let map_size = new_size - cur_size;
         assert!(map_size % self.page_size == 0);
 
+        // Growing the memory block, need to map as read | write
         let mem_block = unsafe {libc::mmap(
             map_addr,
             map_size,
@@ -542,7 +542,7 @@ impl MemBlock
         new_size
     }
 
-    // Create a new thread-local view on this memory block
+    // Create a new thread-local view of this memory block
     fn new_view(&self) -> MemView
     {
         MemView {
@@ -623,6 +623,38 @@ impl MemView
         unsafe {
             let start_ptr = self.get_ptr_mut(addr, num_elems);
             std::slice::from_raw_parts_mut(start_ptr, num_elems)
+        }
+    }
+
+    /// Read a value at an address
+    /// The address does not need to be aligned
+    pub fn read<T>(&self, addr: usize) -> T where T: Copy
+    {
+        // Check that the address is within bounds
+        let cur_size = unsafe { *self.cur_size };
+        if addr + size_of::<T>() > cur_size {
+            panic!("attempting to read past end of heap");
+        }
+
+        unsafe {
+            let ptr = self.mem_block.add(addr) as *const T;
+            std::ptr::read_unaligned(ptr)
+        }
+    }
+
+    /// Write a value at an address
+    /// The address does not need to be aligned
+    pub fn write<T>(&mut self, addr: usize, val: T) where T: Copy
+    {
+        // Check that the address is within bounds
+        let cur_size = unsafe { *self.cur_size };
+        if addr + size_of::<T>() > cur_size {
+            panic!("attempting to write past end of heap");
+        }
+
+        unsafe {
+            let ptr = self.mem_block.add(addr) as *mut T;
+            std::ptr::write_unaligned(ptr, val);
         }
     }
 
@@ -1404,60 +1436,53 @@ impl Thread
                     self.push(v.as_f32() as i32);
                 }
 
+                // Note: load/store accept unaligned addresses
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    let val: u8 = unsafe { *heap_ptr };
+                    let val: u8 = self.heap.read(addr);
                     self.push(val);
                 }
 
                 Op::load_u16 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    let val: u16 = unsafe { *heap_ptr };
+                    let val: u16 = self.heap.read(addr);
                     self.push(val);
                 }
 
                 Op::load_u32 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    let val: u32 = unsafe { *heap_ptr };
+                    let val: u32 = self.heap.read(addr);
                     self.push(val);
                 }
 
                 Op::load_u64 => {
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    let val: u64 = unsafe { *heap_ptr };
+                    let val: u64 = self.heap.read(addr);
                     self.push(val);
                 }
 
                 Op::store_u8 => {
                     let val = self.pop().as_u8();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    unsafe { *heap_ptr = val; }
+                    self.heap.write(addr, val);
                 }
 
                 Op::store_u16 => {
                     let val = self.pop().as_u16();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    unsafe { *heap_ptr = val; }
+                    self.heap.write(addr, val);
                 }
 
                 Op::store_u32 => {
                     let val = self.pop().as_u32();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    unsafe { *heap_ptr = val; }
+                    self.heap.write(addr, val);
                 }
 
                 Op::store_u64 => {
                     let val = self.pop().as_u64();
                     let addr = self.pop().as_usize();
-                    let heap_ptr = self.get_heap_ptr_mut(addr, 1);
-                    unsafe { *heap_ptr = val; }
+                    self.heap.write(addr, val);
                 }
 
                 Op::atomic_load_u64 => {
@@ -1921,6 +1946,22 @@ mod tests
     {
         // Store instruction
         eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; ret;", 11);
+    }
+
+    #[test]
+    fn test_unaligned_load_store()
+    {
+        // Store and load a u64 at an unaligned address
+        eval_i64(".data; .zero 255; .code; push 1; push 0x1122334455667788; store_u64; push 1; load_u64; ret;", 0x1122334455667788);
+
+        // Store and load a u32 at an unaligned address
+        eval_i64(".data; .zero 255; .code; push 3; push 0x0AABBCCD; store_u32; push 3; load_u32; ret;", 0x0AABBCCD);
+
+        // Store and load a u16 at an unaligned address
+        eval_i64(".data; .zero 255; .code; push 7; push 0x1234; store_u16; push 7; load_u16; ret;", 0x1234);
+
+        // Unaligned stores should not clobber neighbouring bytes
+        eval_i64(".data; .zero 255; .code; push 0; push 0xFF; store_u8; push 1; push 0x1122334455667788; store_u64; push 0; load_u8; ret;", 0xFF);
     }
 
     #[test]

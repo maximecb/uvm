@@ -12,6 +12,10 @@ libc = "0.2" # needed for mmap
 [features]
 count_insns = []
 
+# Fully optimize the dependencies in debug mode
+[profile.dev.package."*"]
+opt-level = 3
+
 [profile.dev]
 debug = true
 opt-level = 1
