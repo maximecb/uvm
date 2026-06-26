@@ -348,8 +348,7 @@ impl Value
 
     pub fn as_f32(&self) -> f32 {
         let Value(val) = *self;
-        let val = val as i32;
-        unsafe { transmute(val) }
+        f32::from_bits(val as u32)
     }
 }
 
@@ -409,8 +408,7 @@ impl From<i64> for Value {
 
 impl From<f32> for Value {
     fn from(val: f32) -> Self {
-        let val: u32 = unsafe { transmute(val) };
-        Value(val as u64)
+        Value(val.to_bits() as u64)
     }
 }
 

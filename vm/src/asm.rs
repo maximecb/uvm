@@ -2,7 +2,6 @@ use std::fmt;
 use std::convert::{TryFrom};
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::mem::transmute;
 use crate::vm::{Op};
 use crate::program::*;
 
@@ -843,8 +842,7 @@ impl Assembler
             // 32-bit floating-point value
             "f32" => {
                 let val: f32 = input.parse_float()?;
-                let val_u32: u32 = unsafe { transmute(val) };
-                self.mem().push_u32(val_u32);
+                self.mem().push_u32(val.to_bits());
             }
 
             // Command to read an arbitrary number of bytes
@@ -1003,9 +1001,8 @@ impl Assembler
             // Push a 32-bit floating-point value
             "push_f32" => {
                 let val: f32 = input.parse_float()?;
-                let val_u32: u32 = unsafe { transmute(val) };
                 self.code.push_op(Op::push_u32);
-                self.code.push_u32(val_u32);
+                self.code.push_u32(val.to_bits());
             }
 
             // Variable-size push
