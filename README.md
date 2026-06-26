@@ -20,10 +20,10 @@ Contents:
 - [Features](#features)
 - [Build Instructions](#build-instructions)
 - [Codebase Organization](#codebase-organization)
-- [Design and Architecture](doc/design.md)
-- [Subsystems and System Calls](doc/syscalls.md)
-- [Vision and Motivation](doc/vision.md)
-- [Planning and Evolution](doc/planning.md)
+- [Design and Architecture](docs/design.md)
+- [Subsystems and System Calls](docs/syscalls.md)
+- [Vision and Motivation](docs/vision.md)
+- [Planning and Evolution](docs/planning.md)
 
 If you think that UVM is cool, you can support my work via [GitHub Sponsors](https://github.com/sponsors/maximecb) :heart:
 
@@ -123,18 +123,18 @@ The repository is organized into a 3 different subprojects, each of which is a R
 - `/ncc`: An implementation of a toy C compiler that outputs UVM assembly
   - [`/ncc/README.md`](ncc/README.md): documentation for the NCC compiler.
   - [`/ncc/examples/*`](ncc/examples): Example C source files that can be compiled by NCC
-- `/api`: A system to document and automatically export bindings for UVM system calls and constants.
-  - `/api/syscalls.json`: Declarative list of system calls exposed by UVM.
-- `/doc`: Markdown documentation for UVM
-  - [`/doc/syscalls.json`](doc/syscalls.md): List of system calls and constants accessible to UVM programs
+- `/spec`: A system to document and automatically export bindings for UVM system calls and constants.
+  - `/spec/syscalls.json`: Declarative list of system calls exposed by UVM.
+- `/docs`: Markdown documentation for UVM
+  - [`/docs/syscalls.json`](docs/syscalls.md): List of system calls and constants accessible to UVM programs
 
 The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
 was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over
 time, the `ncc` compiler will be improved. Despite its limitations, it is still usable to write small programs. Contributions to it are welcome.
 
-The `api` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
+The `spec` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
-code that automatically generates [markdown documentation](doc/syscalls.md), Rust constants and [C definitions](ncc/include/uvm/syscalls.h) for system calls.
+code that automatically generates [markdown documentation](docs/syscalls.md), Rust constants and [C definitions](ncc/include/uvm/syscalls.h) for system calls.
 
 ## Open Source License
 
