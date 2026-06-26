@@ -1995,6 +1995,24 @@ mod tests
     }
 
     #[test]
+    fn test_patch_fp()
+    {
+        // Patch a function's code address into the data segment at runtime,
+        // then load it back and call it via call_fp
+        eval_i64(
+            ".data; FPTR: .u64 0; .code; push FPTR; push FN; store_u64; push FPTR; load_u64; call_fp 0; ret; FN: push_i8 33; ret;",
+            33
+        );
+
+        // Same, but the code address is assembled into the data segment
+        // statically using the .addr64 directive
+        eval_i64(
+            ".data; FPTR: .addr64 FN; .code; push FPTR; load_u64; call_fp 0; ret; FN: push_i8 33; ret;",
+            33
+        );
+    }
+
+    #[test]
     fn test_syscalls()
     {
         eval_src(".data; LABEL: .zero 256; .code; push LABEL; push 255; push 0; syscall memset; push 0; ret;");
