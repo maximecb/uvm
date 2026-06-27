@@ -1374,12 +1374,19 @@ mod tests
     #[test]
     fn parse_files()
     {
-        parse_file("examples/empty.asm");
-        parse_file("examples/factorial.asm");
-        parse_file("examples/fib.asm");
-        parse_file("examples/fizzbuzz.asm");
-        parse_file("examples/loop.asm");
-        parse_file("examples/memcpy.asm");
-        parse_file("examples/gradient.asm");
+        // Parse every example program in the examples directory so that new
+        // examples are covered automatically without updating this test.
+        let mut paths: Vec<_> = std::fs::read_dir("examples")
+            .expect("could not read examples directory")
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().map_or(false, |ext| ext == "asm"))
+            .collect();
+        paths.sort();
+
+        assert!(!paths.is_empty(), "no .asm examples found");
+
+        for path in paths {
+            parse_file(path.to_str().unwrap());
+        }
     }
 }

@@ -7,7 +7,7 @@
 #   Space/Up/W : jump (only while standing on a platform)
 #   Escape     : quit
 #
-# Goal: climb the platforms and touch the gold flag at the top.
+# Goal: climb the platforms and reach the door at the top.
 #
 # Physics is done in 1/256-pixel fixed point so that gravity and
 # velocities have sub-pixel precision. Pixel coordinates are obtained
@@ -30,7 +30,7 @@ WINDOW_TITLE:
 .stringz "UVM Platformer";
 
 WIN_STR:
-.stringz "You reached the goal!\n";
+.stringz "You win!\n";
 
 # Platform table: 5 platforms, each is { x, y, w, h } in pixels (i32).
 .align 4;
@@ -59,7 +59,7 @@ PLATFORMS:
 #   L6  key_right  1 if right is held (integer flag)
 #   L7  running    1 while the game loop runs (integer flag)
 #   L8  i          platform loop index (integer)
-#   L9  won        1 while overlapping the goal (integer flag)
+#   L9  won        0 = playing, >0 = win-animation frame counter
 #   L10 gx         scratch: platform x / base address
 #   L11 gy         scratch: platform y
 #   L12 gw         scratch: platform w
@@ -177,6 +177,9 @@ POLL_DONE:
 # Quit if requested
 get_local 7; jz EXIT;
 
+# If the win animation is playing, freeze input/physics and skip ahead
+get_local 9; jnz WIN_UPDATE;
+
 # =====================================================================
 # Compute horizontal velocity from held keys
 # =====================================================================
@@ -287,28 +290,38 @@ get_local 1; push 8; rshift_i64; push 500; gt_i64; jz NO_RESPAWN;
 NO_RESPAWN:
 
 # =====================================================================
-# Goal check
+# Goal check: reaching the door (pixels 400,136,24,40 -> * 256)
 # =====================================================================
-# Goal flag rectangle in pixels: x=405, y=144, w=16, h=32 -> * 256
 get_local 0; get_local 1; push 6144; push 8192;
-push 103680; push 36864; push 4096; push 8192;
+push 102400; push 34816; push 6144; push 10240;
 call AABB_OVERLAP, 8;
-jz GOAL_OUT;
-    get_local 9; jnz GOAL_DONE;     # already announced this touch
-    push 1; set_local 9;
+jz RENDER;
+    get_local 9; jnz RENDER;        # win animation already started
+    push 1; set_local 9;            # start it (frame counter = 1)
     push WIN_STR; syscall print_str;
-    jmp GOAL_DONE;
-GOAL_OUT:
+jmp RENDER;
+
+# =====================================================================
+# Win animation update: physics is frozen, just advance the timer.
+# When the animation ends, respawn the player for another go.
+# =====================================================================
+WIN_UPDATE:
+get_local 9; push 1; add_u64; set_local 9;
+get_local 9; push 180; lt_i64; jnz RENDER;
+    push 10240; set_local 0;
+    push 89600; set_local 1;
+    push 0; set_local 2;
+    push 0; set_local 3;
     push 0; set_local 9;
-GOAL_DONE:
 
 # =====================================================================
 # Render
 # =====================================================================
+RENDER:
 # Clear to sky blue (0xFF87CEEB in BGRA-as-u32)
 push PIXEL_BUFFER; push_u32 0xFF87CEEB; push 307200; syscall memset32;
 
-# Draw platforms (green)
+# Draw platforms (with bevel shading for depth)
 push 0; set_local 8;
 RLOOP:
 get_local 8; push 5; ge_i64; jnz RLOOP_END;
@@ -317,21 +330,32 @@ get_local 10;            load_u32;   # x
 get_local 10; push 4;  add_u64; load_u32;   # y
 get_local 10; push 8;  add_u64; load_u32;   # w
 get_local 10; push 12; add_u64; load_u32;   # h
-push_u32 0xFF3CB44B;     # green
-call FILL_RECT, 5; pop;
+call DRAW_PLATFORM, 4; pop;
 get_local 8; push 1; add_u64; set_local 8;
 jmp RLOOP;
 RLOOP_END:
 
-# Draw the goal as a little door
-push 405; push 144;
-call DRAW_DOOR, 2; pop;
+# When winning, draw the celebration instead of the normal door/guy
+get_local 9; jnz RENDER_WIN;
 
-# Draw the player as a little guy. Convert fixed point -> pixels.
+# Door ground shadow, then the door
+push 404; push 176; push 24; push 4; push_u32 0xFF2A7A34; call FILL_RECT, 5; pop;
+push 400; push 136; call DRAW_DOOR, 2; pop;
+
+# Player cast shadow, then the little guy
+get_local 0; push 8; rshift_i64;
+get_local 1; push 8; rshift_i64;
+call DRAW_SHADOW, 2; pop;
 get_local 0; push 8; rshift_i64;
 get_local 1; push 8; rshift_i64;
 call DRAW_GUY, 2; pop;
+jmp RENDER_PRESENT;
 
+RENDER_WIN:
+get_local 9;
+call DRAW_WIN, 1; pop;
+
+RENDER_PRESENT:
 # Present the frame
 push 0; push PIXEL_BUFFER; syscall window_draw_frame;
 
@@ -443,16 +467,25 @@ ret;
 # hair, head, eyes, shirt, arms, legs and shoes. Returns 0.
 #
 DRAW_GUY:
-# hair
-get_arg 0; push 6;  add_u64; get_arg 1; push 0;  add_u64; push 12; push 3;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
-# head
-get_arg 0; push 6;  add_u64; get_arg 1; push 3;  add_u64; push 12; push 8;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
+# head (skin)
+get_arg 0; push 6;  add_u64; get_arg 1; push 2;  add_u64; push 12; push 9;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
+# hair crown (slightly wider than the head, drawn over its top)
+get_arg 0; push 5;  add_u64; get_arg 1; push 0;  add_u64; push 14; push 5;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
+# left sideburn
+get_arg 0; push 5;  add_u64; get_arg 1; push 5;  add_u64; push 2;  push 3;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
+# right sideburn
+get_arg 0; push 17; add_u64; get_arg 1; push 5;  add_u64; push 2;  push 3;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
+# swept fringe (longer on the left, short flick on the right)
+get_arg 0; push 6;  add_u64; get_arg 1; push 5;  add_u64; push 7;  push 2;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
+get_arg 0; push 13; add_u64; get_arg 1; push 5;  add_u64; push 5;  push 1;  push_u32 0xFF5A3A1A; call FILL_RECT, 5; pop;
 # left eye
-get_arg 0; push 9;  add_u64; get_arg 1; push 6;  add_u64; push 2;  push 2;  push_u32 0xFF202020; call FILL_RECT, 5; pop;
+get_arg 0; push 8;  add_u64; get_arg 1; push 7;  add_u64; push 2;  push 2;  push_u32 0xFF202020; call FILL_RECT, 5; pop;
 # right eye
-get_arg 0; push 13; add_u64; get_arg 1; push 6;  add_u64; push 2;  push 2;  push_u32 0xFF202020; call FILL_RECT, 5; pop;
+get_arg 0; push 13; add_u64; get_arg 1; push 7;  add_u64; push 2;  push 2;  push_u32 0xFF202020; call FILL_RECT, 5; pop;
 # shirt / torso
 get_arg 0; push 4;  add_u64; get_arg 1; push 11; add_u64; push 16; push 10; push_u32 0xFFE63C3C; call FILL_RECT, 5; pop;
+# shirt shading (darker lower edge)
+get_arg 0; push 4;  add_u64; get_arg 1; push 18; add_u64; push 16; push 3;  push_u32 0xFFB02C2C; call FILL_RECT, 5; pop;
 # left arm
 get_arg 0; push 1;  add_u64; get_arg 1; push 11; add_u64; push 3;  push 9;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
 # right arm
@@ -471,20 +504,169 @@ ret;
 #
 # DRAW_DOOR(i64 x, i64 y)
 #
-# Draw a little wooden door inside the 16 x 32 goal box whose top-left
+# Draw a little wooden door inside the 24 x 40 goal box whose top-left
 # corner is at the given pixel coordinates: outer frame, recessed inner
 # panel, two sub-panels and a gold knob. Returns 0.
 #
 DRAW_DOOR:
 # frame
-get_arg 0; push 0;  add_u64; get_arg 1; push 0;  add_u64; push 16; push 32; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
+get_arg 0; push 0;  add_u64; get_arg 1; push 0;  add_u64; push 24; push 40; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
 # recessed inner panel
-get_arg 0; push 2;  add_u64; get_arg 1; push 2;  add_u64; push 12; push 28; push_u32 0xFF6B3F1A; call FILL_RECT, 5; pop;
+get_arg 0; push 3;  add_u64; get_arg 1; push 3;  add_u64; push 18; push 34; push_u32 0xFF6B3F1A; call FILL_RECT, 5; pop;
 # upper sub-panel
-get_arg 0; push 4;  add_u64; get_arg 1; push 4;  add_u64; push 8;  push 10; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
+get_arg 0; push 6;  add_u64; get_arg 1; push 6;  add_u64; push 12; push 12; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
 # lower sub-panel
-get_arg 0; push 4;  add_u64; get_arg 1; push 16; add_u64; push 8;  push 12; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
+get_arg 0; push 6;  add_u64; get_arg 1; push 22; add_u64; push 12; push 13; push_u32 0xFF8B5A2B; call FILL_RECT, 5; pop;
 # door knob
-get_arg 0; push 11; add_u64; get_arg 1; push 18; add_u64; push 2;  push 3;  push_u32 0xFFFFD700; call FILL_RECT, 5; pop;
+get_arg 0; push 18; add_u64; get_arg 1; push 20; add_u64; push 3;  push 4;  push_u32 0xFFFFD700; call FILL_RECT, 5; pop;
+push 0;
+ret;
+
+#
+# DRAW_PLATFORM(i64 x, i64 y, i64 w, i64 h)
+#
+# Draw a platform with a lighter top highlight and a darker bottom edge so
+# it reads as a solid 3D block rather than a flat rectangle. Returns 0.
+#
+DRAW_PLATFORM:
+# body
+get_arg 0; get_arg 1; get_arg 2; get_arg 3; push_u32 0xFF3CB44B; call FILL_RECT, 5; pop;
+# top highlight (3px)
+get_arg 0; get_arg 1; get_arg 2; push 3; push_u32 0xFF5AD06A; call FILL_RECT, 5; pop;
+# bottom shadow (4px)
+get_arg 0; get_arg 1; get_arg 3; add_u64; push 4; sub_u64; get_arg 2; push 4; push_u32 0xFF2A8038; call FILL_RECT, 5; pop;
+push 0;
+ret;
+
+#
+# DRAW_SHADOW(i64 x, i64 y)
+#
+# Draw a soft contact shadow for the player on the nearest platform below
+# its feet. The shadow shrinks as the player rises, giving a sense of
+# height while jumping. x,y are the player's pixel top-left. Returns 0.
+#
+# Locals:
+#   L0 i      platform index
+#   L1 best   y of the closest platform top at or below the feet
+#   L2 feet   y + 32
+#   L3 cx     x + 12 (horizontal centre)
+#   L4 gx     scratch: platform x
+#   L5 gy     scratch: platform y
+#   L6 gw     scratch: platform w
+#   L7 sw     shadow width
+#   L8 dist   feet-to-platform distance
+#   L9 sx     shadow left edge
+#
+DRAW_SHADOW:
+push 0; push 0; push 0; push 0; push 0; push 0; push 0; push 0; push 0; push 0;
+push 0; set_local 0;
+push 100000; set_local 1;
+get_arg 1; push 32; add_u64; set_local 2;     # feet
+get_arg 0; push 12; add_u64; set_local 3;     # cx
+DS_LOOP:
+get_local 0; push 5; ge_i64; jnz DS_DONE;
+get_local 0; push 16; mul_u64; push PLATFORMS; add_u64;   # base
+dup; load_u32; set_local 4;                    # gx
+dup; push 4; add_u64; load_u32; set_local 5;   # gy
+push 8; add_u64; load_u32; set_local 6;        # gw
+# horizontal overlap: x < gx+gw && x+24 > gx
+get_arg 0; get_local 4; get_local 6; add_u64; lt_i64;
+get_arg 0; push 24; add_u64; get_local 4; gt_i64;
+and_u64;
+jz DS_NEXT;
+# platform top at or below the feet?
+get_local 5; get_local 2; push 2; sub_u64; ge_i64; jz DS_NEXT;
+# nearest one so far?
+get_local 5; get_local 1; lt_i64; jz DS_NEXT;
+get_local 5; set_local 1;
+DS_NEXT:
+get_local 0; push 1; add_u64; set_local 0;
+jmp DS_LOOP;
+DS_DONE:
+# no platform below -> nothing to draw
+get_local 1; push 100000; ge_i64; jnz DS_RET;
+# dist = max(0, best - feet)
+get_local 1; get_local 2; sub_u64; set_local 8;
+get_local 8; push 0; lt_i64; jz DS_DIST_OK;
+    push 0; set_local 8;
+DS_DIST_OK:
+# sw = max(6, 24 - dist/5)
+get_local 8; push 5; div_i64; push 24; swap; sub_u64; set_local 7;
+get_local 7; push 6; lt_i64; jz DS_SW_OK;
+    push 6; set_local 7;
+DS_SW_OK:
+# sx = cx - sw/2
+get_local 3; get_local 7; push 2; div_i64; sub_u64; set_local 9;
+get_local 9; get_local 1; get_local 7; push 3; push_u32 0xFF2A7A34;
+call FILL_RECT, 5; pop;
+DS_RET:
+push 0;
+ret;
+
+#
+# DRAW_WIN(i64 t)
+#
+# Draw the victory celebration for animation frame t: the door swings open
+# to reveal warm light, the little guy steps inside, and confetti rains
+# down over the whole scene. Returns 0.
+#
+# Locals:
+#   L0 ow   width of the door opening
+#   L1 gx   walking guy's x
+#   L2 i    confetti index
+#   L3 -    unused scratch
+#
+DRAW_WIN:
+push 0; push 0; push 0; push 0;
+
+# the door itself (closed frame as a backdrop)
+push 400; push 136; call DRAW_DOOR, 2; pop;
+
+# opening width ow = min(20, t/2)
+get_arg 0; push 2; div_i64;
+dup; push 20; gt_i64; jz DW_OW;
+    pop; push 20;
+DW_OW:
+set_local 0;
+
+# warm light spilling out of the growing opening
+push 400; push 24; get_local 0; sub_u64; push 2; div_i64; add_u64;  # lx = 400 + (24-ow)/2
+push 140;
+get_local 0;
+push 32;
+push_u32 0xFFFFE9A0;
+call FILL_RECT, 5; pop;
+
+# the little guy steps into the doorway during the first ~48 frames
+get_arg 0; push 48; lt_i64; jz DW_NOGUY;
+    push 372; get_arg 0; push 2; mul_u64; push 3; div_i64; add_u64; set_local 1;  # gx = 372 + t*2/3
+    get_local 1; push 144; call DRAW_GUY, 2; pop;
+DW_NOGUY:
+
+# confetti: 16 falling squares whose colour cycles
+push 0; set_local 2;
+DW_CONF:
+get_local 2; push 16; ge_i64; jnz DW_CONF_END;
+# x = (i*53 + 40) mod 600
+get_local 2; push 53; mul_u64; push 40; add_u64; push 600; mod_u64;
+# y = (t*4 + i*37) mod 460
+get_arg 0; push 4; mul_u64; get_local 2; push 37; mul_u64; add_u64; push 460; mod_u64;
+# size
+push 5; push 5;
+# colour by i mod 3
+get_local 2; push 3; mod_u64;
+dup; push 0; eq_u64; jnz DW_C0;
+dup; push 1; eq_u64; jnz DW_C1;
+pop; push_u32 0xFF4CC3FF; jmp DW_CDRAW;
+DW_C0:
+pop; push_u32 0xFFE63C3C; jmp DW_CDRAW;
+DW_C1:
+pop; push_u32 0xFFFFD700;
+DW_CDRAW:
+call FILL_RECT, 5; pop;
+get_local 2; push 1; add_u64; set_local 2;
+jmp DW_CONF;
+DW_CONF_END:
+
 push 0;
 ret;
