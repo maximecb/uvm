@@ -65,6 +65,7 @@ PLATFORMS:
 #   L12 gw         scratch: platform w
 #   L13 gh         scratch: platform h
 #   L14 jump_held  1 while a jump key is held (edge detection)
+#   L15 anim       walk-cycle counter (0 when standing still)
 #
 push 10240;     # L0  px = 40 * 256
 push 89600;     # L1  py = 350 * 256
@@ -81,6 +82,7 @@ push 0;         # L11 gy
 push 0;         # L12 gw
 push 0;         # L13 gh
 push 0;         # L14 jump_held (1 while a jump key is held)
+push 0;         # L15 anim (walk-cycle counter)
 
 # Create the window
 push 640;
@@ -190,6 +192,16 @@ SKIP_R:
 get_local 5; jz SKIP_L;
     get_local 2; push 720; sub_u64; set_local 2;   # moving left
 SKIP_L:
+
+# Advance the walk cycle while moving on the ground, else stand still
+get_local 2; push 0; ne_u64;     # trying to move? (vx != 0)
+get_local 4; and_u64;            # AND on the ground
+jz WALK_RESET;
+    get_local 15; push 1; add_u64; set_local 15;
+    jmp WALK_DONE;
+WALK_RESET:
+    push 0; set_local 15;
+WALK_DONE:
 
 # =====================================================================
 # Horizontal movement + collision
@@ -346,9 +358,10 @@ push 400; push 136; call DRAW_DOOR, 2; pop;
 get_local 0; push 8; rshift_i64;
 get_local 1; push 8; rshift_i64;
 call DRAW_SHADOW, 2; pop;
-get_local 0; push 8; rshift_i64;
-get_local 1; push 8; rshift_i64;
-call DRAW_GUY, 2; pop;
+get_local 0; push 8; rshift_i64;        # x
+get_local 1; push 8; rshift_i64;        # y
+get_local 15; call WALK_SWING, 1;       # leg swing for this frame
+call DRAW_GUY, 3; pop;
 jmp RENDER_PRESENT;
 
 RENDER_WIN:
@@ -460,13 +473,33 @@ and_u64;
 ret;
 
 #
-# DRAW_GUY(i64 x, i64 y)
+# DRAW_GUY(i64 x, i64 y, i64 swing)
 #
 # Draw a little character inside the 24 x 32 player box whose top-left
 # corner is at the given pixel coordinates. Built out of FILL_RECT parts:
-# hair, head, eyes, shirt, arms, legs and shoes. Returns 0.
+# hair, head, eyes, shirt, arms, legs and shoes. The signed `swing`
+# (-3..3) lifts alternate feet to produce a simple walk cycle; 0 is the
+# standing pose. Returns 0.
+#
+# Locals:
+#   L0 lift_l   how far the left foot is lifted  = max(0,  swing)
+#   L1 lift_r   how far the right foot is lifted = max(0, -swing)
 #
 DRAW_GUY:
+push 0; push 0;
+# lift_l = max(0, swing)
+get_arg 2;
+dup; push 0; lt_i64; jz DG_LIFTL;
+    pop; push 0;
+DG_LIFTL:
+set_local 0;
+# lift_r = max(0, -swing)
+push 0; get_arg 2; sub_u64;
+dup; push 0; lt_i64; jz DG_LIFTR;
+    pop; push 0;
+DG_LIFTR:
+set_local 1;
+
 # head (skin)
 get_arg 0; push 6;  add_u64; get_arg 1; push 2;  add_u64; push 12; push 9;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
 # hair crown (slightly wider than the head, drawn over its top)
@@ -490,16 +523,34 @@ get_arg 0; push 4;  add_u64; get_arg 1; push 18; add_u64; push 16; push 3;  push
 get_arg 0; push 1;  add_u64; get_arg 1; push 11; add_u64; push 3;  push 9;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
 # right arm
 get_arg 0; push 20; add_u64; get_arg 1; push 11; add_u64; push 3;  push 9;  push_u32 0xFFF0C8A0; call FILL_RECT, 5; pop;
-# left leg
-get_arg 0; push 5;  add_u64; get_arg 1; push 21; add_u64; push 6;  push 9;  push_u32 0xFF2A50A0; call FILL_RECT, 5; pop;
-# right leg
-get_arg 0; push 13; add_u64; get_arg 1; push 21; add_u64; push 6;  push 9;  push_u32 0xFF2A50A0; call FILL_RECT, 5; pop;
-# left shoe
-get_arg 0; push 5;  add_u64; get_arg 1; push 29; add_u64; push 6;  push 3;  push_u32 0xFF3A2A1A; call FILL_RECT, 5; pop;
-# right shoe
-get_arg 0; push 13; add_u64; get_arg 1; push 29; add_u64; push 6;  push 3;  push_u32 0xFF3A2A1A; call FILL_RECT, 5; pop;
+# left leg (shortened by lift_l so the foot rises)
+get_arg 0; push 5;  add_u64; get_arg 1; push 21; add_u64; push 6;  push 9; get_local 0; sub_u64; push_u32 0xFF2A50A0; call FILL_RECT, 5; pop;
+# right leg (shortened by lift_r)
+get_arg 0; push 13; add_u64; get_arg 1; push 21; add_u64; push 6;  push 9; get_local 1; sub_u64; push_u32 0xFF2A50A0; call FILL_RECT, 5; pop;
+# left shoe (raised by lift_l)
+get_arg 0; push 5;  add_u64; get_arg 1; push 29; add_u64; get_local 0; sub_u64; push 6;  push 3;  push_u32 0xFF3A2A1A; call FILL_RECT, 5; pop;
+# right shoe (raised by lift_r)
+get_arg 0; push 13; add_u64; get_arg 1; push 29; add_u64; get_local 1; sub_u64; push 6;  push 3;  push_u32 0xFF3A2A1A; call FILL_RECT, 5; pop;
 push 0;
 ret;
+
+#
+# WALK_SWING(i64 counter) -> i64 swing
+#
+# Map a free-running animation counter onto a 4-phase leg swing:
+# 0 (both feet down), +3 (left foot up), 0, -3 (right foot up), repeating.
+# Phase 0 is neutral so a counter of 0 (standing still) keeps both feet on
+# the ground. Each phase lasts 3 frames, so a full stride takes 12 frames.
+#
+WALK_SWING:
+get_arg 0; push 3; div_i64; push 4; mod_u64;   # phase 0..3
+dup; push 1; eq_u64; jnz WS_POS;
+dup; push 3; eq_u64; jnz WS_NEG;
+pop; push 0; ret;
+WS_POS:
+pop; push 3; ret;
+WS_NEG:
+pop; push -3; ret;
 
 #
 # DRAW_DOOR(i64 x, i64 y)
@@ -637,10 +688,12 @@ push 32;
 push_u32 0xFFFFE9A0;
 call FILL_RECT, 5; pop;
 
-# the little guy steps into the doorway during the first ~48 frames
+# the little guy walks into the doorway during the first ~48 frames
 get_arg 0; push 48; lt_i64; jz DW_NOGUY;
     push 372; get_arg 0; push 2; mul_u64; push 3; div_i64; add_u64; set_local 1;  # gx = 372 + t*2/3
-    get_local 1; push 144; call DRAW_GUY, 2; pop;
+    get_local 1; push 144;
+    get_arg 0; call WALK_SWING, 1;     # animate his legs as he walks in
+    call DRAW_GUY, 3; pop;
 DW_NOGUY:
 
 # confetti: 16 falling squares whose colour cycles
