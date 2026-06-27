@@ -957,6 +957,22 @@ impl Assembler
                 self.code.push_u8(idx);
             }
 
+            "get_argc" => {
+                self.code.push_op(Op::get_argc);
+            }
+
+            "thread_get" => {
+                let idx: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::thread_get);
+                self.code.push_u8(idx);
+            }
+
+            "thread_set" => {
+                let idx: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::thread_set);
+                self.code.push_u8(idx);
+            }
+
             "push_0" => {
                 self.code.push_op(Op::push_0);
             }
@@ -1274,6 +1290,13 @@ mod tests
         parse_ok(".code;\npush_u32 0xFFFFFFFF;");
         parse_ok(".code; push_u32 1_000_000;");
         parse_ok(".code; push_i8 55; push_i8 -1;");
+
+        // Frame argument count and thread-local variable access
+        parse_ok(".code; get_argc;");
+        parse_ok(".code; thread_get 0;");
+        parse_ok(".code; push_i8 7; thread_set 3;");
+        parse_fails(".code; thread_get;");
+        parse_fails(".code; thread_set;");
     }
 
     #[test]

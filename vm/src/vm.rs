@@ -838,6 +838,11 @@ impl Thread
                     self.push(b);
                 }
 
+                Op::get_argc => {
+                    let argc = self.frames[self.frames.len() - 1].argc;
+                    self.push(Value::from(argc as u64));
+                }
+
                 Op::get_arg => {
                     let idx = self.code.read_pc::<u8>(&mut pc) as usize;
 
@@ -1926,6 +1931,17 @@ mod tests
     fn test_setlocal()
     {
         eval_i64(".code; push 0; push 77; set_local 0; get_local 0; ret;", 77);
+    }
+
+    #[test]
+    fn test_get_argc()
+    {
+        // The top-level frame is entered with no arguments
+        eval_i64("get_argc; ret;", 0);
+
+        // get_argc reports the argument count of the current frame
+        eval_i64("push 42; call FN, 1; ret; FN: get_argc; ret;", 1);
+        eval_i64("push 10; push 20; push 30; call FN, 3; ret; FN: get_argc; ret;", 3);
     }
 
     #[test]
