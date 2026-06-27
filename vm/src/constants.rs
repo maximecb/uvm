@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 32;
+pub const SYSCALL_TBL_LEN: usize = 37;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -21,9 +21,11 @@ pub const EXIT: u16 = 11;
 pub const AUDIO_OPEN_INPUT: u16 = 12;
 pub const AUDIO_READ_SAMPLES: u16 = 13;
 pub const VM_HEAP_SIZE: u16 = 14;
+pub const FILE_OPEN: u16 = 15;
 pub const MEMSET32: u16 = 16;
 pub const VM_GROW_HEAP: u16 = 17;
 pub const AUDIO_OPEN_OUTPUT: u16 = 18;
+pub const FILE_CLOSE: u16 = 19;
 pub const PRINT_F32: u16 = 20;
 pub const NET_LISTEN: u16 = 21;
 pub const NET_ACCEPT: u16 = 22;
@@ -36,6 +38,11 @@ pub const THREAD_ID: u16 = 28;
 pub const THREAD_SPAWN: u16 = 29;
 pub const THREAD_SLEEP: u16 = 30;
 pub const THREAD_JOIN: u16 = 31;
+pub const FILE_READ: u16 = 32;
+pub const FILE_WRITE: u16 = 33;
+pub const FILE_SEEK: u16 = 34;
+pub const FILE_TELL: u16 = 35;
+pub const FILE_SIZE: u16 = 36;
 
 pub struct SysCallDesc
 {
@@ -61,11 +68,11 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "audio_open_input", const_idx: 12, argc: 4, has_ret: true }),
     Some(SysCallDesc { name: "audio_read_samples", const_idx: 13, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
-    None,
+    Some(SysCallDesc { name: "file_open", const_idx: 15, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "memset32", const_idx: 16, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "vm_grow_heap", const_idx: 17, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
-    None,
+    Some(SysCallDesc { name: "file_close", const_idx: 19, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_f32", const_idx: 20, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 4, has_ret: true }),
@@ -78,6 +85,11 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "thread_spawn", const_idx: 29, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "thread_sleep", const_idx: 30, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "thread_join", const_idx: 31, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "file_read", const_idx: 32, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "file_write", const_idx: 33, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "file_seek", const_idx: 34, argc: 2, has_ret: true }),
+    Some(SysCallDesc { name: "file_tell", const_idx: 35, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "file_size", const_idx: 36, argc: 1, has_ret: true }),
 ];
 
 pub const EVENT_QUIT: u16 = 0;
@@ -141,3 +153,7 @@ pub const KEY_UP: u16 = 16003;
 pub const KEY_DOWN: u16 = 16004;
 pub const KEY_SHIFT: u16 = 16005;
 pub const AUDIO_FORMAT_I16: u16 = 0;
+pub const OPEN_READ: u64 = 1;
+pub const OPEN_WRITE: u64 = 2;
+pub const OPEN_CREATE: u64 = 4;
+pub const OPEN_TRUNC: u64 = 8;

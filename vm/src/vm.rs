@@ -450,15 +450,16 @@ impl MemBlock
 {
     pub fn new() -> MemBlock
     {
-        // Try to allocate a very large block first (512GB)
+        // Try to reserve a very large block first (512GB)
         let start_size: usize = 512 * 1024 * 1024 * 1024;
 
         let mut alloc_size = start_size;
 
         let mut mem_block;
 
-        // Try to allocate a contiguous block of memory that is
-        // as large as possible
+        // Try to mmap a contiguous block of memory that is
+        // as large as possible. We do this so we can grow the
+        // heap later without invalidating heap addresses.
         loop {
             // PROT_NONE means the data cannot be accessed yet
             mem_block = unsafe {libc::mmap(
@@ -514,7 +515,8 @@ impl MemBlock
             return cur_size;
         }
 
-        // Compute the address from which to mmap
+        // Compute the address from which to mmap new pages,
+        // starting at the end of the already mapped block
         let map_addr = unsafe { transmute(self.mem_block.add(cur_size)) };
 
         let map_size = new_size - cur_size;

@@ -125,6 +125,34 @@
 // Close an open socket.
 #define net_close(__socket_id) asm (__socket_id) -> void { syscall net_close; }
 
+// u64 file_open(const char* path, u64 flags)
+// Open the file at the given path. The flags argument is a bitfield combining OPEN_READ, OPEN_WRITE, OPEN_CREATE and OPEN_TRUNC. All access is binary (byte-exact) with no newline translation. Returns a nonzero file handle on success, or 0 on failure (for example if the path is rejected by the sandbox or does not exist).
+#define file_open(__path, __flags) asm (__path, __flags) -> u64 { syscall file_open; }
+
+// void file_close(u64 handle)
+// Close a file handle previously returned by file_open. Has no effect if the handle is not open.
+#define file_close(__handle) asm (__handle) -> void { syscall file_close; }
+
+// i64 file_read(u64 handle, u8* buf, u64 num_bytes)
+// Read up to num_bytes from the file into the buffer. Returns the number of bytes actually read, 0 at end of file, or -1 on error.
+#define file_read(__handle, __buf, __num_bytes) asm (__handle, __buf, __num_bytes) -> i64 { syscall file_read; }
+
+// i64 file_write(u64 handle, const u8* buf, u64 num_bytes)
+// Write num_bytes from the buffer to the file. Returns the number of bytes actually written, or -1 on error.
+#define file_write(__handle, __buf, __num_bytes) asm (__handle, __buf, __num_bytes) -> i64 { syscall file_write; }
+
+// u64 file_seek(u64 handle, u64 pos)
+// Seek to an absolute byte offset measured from the start of the file. Returns the new absolute position.
+#define file_seek(__handle, __pos) asm (__handle, __pos) -> u64 { syscall file_seek; }
+
+// u64 file_tell(u64 handle)
+// Return the current absolute byte offset, measured from the start of the file.
+#define file_tell(__handle) asm (__handle) -> u64 { syscall file_tell; }
+
+// u64 file_size(u64 handle)
+// Return the total size of the file in bytes. Does not change the current file position.
+#define file_size(__handle) asm (__handle) -> u64 { syscall file_size; }
+
 #define EVENT_QUIT 0
 #define EVENT_KEYDOWN 1
 #define EVENT_KEYUP 2
@@ -186,5 +214,9 @@
 #define KEY_DOWN 16004
 #define KEY_SHIFT 16005
 #define AUDIO_FORMAT_I16 0
+#define OPEN_READ 1
+#define OPEN_WRITE 2
+#define OPEN_CREATE 4
+#define OPEN_TRUNC 8
 
 #endif

@@ -22,6 +22,10 @@ jobs:
       working-directory: ./spec
       run: cargo build
 
+    - name: Check generated bindings are up to date
+      working-directory: ./spec
+      run: cargo run && git diff --exit-code
+
     - name: Test VM
       working-directory: ./vm
       run: RUST_BACKTRACE=1 cargo test

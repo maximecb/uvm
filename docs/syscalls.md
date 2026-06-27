@@ -381,3 +381,79 @@ Close an open socket.
 
 File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.
 
+## file_open
+
+```
+u64 file_open(const char* path, u64 flags)
+```
+
+**Returns:** `u64 handle`
+
+Open the file at the given path. The flags argument is a bitfield combining OPEN_READ, OPEN_WRITE, OPEN_CREATE and OPEN_TRUNC. All access is binary (byte-exact) with no newline translation. Returns a nonzero file handle on success, or 0 on failure (for example if the path is rejected by the sandbox or does not exist).
+
+## file_close
+
+```
+void file_close(u64 handle)
+```
+
+Close a file handle previously returned by file_open. Has no effect if the handle is not open.
+
+## file_read
+
+```
+i64 file_read(u64 handle, u8* buf, u64 num_bytes)
+```
+
+**Returns:** `i64 num_bytes`
+
+Read up to num_bytes from the file into the buffer. Returns the number of bytes actually read, 0 at end of file, or -1 on error.
+
+## file_write
+
+```
+i64 file_write(u64 handle, const u8* buf, u64 num_bytes)
+```
+
+**Returns:** `i64 num_bytes`
+
+Write num_bytes from the buffer to the file. Returns the number of bytes actually written, or -1 on error.
+
+## file_seek
+
+```
+u64 file_seek(u64 handle, u64 pos)
+```
+
+**Returns:** `u64 new_pos`
+
+Seek to an absolute byte offset measured from the start of the file. Returns the new absolute position.
+
+## file_tell
+
+```
+u64 file_tell(u64 handle)
+```
+
+**Returns:** `u64 pos`
+
+Return the current absolute byte offset, measured from the start of the file.
+
+## file_size
+
+```
+u64 file_size(u64 handle)
+```
+
+**Returns:** `u64 num_bytes`
+
+Return the total size of the file in bytes. Does not change the current file position.
+
+## Constants
+These are the constants associated with the fs subsystem:
+
+- `u64 OPEN_READ = 1`
+- `u64 OPEN_WRITE = 2`
+- `u64 OPEN_CREATE = 4`
+- `u64 OPEN_TRUNC = 8`
+

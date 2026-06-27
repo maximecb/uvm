@@ -918,7 +918,165 @@
   {
     "subsystem": "fs",
     "description": "File I/O and filesystem-related functionality. This subsystem is separated out from the general-purpose io subsystem for security reasons.",
-    "syscalls": [],
-    "constants": []
+    "syscalls": [
+      {
+        "name": "file_open",
+        "args": [
+          [
+            "const char*",
+            "path"
+          ],
+          [
+            "u64",
+            "flags"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "handle"
+        ],
+        "permission": "file_open",
+        "const_idx": 15,
+        "description": "Open the file at the given path. The flags argument is a bitfield combining OPEN_READ, OPEN_WRITE, OPEN_CREATE and OPEN_TRUNC. All access is binary (byte-exact) with no newline translation. Returns a nonzero file handle on success, or 0 on failure (for example if the path is rejected by the sandbox or does not exist)."
+      },
+      {
+        "name": "file_close",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "file_io",
+        "const_idx": 19,
+        "description": "Close a file handle previously returned by file_open. Has no effect if the handle is not open."
+      },
+      {
+        "name": "file_read",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ],
+          [
+            "u8*",
+            "buf"
+          ],
+          [
+            "u64",
+            "num_bytes"
+          ]
+        ],
+        "returns": [
+          "i64",
+          "num_bytes"
+        ],
+        "permission": "file_io",
+        "const_idx": 32,
+        "description": "Read up to num_bytes from the file into the buffer. Returns the number of bytes actually read, 0 at end of file, or -1 on error."
+      },
+      {
+        "name": "file_write",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ],
+          [
+            "const u8*",
+            "buf"
+          ],
+          [
+            "u64",
+            "num_bytes"
+          ]
+        ],
+        "returns": [
+          "i64",
+          "num_bytes"
+        ],
+        "permission": "file_io",
+        "const_idx": 33,
+        "description": "Write num_bytes from the buffer to the file. Returns the number of bytes actually written, or -1 on error."
+      },
+      {
+        "name": "file_seek",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ],
+          [
+            "u64",
+            "pos"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "new_pos"
+        ],
+        "permission": "file_io",
+        "const_idx": 34,
+        "description": "Seek to an absolute byte offset measured from the start of the file. Returns the new absolute position."
+      },
+      {
+        "name": "file_tell",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "pos"
+        ],
+        "permission": "file_io",
+        "const_idx": 35,
+        "description": "Return the current absolute byte offset, measured from the start of the file."
+      },
+      {
+        "name": "file_size",
+        "args": [
+          [
+            "u64",
+            "handle"
+          ]
+        ],
+        "returns": [
+          "u64",
+          "num_bytes"
+        ],
+        "permission": "file_io",
+        "const_idx": 36,
+        "description": "Return the total size of the file in bytes. Does not change the current file position."
+      }
+    ],
+    "constants": [
+      [
+        "OPEN_READ",
+        "u64",
+        1
+      ],
+      [
+        "OPEN_WRITE",
+        "u64",
+        2
+      ],
+      [
+        "OPEN_CREATE",
+        "u64",
+        4
+      ],
+      [
+        "OPEN_TRUNC",
+        "u64",
+        8
+      ]
+    ]
   }
 ]

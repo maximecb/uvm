@@ -126,6 +126,15 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         AUDIO_OPEN_INPUT => HostFn::Fn4_1(audio_open_input),
         AUDIO_READ_SAMPLES => HostFn::Fn2_0(audio_read_samples),
 
+        // File I/O
+        FILE_OPEN => HostFn::Fn2_1(file_open),
+        FILE_CLOSE => HostFn::Fn1_0(file_close),
+        FILE_READ => HostFn::Fn3_1(file_read),
+        FILE_WRITE => HostFn::Fn3_1(file_write),
+        FILE_SEEK => HostFn::Fn2_1(file_seek),
+        FILE_TELL => HostFn::Fn1_1(file_tell),
+        FILE_SIZE => HostFn::Fn1_1(file_size),
+
         _ => panic!("unknown syscall \"{}\"", const_idx),
     }
 }
@@ -286,15 +295,195 @@ fn getchar(thread: &mut Thread) -> Value
     }
 }
 
+/// Process-global table of files opened through the fs subsystem.
+/// Kept as a global (rather than per-VM state) and guarded by a mutex so
+/// that open files can be shared safely across the VM's threads.
+struct FileTable
+{
+    // Map from file handle to open file
+    files: HashMap<u64, std::fs::File>,
+
+    // Next file handle to assign. Starts at 1 so that 0 can be
+    // returned as a null/error handle by file_open.
+    next_id: u64,
+}
+
+static FILE_TABLE: std::sync::LazyLock<Mutex<FileTable>> = std::sync::LazyLock::new(|| {
+    Mutex::new(FileTable { files: HashMap::new(), next_id: 1 })
+});
+
+/// Open a file and return a nonzero handle, or 0 on failure
+fn file_open(thread: &mut Thread, path: Value, flags: Value) -> Value
+{
+    use std::fs::OpenOptions;
+
+    let path = thread.get_heap_str(path.as_usize()).to_string();
+    let flags = flags.as_u64();
+
+    // Basic sandboxing to restrict which files can be accessed
+    if !is_safe_path(&path) {
+        return Value::from(0u64);
+    }
+
+    let file = OpenOptions::new()
+        .read((flags & OPEN_READ) != 0)
+        .write((flags & OPEN_WRITE) != 0)
+        .create((flags & OPEN_CREATE) != 0)
+        .truncate((flags & OPEN_TRUNC) != 0)
+        .open(&path);
+
+    let file = match file {
+        Ok(file) => file,
+        Err(_) => return Value::from(0u64),
+    };
+
+    let mut tbl = FILE_TABLE.lock().unwrap();
+    let handle = tbl.next_id;
+    tbl.next_id += 1;
+    tbl.files.insert(handle, file);
+    Value::from(handle)
+}
+
+/// Close an open file handle
+fn file_close(thread: &mut Thread, handle: Value)
+{
+    let handle = handle.as_u64();
+
+    // Dropping the File closes the underlying OS file
+    FILE_TABLE.lock().unwrap().files.remove(&handle);
+}
+
+/// Read bytes from a file into a heap buffer.
+/// Returns the number of bytes read, 0 at EOF, or -1 on error.
+fn file_read(thread: &mut Thread, handle: Value, buf: Value, num_bytes: Value) -> Value
+{
+    let handle = handle.as_u64();
+    let num_bytes = num_bytes.as_usize();
+
+    // Mutable slice over the destination region in the heap
+    let buf: &mut [u8] = unsafe {
+        let ptr: *mut u8 = thread.get_heap_ptr_mut(buf.as_usize(), num_bytes);
+        std::slice::from_raw_parts_mut(ptr, num_bytes)
+    };
+
+    let mut tbl = FILE_TABLE.lock().unwrap();
+    let file = match tbl.files.get_mut(&handle) {
+        Some(file) => file,
+        None => return Value::from(-1 as i64),
+    };
+
+    match file.read(buf) {
+        Ok(num_read) => Value::from(num_read as u64),
+        Err(_) => Value::from(-1 as i64),
+    }
+}
+
+/// Write bytes from a heap buffer to a file.
+/// Returns the number of bytes written, or -1 on error.
+fn file_write(thread: &mut Thread, handle: Value, buf: Value, num_bytes: Value) -> Value
+{
+    let handle = handle.as_u64();
+    let num_bytes = num_bytes.as_usize();
+
+    // Slice over the source region in the heap
+    let buf: &[u8] = unsafe {
+        let ptr: *const u8 = thread.get_heap_ptr_mut(buf.as_usize(), num_bytes);
+        std::slice::from_raw_parts(ptr, num_bytes)
+    };
+
+    let mut tbl = FILE_TABLE.lock().unwrap();
+    let file = match tbl.files.get_mut(&handle) {
+        Some(file) => file,
+        None => return Value::from(-1 as i64),
+    };
+
+    match file.write(buf) {
+        Ok(num_written) => Value::from(num_written as u64),
+        Err(_) => Value::from(-1 as i64),
+    }
+}
+
+/// Seek to an absolute offset from the start of the file.
+/// Returns the new absolute position.
+fn file_seek(thread: &mut Thread, handle: Value, pos: Value) -> Value
+{
+    use std::io::{Seek, SeekFrom};
+
+    let handle = handle.as_u64();
+    let pos = pos.as_u64();
+
+    let mut tbl = FILE_TABLE.lock().unwrap();
+    let file = match tbl.files.get_mut(&handle) {
+        Some(file) => file,
+        None => return Value::from(0u64),
+    };
+
+    match file.seek(SeekFrom::Start(pos)) {
+        Ok(new_pos) => Value::from(new_pos),
+        Err(_) => Value::from(0u64),
+    }
+}
+
+/// Return the current absolute file position
+fn file_tell(thread: &mut Thread, handle: Value) -> Value
+{
+    use std::io::Seek;
+
+    let handle = handle.as_u64();
+
+    let mut tbl = FILE_TABLE.lock().unwrap();
+    let file = match tbl.files.get_mut(&handle) {
+        Some(file) => file,
+        None => return Value::from(0u64),
+    };
+
+    match file.stream_position() {
+        Ok(pos) => Value::from(pos),
+        Err(_) => Value::from(0u64),
+    }
+}
+
+/// Return the total size of the file in bytes
+fn file_size(thread: &mut Thread, handle: Value) -> Value
+{
+    let handle = handle.as_u64();
+
+    let tbl = FILE_TABLE.lock().unwrap();
+    let file = match tbl.files.get(&handle) {
+        Some(file) => file,
+        None => return Value::from(0u64),
+    };
+
+    match file.metadata() {
+        Ok(meta) => Value::from(meta.len()),
+        Err(_) => Value::from(0u64),
+    }
+}
+
 /// Do some basic safety checking (sandboxing) to minimize
 /// security risks for file accesses
 fn is_safe_path(file_path: &str) -> bool
 {
-    use std::path::PathBuf;
+    use std::path::{PathBuf, Component};
     use std::fs::canonicalize;
 
     let file_path = file_path.trim();
     let mut file_path = PathBuf::from(file_path);
+
+    // Guard specifically against touching the source code and tooling
+    // directories of the UVM project itself. We reject the path if any of
+    // its components names one of these directories (case-insensitive). This
+    // is checked on the requested path, before canonicalization, so it also
+    // prevents creating new files under such a directory.
+    for comp in file_path.components() {
+        if let Component::Normal(name) = comp {
+            match name.to_string_lossy().to_lowercase().as_str() {
+                "src" | ".cargo" | "cargo.toml" | "cargo.lock" |
+                ".git" | ".github" => return false,
+                _ => {}
+            }
+        }
+    }
 
     // Reject extensions associated with executable, script or
     // loadable library files. The comparison is case-insensitive
@@ -422,6 +611,25 @@ mod tests
         // The blocklist must not be bypassable by changing the case
         assert!(!is_safe_path("run_me.SH"));
         assert!(!is_safe_path("MALWARE.Exe"));
+
+        // Reject access to the UVM project's own source and tooling dirs
+        assert!(!is_safe_path("src/main.rs"));
+        assert!(!is_safe_path("vm/src/host.rs"));
+        assert!(!is_safe_path(".cargo/config.toml"));
+        assert!(!is_safe_path(".git/config"));
+        assert!(!is_safe_path(".github/workflows/test.yml"));
+        assert!(!is_safe_path("../.git/config"));
+
+        // The manifest files are guarded as whole-name components
+        // (the extension is part of the component, not separate)
+        assert!(!is_safe_path("Cargo.toml"));
+        assert!(!is_safe_path("Cargo.lock"));
+        assert!(!is_safe_path("vm/Cargo.toml"));
+
+        // The project-dir blocklist is also case-insensitive
+        assert!(!is_safe_path("SRC/main.rs"));
+        assert!(!is_safe_path(".GitHub/workflows/test.yml"));
+        assert!(!is_safe_path("CARGO.TOML"));
 
         // Home directory access is not safe
         if let Some(home_path) = std::env::home_dir() {

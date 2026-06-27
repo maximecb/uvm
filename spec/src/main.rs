@@ -181,7 +181,7 @@ fn main()
 
     gen_rust_bindings("../vm/src/constants.rs", &subsystems, &idx_to_name);
     gen_c_bindings("../ncc/include/uvm/syscalls.h", &subsystems);
-    gen_markdown("../doc/syscalls.md", &subsystems);
+    gen_markdown("../docs/syscalls.md", &subsystems);
 }
 
 fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &Vec<Option<String>>)
