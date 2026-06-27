@@ -285,3 +285,154 @@ fn getchar(thread: &mut Thread) -> Value
         None | Some(Err(_)) => Value::from(-1 as i64),
     }
 }
+
+/// Do some basic safety checking (sandboxing) to minimize
+/// security risks for file accesses
+fn is_safe_path(file_path: &str) -> bool
+{
+    use std::path::PathBuf;
+    use std::fs::canonicalize;
+
+    let file_path = file_path.trim();
+    let mut file_path = PathBuf::from(file_path);
+
+    // Reject extensions associated with executable, script or
+    // loadable library files. The comparison is case-insensitive
+    // because some filesystems (e.g. macOS, Windows) treat "EXE"
+    // and "exe" as referring to the same file, so a case-sensitive
+    // check would be trivially bypassable.
+    if let Some(ext) = file_path.extension() {
+        match ext.to_string_lossy().to_lowercase().as_str() {
+            // Windows executables and scripts
+            "exe" | "com" | "scr" | "msi" | "cpl" | "dll" |
+            "bat" | "cmd" | "ps1" | "psm1" | "vbs" | "vbe" |
+            "js" | "jse" | "wsf" | "wsh" | "hta" | "jar" |
+            // Unix/macOS executables, libraries and shell scripts
+            "sh" | "bash" | "zsh" | "csh" | "ksh" | "fish" |
+            "command" | "so" | "dylib" | "app" | "out" |
+            // Interpreted language sources
+            "py" | "pyc" | "pyo" | "rb" | "pl" | "php" | "lua"
+                => return false,
+            _ => {}
+        }
+    }
+
+    // If this is a file that does not exist yet, pop the trailing
+    // components from the path. This is necessary for the canonicalize
+    // function to work
+    while !file_path.exists() {
+        file_path.pop();
+
+        if file_path.as_os_str().is_empty() {
+            file_path = PathBuf::from(".");
+        }
+    }
+
+    // Get the absolute path for the file, resolving symlinks
+    let file_path = canonicalize(&file_path).unwrap();
+    //println!("Canonical path: {:?}", file_path);
+
+    // Don't allow access to the current executable
+    let current_exe = std::env::current_exe().unwrap();
+    let current_exe = canonicalize(&current_exe).unwrap();
+    if file_path == current_exe {
+        println!("file path is current exe");
+        return false;
+    }
+
+    // On Unix/Linux platforms, deny access to files marked as executable
+    #[cfg(unix)]
+    if file_path.exists() && !file_path.is_dir() {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = std::fs::metadata(&file_path).unwrap();
+        let permissions = metadata.permissions();
+        let mode = permissions.mode();
+        if (mode & 0o111) != 0 {
+            println!("mode is executable");
+            return false;
+        }
+    }
+
+    // Get the current working directory
+    let cwd = std::env::current_dir().unwrap();
+    let cwd = canonicalize(&cwd).unwrap();
+    //println!("Canonical cwd: {:?}", cwd);
+
+    // If the file path is inside the current working directory, allow access
+    if file_path.starts_with(cwd) {
+        return true;
+    }
+
+    /*
+    // Parse the rest arguments
+    let rest_args = crate::parse_args(std::env::args().collect()).rest;
+
+    // For each rest argument supplied on the command-line
+    for arg in rest_args {
+
+        let arg_path = PathBuf::from(arg);
+
+        // If this is not a valid path, ignore it
+        if !arg_path.exists() {
+            continue;
+        }
+
+        let arg_path = canonicalize(&arg_path).unwrap();
+
+        // We can allow access to files in directories
+        // explicitly specified on the command-line
+        if arg_path.is_dir() {
+            if file_path.starts_with(&arg_path) {
+                return true;
+            }
+        }
+
+        // We can allow access to files explicitly
+        // specified on the command-line
+        if arg_path.is_file() && file_path == arg_path {
+            return true;
+        }
+    }
+    */
+
+    false
+}
+
+#[cfg(test)]
+mod tests
+{
+    use crate::host::is_safe_path;
+
+    #[test]
+    fn safe_path()
+    {
+        assert!(!is_safe_path("/"));
+        assert!(!is_safe_path("/root"));
+        assert!(!is_safe_path("/usr/bin"));
+        assert!(!is_safe_path("/home/user"));
+        assert!(!is_safe_path(".."));
+        assert!(!is_safe_path("run_me.sh"));
+        assert!(!is_safe_path("run_me.exe"));
+
+        // Other executable/script/library extensions are unsafe
+        assert!(!is_safe_path("lib.dylib"));
+        assert!(!is_safe_path("script.py"));
+        assert!(!is_safe_path("app.jar"));
+
+        // The blocklist must not be bypassable by changing the case
+        assert!(!is_safe_path("run_me.SH"));
+        assert!(!is_safe_path("MALWARE.Exe"));
+
+        // Home directory access is not safe
+        if let Some(home_path) = std::env::home_dir() {
+            let home_path = home_path.to_str().unwrap();
+            assert!(!is_safe_path(home_path));
+        }
+
+        // Safe paths inside CWD
+        assert!(is_safe_path("."));
+        assert!(is_safe_path("foo.txt"));
+        assert!(is_safe_path("data.csv"));
+        assert!(is_safe_path("docs/language.md"));
+    }
+}
