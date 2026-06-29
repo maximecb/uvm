@@ -84,6 +84,12 @@ pub enum Op
     // set_local <idx:u8> (value)
     set_local,
 
+    // Same as get_local/set_local, but with a 16-bit slot index
+    // get_local_w <idx:u16>
+    get_local_w,
+    // set_local_w <idx:u16> (value)
+    set_local_w,
+
     // 32-bit bitwise operations
     and_u32,
     or_u32,
@@ -899,6 +905,27 @@ impl Thread
 
                     if bp + idx >= self.stack.len() {
                         panic!("invalid index in set_local");
+                    }
+
+                    self.stack[bp + idx] = val;
+                }
+
+                Op::get_local_w => {
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+
+                    if bp + idx >= self.stack.len() {
+                        panic!("invalid index {} in get_local_w", idx);
+                    }
+
+                    self.push(self.stack[bp + idx]);
+                }
+
+                Op::set_local_w => {
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let val = self.pop();
+
+                    if bp + idx >= self.stack.len() {
+                        panic!("invalid index in set_local_w");
                     }
 
                     self.stack[bp + idx] = val;
@@ -1892,7 +1919,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 117);
+        assert!(Op::ret as usize <= 119);
     }
 
     #[test]
@@ -1932,6 +1959,15 @@ mod tests
     fn test_setlocal()
     {
         eval_i64(".code; push 0; push 77; set_local 0; get_local 0; ret;", 77);
+    }
+
+    #[test]
+    fn test_setlocal_w()
+    {
+        eval_i64(".code; push 0; push 77; set_local_w 0; get_local_w 0; ret;", 77);
+        // get_local_w and set_local_w refer to the same slots as the u8 variants
+        eval_i64(".code; push 0; push 88; set_local_w 0; get_local 0; ret;", 88);
+        eval_i64(".code; push 0; push 99; set_local 0; get_local_w 0; ret;", 99);
     }
 
     #[test]
