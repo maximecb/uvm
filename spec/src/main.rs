@@ -269,6 +269,19 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &
             ).unwrap();
         }
     }
+    writeln!(&mut file).unwrap();
+
+    // Generate a runtime-iterable table of constants so that the assembler
+    // can resolve $CONST_NAME references. Syscalls are intentionally excluded
+    // since they already have their own table (SYSCALL_DESCS).
+    let const_count: usize = subsystems.iter().map(|s| s.constants.len()).sum();
+    writeln!(&mut file, "pub const CONST_DESCS: [(&'static str, i128); {}] = [", const_count).unwrap();
+    for subsystem in subsystems {
+        for (name, _type_name, value) in &subsystem.constants {
+            writeln!(&mut file, "    (\"{}\", {}),", name, value).unwrap();
+        }
+    }
+    writeln!(&mut file, "];").unwrap();
 }
 
 fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)

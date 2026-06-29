@@ -106,12 +106,9 @@ jz POLL_DONE;            # no event available -> stop polling
 push EVENT;
 load_u16;
 
-# EVENT_QUIT == 0
-dup; push 0; eq_u64; jnz EV_QUIT;
-# EVENT_KEYDOWN == 1
-dup; push 1; eq_u64; jnz EV_KEYDOWN;
-# EVENT_KEYUP == 2
-dup; push 2; eq_u64; jnz EV_KEYUP;
+dup; push $EVENT_QUIT;    eq_u64; jnz EV_QUIT;
+dup; push $EVENT_KEYDOWN; eq_u64; jnz EV_KEYDOWN;
+dup; push $EVENT_KEYUP;   eq_u64; jnz EV_KEYUP;
 # Anything else: ignore
 pop;
 jmp POLL;
@@ -124,18 +121,18 @@ jmp POLL_DONE;
 EV_KEYDOWN:
 pop;                     # drop kind
 push EVENT; push 4; add_u64; load_u16;   # key = *(u16*)(EVENT+4)
-# Left: KEY_LEFT (16001) or A (65)
-dup; push 16001; eq_u64; jnz KD_LEFT;
-dup; push 65;    eq_u64; jnz KD_LEFT;
-# Right: KEY_RIGHT (16002) or D (68)
-dup; push 16002; eq_u64; jnz KD_RIGHT;
-dup; push 68;    eq_u64; jnz KD_RIGHT;
-# Jump: SPACE (32), KEY_UP (16003) or W (87)
-dup; push 32;    eq_u64; jnz KD_JUMP;
-dup; push 16003; eq_u64; jnz KD_JUMP;
-dup; push 87;    eq_u64; jnz KD_JUMP;
-# Escape (27): quit
-dup; push 27;    eq_u64; jnz KD_ESC;
+# Left: arrow or A
+dup; push $KEY_LEFT;  eq_u64; jnz KD_LEFT;
+dup; push $KEY_A;     eq_u64; jnz KD_LEFT;
+# Right: arrow or D
+dup; push $KEY_RIGHT; eq_u64; jnz KD_RIGHT;
+dup; push $KEY_D;     eq_u64; jnz KD_RIGHT;
+# Jump: space, up arrow or W
+dup; push $KEY_SPACE; eq_u64; jnz KD_JUMP;
+dup; push $KEY_UP;    eq_u64; jnz KD_JUMP;
+dup; push $KEY_W;     eq_u64; jnz KD_JUMP;
+# Escape: quit
+dup; push $KEY_ESCAPE; eq_u64; jnz KD_ESC;
 pop;
 jmp POLL;
 
@@ -157,13 +154,13 @@ jmp POLL;
 EV_KEYUP:
 pop;                     # drop kind
 push EVENT; push 4; add_u64; load_u16;   # key
-dup; push 16001; eq_u64; jnz KU_LEFT;
-dup; push 65;    eq_u64; jnz KU_LEFT;
-dup; push 16002; eq_u64; jnz KU_RIGHT;
-dup; push 68;    eq_u64; jnz KU_RIGHT;
-dup; push 32;    eq_u64; jnz KU_JUMP;
-dup; push 16003; eq_u64; jnz KU_JUMP;
-dup; push 87;    eq_u64; jnz KU_JUMP;
+dup; push $KEY_LEFT;  eq_u64; jnz KU_LEFT;
+dup; push $KEY_A;     eq_u64; jnz KU_LEFT;
+dup; push $KEY_RIGHT; eq_u64; jnz KU_RIGHT;
+dup; push $KEY_D;     eq_u64; jnz KU_RIGHT;
+dup; push $KEY_SPACE; eq_u64; jnz KU_JUMP;
+dup; push $KEY_UP;    eq_u64; jnz KU_JUMP;
+dup; push $KEY_W;     eq_u64; jnz KU_JUMP;
 pop;
 jmp POLL;
 
@@ -350,8 +347,7 @@ RLOOP_END:
 # When winning, draw the celebration instead of the normal door/guy
 get_local 9; jnz RENDER_WIN;
 
-# Door ground shadow, then the door
-push 404; push 176; push 24; push 4; push_u32 0xFF2A7A34; call FILL_RECT, 5; pop;
+# The door
 push 400; push 136; call DRAW_DOOR, 2; pop;
 
 # Player cast shadow, then the little guy
@@ -680,8 +676,10 @@ dup; push 20; gt_i64; jz DW_OW;
 DW_OW:
 set_local 0;
 
-# warm light spilling out of the growing opening
-push 400; push 24; get_local 0; sub_u64; push 2; div_i64; add_u64;  # lx = 400 + (24-ow)/2
+# warm light spilling out of the opening. The door is hinged on the left
+# (knob on the right), so it opens leftward: the right edge of the opening
+# stays pinned at the right jamb while the left edge sweeps left as ow grows.
+push 422; get_local 0; sub_u64;   # lx = 422 - ow  (right edge fixed at 400 + 24 - 2)
 push 140;
 get_local 0;
 push 32;

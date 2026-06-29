@@ -513,11 +513,15 @@ impl Assembler
             }
         }
 
-        // TODO:
         // Populate the available constants
+        use crate::constants::CONST_DESCS;
+        let mut const_map = HashMap::new();
+        for (name, val) in CONST_DESCS {
+            const_map.insert(name.to_string(), val);
+        }
 
         Self {
-            const_map: HashMap::new(),
+            const_map: const_map,
             syscall_map: syscall_map,
             syscall_set: HashSet::new(),
             code: ByteArray::new(),
@@ -781,10 +785,9 @@ impl Assembler
 
             "fill" => {
                 let num_bytes: u32 = self.parse_int_arg(input)?;
-
                 input.expect_token(",")?;
-
                 let val: u8 = self.parse_int_arg(input)?;
+
                 let mem = self.mem();
                 for i in 0..num_bytes {
                     mem.push_u8(val);
@@ -1007,7 +1010,7 @@ impl Assembler
                 self.code.push_u64(val);
             }
 
-            // Push a pointer to a label
+            // Push a 32-bit pointer to a label
             "push_p32" => {
                 let label_name = input.parse_ident()?;
                 self.code.push_op(Op::push_u32);
@@ -1203,9 +1206,12 @@ impl Assembler
     {
         let ch = input.peek_ch();
 
-        // If this is a decimal integer
-        if ch.is_digit(10) || ch == '-' {
-            let int_val = input.parse_int()?;
+        // If this is a decimal integer or a special constant
+        if ch.is_digit(10) || ch == '-' || ch == '$' {
+            // Parse the operand as a wide integer, then pick the smallest
+            // push encoding that fits. This reuses parse_int_arg's handling
+            // of both integer literals and $CONST references.
+            let int_val: i128 = self.parse_int_arg(input)?;
 
             if int_val == 0 {
                 self.code.push_op(Op::push_0);
@@ -1373,6 +1379,25 @@ mod tests
         parse_ok(" .data; #comment .fill 256, 0xFF; .code; push_u64 777; #comment");
         parse_ok(".data; DATA_LABEL: .fill 256, 0xFF; .code; push_p32 DATA_LABEL;");
         parse_ok(".data; STR_LABEL: .stringz \"hi!\"; .code; push_p32 STR_LABEL;");
+    }
+
+    #[test]
+    fn test_constants()
+    {
+        // Special constants resolve through the const_map
+        parse_ok(".code; push_u32 $KEY_LEFT;");
+        parse_ok(".code; push_u64 $OPEN_READ;");
+        parse_ok(".data; .u16 $EVENT_QUIT;");
+
+        // The push mnemonic also resolves special constants
+        parse_ok(".code; push $KEY_LEFT;");
+        parse_ok(".code; push $EVENT_QUIT;");
+
+        // Unknown constants are rejected
+        parse_fails(".code; push_u32 $NONEXISTENT;");
+        parse_fails(".code; push $NONEXISTENT;");
+        // Syscalls are intentionally not in the const_map
+        parse_fails(".code; push_u32 $FILE_OPEN;");
     }
 
     #[test]
