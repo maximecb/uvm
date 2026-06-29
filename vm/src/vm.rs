@@ -1887,6 +1887,7 @@ mod tests
     fn test_opcodes()
     {
         // We can have at most 254 short single-byte opcodes
+        // The last opcode value (OP_EXT) is reserved for future long opcodes
         assert!(Op::ret as usize <= 254);
 
         // Keep track of how many short opcodes we have so far
