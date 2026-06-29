@@ -988,6 +988,15 @@ impl Assembler
                 self.code.push_u16(idx);
             }
 
+            "select" => {
+                let idx_a: u8 = self.parse_int_arg(input)?;
+                input.expect_token(",")?;
+                let idx_b: u8 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::select);
+                self.code.push_u8(idx_a);
+                self.code.push_u8(idx_b);
+            }
+
             "get_argc" => {
                 self.code.push_op(Op::get_argc);
             }

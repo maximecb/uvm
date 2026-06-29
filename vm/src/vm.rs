@@ -87,8 +87,15 @@ pub enum Op
     // Same as get_local/set_local, but with a 16-bit slot index
     // get_local_w <idx:u16>
     get_local_w,
+
     // set_local_w <idx:u16> (value)
     set_local_w,
+
+    // Select between two local variables based on a popped condition.
+    // Pushes local slot `a` if the condition is non-zero, else slot `b`.
+    // Indices are relative to the base of the stack frame.
+    // select <a:u8> <b:u8> (cond)
+    select,
 
     // 32-bit bitwise operations
     and_u32,
@@ -929,6 +936,19 @@ impl Thread
                     }
 
                     self.stack[bp + idx] = val;
+                }
+
+                Op::select => {
+                    let idx_a = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let idx_b = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let cond = self.pop().as_u64();
+
+                    let idx = if cond != 0 { idx_a } else { idx_b };
+                    if bp + idx >= self.stack.len() {
+                        panic!("invalid index {} in select", idx);
+                    }
+
+                    self.push(self.stack[bp + idx]);
                 }
 
                 Op::push_0 => {
@@ -1919,7 +1939,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 119);
+        assert!(Op::ret as usize <= 120);
     }
 
     #[test]
