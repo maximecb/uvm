@@ -52,14 +52,17 @@ all of its arguments from the stack and leaves only the return value on the valu
 
 ### The Heap
 
-The address space used to store data is referred to as the heap. It is a linear address space which
-starts at address 0. There is a system call to expand and resize the heap. For performance reasons,
-UVM may allocate more space than requested, but programs should not rely on this behavior.
+The address space used to store data is referred to as the heap. It is a linear address space. There
+is a system call to expand and resize the heap. For performance reasons, UVM may allocate more space
+than requested, but programs should not rely on this behavior.
 
-One unusual property of the UVM heap is that address 0 is a valid address, meaning that accessing it
-will not fault. If address 0 is to be used for null pointers, in a language such as C, you can simply
-write some dummy data at this address. If you would like accesses to address 0 to panic, then you can
-insert or generate your own null checks in debug builds of your software.
+The low region of the address space (the first 64 KiB, below `MEM_BASE`) is left unmapped as a guard
+region, so the data segment is loaded at `MEM_BASE` rather than at address 0. Any load, store or jump
+to address 0, or to any other address in the guard region, faults in hardware. This means null
+pointers (address 0) and small offsets from them trap automatically, with no need for explicit null
+checks in the program. The same guard region applies to the code address space, so calling a null
+function pointer also faults. Absolute addresses are relocated by the assembler, so programs and
+compilers targeting UVM refer to labels as usual and do not need to be aware of `MEM_BASE`.
 
 UVM requires heap memory accesses to be aligned, and will panic if they are
 not. This is done for performance reasons, and also because some architectures don't allow

@@ -7,6 +7,14 @@ use std::ffi::CStr;
 use crate::host::*;
 use crate::program::Program;
 
+/// Base address at which the code and data segments are loaded.
+/// The region [0, MEM_BASE) is left unmapped in both address spaces so that
+/// loads, stores and jumps to null/low addresses fault in hardware, without
+/// the VM having to bounds-check the low end on every access. The assembler
+/// relocates absolute addresses (data labels and function pointers) by this
+/// amount; PC-relative offsets and integer literals are left untouched.
+pub const MEM_BASE: usize = 0x1_0000;
+
 /// Instruction opcodes
 /// Note: commonly used upcodes should be in the [0, 127] range (one byte)
 ///       less frequently used opcodes can take multiple bytes if necessary.
@@ -500,11 +508,15 @@ impl MemBlock
         let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
         assert!(page_size % 8 == 0);
 
+        // The accessible region starts at MEM_BASE: the [0, MEM_BASE) range is
+        // never mapped, so null/low-address accesses fault as a hardware guard.
+        assert!(MEM_BASE % page_size == 0);
+
         MemBlock {
             mem_block: unsafe { transmute(mem_block) },
             mapping_size: alloc_size,
             page_size,
-            cur_size: Box::new(0),
+            cur_size: Box::new(MEM_BASE),
         }
     }
 
@@ -1800,18 +1812,20 @@ impl VM
         let mut code = MemBlock::new();
         let mut heap = MemBlock::new();
 
-        // Resize the code and memory blocks to accomodate the program
-        code.grow(prog.code.len());
-        heap.grow(prog.data.len());
+        // Resize the code and memory blocks to accomodate the program.
+        // Both segments are loaded at MEM_BASE so that address 0 (and the
+        // rest of the guard region below MEM_BASE) stays unmapped.
+        code.grow(MEM_BASE + prog.code.len());
+        heap.grow(MEM_BASE + prog.data.len());
 
         // Copy the program code
         let mut code_view = code.new_view();
-        let mut code_slice: &mut [u8] = code_view.get_slice_mut(0, prog.code.len());
+        let mut code_slice: &mut [u8] = code_view.get_slice_mut(MEM_BASE, prog.code.len());
         code_slice.clone_from_slice(prog.code.as_slice());
 
         // Copy the program data
         let mut heap_view = heap.new_view();
-        let mut heap_slice: &mut [u8] = heap_view.get_slice_mut(0, prog.data.len());
+        let mut heap_slice: &mut [u8] = heap_view.get_slice_mut(MEM_BASE, prog.data.len());
         heap_slice.clone_from_slice(prog.data.as_slice());
 
         let vm = Self {
@@ -1919,7 +1933,7 @@ mod tests
         let asm = Assembler::new();
         let prog = asm.parse_str(src).unwrap();
         let mut vm = VM::new(prog);
-        let result = VM::call(&mut vm, 0, &[]);
+        let result = VM::call(&mut vm, MEM_BASE as u64, &[]);
 
         result
     }
@@ -1957,7 +1971,7 @@ mod tests
         eval_i64("push 1; ret;", 1);
         eval_i64("push -1; ret;", -1);
         eval_i64("push 0xFFFF; ret;", 0xFFFF);
-        eval_i64(".data; LABEL: .u64 0; .code; push LABEL; ret;", 0);
+        eval_i64(".data; LABEL: .u64 0; .code; push LABEL; ret;", MEM_BASE as i64);
 
         // Stack manipulation
         eval_i64("push_i8 7; push_i8 3; swap; ret;", 7);
@@ -2017,24 +2031,28 @@ mod tests
     #[test]
     fn test_load_store()
     {
-        // Store instruction
-        eval_i64(".data; .zero 255; .code; push_i8 0; push_i8 77; store_u8; push_i8 11; ret;", 11);
+        // Store instruction (addresses are taken relative to a data label,
+        // since the low addresses are now in the guard region)
+        eval_i64(".data; D: .zero 255; .code; push D; push_i8 77; store_u8; push_i8 11; ret;", 11);
     }
 
     #[test]
     fn test_unaligned_load_store()
     {
+        // The data label resolves to MEM_BASE, which is aligned, so we add an
+        // odd offset to exercise unaligned accesses.
+
         // Store and load a u64 at an unaligned address
-        eval_i64(".data; .zero 255; .code; push 1; push 0x1122334455667788; store_u64; push 1; load_u64; ret;", 0x1122334455667788);
+        eval_i64(".data; D: .zero 255; .code; push D; push 1; add_u64; push 0x1122334455667788; store_u64; push D; push 1; add_u64; load_u64; ret;", 0x1122334455667788);
 
         // Store and load a u32 at an unaligned address
-        eval_i64(".data; .zero 255; .code; push 3; push 0x0AABBCCD; store_u32; push 3; load_u32; ret;", 0x0AABBCCD);
+        eval_i64(".data; D: .zero 255; .code; push D; push 3; add_u64; push 0x0AABBCCD; store_u32; push D; push 3; add_u64; load_u32; ret;", 0x0AABBCCD);
 
         // Store and load a u16 at an unaligned address
-        eval_i64(".data; .zero 255; .code; push 7; push 0x1234; store_u16; push 7; load_u16; ret;", 0x1234);
+        eval_i64(".data; D: .zero 255; .code; push D; push 7; add_u64; push 0x1234; store_u16; push D; push 7; add_u64; load_u16; ret;", 0x1234);
 
         // Unaligned stores should not clobber neighbouring bytes
-        eval_i64(".data; .zero 255; .code; push 0; push 0xFF; store_u8; push 1; push 0x1122334455667788; store_u64; push 0; load_u8; ret;", 0xFF);
+        eval_i64(".data; D: .zero 255; .code; push D; push 0xFF; store_u8; push D; push 1; add_u64; push 0x1122334455667788; store_u64; push D; load_u8; ret;", 0xFF);
     }
 
     #[test]

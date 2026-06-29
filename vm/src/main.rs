@@ -103,7 +103,7 @@ fn main()
 
     let program = program.unwrap();
     let mut vm = VM::new(program);
-    let ret_val = VM::call(&mut vm, 0, &[]);
+    let ret_val = VM::call(&mut vm, vm::MEM_BASE as u64, &[]);
 
     exit(ret_val.as_i32());
 }

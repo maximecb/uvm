@@ -56,6 +56,10 @@ LOOP_Y:
     push_u64 4;
     mul_u64; # (Y * 800 + X) * 4
 
+    # Add the pixel buffer base address
+    push PIXEL_BUFFER;
+    add_u64;
+
     # Compute red color:
     # Y * 256 / 600
     get_local 2;

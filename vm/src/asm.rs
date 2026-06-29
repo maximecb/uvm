@@ -2,7 +2,7 @@ use std::fmt;
 use std::convert::{TryFrom};
 use std::collections::HashMap;
 use std::collections::HashSet;
-use crate::vm::{Op};
+use crate::vm::{Op, MEM_BASE};
 use crate::program::*;
 
 #[derive(Debug)]
@@ -562,7 +562,9 @@ impl Assembler
 
             match label_ref.kind {
                 LabelRefKind::Address32 => {
-                    let ptr32 = u32::try_from(def.pos);
+                    // Absolute addresses are relocated by MEM_BASE so they
+                    // point into the loaded segment (above the guard region)
+                    let ptr32 = u32::try_from(def.pos + MEM_BASE);
 
                     if ptr32.is_err() {
                         return Err(ParseError {
@@ -579,7 +581,7 @@ impl Assembler
                 }
 
                 LabelRefKind::Address64 => {
-                    let ptr64 = def.pos as u64;
+                    let ptr64 = (def.pos + MEM_BASE) as u64;
 
                     match label_ref.section {
                         Section::Code => self.code.write(label_ref.pos, ptr64),
