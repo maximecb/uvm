@@ -2100,6 +2100,31 @@ mod tests
     }
 
     #[test]
+    fn test_cmd_args()
+    {
+        // Argument 0 is the program path, the rest are user-supplied args.
+        // PROGRAM_ARGS is a set-once global, so this must be the only test
+        // that sets it.
+        crate::host::set_program_args(vec![
+            "prog.asm".to_string(),
+            "hello".to_string(),
+            "wide".to_string(),
+        ]);
+
+        // cmd_argc returns the number of arguments
+        eval_i64(".code; syscall cmd_argc; ret;", 3);
+
+        // cmd_get_arg copies arg 1 ("hello") into the buffer and returns its length
+        eval_i64(".data; BUF: .zero 64; .code; push 1; push BUF; push 64; syscall cmd_get_arg; ret;", 5);
+
+        // The argument bytes are actually written into the buffer ('h' == 104)
+        eval_i64(".data; BUF: .zero 64; .code; push 1; push BUF; push 64; syscall cmd_get_arg; push BUF; load_u8; ret;", 'h' as i64);
+
+        // A dst_len of 0 queries the length without writing to the buffer
+        eval_i64(".data; BUF: .zero 64; .code; push 2; push BUF; push 0; syscall cmd_get_arg; ret;", 4);
+    }
+
+    #[test]
     #[should_panic]
     fn test_div_zero()
     {

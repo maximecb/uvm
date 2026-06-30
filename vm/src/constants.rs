@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 37;
+pub const SYSCALL_TBL_LEN: usize = 39;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -43,6 +43,8 @@ pub const FILE_WRITE: u16 = 33;
 pub const FILE_SEEK: u16 = 34;
 pub const FILE_TELL: u16 = 35;
 pub const FILE_SIZE: u16 = 36;
+pub const CMD_ARGC: u16 = 37;
+pub const CMD_GET_ARG: u16 = 38;
 
 pub struct SysCallDesc
 {
@@ -90,6 +92,8 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "file_seek", const_idx: 34, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "file_tell", const_idx: 35, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "file_size", const_idx: 36, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "cmd_argc", const_idx: 37, argc: 0, has_ret: true }),
+    Some(SysCallDesc { name: "cmd_get_arg", const_idx: 38, argc: 3, has_ret: true }),
 ];
 
 pub const EVENT_QUIT: u16 = 0;

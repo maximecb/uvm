@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::io::Write;
 use std::io::Read;
 use std::io::{stdout, stdin};
-use std::sync::{Arc, Weak, Mutex};
+use std::sync::{Arc, Weak, Mutex, OnceLock};
 use crate::vm::{Value, VM, Thread};
 use crate::window::*;
 use crate::audio::*;
@@ -107,6 +107,9 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         THREAD_ID => HostFn::Fn0_1(thread_id),
         THREAD_SLEEP => HostFn::Fn1_0(thread_sleep),
 
+        CMD_ARGC => HostFn::Fn0_1(cmd_argc),
+        CMD_GET_ARG => HostFn::Fn3_1(cmd_get_arg),
+
         // Console I/O
         PRINT_I64 => HostFn::Fn1_0(print_i64),
         PRINT_F32 => HostFn::Fn1_0(print_f32),
@@ -150,6 +153,60 @@ fn vm_grow_heap(thread: &mut Thread, num_bytes: Value) -> Value
     let num_bytes = num_bytes.as_usize();
     let new_size = vm.grow_heap(num_bytes);
     Value::from(new_size)
+}
+
+/// Command-line arguments passed to the running program.
+/// Set once at startup by the host (see set_program_args). Argument 0 is
+/// the program file path, mirroring the C `argv[0]` convention.
+static PROGRAM_ARGS: OnceLock<Vec<String>> = OnceLock::new();
+
+/// Set the command-line arguments visible to the program.
+/// Must be called before the program starts running.
+pub fn set_program_args(args: Vec<String>)
+{
+    // set() only fails if the args were already set; ignore that case so
+    // that calling this more than once (e.g. in tests) is harmless.
+    let _ = PROGRAM_ARGS.set(args);
+}
+
+/// Get the command-line arguments, defaulting to none if never set
+/// (e.g. when the VM is driven directly from unit tests).
+fn program_args() -> &'static [String]
+{
+    PROGRAM_ARGS.get().map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// Get the number of command-line arguments
+fn cmd_argc(thread: &mut Thread) -> Value
+{
+    Value::from(program_args().len() as u64)
+}
+
+/// Copy command-line argument `idx` into the guest buffer `dst`.
+/// The copy is NUL-terminated whenever dst_len >= 1, and truncated to fit.
+/// Returns the full byte length of the argument, excluding the NUL, so
+/// calling with dst_len = 0 can be used to query the size needed.
+fn cmd_get_arg(thread: &mut Thread, idx: Value, dst: Value, dst_len: Value) -> Value
+{
+    let args = program_args();
+    let idx = idx.as_usize();
+
+    if idx >= args.len() {
+        panic!("invalid index {} in cmd_get_arg", idx);
+    }
+
+    let bytes = args[idx].as_bytes();
+    let dst_len = dst_len.as_usize();
+
+    if dst_len >= 1 {
+        // Copy as many bytes as fit, leaving room for the NUL terminator
+        let num_copy = bytes.len().min(dst_len - 1);
+        let buf: &mut [u8] = thread.get_heap_slice_mut(dst.as_usize(), dst_len);
+        buf[..num_copy].copy_from_slice(&bytes[..num_copy]);
+        buf[num_copy] = 0;
+    }
+
+    Value::from(bytes.len() as u64)
 }
 
 fn thread_id(thread: &mut Thread) -> Value

@@ -81,11 +81,15 @@ fn main()
     let opts = parse_args(env::args().collect());
     //println!("{:?}", opts);
 
-    if opts.rest.len() != 1 {
-        panic!("must specify exactly one input file to run");
+    if opts.rest.is_empty() {
+        panic!("must specify an input file to run");
     }
 
     let file_name = &opts.rest[0];
+
+    // Make the command-line arguments visible to the program.
+    // Argument 0 is the input file path, the rest are user-supplied arguments.
+    host::set_program_args(opts.rest.clone());
 
     // Parse/compile the program
     let asm = Assembler::new();

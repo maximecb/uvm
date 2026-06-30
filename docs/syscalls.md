@@ -114,6 +114,26 @@ u64 thread_join(u64 tid)
 
 Join on the thread with the given id. Produces the return value for the thread.
 
+## cmd_argc
+
+```
+u64 cmd_argc()
+```
+
+**Returns:** `u64 argc`
+
+Get the number of command-line arguments passed to the program. Argument 0 is the program file path.
+
+## cmd_get_arg
+
+```
+u64 cmd_get_arg(u64 idx, u8* dst, u64 dst_len)
+```
+
+**Returns:** `u64 len`
+
+Copy command-line argument idx into the buffer dst with capacity dst_len bytes. The copy is NUL-terminated whenever dst_len is at least 1, and truncated to fit. Returns the full byte length of the argument excluding the NUL terminator, so calling with dst_len = 0 queries the size needed.
+
 # io
 
 Stream I/O functionality.
