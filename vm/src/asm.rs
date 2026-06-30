@@ -950,53 +950,34 @@ impl Assembler
                 self.code.push_u8(idx);
             }
 
-            // get_local automatically selects the narrow (u8) or wide (u16)
-            // index encoding based on the index value
             "get_local" => {
                 let idx: u16 = self.parse_int_arg(input)?;
-                if let Ok(idx) = u8::try_from(idx) {
-                    self.code.push_op(Op::get_local);
-                    self.code.push_u8(idx);
-                } else {
-                    self.code.push_op(Op::get_local_w);
-                    self.code.push_u16(idx);
-                }
-            }
-
-            // set_local automatically selects the narrow (u8) or wide (u16)
-            // index encoding based on the index value
-            "set_local" => {
-                let idx: u16 = self.parse_int_arg(input)?;
-                if let Ok(idx) = u8::try_from(idx) {
-                    self.code.push_op(Op::set_local);
-                    self.code.push_u8(idx);
-                } else {
-                    self.code.push_op(Op::set_local_w);
-                    self.code.push_u16(idx);
-                }
-            }
-
-            // Explicit wide-index forms, in case the u16 encoding is wanted
-            // regardless of the index value
-            "get_local_w" => {
-                let idx: u16 = self.parse_int_arg(input)?;
-                self.code.push_op(Op::get_local_w);
+                self.code.push_op(Op::get_local);
                 self.code.push_u16(idx);
             }
 
-            "set_local_w" => {
+            "set_local" => {
                 let idx: u16 = self.parse_int_arg(input)?;
-                self.code.push_op(Op::set_local_w);
+                self.code.push_op(Op::set_local);
                 self.code.push_u16(idx);
             }
 
             "select" => {
-                let idx_a: u8 = self.parse_int_arg(input)?;
+                let idx_a: u16 = self.parse_int_arg(input)?;
                 input.expect_token(",")?;
-                let idx_b: u8 = self.parse_int_arg(input)?;
+                let idx_b: u16 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::select);
-                self.code.push_u8(idx_a);
-                self.code.push_u8(idx_b);
+                self.code.push_u16(idx_a);
+                self.code.push_u16(idx_b);
+            }
+
+            "mov" => {
+                let dst: u16 = self.parse_int_arg(input)?;
+                input.expect_token(",")?;
+                let src: u16 = self.parse_int_arg(input)?;
+                self.code.push_op(Op::mov);
+                self.code.push_u16(dst);
+                self.code.push_u16(src);
             }
 
             "get_argc" => {

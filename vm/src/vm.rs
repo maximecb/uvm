@@ -84,26 +84,24 @@ pub enum Op
 
     // Get the local variable at a given stack slot index
     // The index is relative to the base of the stack frame
-    // get_local <idx:u8>
+    // get_local <idx:u16>
     get_local,
 
     // Set the local variable at a given stack slot index
     // The index is relative to the base of the stack frame
-    // set_local <idx:u8> (value)
+    // set_local <idx:u16> (value)
     set_local,
-
-    // Same as get_local/set_local, but with a 16-bit slot index
-    // get_local_w <idx:u16>
-    get_local_w,
-
-    // set_local_w <idx:u16> (value)
-    set_local_w,
 
     // Select between two local variables based on a popped condition.
     // Pushes local slot `a` if the condition is non-zero, else slot `b`.
     // Indices are relative to the base of the stack frame.
-    // select <a:u8> <b:u8> (cond)
+    // select <a:u16> <b:u16> (cond)
     select,
+
+    // Move (copy) the value of one local variable into another.
+    // Both indices are relative to the base of the stack frame.
+    // mov <dst:u16> <src:u16>
+    mov,
 
     // 32-bit bitwise operations
     and_u32,
@@ -909,7 +907,7 @@ impl Thread
                 }
 
                 Op::get_local => {
-                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
 
                     if bp + idx >= self.stack.len() {
                         panic!("invalid index {} in get_local", idx);
@@ -919,7 +917,7 @@ impl Thread
                 }
 
                 Op::set_local => {
-                    let idx = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
                     let val = self.pop();
 
                     if bp + idx >= self.stack.len() {
@@ -929,30 +927,9 @@ impl Thread
                     self.stack[bp + idx] = val;
                 }
 
-                Op::get_local_w => {
-                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
-
-                    if bp + idx >= self.stack.len() {
-                        panic!("invalid index {} in get_local_w", idx);
-                    }
-
-                    self.push(self.stack[bp + idx]);
-                }
-
-                Op::set_local_w => {
-                    let idx = self.code.read_pc::<u16>(&mut pc) as usize;
-                    let val = self.pop();
-
-                    if bp + idx >= self.stack.len() {
-                        panic!("invalid index in set_local_w");
-                    }
-
-                    self.stack[bp + idx] = val;
-                }
-
                 Op::select => {
-                    let idx_a = self.code.read_pc::<u8>(&mut pc) as usize;
-                    let idx_b = self.code.read_pc::<u8>(&mut pc) as usize;
+                    let idx_a = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let idx_b = self.code.read_pc::<u16>(&mut pc) as usize;
                     let cond = self.pop().as_u64();
 
                     let idx = if cond != 0 { idx_a } else { idx_b };
@@ -961,6 +938,17 @@ impl Thread
                     }
 
                     self.push(self.stack[bp + idx]);
+                }
+
+                Op::mov => {
+                    let dst = self.code.read_pc::<u16>(&mut pc) as usize;
+                    let src = self.code.read_pc::<u16>(&mut pc) as usize;
+
+                    if bp + dst >= self.stack.len() || bp + src >= self.stack.len() {
+                        panic!("invalid index in mov");
+                    }
+
+                    self.stack[bp + dst] = self.stack[bp + src];
                 }
 
                 Op::push_0 => {
@@ -1996,12 +1984,12 @@ mod tests
     }
 
     #[test]
-    fn test_setlocal_w()
+    fn test_mov()
     {
-        eval_i64(".code; push 0; push 77; set_local_w 0; get_local_w 0; ret;", 77);
-        // get_local_w and set_local_w refer to the same slots as the u8 variants
-        eval_i64(".code; push 0; push 88; set_local_w 0; get_local 0; ret;", 88);
-        eval_i64(".code; push 0; push 99; set_local 0; get_local_w 0; ret;", 99);
+        // Copy local slot 1 into slot 0
+        eval_i64(".code; push 0; push 55; mov 0, 1; get_local 0; ret;", 55);
+        // mov leaves the source slot unchanged
+        eval_i64(".code; push 0; push 55; mov 0, 1; get_local 1; ret;", 55);
     }
 
     #[test]
