@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{Ordering, AtomicU64};
+use std::sync::atomic::{Ordering, AtomicU64, AtomicUsize};
 use std::mem::{transmute, size_of, align_of};
 use std::collections::{HashSet, HashMap};
 use std::thread;
@@ -315,56 +315,67 @@ pub struct Value(u64);
 
 impl Value
 {
+    #[inline(always)]
     pub fn is_null(&self) -> bool {
         let Value(val) = *self;
         val == 0
     }
 
+    #[inline(always)]
     pub fn as_u8(&self) -> u8 {
         let Value(val) = *self;
         val as u8
     }
 
+    #[inline(always)]
     pub fn as_u16(&self) -> u16 {
         let Value(val) = *self;
         val as u16
     }
 
+    #[inline(always)]
     pub fn as_u32(&self) -> u32 {
         let Value(val) = *self;
         val as u32
     }
 
+    #[inline(always)]
     pub fn as_u64(&self) -> u64 {
         let Value(val) = *self;
         val as u64
     }
 
+    #[inline(always)]
     pub fn as_usize(&self) -> usize {
         let Value(val) = *self;
         val as usize
     }
 
+    #[inline(always)]
     pub fn as_i8(&self) -> i8 {
         let Value(val) = *self;
         val as i8
     }
 
+    #[inline(always)]
     pub fn as_i16(&self) -> i16 {
         let Value(val) = *self;
         val as i16
     }
 
+    #[inline(always)]
     pub fn as_i32(&self) -> i32 {
         let Value(val) = *self;
         val as i32
     }
 
+    #[inline(always)]
     pub fn as_i64(&self) -> i64 {
         let Value(val) = *self;
         val as i64
     }
 
+    #[inline(always)]
     pub fn as_f32(&self) -> f32 {
         let Value(val) = *self;
         f32::from_bits(val as u32)
@@ -372,60 +383,70 @@ impl Value
 }
 
 impl From<bool> for Value {
+    #[inline(always)]
     fn from(val: bool) -> Self {
         Value(if val { 1 } else { 0 })
     }
 }
 
 impl From<u8> for Value {
+    #[inline(always)]
     fn from(val: u8) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<u16> for Value {
+    #[inline(always)]
     fn from(val: u16) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<u32> for Value {
+    #[inline(always)]
     fn from(val: u32) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<u64> for Value {
+    #[inline(always)]
     fn from(val: u64) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<usize> for Value {
+    #[inline(always)]
     fn from(val: usize) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<i8> for Value {
+    #[inline(always)]
     fn from(val: i8) -> Self {
         Value((val as i64) as u64)
     }
 }
 
 impl From<i32> for Value {
+    #[inline(always)]
     fn from(val: i32) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<i64> for Value {
+    #[inline(always)]
     fn from(val: i64) -> Self {
         Value(val as u64)
     }
 }
 
 impl From<f32> for Value {
+    #[inline(always)]
     fn from(val: f32) -> Self {
         Value(val.to_bits() as u64)
     }
@@ -459,10 +480,12 @@ struct MemBlock
     // System page size
     page_size: usize,
 
-    // Currently visible/accessible size
-    // This is a box because we need a pointer
-    // To access this value from threads using MemView
-    cur_size: Box<usize>,
+    // Currently visible/accessible size.
+    // This is a box because we need a stable pointer to access this value
+    // from threads using MemView. It is atomic because grow() (serialized by
+    // the VM mutex) writes it while other threads read it on every memory
+    // access; the atomic prevents torn reads of the size.
+    cur_size: Box<AtomicUsize>,
 }
 
 impl MemBlock
@@ -514,7 +537,7 @@ impl MemBlock
             mem_block: unsafe { transmute(mem_block) },
             mapping_size: alloc_size,
             page_size,
-            cur_size: Box::new(MEM_BASE),
+            cur_size: Box::new(AtomicUsize::new(MEM_BASE)),
         }
     }
 
@@ -532,7 +555,7 @@ impl MemBlock
         }
         assert!(new_size % self.page_size == 0);
 
-        let cur_size = *self.cur_size;
+        let cur_size = self.cur_size.load(Ordering::Relaxed);
 
         if new_size <= cur_size {
             return cur_size;
@@ -559,8 +582,10 @@ impl MemBlock
             panic!();
         }
 
-        // Update the currently accessible size
-        *self.cur_size = new_size;
+        // Update the currently accessible size. The new pages are mapped by
+        // the mmap above (which completes before this store), so any thread
+        // that observes the new size will also see the newly mapped memory.
+        self.cur_size.store(new_size, Ordering::Relaxed);
 
         new_size
     }
@@ -570,7 +595,7 @@ impl MemBlock
     {
         MemView {
             mem_block: self.mem_block,
-            cur_size: &*self.cur_size,
+            cur_size: &*self.cur_size as *const AtomicUsize,
         }
     }
 }
@@ -580,8 +605,8 @@ struct MemView
     // Underlying memory block
     mem_block: *mut u8,
 
-    // Pointer to size variable from parent MemBlock
-    cur_size: *const usize,
+    // Pointer to the atomic size variable owned by the parent MemBlock
+    cur_size: *const AtomicUsize,
 }
 
 unsafe impl Send for MemView {}
@@ -590,14 +615,14 @@ impl MemView
 {
     pub fn size_bytes(&self) -> usize
     {
-        unsafe { *self.cur_size }
+        unsafe { (*self.cur_size).load(Ordering::Relaxed) }
     }
 
     /// Get a mutable pointer to an address/offset
     pub fn get_ptr_mut<T>(&mut self, addr: usize, num_elems: usize) -> *mut T
     {
         // Check that the address is within bounds
-        let cur_size = unsafe { *self.cur_size };
+        let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
         if addr + std::mem::size_of::<T>() * num_elems > cur_size {
             panic!("attempting to access memory slice past end of heap");
         }
@@ -621,16 +646,17 @@ impl MemView
     pub fn get_ptr<T>(&self, addr: usize, num_elems: usize) -> *const T
     {
         // Check that the address is within bounds
-        let cur_size = unsafe { *self.cur_size };
+        let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
         if addr + std::mem::size_of::<T>() * num_elems > cur_size {
             panic!("attempting to access memory slice past end of heap");
         }
 
         // Check that the address is aligned
-        if addr & (size_of::<T>() - 1) != 0 {
+        if addr & (align_of::<T>() - 1) != 0 {
             panic!(
-                "attempting to access data of type {} at unaligned address",
-                std::any::type_name::<T>()
+                "attempting to access data of type {} at unaligned address {}",
+                std::any::type_name::<T>(),
+                addr
             );
         }
 
@@ -651,10 +677,11 @@ impl MemView
 
     /// Read a value at an address
     /// The address does not need to be aligned
+    #[inline(always)]
     pub fn read<T>(&self, addr: usize) -> T where T: Copy
     {
         // Check that the address is within bounds
-        let cur_size = unsafe { *self.cur_size };
+        let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
         if addr + size_of::<T>() > cur_size {
             panic!("attempting to read past end of heap");
         }
@@ -667,10 +694,11 @@ impl MemView
 
     /// Write a value at an address
     /// The address does not need to be aligned
+    #[inline(always)]
     pub fn write<T>(&mut self, addr: usize, val: T) where T: Copy
     {
         // Check that the address is within bounds
-        let cur_size = unsafe { *self.cur_size };
+        let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
         if addr + size_of::<T>() > cur_size {
             panic!("attempting to write past end of heap");
         }
@@ -682,10 +710,11 @@ impl MemView
     }
 
     /// Read a value at the current PC and then increment the PC
+    #[inline(always)]
     pub fn read_pc<T>(&self, pc: &mut usize) -> T where T: Copy
     {
         // Check that the address is within bounds
-        let cur_size = unsafe { *self.cur_size };
+        let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
         if *pc + std::mem::size_of::<T>() > cur_size {
             // TODO: output name of type being read
             panic!("pc outside of bounds of code space");
@@ -696,6 +725,27 @@ impl MemView
             *pc += size_of::<T>();
             std::ptr::read_unaligned(val_ptr)
         }
+    }
+
+    /// Read an opcode at the current PC and then increment the PC.
+    /// The byte is range-checked before being interpreted as an `Op`.
+    /// Reading an arbitrary byte directly as an `Op` (e.g. when a computed
+    /// jump lands on operand or data bytes) would be undefined behaviour if
+    /// the byte is not a valid discriminant, so we validate it here. Opcodes
+    /// are assigned contiguous values from 0 (`panic`) up to and including
+    /// `ret`, so any byte in that range maps to a valid `Op`.
+    #[inline(always)]
+    pub fn read_op(&self, pc: &mut usize) -> Op
+    {
+        let op_byte = self.read_pc::<u8>(pc);
+
+        if op_byte > Op::ret as u8 {
+            panic!("invalid opcode {}", op_byte);
+        }
+
+        // Safe: the range check above guarantees a valid, in-range
+        // discriminant, and the discriminants are gap-free up to `ret`.
+        unsafe { transmute::<u8, Op>(op_byte) }
     }
 }
 
@@ -738,11 +788,13 @@ impl Thread
         }
     }
 
+    #[inline(always)]
     pub fn push<T>(&mut self, val: T) where Value: From<T>
     {
         self.stack.push(Value::from(val));
     }
 
+    #[inline(always)]
     pub fn pop(&mut self) -> Value
     {
         match self.stack.pop() {
@@ -822,7 +874,7 @@ impl Thread
         // For each instruction to execute
         loop
         {
-            let op = self.code.read_pc::<Op>(&mut pc);
+            let op = self.code.read_op(&mut pc);
             //dbg!(op);
 
             match op
@@ -2122,6 +2174,17 @@ mod tests
 
         // A dst_len of 0 queries the length without writing to the buffer
         eval_i64(".data; BUF: .zero 64; .code; push 2; push BUF; push 0; syscall cmd_get_arg; ret;", 4);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid opcode")]
+    fn test_invalid_opcode()
+    {
+        // A computed jump (call_fp) into the operand bytes of an instruction
+        // lands on bytes that are not valid opcodes. This must fault cleanly
+        // rather than decode an invalid Op value, which would be undefined
+        // behaviour. BAD+1 is the first 0xFF operand byte of the push_u64.
+        eval_src("push BAD; push 1; add_u64; call_fp 0; ret; BAD: push_u64 0xFFFF_FFFF_FFFF_FFFF; ret;");
     }
 
     #[test]
