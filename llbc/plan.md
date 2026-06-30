@@ -244,20 +244,32 @@ folding would hide. The harness runs these automatically when `lli` is present.
       match `lli` exactly. This is the real validation — `control_flow.c`'s C
       `main` is const-folded by `-O2`, so its exit code alone is shallow.
 
-### Phase 4 — memory & pointers  (`pointers.c`)
-- [ ] Stack-alloc runtime prelude (`__stack_alloc_sp__` etc.).
-- [ ] `alloca` (frame offset assignment, entry bump, restore on ret).
-- [ ] `load`/`store` (typed by size).
-- [ ] `getelementptr` (struct fields, array index, nested, var index).
-- [ ] `ptrtoint`/`inttoptr`.
-- [ ] `pointers.c` matches native.
+### Phase 4 — memory & pointers  (`pointers.c`)  ✅ DONE
+- [x] Stack-alloc region: `__stack_alloc_sp__` (a `.addr64` bump pointer) + an
+      8 MB `__stack_alloc_buf__`; per-function frame bumped on entry, restored
+      on every `ret`.
+- [x] `alloca` (fixed-size): each gets a frame offset; result = bp + offset.
+      Dynamic (variable-length) alloca errors for now.
+- [x] `load`/`store` (`load_uN`/`store_uN` by byte size; store pushes addr then
+      value, matching the VM's pop order).
+- [x] `getelementptr` (byte-offset `i8` GEPs, struct fields, array index, nested,
+      runtime index with sign-extension; constants folded into one add).
+- [x] `ptrtoint`/`inttoptr` (already handled in Phase 2 conversions).
+- [x] `pointers.c` matches native (exit 223); `alloca`+load/store/gep loop
+      validated against `lli` via `tests/ll/mem.ll` (exit 14).
 
-### Phase 5 — globals & aggregates  (`globals.c`)
-- [ ] `.data` emission: scalars, arrays, structs, strings, `zeroinitializer`,
-      nested aggregates (correct alignment/padding).
-- [ ] `@name` address references.
-- [ ] Constant-expression lowering (`gep`/`add`/`sub`/conv).
-- [ ] `globals.c` matches native.
+### Phase 5 — globals & aggregates  (`globals.c`)  ✅ DONE
+- [x] `.data` emission: scalars (`.u8/16/32/64`), `zeroinitializer`/uninitialized
+      (`.zero`), strings & byte arrays (`.hex`), pointer-to-global/function
+      (`.addr64`), arrays and structs with correct padding, nested aggregates.
+- [x] `@name` address references (`push <label>`; functions & globals share the
+      label space).
+- [x] Constant-expression initializers (`gep`/`add`/`sub`/conv, incl. nested in
+      aggregates): reserve `.zero` space + compute and `store` at startup
+      (tracked as (label, byte-offset, expr)).
+- [x] `globals.c` matches native (exit 0); reads validated against `lli` via
+      `tests/ll/globals_read.ll` (exit 215). All 1817 doom.ll globals emit
+      cleanly (llbc now reaches doom's function bodies, stops at `call`).
 
 ### Phase 6 — functions & calls  (`strings.c`, `recursion.c`, `funcptr.c`)
 - [ ] Direct calls: arg passing, return values, void calls.
