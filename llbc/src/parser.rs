@@ -340,6 +340,7 @@ impl Parser
             "sext" => self.parse_conv(ConvOp::SExt),
             "ptrtoint" => self.parse_conv(ConvOp::PtrToInt),
             "inttoptr" => self.parse_conv(ConvOp::IntToPtr),
+            "bitcast" => self.parse_conv(ConvOp::BitCast),
             "icmp" => self.parse_icmp(),
             "select" => self.parse_select(),
             "load" => self.parse_load(),
@@ -931,16 +932,58 @@ impl Parser
         if self.input.match_keyword("getelementptr")? {
             return self.parse_ce_gep();
         }
-        if self.input.match_keyword("inttoptr")? {
+        if let Some(op) = self.match_conv_op()? {
             let (val, to) = self.parse_ce_conv_body()?;
-            return Ok(Value::ConstExpr(Box::new(ConstExpr::IntToPtr { val, to })));
+            return Ok(Value::ConstExpr(Box::new(ConstExpr::Conv { op, val, to })));
         }
-        if self.input.match_keyword("ptrtoint")? {
-            let (val, to) = self.parse_ce_conv_body()?;
-            return Ok(Value::ConstExpr(Box::new(ConstExpr::PtrToInt { val, to })));
+        if let Some(op) = self.match_bin_op()? {
+            self.skip_arith_flags()?;
+            self.input.expect_token("(")?;
+            let lhs = self.parse_typed_val()?;
+            self.input.expect_token(",")?;
+            let rhs = self.parse_typed_val()?;
+            self.input.expect_token(")")?;
+            return Ok(Value::ConstExpr(Box::new(ConstExpr::Bin { op, lhs, rhs })));
         }
 
         self.input.parse_error("value form not yet supported")
+    }
+
+    /// If the next token is a conversion opcode, consume it and return it.
+    fn match_conv_op(&mut self) -> Result<Option<ConvOp>, ParseError>
+    {
+        const OPS: &[(&str, ConvOp)] = &[
+            ("trunc", ConvOp::Trunc),
+            ("zext", ConvOp::ZExt),
+            ("sext", ConvOp::SExt),
+            ("ptrtoint", ConvOp::PtrToInt),
+            ("inttoptr", ConvOp::IntToPtr),
+            ("bitcast", ConvOp::BitCast),
+        ];
+        for (kw, op) in OPS {
+            if self.input.match_keyword(kw)? {
+                return Ok(Some(*op));
+            }
+        }
+        Ok(None)
+    }
+
+    /// If the next token is a binary opcode, consume it and return it.
+    fn match_bin_op(&mut self) -> Result<Option<BinOp>, ParseError>
+    {
+        const OPS: &[(&str, BinOp)] = &[
+            ("add", BinOp::Add), ("sub", BinOp::Sub), ("mul", BinOp::Mul),
+            ("udiv", BinOp::UDiv), ("sdiv", BinOp::SDiv),
+            ("urem", BinOp::URem), ("srem", BinOp::SRem),
+            ("and", BinOp::And), ("or", BinOp::Or), ("xor", BinOp::Xor),
+            ("shl", BinOp::Shl), ("lshr", BinOp::LShr), ("ashr", BinOp::AShr),
+        ];
+        for (kw, op) in OPS {
+            if self.input.match_keyword(kw)? {
+                return Ok(Some(*op));
+            }
+        }
+        Ok(None)
     }
 
     /// Parse a `<type> <value>` pair.

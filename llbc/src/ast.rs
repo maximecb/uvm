@@ -121,10 +121,11 @@ pub enum ConstExpr
         base: TypedVal,
         indices: Vec<TypedVal>,
     },
-    /// `inttoptr (iN <v> to ptr)`
-    IntToPtr { val: TypedVal, to: Type },
-    /// `ptrtoint (ptr <v> to iN)`
-    PtrToInt { val: TypedVal, to: Type },
+    /// A conversion applied to a constant: `trunc`/`zext`/`sext`/`ptrtoint`/
+    /// `inttoptr`/`bitcast`, e.g. `ptrtoint (ptr @g to i32)`.
+    Conv { op: ConvOp, val: TypedVal, to: Type },
+    /// A binary operation on two constants, e.g. `add (i32 <a>, i32 <b>)`.
+    Bin { op: BinOp, lhs: TypedVal, rhs: TypedVal },
 }
 
 // ===========================================================================
@@ -259,7 +260,7 @@ pub enum BinOp
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConvOp
 {
-    Trunc, ZExt, SExt, PtrToInt, IntToPtr,
+    Trunc, ZExt, SExt, PtrToInt, IntToPtr, BitCast,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
