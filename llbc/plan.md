@@ -192,36 +192,57 @@ Self-checking tests additionally `assert()` internally and return non-zero on
 failure, so even a missing reference catches regressions. Keep all generated
 `.ll`/`.asm` reproducible via `gen_ll.sh`.
 
+**Hand-written `.ll` vs `lli`.** Because clang `-O2` constant-folds pure C
+`main`s (so a test's *functions* compile but its exit code only reflects a
+folded constant), we also keep hand-written `tests/ll/*.ll` files that exercise
+real runtime behavior, and diff `llbc`→UVM against the **LLVM interpreter**
+`lli` (`/opt/homebrew/opt/llvm/bin/lli`). `lli` is the LLVM reference semantics
+and runs `.ll` directly — ideal for control flow, and later phases, that C-level
+folding would hide. The harness runs these automatically when `lli` is present.
+
 ---
 
 ## Milestone checklist
 
-### Phase 0 — scaffolding
-- [ ] `layout.rs`: `size_of`/`align_of`/field offsets for all types (ints, ptr,
-      array, named/anon struct, nested); unit tests vs known x86_64 sizes.
-- [ ] `codegen.rs` skeleton: emit `.data;`/`.code;`, program entry
-      (`call main, 0; ret;`), function labels, empty bodies.
-- [ ] Driver: `llbc <file.ll>` writes `.asm` (stdout or `-o`).
-- [ ] Test harness: native-vs-UVM exit-code/stdout comparison over `tests/*.c`.
+### Phase 0 — scaffolding  ✅ DONE
+- [x] `layout.rs`: `size_of`/`align_of`/field offsets for all types (ints, ptr,
+      array, named/anon struct, nested); unit tests vs known x86_64 sizes (6 tests).
+- [x] `codegen.rs` skeleton: emit `.data;`/`.code;`, program entry
+      (`call main, 0; ret;`), function labels.
+- [x] Driver: `llbc <file.ll> [-o out.asm] [--stats]`.
+- [x] Test harness `tests/run_tests.sh`: native-vs-UVM exit-code/stdout diff.
+- [x] (VM tweak) `push_0n` now takes a u16 operand, so the prologue reserves
+      up to 65535 slots in one instruction (matches `get_local`'s u16 index).
 
-### Phase 1 — empty main & returns  (`empty_main.c`)
-- [ ] Function prologue/epilogue (slots, `ret`).
-- [ ] `ret <iN const>`, `ret void`.
-- [ ] `empty_main` runs in UVM, exit code 0, matches native.
+### Phase 1 — empty main & returns  (`empty_main.c`)  ✅ DONE
+- [x] Function prologue (`push_0n <num_slots>`) and `ret`.
+- [x] `ret <iN const>`, `ret void` (push 0 for void).
+- [x] `empty_main` runs in UVM, exit 0, matches native.
 
-### Phase 2 — integer arithmetic & values  (`arithmetic.c`)
-- [ ] SSA-value → slot allocation.
-- [ ] Integer constants; `add/sub/mul/udiv/sdiv/urem/srem/and/or/xor/shl/lshr/ashr`.
-- [ ] `trunc/zext/sext`; narrow-int normalization; **natural-width op selection**.
-- [ ] `arithmetic.c` matches native.
+### Phase 2 — integer arithmetic & values  (`arithmetic.c`)  ✅ DONE
+- [x] SSA-result → slot allocation; params read via `get_arg`.
+- [x] Integer constants (width-masked); `add/sub/mul/udiv/sdiv/urem/srem/and/or/xor/shl/lshr/ashr`.
+- [x] `trunc/zext/sext` (zext is a no-op given the zero-extended invariant);
+      natural-width op selection; sub-32-bit normalization (trunc after, sign-
+      extend operands for signed ops).
+- [x] `arithmetic.c` matches native (exit 135); `casts.c` also compiles+matches.
+- Note: `-O2` const-folds these test `main`s, so exit-code validation here is
+  shallow (pipeline + no-crash on every opcode); deep arithmetic validation
+  arrives once calls/memory land and functions are actually exercised.
 
-### Phase 3 — control flow  (`control_flow.c`)
-- [ ] Block labels; `br` (cond/uncond) → `jz`/`jnz`/`jmp`.
-- [ ] `icmp` (all predicates, signed/unsigned widths).
-- [ ] `select`.
-- [ ] `phi` parallel-copy + critical-edge splitting.
-- [ ] `switch` → compare chain.
-- [ ] `control_flow.c` matches native.
+### Phase 3 — control flow  (`control_flow.c`)  ✅ DONE
+- [x] Block labels (`<fn>__<block>`); `br` (cond/uncond) → `jz`/`jmp`.
+- [x] `icmp` (all 10 predicates; signed ops sign-extend sub-32 operands).
+- [x] `select` (lowered via a branch, so constant operands work).
+- [x] `phi` parallel-copy (push all incoming, store in reverse). Per-branch edge
+      copies make critical edges correct without a separate splitting pass.
+- [x] `switch` → compare chain (`eq` + `jnz` per case, fall-through default).
+- [x] `control_flow.c` matches native (exit 114).
+- [x] Runtime-validated against **`lli`** (LLVM interpreter) with hand-written
+      `tests/ll/*.ll`: `cf` (loop+switch+select+edge-phis), `swap` (mutually-
+      referencing phi parallel-copy = Fibonacci), `nested` (nested loops). All
+      match `lli` exactly. This is the real validation — `control_flow.c`'s C
+      `main` is const-folded by `-O2`, so its exit code alone is shallow.
 
 ### Phase 4 — memory & pointers  (`pointers.c`)
 - [ ] Stack-alloc runtime prelude (`__stack_alloc_sp__` etc.).
