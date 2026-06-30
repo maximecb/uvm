@@ -1007,9 +1007,9 @@ impl Assembler
             }
 
             "push_0n" => {
-                let n: u8 = self.parse_int_arg(input)?;
+                let n: u16 = self.parse_int_arg(input)?;
                 self.code.push_op(Op::push_0n);
-                self.code.push_u8(n);
+                self.code.push_u16(n);
             }
 
             "push_i8" => {

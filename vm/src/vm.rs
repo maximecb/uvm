@@ -1014,7 +1014,7 @@ impl Thread
                 }
 
                 Op::push_0n => {
-                    let n = self.code.read_pc::<u8>(&mut pc);
+                    let n = self.code.read_pc::<u16>(&mut pc);
                     self.stack.resize(self.stack.len() + n as usize, Value::from(0));
                 }
 
