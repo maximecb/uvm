@@ -283,8 +283,8 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       all calls (incl. its indirect call via a varargs-typed pointer) and stops
       at `llvm.memset` (Phase 7). Callee-side `va_arg` stays out of scope (see
       `variadic.c`).
-- [ ] `strlen` + any libc helpers used.
 - [ ] `strings.c` matches native (`recursion.c`/`funcptr.c` already do).
+- [ ] `strlen` + any libc helpers used.
 
 ### Phase 7 — intrinsics
 - [ ] `memcpy`, `memset`.
@@ -292,14 +292,25 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
 - [ ] `lifetime.start/end` → no-ops.
 - [ ] A focused test per intrinsic.
 
-### Phase 8 — more tests & corner cases
-- [ ] `while`/`do-while`/nested loops + break/continue (`loops.c`).
-- [ ] Integer width conversions, signed/unsigned, 64-bit (`casts.c`).
-- [ ] `goto`, deeper recursion; `INT_MIN`, division/shift edge cases.
-- [ ] `i8`/`i16` arithmetic and overflow wrap-around.
-- [ ] Nested structs, arrays of structs, function pointers stored in structs.
-- [ ] Large/sparse `switch`; `unreachable`; fall-through.
-- [ ] Pointer/array boundary and alignment cases.
+### Phase 8 — more tests & corner cases  ✅ DONE
+All differential vs native at -O0/-O1/-O2 (`run_tests.sh`) unless noted. No
+codegen changes were needed — these exercised the existing lowering and passed.
+- [x] `while`/`do-while`/nested loops + break/continue (`loops.c`). Passes at
+      -O0; -O1/-O2 SKIP on the `llvm.smax` clang folds the loop bounds into
+      (Phase 7), so the loop shapes themselves are validated at -O0.
+- [x] Integer width conversions, signed/unsigned, 64-bit (`casts.c`), plus
+      narrow compares (`narrow.c`).
+- [x] `goto` + hand-rolled loops and deeper recursion (`goto.c`); division/shift
+      and well-defined `INT_MIN` edge cases (`intdiv.c`) — avoids the INT_MIN/-1
+      and -INT_MIN UB, sums into an unsigned accumulator.
+- [x] `i8`/`i16` arithmetic and unsigned overflow wrap-around (`narrow.c`).
+- [x] Nested structs, arrays of structs, and a function pointer in a struct
+      field with an indirect call through it (`structs.c`); aggregates are
+      static + passed by pointer to avoid memcpy.
+- [x] Large/sparse `switch` (negative & INT_MAX cases), fall-through groups,
+      and `unreachable`→`panic` (`switch_edge.c`).
+- [x] Pointer/array boundaries: one-past-the-end, pointer difference (stride
+      division), mixed element sizes (`ptr_bounds.c`).
 - [ ] *(optional, not on doom path)* callee-side `va_arg` via x86_64 va_list
       emulation (`variadic.c`).
 
