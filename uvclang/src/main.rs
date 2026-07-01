@@ -2,6 +2,7 @@
 
 mod ast;
 mod codegen;
+mod frontend;
 mod layout;
 mod lexer;
 mod parser;
@@ -9,24 +10,50 @@ mod parser;
 use std::process::exit;
 
 use codegen::Codegen;
+use frontend::FrontendOpts;
 use lexer::{Lexer, ParseError};
 use parser::Parser;
 
+const USAGE: &str = "usage: uvclang <input.c|.ll> [-o out.asm] [-O0|-O1|-O2|-O3]\n       \
+                     [-D<macro>] [-I<dir>] [--emit-ir] [--stats]";
+
 fn main()
 {
-    // Args: <input.ll> [-o <out.asm>] [--stats]
+    // Args: <input.c|.ll> [-o out.asm] [-O<n>] [-D..] [-I..] [--emit-ir] [--stats]
+    // A `.ll` input is parsed directly (the back-end path, unchanged); any other
+    // source is first lowered to IR by clang (the Phase 9 front-end).
     let args: Vec<String> = std::env::args().collect();
     let mut input: Option<String> = None;
     let mut out_path: Option<String> = None;
     let mut stats = false;
+    let mut emit_ir = false;
+    let mut fe = FrontendOpts::default();
 
     let mut i = 1;
     while i < args.len() {
-        match args[i].as_str() {
+        let a = args[i].as_str();
+        match a {
             "--stats" => stats = true,
+            "--emit-ir" | "--emit-llvm" => emit_ir = true,
             "-o" => {
                 i += 1;
                 out_path = args.get(i).cloned();
+            }
+            // Optimization level: forwarded to clang; ignored for `.ll` input.
+            "-O0" | "-O1" | "-O2" | "-O3" | "-Os" | "-Oz" => fe.opt_level = a.to_string(),
+            // -D / -I, both the joined (`-DFOO`) and split (`-D FOO`) forms.
+            "-D" | "-I" => {
+                if let Some(v) = args.get(i + 1) {
+                    fe.passthrough.push(format!("{}{}", a, v));
+                    i += 1;
+                }
+            }
+            _ if a.starts_with("-D") || a.starts_with("-I") => {
+                fe.passthrough.push(a.to_string());
+            }
+            _ if a.starts_with('-') => {
+                eprintln!("uvclang: unknown option \"{}\"\n{}", a, USAGE);
+                exit(2);
             }
             s => {
                 if input.is_none() {
@@ -40,12 +67,39 @@ fn main()
     let input = match input {
         Some(p) => p,
         None => {
-            eprintln!("usage: uvclang <input.ll> [-o <out.asm>] [--stats]");
+            eprintln!("{}", USAGE);
             exit(2);
         }
     };
 
-    let module = match parse(&input) {
+    // Front-end: obtain textual LLVM IR either straight from a `.ll` file or by
+    // driving clang on a C/C++ source in-process (no temp `.ll` on disk).
+    let (ir, ir_name) = if frontend::is_ir_path(&input) {
+        match std::fs::read_to_string(&input) {
+            Ok(src) => (src, input.clone()),
+            Err(e) => {
+                eprintln!("could not read input file \"{}\": {}", input, e);
+                exit(1);
+            }
+        }
+    } else {
+        fe.is_cpp = frontend::is_cpp_path(&input);
+        match frontend::compile_to_ir(&input, &fe) {
+            Ok(ir) => (ir, input.clone()),
+            Err(e) => {
+                eprintln!("uvclang: {}", e);
+                exit(1);
+            }
+        }
+    };
+
+    // --emit-ir: dump the front-end IR and stop (handy for growing C coverage).
+    if emit_ir {
+        emit(&out_path, ir);
+        return;
+    }
+
+    let module = match parse(&ir, &ir_name) {
         Ok(m) => m,
         Err(e) => {
             eprintln!("parse error: {}", e);
@@ -54,7 +108,7 @@ fn main()
     };
 
     if stats {
-        print_stats(&input, &module);
+        print_stats(&ir_name, &module);
         return;
     }
 
@@ -66,20 +120,26 @@ fn main()
         }
     };
 
+    emit(&out_path, asm);
+}
+
+/// Write `text` to the `-o` path, or to stdout when none was given.
+fn emit(out_path: &Option<String>, text: String)
+{
     match out_path {
         Some(p) => {
-            if let Err(e) = std::fs::write(&p, asm) {
+            if let Err(e) = std::fs::write(p, text) {
                 eprintln!("could not write {}: {}", p, e);
                 exit(1);
             }
         }
-        None => print!("{}", asm),
+        None => print!("{}", text),
     }
 }
 
-fn parse(path: &str) -> Result<ast::Module, ParseError>
+fn parse(src: &str, name: &str) -> Result<ast::Module, ParseError>
 {
-    let lexer = Lexer::from_file(path)?;
+    let lexer = Lexer::new(src, name);
     Parser::new(lexer).parse_module()
 }
 

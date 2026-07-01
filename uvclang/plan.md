@@ -6,12 +6,13 @@ uvclang's own back-end lowers that IR to UVM assembly. Reusing clang (rather tha
 a hand-written parser) is what buys full C/C++ and the LLVM optimizer for free —
 that's the reason the project exists and the reason for the name.
 
-**Current stage — the IR back-end.** Today uvclang *is* that back-end: it reads
-the `.ll` that `clang -O2` emits (see `tests/gen_ll.sh`) and compiles it to UVM
-assembly. The clang invocation still lives in the test harness; folding it into
-the `uvclang` driver so a single `uvclang foo.c` runs the whole pipeline is the
-planned front-end step (Phase 10). The ultimate back-end target is `doom.ll` at
-the repo root.
+**Current stage — front-end wired in.** uvclang now drives the whole pipeline
+from one command: `uvclang foo.c` runs clang in-process to emit textual LLVM IR
+and lowers that IR to UVM assembly (Phase 9, done — see `src/frontend.rs`). A
+`.ll` argument still skips the clang step and feeds the back-end directly, so the
+`tests/gen_ll.sh`-based back-end suite is unchanged. The clang invocation in
+`tests/gen_ll.sh` is kept as the flag reference the driver mirrors. The ultimate
+back-end target is `doom.ll` at the repo root.
 
 Note the sibling `ncc/` is a *separate*, self-contained C→UVM compiler with its
 own hand-written front-end; uvclang deliberately does the opposite and delegates
@@ -41,12 +42,14 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
   `doom.ll` (771 fns, 1817 globals, 12090 blocks, 69286 insts), counts matching
   the `llvm-ir` crate. See `src/{lexer,ast,parser}.rs`.
 - **Back-end codegen: Phases 0–8 done** (arithmetic, control flow, memory,
-  globals, calls, intrinsics, corner cases). The differential suite is
-  **75 pass / 0 fail / 3 skip** (skips = callee-side `va_arg`), and `doom.ll`
-  compiles through every construct.
-- **Remaining:** Phase 9 (doom bring-up — run it in UVM), Phase 10 (the
-  clang-driver front-end so `uvclang foo.c` drives the whole pipeline), and a
-  real `vm_*` runtime.
+  globals, calls, intrinsics, corner cases) and **Phase 9 done** (the
+  clang-driver front-end — `uvclang foo.c` drives clang + back-end in one
+  command). The back-end differential suite (`.ll` path) is **81 pass / 0 fail /
+  3 skip** (skips = callee-side `va_arg`); the end-to-end front-end suite
+  (`tests/run_frontend_tests.sh`, single-command `uvclang foo.c`) is **93 pass /
+  0 fail / 3 skip**. `doom.ll` compiles through every construct.
+- **Remaining:** Phase 10 (doom bring-up — run it in UVM) and a real `vm_*`
+  runtime.
 
 ## The UVM target (reference)
 
@@ -87,9 +90,10 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
 C/C++  ──clang──▶  .ll  ──parse──▶  type layout  ──▶  per-fn lowering  ──▶  asm
        front-end        └──────────────────── uvclang back-end ──────────────┘
 ```
-(The clang stage is planned as Phase 10; today the back-end pipeline —
-`parse → type layout → per-function lowering → emit asm text` — runs on `.ll`
-produced out-of-band by `tests/gen_ll.sh`.)
+(The clang stage is the Phase 9 driver front-end (`src/frontend.rs`), run
+in-process; the back-end pipeline — `parse → type layout → per-function
+lowering → emit asm text` — then runs on the captured IR. A `.ll` input skips
+clang and feeds the back-end directly, matching `tests/gen_ll.sh`.)
 New source files:
 - `layout.rs` — `size_of` / `align_of` / struct field offsets, computed from the
   type tree (resolving named structs); the x86_64 layout the datalayout encodes.
@@ -410,29 +414,36 @@ codegen changes were needed — these exercised the existing lowering and passed
 - [ ] *(optional, not on doom path)* callee-side `va_arg` via x86_64 va_list
       emulation (`variadic.c`).
 
-### Phase 9 — doom.ll bring-up
-- [ ] Compile all of `doom.ll` to `.asm`; resolve any unhandled construct.
-- [ ] `--parse-only` (assembler accepts the output).
-- [ ] Runs in UVM without crashing (stubbed I/O).
-- [ ] Spot-check deterministic internal functions vs native where feasible.
-
-### Phase 10 — clang-driver front-end  (`uvclang foo.c`)
+### Phase 9 — clang-driver front-end  (`uvclang foo.c`)  ✅ DONE (core)
 Fold the clang invocation (currently in `tests/gen_ll.sh`) into the `uvclang`
 driver so one command compiles C/C++ straight to UVM assembly. This is the step
 that makes uvclang a *C/C++* compiler rather than only an IR back-end.
-- [ ] `uvclang foo.c`: locate clang (honor `$CLANG`/Homebrew LLVM/PATH as
-      `gen_ll.sh` does), emit IR with the canonical flags (target triple,
+Implemented in `src/frontend.rs` (clang invocation) + `src/main.rs` (driver);
+end-to-end suite is `tests/run_frontend_tests.sh` (93 pass / 0 fail / 3 skip).
+- [x] `uvclang foo.c`: locate clang (honor `$CLANG`/`$CLANGXX`/Homebrew LLVM/PATH
+      as `gen_ll.sh` does), emit IR with the canonical flags (target triple,
       `-S -emit-llvm`, `-fno-discard-value-names`, the `-fno-*` set,
-      `-Iuvclang/include`), then run the existing IR→UVM back-end in-process — no
-      temp `.ll` on disk.
-- [ ] Argument pass-through: `-O0/-O1/-O2`, `-o <out.asm>`, `-D`, `-I`. A `.ll`
-      argument still skips the clang step, so the back-end test suite is unchanged.
+      `-Iuvclang/include` — found via `$UVCLANG_INCLUDE` or the compiled-in crate
+      path), then run the existing IR→UVM back-end in-process — no temp `.ll` on
+      disk (clang writes to stdout, captured into the lexer). Verified that a
+      given `.c` at a given `-O` produces byte-identical asm through the driver
+      and through the old `gen_ll.sh` + `.ll` path.
+- [x] Argument pass-through: `-O0/-O1/-O2/-O3/-Os/-Oz`, `-o <out.asm>`, `-D`, `-I`
+      (both joined `-DFOO` and split `-D FOO` forms). A `.ll` argument still skips
+      the clang step, so the back-end test suite is unchanged. Added `--emit-ir`
+      to dump the front-end IR (aids growing C coverage); unknown flags error.
 - [ ] Grow C coverage: add support as clang surfaces new IR constructs, driven by
       real programs (same gradual, test-first rule as the back-end phases).
 - [ ] C++ front-end: handle clang++ output (name-mangled symbols, vtables, and
       the wider aggregate/struct-by-value ABI it emits) once C is solid. This is
       where the ABI simplifications noted above (structs by pointer, no
       struct-by-value coercion) get revisited.
+
+### Phase 10 — doom.ll bring-up
+- [ ] Compile all of `doom.ll` to `.asm`; resolve any unhandled construct.
+- [ ] `--parse-only` (assembler accepts the output).
+- [ ] Runs in UVM without crashing (stubbed I/O).
+- [ ] Spot-check deterministic internal functions vs native where feasible.
 
 ### Phase 11 — later (out of current scope)
 - [ ] Real UVM runtime implementing `vm_*` via syscalls so doom renders/plays.
@@ -443,8 +454,3 @@ that makes uvclang a *C/C++* compiler rather than only an IR back-end.
 - No real device I/O for doom (stubs compiled as-is).
 - No support for IR features clang `-O2` C output never emits (vectors, floats
   beyond what appears, exception handling, etc.) until a test needs them.
-
-## Open questions / to revisit
-- Exact stack-alloc frame size limits and overflow behavior to mirror `ncc`.
-- memcpy/memset: inline loop vs shared runtime helper (decide by size/perf once
-  doom runs).
