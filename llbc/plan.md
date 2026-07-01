@@ -310,7 +310,14 @@ codegen changes were needed — these exercised the existing lowering and passed
 - [x] Large/sparse `switch` (negative & INT_MAX cases), fall-through groups,
       and `unreachable`→`panic` (`switch_edge.c`).
 - [x] Pointer/array boundaries: one-past-the-end, pointer difference (stride
-      division), mixed element sizes (`ptr_bounds.c`).
+      division), mixed element sizes (`ptr_bounds.c`); non-power-of-two stride
+      (a 12-byte struct ⇒ `sdiv i64`, not a shift) in `ptrdiff.c`.
+- [x] Extra corner cases that hit otherwise-untested paths: void / discarded
+      calls (`voidcall.c` — the caller `pop` path), little-endian type punning
+      via mixed-width load/store (`endian.c`), 2-D arrays with runtime indices
+      on both dimensions (`arr2d.c`), 64-bit edges incl. `LLONG_MIN` and
+      signed/unsigned compare divergence (`wide64.c`), and signed i8/i16
+      div/rem/arith-shift (`narrow_signed.c`).
 - [ ] *(optional, not on doom path)* callee-side `va_arg` via x86_64 va_list
       emulation (`variadic.c`).
 
