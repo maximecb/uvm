@@ -39,6 +39,15 @@ OPT_LEVELS="-O0 -O1 -O2"
 
 for src in "$TESTS"/*.c; do
     base=$(basename "$src" .c)
+
+    # The uvm_*.c tests exercise the <uvm/...> platform headers, which have no
+    # native-libc equivalent and so can't be built by the native reference
+    # compiler. They're covered by run_uvm_tests.sh instead; skip them here so
+    # they don't show as permanent native-only SKIPs in this differential suite.
+    case "$base" in
+        uvm_*) continue ;;
+    esac
+
     for opt in $OPT_LEVELS; do
         name="$base ($opt)"
         ll="$TMP/$base$opt.ll"

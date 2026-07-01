@@ -56,3 +56,6 @@ jobs:
       run: |
         clang --version   # fail loudly if the toolchain is missing rather than skipping every test
         ./uvclang/tests/run_tests.sh
+
+    - name: Test uvclang <uvm/...> headers (self-checking, no native equivalent)
+      run: ./uvclang/tests/run_uvm_tests.sh
