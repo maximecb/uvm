@@ -126,7 +126,7 @@ The repository is organized into a 3 different subprojects, each of which is a R
 - `/spec`: A system to document and automatically export bindings for UVM system calls and constants.
   - `/spec/syscalls.json`: Declarative list of system calls exposed by UVM.
 - `/docs`: Markdown documentation for UVM
-  - [`/docs/syscalls.json`](docs/syscalls.md): List of system calls and constants accessible to UVM programs
+  - [`/docs/syscalls.md`](docs/syscalls.md): List of system calls and constants accessible to UVM programs
 
 The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
 was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over

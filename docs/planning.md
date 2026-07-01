@@ -36,7 +36,7 @@ same thing can't be said for binary files.
 
 ## JIT Compiler
 
-UVM has been [designed](/doc/design.md) with JIT compilation in mind, that
+UVM has been [designed](/docs/design.md) with JIT compilation in mind, that
 is, we've made multiple design choices that we think will make it easier
 to generate efficient machine code from our bytecode instructions. We
 believe it should be possible to get good performance with a fairly

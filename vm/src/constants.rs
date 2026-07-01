@@ -1,5 +1,5 @@
 //
-// This file was automatically generated based on api/syscalls.json
+// This file was automatically generated based on spec/syscalls.json
 //
 
 #![allow(unused)]

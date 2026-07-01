@@ -124,7 +124,7 @@ more fragile and detract from our design goals.
 ### No Foreign Function Interface (FFI)
 
 UVM provides no FFI. If your program wants to communicate with the outside world, it has to be done through the
-small set of minimalistic APIs ([system calls](/doc/syscalls.md)) that UVM provides. This is likely going to turn
+small set of minimalistic APIs ([system calls](/docs/syscalls.md)) that UVM provides. This is likely going to turn
 many people away as it means that UVM can't interface with many existing libraries unless said libraries are
 recompiled to target UVM.
 To many developers, the lack of an FFI will probably seem ridiculous, but I view it as a necessary sacrifice.
