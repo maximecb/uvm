@@ -40,7 +40,7 @@ fn main()
     let input = match input {
         Some(p) => p,
         None => {
-            eprintln!("usage: llbc <input.ll> [-o <out.asm>] [--stats]");
+            eprintln!("usage: uvclang <input.ll> [-o <out.asm>] [--stats]");
             exit(2);
         }
     };

@@ -182,12 +182,12 @@ fn main()
     gen_rust_bindings("../vm/src/constants.rs", &subsystems, &idx_to_name);
 
     // The C header is dual-mode (gated on `__clang__`): ncc takes the inline-asm
-    // branch, clang/llbc takes the `__uvm_syscall_*` extern-function branch. The
+    // branch, clang/uvclang takes the `__uvm_syscall_*` extern-function branch. The
     // same file is dropped into each toolchain's own include directory.
     let c_header = build_c_header(&subsystems);
     fs::write("../ncc/include/uvm/syscalls.h", &c_header).unwrap();
-    fs::create_dir_all("../llbc/include/uvm").unwrap();
-    fs::write("../llbc/include/uvm/syscalls.h", &c_header).unwrap();
+    fs::create_dir_all("../uvclang/include/uvm").unwrap();
+    fs::write("../uvclang/include/uvm/syscalls.h", &c_header).unwrap();
 
     gen_markdown("../docs/syscalls.md", &subsystems);
 }
@@ -326,8 +326,8 @@ fn c_type(ty: &str) -> String
 
 /// Build the dual-mode `<uvm/syscalls.h>` header. Both toolchains share one
 /// file, discriminated on `__clang__`:
-///   - clang (llbc backend): each syscall is an `extern __uvm_<name>`
-///     function that llbc lowers to an inline UVM `syscall`, plus a
+///   - clang (uvclang backend): each syscall is an `extern __uvm_<name>`
+///     function that uvclang lowers to an inline UVM `syscall`, plus a
 ///     function-like macro binding the natural name so call sites read the same
 ///     as under ncc (and bypass clang's builtin declarations for names like
 ///     `memcpy`/`putchar`, avoiding signature clashes).
@@ -347,10 +347,10 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
     writeln!(s, "#define __UVM_SYSCALLS__").unwrap();
     writeln!(s).unwrap();
 
-    // ---- clang / llbc: extern __uvm_syscall_* functions ----
+    // ---- clang / uvclang: extern __uvm_syscall_* functions ----
     writeln!(s, "#ifdef __clang__").unwrap();
-    writeln!(s, "// Compiled with clang for the llbc backend. Each syscall is exposed as an").unwrap();
-    writeln!(s, "// external function `__uvm_<name>`, which llbc recognizes and lowers").unwrap();
+    writeln!(s, "// Compiled with clang for the uvclang backend. Each syscall is exposed as an").unwrap();
+    writeln!(s, "// external function `__uvm_<name>`, which uvclang recognizes and lowers").unwrap();
     writeln!(s, "// to an inline UVM `syscall <name>` instruction. The function-like macros let").unwrap();
     writeln!(s, "// user code call syscalls by their natural names without colliding with").unwrap();
     writeln!(s, "// clang's builtin declarations (memcpy, putchar, ...).").unwrap();

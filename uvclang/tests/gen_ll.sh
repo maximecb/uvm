@@ -1,8 +1,8 @@
 #!/bin/sh
 # Emit textual LLVM IR (.ll) on stdout for a C source file, using the canonical
-# flags for the llbc front-end. The optimization level defaults to -O2; override
+# flags for the uvclang front-end. The optimization level defaults to -O2; override
 # it with OPT (e.g. OPT=-O1). The IR is a build artifact and is not checked in:
-# pipe it into llbc, or redirect to a scratch file for inspection.
+# pipe it into uvclang, or redirect to a scratch file for inspection.
 #
 # Usage: ./gen_ll.sh foo.c                # -O2 IR to stdout
 #        OPT=-O1 ./gen_ll.sh foo.c         # -O1 IR to stdout
@@ -17,10 +17,10 @@ if [ -z "${CLANG:-}" ]; then
     fi
 fi
 OPT="${OPT:--O2}"
-# UVM include dir: llbc's own headers (<uvm/syscalls.h>, <string.h>, ...) live
+# UVM include dir: uvclang's own headers (<uvm/syscalls.h>, <string.h>, ...) live
 # here. This is the UVM build ONLY. The native reference build in run_tests.sh
 # never adds this -I, so it uses the platform's own libc + clang's headers, and
-# stdlib headers are checked differentially (llbc's impl vs the system libc).
+# stdlib headers are checked differentially (uvclang's impl vs the system libc).
 INCDIR="$(cd "$(dirname "$0")/../include" && pwd)"
 exec "$CLANG" \
     --target=x86_64-unknown-linux-gnu \

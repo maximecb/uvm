@@ -1,6 +1,6 @@
 // Calls into the C library strlen(), alongside manual string loops and
 // pointer arithmetic (pointer difference -> ptrtoint/sub). For the UVM build
-// strlen() resolves to llbc's own <string.h> (implemented over UVM primitives);
+// strlen() resolves to uvclang's own <string.h> (implemented over UVM primitives);
 // the native reference build uses the platform libc, so this is a differential
 // check of the two implementations.
 #include <string.h>

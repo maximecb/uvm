@@ -6,8 +6,8 @@
 #define __UVM_SYSCALLS__
 
 #ifdef __clang__
-// Compiled with clang for the llbc backend. Each syscall is exposed as an
-// external function `__uvm_<name>`, which llbc recognizes and lowers
+// Compiled with clang for the uvclang backend. Each syscall is exposed as an
+// external function `__uvm_<name>`, which uvclang recognizes and lowers
 // to an inline UVM `syscall <name>` instruction. The function-like macros let
 // user code call syscalls by their natural names without colliding with
 // clang's builtin declarations (memcpy, putchar, ...).

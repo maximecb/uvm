@@ -1,8 +1,21 @@
-# llbc — LLVM IR → UVM Compiler: Design & Plan
+# uvclang — C/C++ → UVM Compiler: Design & Plan
 
-`llbc` compiles textual LLVM IR (the `.ll` produced by `clang -O2`; see
-`tests/gen_ll.sh`) into UVM assembly. The ultimate target is `doom.ll` at the
-repo root.
+`uvclang` is a C/C++ compiler that targets the UVM virtual machine, using
+**clang as its front-end**: clang lowers C/C++ to textual LLVM IR (`.ll`), and
+uvclang's own back-end lowers that IR to UVM assembly. Reusing clang (rather than
+a hand-written parser) is what buys full C/C++ and the LLVM optimizer for free —
+that's the reason the project exists and the reason for the name.
+
+**Current stage — the IR back-end.** Today uvclang *is* that back-end: it reads
+the `.ll` that `clang -O2` emits (see `tests/gen_ll.sh`) and compiles it to UVM
+assembly. The clang invocation still lives in the test harness; folding it into
+the `uvclang` driver so a single `uvclang foo.c` runs the whole pipeline is the
+planned front-end step (Phase 10). The ultimate back-end target is `doom.ll` at
+the repo root.
+
+Note the sibling `ncc/` is a *separate*, self-contained C→UVM compiler with its
+own hand-written front-end; uvclang deliberately does the opposite and delegates
+the front-end to clang, so its scope is the IR→UVM lowering plus the thin driver.
 
 ## Guiding principles
 
@@ -15,7 +28,7 @@ repo root.
    - **Self-checking tests:** programs `assert()` their own results and exit
      non-zero on failure.
    - **Differential vs native:** compile each `.c` natively with clang *and* to
-     UVM via `llbc`; run both; compare exit code and stdout.
+     UVM via `uvclang`; run both; compare exit code and stdout.
 4. **Use natural-width ops.** Emit 32-bit ops (`add_u32`, `lt_i32`, …) for
    values of width ≤ 32, and 64-bit ops only for 64-bit values. Don't promote
    everything to 64-bit. `doom.ll` is overwhelmingly `i32`, so this is the
@@ -23,10 +36,17 @@ repo root.
 
 ## Current status
 
-- **Front-end is complete.** The parser handles every test file and fully
-  parses `doom.ll` (771 fns, 1817 globals, 12090 blocks, 69286 insts), with
-  counts matching the `llvm-ir` crate. See `src/{lexer,ast,parser}.rs`.
-- **Codegen is not started.** This document plans it.
+- **IR parser complete.** (This is the front-end *of the back-end* — clang is
+  the compiler's actual front-end.) It handles every test file and fully parses
+  `doom.ll` (771 fns, 1817 globals, 12090 blocks, 69286 insts), counts matching
+  the `llvm-ir` crate. See `src/{lexer,ast,parser}.rs`.
+- **Back-end codegen: Phases 0–8 done** (arithmetic, control flow, memory,
+  globals, calls, intrinsics, corner cases). The differential suite is
+  **75 pass / 0 fail / 3 skip** (skips = callee-side `va_arg`), and `doom.ll`
+  compiles through every construct.
+- **Remaining:** Phase 9 (doom bring-up — run it in UVM), Phase 10 (the
+  clang-driver front-end so `uvclang foo.c` drives the whole pipeline), and a
+  real `vm_*` runtime.
 
 ## The UVM target (reference)
 
@@ -64,8 +84,12 @@ repo root.
 
 ### Pipeline & modules
 ```
-parse (done) → type layout → per-function lowering → emit asm text
+C/C++  ──clang──▶  .ll  ──parse──▶  type layout  ──▶  per-fn lowering  ──▶  asm
+       front-end        └──────────────────── uvclang back-end ──────────────┘
 ```
+(The clang stage is planned as Phase 10; today the back-end pipeline —
+`parse → type layout → per-function lowering → emit asm text` — runs on `.ll`
+produced out-of-band by `tests/gen_ll.sh`.)
 New source files:
 - `layout.rs` — `size_of` / `align_of` / struct field offsets, computed from the
   type tree (resolving named structs); the x86_64 layout the datalayout encodes.
@@ -175,16 +199,16 @@ values), so min/max/abs use a compare + branch, mirroring `gen_select`.
 | `llvm.bitreverse.i8` | branchless `((b*0x0202020202)&0x010884422010)%1023` |
 
 `strlen` and friends are **not** intrinsics — they are ordinary functions
-supplied by llbc's `<string.h>` (see *C standard library* below) and compiled
+supplied by uvclang's `<string.h>` (see *C standard library* below) and compiled
 like any other code.
 
-### Syscalls & the include directory (`llbc/include/`)
+### Syscalls & the include directory (`uvclang/include/`)
 UVM syscalls reach clang-compiled code through a generated header,
-`llbc/include/uvm/syscalls.h` (point clang at it with `-Illbc/include`). The
+`uvclang/include/uvm/syscalls.h` (point clang at it with `-Iuvclang/include`). The
 header is produced by `spec/` from `syscalls.json` — the same source of truth as
 the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
 `#ifdef __clang__`:
-- **clang / llbc:** each syscall is `extern <ret> __uvm_<name>(...)` plus a
+- **clang / uvclang:** each syscall is `extern <ret> __uvm_<name>(...)` plus a
   function-like macro binding the natural name (so `memcpy(...)`, `putchar(...)`
   expand to `__uvm_memcpy(...)` etc., bypassing clang's builtin declarations with
   no signature clash — and never taking a symbol's address).
@@ -193,37 +217,37 @@ the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
 
 ncc predefines nothing and gates `#include`/`#define` on the active branch, so it
 cleanly takes the `#else` path (verified: `ncc tests/graphics.c` still builds).
-The identical file is written to both `ncc/include/uvm/` and `llbc/include/uvm/`.
+The identical file is written to both `ncc/include/uvm/` and `uvclang/include/uvm/`.
 
-llbc lowers a `call @__uvm_<name>(args...)` inline (`gen_syscall` in
+uvclang lowers a `call @__uvm_<name>(args...)` inline (`gen_syscall` in
 `codegen.rs`): push args left-to-right, emit `syscall <name>;`, then store/`pop`
 the result for value-returning syscalls. No runtime helper, no call overhead —
 same strategy as the `memcpy`/`memset` intrinsics. Verified end-to-end
 (`print_str`/`putchar`/`print_i64`/`print_endl` → correct UVM stdout + exit).
 
-### C standard library (`llbc/include/`)
-Beyond the syscalls, llbc ships its own C stdlib headers under `llbc/include/`,
+### C standard library (`uvclang/include/`)
+Beyond the syscalls, uvclang ships its own C stdlib headers under `uvclang/include/`,
 implemented on top of the UVM primitives the same way ncc's headers are (ported
 from `ncc/include/`). So far: `string.h` (`strlen`, `strcmp`, `strncmp`,
 `strcasecmp`, `strchr`, `strstr`, `strncpy`, `strncat`) and `ctype.h`. Unlike
 ncc's headers, these are plain standard-signature C bodies — clang lowers them to
-LLVM IR and llbc compiles them like any other function, which is what resolves an
+LLVM IR and uvclang compiles them like any other function, which is what resolves an
 external such as `@strlen` without a native libc. `size_t`/`NULL` come from
 clang's own freestanding `<stddef.h>`; `memcpy`/`memset`/`memcmp` are left to the
 syscalls/intrinsics (not redefined here).
 
-Only the **UVM build** sees these headers (clang with `-Illbc/include`, added in
+Only the **UVM build** sees these headers (clang with `-Iuvclang/include`, added in
 `gen_ll.sh`). The **native reference build never adds `-I`**, so it uses the
 platform's own libc and clang's headers — that asymmetry is deliberate and is
 what makes stdlib headers *differentially testable*: `tests/libc_string.c` and
-`tests/strings.c` compile against llbc's `string.h` for UVM and the system
+`tests/strings.c` compile against uvclang's `string.h` for UVM and the system
 `string.h` natively, and their outputs must match (verified: both pass at
 -O0/-O1/-O2). Loop-idiom at -O2 rewrites some hand-written loops into
 `llvm.memset`/`llvm.memcpy` (handled) but does **not** produce self-recursive
 `@strlen`/`@memcpy` libcalls.
 
 Note: `doom.ll` is a pre-generated artifact compiled *without* these headers, so
-its `@strlen` stays external until doom is regenerated with `-Illbc/include` and
+its `@strlen` stays external until doom is regenerated with `-Iuvclang/include` and
 `#include <string.h>`.
 
 ### Host functions (`vm_*`)
@@ -237,10 +261,10 @@ is a **later, separate** effort (a hand-written UVM runtime that overrides
 
 A `tests/` harness (shell script or `cargo test`) that, for each `tests/*.c` at
 `-O0`, `-O1` and `-O2` (each level emits a different IR shape and so exercises
-different llbc code paths):
+different uvclang code paths):
 1. Compiles natively: `clang <flags> file.c -o ref`; runs `./ref`; records exit
    code + stdout.
-2. Compiles to UVM: `llbc file.ll > file.asm`; runs `cd vm && cargo run file.asm`;
+2. Compiles to UVM: `uvclang file.ll > file.asm`; runs `cd vm && cargo run file.asm`;
    records exit code + stdout.
 3. Asserts `native == uvm` (exit code mod 256, stdout exact).
 
@@ -258,7 +282,7 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       array, named/anon struct, nested); unit tests vs known x86_64 sizes (6 tests).
 - [x] `codegen.rs` skeleton: emit `.data;`/`.code;`, program entry
       (`call main, 0; ret;`), function labels.
-- [x] Driver: `llbc <file.ll> [-o out.asm] [--stats]`.
+- [x] Driver: `uvclang <file.ll> [-o out.asm] [--stats]`.
 - [x] Test harness `tests/run_tests.sh`: native-vs-UVM exit-code/stdout diff.
 - [x] (VM tweak) `push_0n` now takes a u16 operand, so the prologue reserves
       up to 65535 slots in one instruction (matches `get_local`'s u16 index).
@@ -318,7 +342,7 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       (tracked as (label, byte-offset, expr)).
 - [x] `globals.c` matches native (exit 0); reads validated during development
       against `lli` with a hand-written `.ll` (exit 215). All 1817 doom.ll globals emit
-      cleanly (llbc now reaches doom's function bodies, stops at `call`).
+      cleanly (uvclang now reaches doom's function bodies, stops at `call`).
 
 ### Phase 6 — functions & calls  (`strings.c`, `recursion.c`, `funcptr.c`)
 - [x] Direct calls: `call <label>, <argc>`; args pushed left-to-right (arg 0 →
@@ -338,8 +362,8 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       at `llvm.memset` (Phase 7). Callee-side `va_arg` stays out of scope (see
       `variadic.c`).
 - [x] `strings.c` matches native at -O0/-O1/-O2 (exit 16), now that `strlen`
-      comes from llbc's `<string.h>` (see *C standard library*).
-- [x] `strlen` + libc string helpers — provided by `llbc/include/string.h`,
+      comes from uvclang's `<string.h>` (see *C standard library*).
+- [x] `strlen` + libc string helpers — provided by `uvclang/include/string.h`,
       exercised differentially by `libc_string.c` (exit 49).
 
 ### Phase 7 — intrinsics  ✅ DONE
@@ -351,9 +375,9 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       -O0/-O1/-O2 (exit 205). Also un-blocked `loops`/`funcptr`/`structs`, which
       previously SKIPped on `llvm.smax`/`llvm.memcpy`.
 - Note: `doom.ll` now compiles cleanly through every intrinsic. Its one
-  remaining external, `@strlen`, is now implementable via llbc's `<string.h>`,
+  remaining external, `@strlen`, is now implementable via uvclang's `<string.h>`,
   but `doom.ll` is a pre-generated artifact so it must be regenerated with
-  `-Illbc/include` + `#include <string.h>` to pick the body up.
+  `-Iuvclang/include` + `#include <string.h>` to pick the body up.
 - Deferred: `llvm.memmove` (needs overlap-safe copy — not in doom); `llvm.va_start`
   (callee-side varargs — see `variadic.c`, out of scope).
 
@@ -392,7 +416,25 @@ codegen changes were needed — these exercised the existing lowering and passed
 - [ ] Runs in UVM without crashing (stubbed I/O).
 - [ ] Spot-check deterministic internal functions vs native where feasible.
 
-### Phase 10 — later (out of current scope)
+### Phase 10 — clang-driver front-end  (`uvclang foo.c`)
+Fold the clang invocation (currently in `tests/gen_ll.sh`) into the `uvclang`
+driver so one command compiles C/C++ straight to UVM assembly. This is the step
+that makes uvclang a *C/C++* compiler rather than only an IR back-end.
+- [ ] `uvclang foo.c`: locate clang (honor `$CLANG`/Homebrew LLVM/PATH as
+      `gen_ll.sh` does), emit IR with the canonical flags (target triple,
+      `-S -emit-llvm`, `-fno-discard-value-names`, the `-fno-*` set,
+      `-Iuvclang/include`), then run the existing IR→UVM back-end in-process — no
+      temp `.ll` on disk.
+- [ ] Argument pass-through: `-O0/-O1/-O2`, `-o <out.asm>`, `-D`, `-I`. A `.ll`
+      argument still skips the clang step, so the back-end test suite is unchanged.
+- [ ] Grow C coverage: add support as clang surfaces new IR constructs, driven by
+      real programs (same gradual, test-first rule as the back-end phases).
+- [ ] C++ front-end: handle clang++ output (name-mangled symbols, vtables, and
+      the wider aggregate/struct-by-value ABI it emits) once C is solid. This is
+      where the ABI simplifications noted above (structs by pointer, no
+      struct-by-value coercion) get revisited.
+
+### Phase 11 — later (out of current scope)
 - [ ] Real UVM runtime implementing `vm_*` via syscalls so doom renders/plays.
 - [ ] Optimizations (keep values on stack, jump tables, slot reuse, peephole).
 

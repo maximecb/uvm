@@ -1,4 +1,4 @@
-// Exercises the LLVM intrinsics llbc lowers inline (Phase 7):
+// Exercises the LLVM intrinsics uvclang lowers inline (Phase 7):
 //   llvm.abs / smax / smin / umax / umin / scmp / usub.sat / bitreverse
 //   llvm.memcpy / llvm.memset (mapped to UVM syscalls)
 //   llvm.lifetime.* (dropped)

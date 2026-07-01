@@ -1,19 +1,19 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
-// <string.h> for the llbc/UVM freestanding target, implemented on top of the
+// <string.h> for the uvclang/UVM freestanding target, implemented on top of the
 // UVM primitives the same way ncc's headers are (see ncc/include/string.h).
 // The bodies here are plain, standard-signature C that clang lowers to LLVM IR
-// and llbc then compiles like any other function -- this is what resolves calls
+// and uvclang then compiles like any other function -- this is what resolves calls
 // such as @strlen without a native libc.
 //
-// This header is used ONLY for the UVM build (clang with -Illbc/include). The
+// This header is used ONLY for the UVM build (clang with -Iuvclang/include). The
 // native reference build in the test harness deliberately does not see it and
 // uses the platform's own libc, so these functions are checked differentially
 // against the real thing.
 //
 // memcpy / memset / memcmp are UVM syscalls: clang lowers the common cases to
-// the llvm.memcpy / llvm.memset intrinsics (which llbc maps to native UVM
+// the llvm.memcpy / llvm.memset intrinsics (which uvclang maps to native UVM
 // syscalls), and <uvm/syscalls.h> exposes them explicitly. They are
 // intentionally not redefined here.
 

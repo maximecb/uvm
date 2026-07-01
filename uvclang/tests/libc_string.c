@@ -1,6 +1,6 @@
-// Differential test for <string.h>: llbc's UVM-side libc (implemented over UVM
+// Differential test for <string.h>: uvclang's UVM-side libc (implemented over UVM
 // primitives) vs the platform's native libc. The UVM build resolves <string.h>
-// to llbc/include/string.h; the native reference build uses the system header.
+// to uvclang/include/string.h; the native reference build uses the system header.
 //
 // All inputs are derived from a volatile seed so -O2 can't const-fold the calls
 // away -- the string functions actually run. Comparison functions are used only
