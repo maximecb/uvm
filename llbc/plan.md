@@ -159,18 +159,21 @@ uses `va_arg`.
   `get_var_arg`. Supporting it means emulating that va_list memory layout at the
   prologue of variadic functions. Deferred (Phase 8, optional).
 
-### Intrinsics (lower inline or via small helpers)
+### Intrinsics (lowered inline — `gen_intrinsic` in `codegen.rs`)
+Dispatched by name prefix (`llvm.*`) before the ordinary call path, so no
+runtime helper or call overhead. The UVM `select` op indexes slots (not stack
+values), so min/max/abs use a compare + branch, mirroring `gen_select`.
 | Intrinsic | Lowering |
 |---|---|
 | `llvm.lifetime.start/end` | drop (no-op) |
-| `llvm.memcpy.p0.p0.i64` | byte/word copy loop (or runtime helper) |
-| `llvm.memset.p0.i64` | `fill` / store loop |
-| `llvm.abs.i32` | `dup`, compare to 0, negate-or-keep (`select`) |
-| `llvm.smin/smax/umin/umax.i32` | compare + `select` |
-| `llvm.scmp.i32.i32` | two compares → -1/0/1 |
-| `llvm.usub.sat.i32` | `sub` then clamp at 0 |
-| `llvm.bitreverse.i8` | small shift/mask helper |
-| `strlen` | runtime helper (load_u8 loop) |
+| `llvm.memcpy.p0.p0.i64` | `syscall memcpy` (native host, drops the `i1 volatile`) |
+| `llvm.memset.p0.i64` | `syscall memset` (native host) |
+| `llvm.abs.i32` | `x<0 ? 0-x : x` via branch (INT_MIN wraps ⇒ poison-ok) |
+| `llvm.smin/smax/umin/umax` | compare + branch |
+| `llvm.scmp/ucmp` | `(a>b)-(a<b)` — two compares then `sub` |
+| `llvm.usub.sat.i32` | `a>b ? a-b : 0` via branch |
+| `llvm.bitreverse.i8` | branchless `((b*0x0202020202)&0x010884422010)%1023` |
+| `strlen` (external, not an intrinsic) | runtime helper — deferred to the sysroot/runtime work |
 
 ### Host functions (`vm_*`)
 Per decision, **compile `doom.ll` as-is** — the stub `vm_*` bodies (e.g.
@@ -286,11 +289,18 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
 - [ ] `strings.c` matches native (`recursion.c`/`funcptr.c` already do).
 - [ ] `strlen` + any libc helpers used.
 
-### Phase 7 — intrinsics
-- [ ] `memcpy`, `memset`.
-- [ ] `abs`, `smin/smax/umin/umax`, `scmp`, `usub.sat`, `bitreverse`.
-- [ ] `lifetime.start/end` → no-ops.
-- [ ] A focused test per intrinsic.
+### Phase 7 — intrinsics  ✅ DONE
+- [x] `memcpy`, `memset` → native UVM `syscall memcpy`/`memset` (not inline loops).
+- [x] `abs`, `smin/smax/umin/umax`, `scmp` (+`ucmp`), `usub.sat`, `bitreverse.i8`.
+- [x] `lifetime.start/end` → no-ops.
+- [x] Focused test `intrinsics.c` — all intrinsics exercised with runtime-derived
+      inputs (so `-O2` can't fold them away), differential vs native at
+      -O0/-O1/-O2 (exit 205). Also un-blocked `loops`/`funcptr`/`structs`, which
+      previously SKIPped on `llvm.smax`/`llvm.memcpy`.
+- Note: `doom.ll` now compiles cleanly through every intrinsic and stops at the
+  one remaining real external, `@strlen` (Phase 6 / the runtime-libc work).
+- Deferred: `llvm.memmove` (needs overlap-safe copy — not in doom); `llvm.va_start`
+  (callee-side varargs — see `variadic.c`, out of scope).
 
 ### Phase 8 — more tests & corner cases  ✅ DONE
 All differential vs native at -O0/-O1/-O2 (`run_tests.sh`) unless noted. No

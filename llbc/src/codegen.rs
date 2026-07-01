@@ -279,8 +279,15 @@ impl<'a> Codegen<'a>
                 self.gen_gep(ctx, base_ty, ptr, indices)?;
                 self.store_dest(ctx, inst.dest.as_deref())?;
             }
-            InstKind::Call { callee, args, .. } => {
-                self.gen_call(ctx, inst.dest.as_deref(), callee, args)?;
+            InstKind::Call { callee, args, ret_ty, .. } => {
+                // `@llvm.*` intrinsics are lowered inline (or to a syscall), not
+                // called; everything else is an ordinary UVM call.
+                match callee {
+                    Value::Global(name) if name.starts_with("llvm.") => {
+                        self.gen_intrinsic(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
+                    }
+                    _ => self.gen_call(ctx, inst.dest.as_deref(), callee, args)?,
+                }
             }
             // Phi results are written on the predecessor edges, so the phi
             // instruction itself emits no code.
@@ -627,6 +634,171 @@ impl<'a> Codegen<'a>
             }
             None => self.line("pop;"),
         }
+        Ok(())
+    }
+
+    // -- intrinsics -----------------------------------------------------------
+
+    /// Lower an `@llvm.*` intrinsic. `memcpy`/`memset` map onto the native UVM
+    /// syscalls; `lifetime.*` is dropped; the small arithmetic intrinsics
+    /// expand inline to a handful of stack ops (no call, no runtime helper).
+    /// The trailing metadata args LLVM passes (the `i1 volatile` on the memory
+    /// intrinsics, the `i1 is_int_min_poison` on `abs`) are ignored.
+    fn gen_intrinsic(&mut self, ctx: &FnCtx, dest: Option<&str>, name: &str, ret_ty: &Type, args: &[TypedVal]) -> Result<(), String>
+    {
+        let bare = &name["llvm.".len()..];
+
+        // --- void intrinsics (no result) ---
+        if bare.starts_with("lifetime.") {
+            return Ok(()); // a scoping hint; emit nothing
+        }
+        if bare.starts_with("memcpy.") {
+            // (dst, src, len, i1 volatile) -> UVM `memcpy(dst, src, num_bytes)`.
+            self.push_value(ctx, &args[0].val, 64)?; // dst
+            self.push_value(ctx, &args[1].val, 64)?; // src
+            self.push_value(ctx, &args[2].val, 64)?; // num_bytes
+            self.line("syscall memcpy;");
+            return Ok(());
+        }
+        if bare.starts_with("memset.") {
+            // (dst, i8 value, len, i1 volatile) -> UVM `memset(dst, value, num_bytes)`.
+            self.push_value(ctx, &args[0].val, 64)?; // dst
+            self.push_value(ctx, &args[1].val, 8)?;  // fill byte
+            self.push_value(ctx, &args[2].val, 64)?; // num_bytes
+            self.line("syscall memset;");
+            return Ok(());
+        }
+
+        // --- value-producing intrinsics ---
+        let a = &args[0].val;
+        if bare.starts_with("abs.") {
+            self.gen_abs(ctx, a, ret_ty)?;
+        } else if bare.starts_with("smax.") {
+            self.gen_minmax(ctx, a, &args[1].val, ret_ty, true, true)?;
+        } else if bare.starts_with("smin.") {
+            self.gen_minmax(ctx, a, &args[1].val, ret_ty, false, true)?;
+        } else if bare.starts_with("umax.") {
+            self.gen_minmax(ctx, a, &args[1].val, ret_ty, true, false)?;
+        } else if bare.starts_with("umin.") {
+            self.gen_minmax(ctx, a, &args[1].val, ret_ty, false, false)?;
+        } else if bare.starts_with("scmp.") {
+            self.gen_three_way(ctx, a, &args[1].val, &args[0].ty, ret_ty, true)?;
+        } else if bare.starts_with("ucmp.") {
+            self.gen_three_way(ctx, a, &args[1].val, &args[0].ty, ret_ty, false)?;
+        } else if bare.starts_with("usub.sat.") {
+            self.gen_usub_sat(ctx, a, &args[1].val, ret_ty)?;
+        } else if bare.starts_with("bitreverse.") {
+            let w = int_width(ret_ty)?;
+            if w != 8 {
+                return Err(format!("llvm.bitreverse only supported for i8 (got i{})", w));
+            }
+            self.gen_bitreverse8(ctx, a)?;
+        } else {
+            return Err(format!("unsupported intrinsic @{}", name));
+        }
+
+        self.store_dest(ctx, dest)
+    }
+
+    /// `abs(x)` = `x < 0 ? -x : x`. INT_MIN wraps to itself, which matches the
+    /// intrinsic's poison-on-INT_MIN contract (any result is acceptable there).
+    fn gen_abs(&mut self, ctx: &FnCtx, x: &Value, ty: &Type) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        let ow = if w <= 32 { 32 } else { 64 };
+        let l_neg = self.fresh_label("abs_neg");
+        let l_done = self.fresh_label("abs_done");
+
+        // cond = x < 0 (signed)
+        self.push_value(ctx, x, w)?;
+        if w < ow { self.emit_sext(w, ow)?; }
+        self.push_int(0, ow);
+        self.line(&format!("lt_i{};", ow));
+        self.line(&format!("jnz {};", l_neg));
+
+        // x >= 0: the value is x itself.
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("jmp {};", l_done));
+
+        // x < 0: 0 - x.
+        self.line(&format!("{}:", l_neg));
+        self.push_int(0, ow);
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("sub_u{};", ow));
+        if w < 32 { self.emit_trunc_to(w); }
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// `min`/`max` of two operands via a compare + branch (the UVM `select` op
+    /// indexes slots, not stack values, so it can't be used here).
+    fn gen_minmax(&mut self, ctx: &FnCtx, a: &Value, b: &Value, ty: &Type, is_max: bool, signed: bool) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        let lt = if signed { ICmpPred::Slt } else { ICmpPred::Ult };
+        self.gen_icmp(ctx, lt, ty, a, b)?; // cond = a < b
+        let l_else = self.fresh_label("mm_else");
+        let l_done = self.fresh_label("mm_done");
+        self.line(&format!("jz {};", l_else));
+        // a < b: max picks b, min picks a.
+        self.push_value(ctx, if is_max { b } else { a }, w)?;
+        self.line(&format!("jmp {};", l_done));
+        self.line(&format!("{}:", l_else));
+        // a >= b: max picks a, min picks b.
+        self.push_value(ctx, if is_max { a } else { b }, w)?;
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// Three-way compare (`scmp`/`ucmp`): `(a > b) - (a < b)` in {-1, 0, 1}.
+    /// The compare uses the operand type `op_ty`; the result width is `ret_ty`.
+    fn gen_three_way(&mut self, ctx: &FnCtx, a: &Value, b: &Value, op_ty: &Type, ret_ty: &Type, signed: bool) -> Result<(), String>
+    {
+        let (gt, lt) = if signed {
+            (ICmpPred::Sgt, ICmpPred::Slt)
+        } else {
+            (ICmpPred::Ugt, ICmpPred::Ult)
+        };
+        self.gen_icmp(ctx, gt, op_ty, a, b)?; // g (0/1)
+        self.gen_icmp(ctx, lt, op_ty, a, b)?; // l (0/1)  -> stack [g, l]
+        let rw = int_width(ret_ty)?;
+        let sw = if rw <= 32 { 32 } else { 64 };
+        self.line(&format!("sub_u{};", sw)); // g - l  (wraps to -1 at the result width)
+        if rw < 32 { self.emit_trunc_to(rw); }
+        Ok(())
+    }
+
+    /// Unsigned saturating subtract: `a > b ? a - b : 0`.
+    fn gen_usub_sat(&mut self, ctx: &FnCtx, a: &Value, b: &Value, ty: &Type) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        let ow = if w <= 32 { 32 } else { 64 };
+        self.gen_icmp(ctx, ICmpPred::Ugt, ty, a, b)?; // cond = a > b
+        let l_zero = self.fresh_label("usat_zero");
+        let l_done = self.fresh_label("usat_done");
+        self.line(&format!("jz {};", l_zero));
+        self.push_value(ctx, a, w)?;
+        self.push_value(ctx, b, w)?;
+        self.line(&format!("sub_u{};", ow));
+        if w < 32 { self.emit_trunc_to(w); }
+        self.line(&format!("jmp {};", l_done));
+        self.line(&format!("{}:", l_zero));
+        self.line("push 0;");
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// Reverse the bits of a byte with the classic branchless 64-bit trick:
+    /// `((b * 0x0202020202) & 0x010884422010) % 1023`.
+    fn gen_bitreverse8(&mut self, ctx: &FnCtx, x: &Value) -> Result<(), String>
+    {
+        self.push_value(ctx, x, 8)?;
+        self.push_int(0x0202020202, 64);
+        self.line("mul_u64;");
+        self.push_int(0x010884422010, 64);
+        self.line("and_u64;");
+        self.push_int(1023, 64);
+        self.line("mod_u64;"); // result is 0..255, already a valid i8 slot
         Ok(())
     }
 
