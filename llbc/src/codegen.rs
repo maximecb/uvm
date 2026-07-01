@@ -286,6 +286,9 @@ impl<'a> Codegen<'a>
                     Value::Global(name) if name.starts_with("llvm.") => {
                         self.gen_intrinsic(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
                     }
+                    Value::Global(name) if name.starts_with("__uvm_") => {
+                        self.gen_syscall(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
+                    }
                     _ => self.gen_call(ctx, inst.dest.as_deref(), callee, args)?,
                 }
             }
@@ -633,6 +636,32 @@ impl<'a> Codegen<'a>
                 self.line(&format!("set_local {};", slot));
             }
             None => self.line("pop;"),
+        }
+        Ok(())
+    }
+
+    /// Lower a call to a `__uvm_<name>` shim (declared by `<uvm/syscalls.h>`
+    /// when compiled with clang) into an inline UVM `syscall <name>`. Arguments
+    /// are pushed left-to-right; a value-returning syscall leaves one result on
+    /// the stack, which we store into the destination slot (or discard).
+    fn gen_syscall(&mut self, ctx: &FnCtx, dest: Option<&str>, sym: &str, ret_ty: &Type, args: &[TypedVal]) -> Result<(), String>
+    {
+        let name = &sym["__uvm_".len()..];
+        for a in args {
+            let w = int_width(&a.ty)?;
+            self.push_value(ctx, &a.val, w)?;
+        }
+        self.line(&format!("syscall {};", name));
+
+        // `void` syscalls push nothing; value syscalls leave exactly one result.
+        if !matches!(ret_ty, Type::Void) {
+            match dest {
+                Some(d) => {
+                    let slot = *ctx.slots.get(d).ok_or_else(|| format!("no slot for %{}", d))?;
+                    self.line(&format!("set_local {};", slot));
+                }
+                None => self.line("pop;"),
+            }
         }
         Ok(())
     }

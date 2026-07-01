@@ -175,6 +175,29 @@ values), so min/max/abs use a compare + branch, mirroring `gen_select`.
 | `llvm.bitreverse.i8` | branchless `((b*0x0202020202)&0x010884422010)%1023` |
 | `strlen` (external, not an intrinsic) | runtime helper — deferred to the sysroot/runtime work |
 
+### Syscalls & the include directory (`llbc/include/`)
+UVM syscalls reach clang-compiled code through a generated header,
+`llbc/include/uvm/syscalls.h` (point clang at it with `-Illbc/include`). The
+header is produced by `spec/` from `syscalls.json` — the same source of truth as
+the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
+`#ifdef __clang__`:
+- **clang / llbc:** each syscall is `extern <ret> __uvm_<name>(...)` plus a
+  function-like macro binding the natural name (so `memcpy(...)`, `putchar(...)`
+  expand to `__uvm_memcpy(...)` etc., bypassing clang's builtin declarations with
+  no signature clash — and never taking a symbol's address).
+- **ncc:** the original inline-asm `asm(...) -> T { syscall name; }` macros.
+- Constants (`KEY_*`, `OPEN_*`, `EVENT_*`, ...) are shared by both branches.
+
+ncc predefines nothing and gates `#include`/`#define` on the active branch, so it
+cleanly takes the `#else` path (verified: `ncc tests/graphics.c` still builds).
+The identical file is written to both `ncc/include/uvm/` and `llbc/include/uvm/`.
+
+llbc lowers a `call @__uvm_<name>(args...)` inline (`gen_syscall` in
+`codegen.rs`): push args left-to-right, emit `syscall <name>;`, then store/`pop`
+the result for value-returning syscalls. No runtime helper, no call overhead —
+same strategy as the `memcpy`/`memset` intrinsics. Verified end-to-end
+(`print_str`/`putchar`/`print_i64`/`print_endl` → correct UVM stdout + exit).
+
 ### Host functions (`vm_*`)
 Per decision, **compile `doom.ll` as-is** — the stub `vm_*` bodies (e.g.
 `vm_malloc` returns null) are compiled like any other function. Milestone goal:

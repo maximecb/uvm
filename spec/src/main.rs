@@ -180,7 +180,15 @@ fn main()
     file.write_all(json_output.as_bytes()).unwrap();
 
     gen_rust_bindings("../vm/src/constants.rs", &subsystems, &idx_to_name);
-    gen_c_bindings("../ncc/include/uvm/syscalls.h", &subsystems);
+
+    // The C header is dual-mode (gated on `__clang__`): ncc takes the inline-asm
+    // branch, clang/llbc takes the `__uvm_syscall_*` extern-function branch. The
+    // same file is dropped into each toolchain's own include directory.
+    let c_header = build_c_header(&subsystems);
+    fs::write("../ncc/include/uvm/syscalls.h", &c_header).unwrap();
+    fs::create_dir_all("../llbc/include/uvm").unwrap();
+    fs::write("../llbc/include/uvm/syscalls.h", &c_header).unwrap();
+
     gen_markdown("../docs/syscalls.md", &subsystems);
 }
 
@@ -284,23 +292,110 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &
     writeln!(&mut file, "];").unwrap();
 }
 
-fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
+/// Map an ncc type string (as spelled in syscalls.json) to the equivalent C
+/// type understood by clang. Handles an optional `const ` prefix and a single
+/// trailing `*` pointer suffix.
+fn c_type(ty: &str) -> String
 {
-    // Generate C bindings
-    let mut file = File::create(out_file).unwrap();
-    writeln!(&mut file, "//").unwrap();
-    writeln!(&mut file, "// This file was automatically generated based on spec/syscalls.json").unwrap();
-    writeln!(&mut file, "//").unwrap();
-    writeln!(&mut file).unwrap();
+    let ty = ty.trim();
+    let (is_const, rest) = match ty.strip_prefix("const ") {
+        Some(r) => (true, r.trim()),
+        None => (false, ty),
+    };
+    let (base, is_ptr) = match rest.strip_suffix('*') {
+        Some(b) => (b.trim_end(), true),
+        None => (rest, false),
+    };
+    let cbase = match base {
+        "void" => "void",
+        "bool" => "_Bool",
+        "char" => "char",
+        "i8"  => "int8_t",   "u8"  => "uint8_t",
+        "i16" => "int16_t",  "u16" => "uint16_t",
+        "i32" => "int32_t",  "u32" => "uint32_t",
+        "i64" => "int64_t",  "u64" => "uint64_t",
+        "f32" => "float",
+        other => panic!("gen C bindings: unknown syscall type '{}'", other),
+    };
+    let mut s = String::new();
+    if is_const { s.push_str("const "); }
+    s.push_str(cbase);
+    if is_ptr { s.push('*'); }
+    s
+}
 
-    writeln!(&mut file, "#ifndef __UVM_SYSCALLS__").unwrap();
-    writeln!(&mut file, "#define __UVM_SYSCALLS__").unwrap();
-    writeln!(&mut file).unwrap();
+/// Build the dual-mode `<uvm/syscalls.h>` header. Both toolchains share one
+/// file, discriminated on `__clang__`:
+///   - clang (llbc backend): each syscall is an `extern __uvm_<name>`
+///     function that llbc lowers to an inline UVM `syscall`, plus a
+///     function-like macro binding the natural name so call sites read the same
+///     as under ncc (and bypass clang's builtin declarations for names like
+///     `memcpy`/`putchar`, avoiding signature clashes).
+///   - ncc: the original inline-asm `syscall` macros.
+/// Constants are shared by both branches.
+fn build_c_header(subsystems: &Vec<SubSystem>) -> String
+{
+    use std::fmt::Write as _;
+    let mut s = String::new();
+
+    writeln!(s, "//").unwrap();
+    writeln!(s, "// This file was automatically generated based on spec/syscalls.json").unwrap();
+    writeln!(s, "//").unwrap();
+    writeln!(s).unwrap();
+
+    writeln!(s, "#ifndef __UVM_SYSCALLS__").unwrap();
+    writeln!(s, "#define __UVM_SYSCALLS__").unwrap();
+    writeln!(s).unwrap();
+
+    // ---- clang / llbc: extern __uvm_syscall_* functions ----
+    writeln!(s, "#ifdef __clang__").unwrap();
+    writeln!(s, "// Compiled with clang for the llbc backend. Each syscall is exposed as an").unwrap();
+    writeln!(s, "// external function `__uvm_<name>`, which llbc recognizes and lowers").unwrap();
+    writeln!(s, "// to an inline UVM `syscall <name>` instruction. The function-like macros let").unwrap();
+    writeln!(s, "// user code call syscalls by their natural names without colliding with").unwrap();
+    writeln!(s, "// clang's builtin declarations (memcpy, putchar, ...).").unwrap();
+    writeln!(s).unwrap();
+    writeln!(s, "#include <stdint.h>").unwrap();
+    writeln!(s).unwrap();
 
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
-            let fn_name = syscall.name.clone();
-            let c_sig_str = syscall.c_sig_string();
+            let name = &syscall.name;
+
+            // `extern` parameter list, and the macro argument list.
+            let mut decl_params = String::new();
+            let mut macro_args = String::new();
+            for (idx, arg) in syscall.args.iter().enumerate() {
+                if idx > 0 {
+                    decl_params += ", ";
+                    macro_args += ", ";
+                }
+                write!(decl_params, "{} __{}", c_type(&arg.0), arg.1).unwrap();
+                write!(macro_args, "__{}", arg.1).unwrap();
+            }
+            if syscall.args.is_empty() {
+                decl_params.push_str("void");
+            }
+
+            writeln!(s, "// {}", syscall.c_sig_string()).unwrap();
+            if let Some(text) = &syscall.description {
+                writeln!(s, "// {}", text).unwrap();
+            }
+            writeln!(s, "extern {} __uvm_{}({});",
+                c_type(&syscall.returns.0), name, decl_params).unwrap();
+            writeln!(s, "#define {}({}) __uvm_{}({})\n",
+                name, macro_args, name, macro_args).unwrap();
+        }
+    }
+
+    // ---- ncc: inline-asm syscall macros ----
+    writeln!(s, "#else").unwrap();
+    writeln!(s, "// Compiled with ncc: syscalls expand to inline UVM assembly blocks.").unwrap();
+    writeln!(s).unwrap();
+
+    for subsystem in subsystems {
+        for syscall in &subsystem.syscalls {
+            let fn_name = &syscall.name;
 
             let mut sys_arg_str = "".to_string();
             for (idx, arg) in syscall.args.iter().enumerate() {
@@ -310,14 +405,11 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
                 sys_arg_str += &format!("__{}", arg.1);
             }
 
-            writeln!(&mut file, "// {}", c_sig_str).unwrap();
-
-            // Add description comment if present
+            writeln!(s, "// {}", syscall.c_sig_string()).unwrap();
             if let Some(text) = &syscall.description {
-                writeln!(&mut file, "// {}", text).unwrap();
+                writeln!(s, "// {}", text).unwrap();
             }
-
-            writeln!(&mut file,
+            writeln!(s,
                 "#define {}({}) asm ({}) -> {} {{ syscall {}; }}\n",
                 fn_name,
                 sys_arg_str,
@@ -325,41 +417,22 @@ fn gen_c_bindings(out_file: &str, subsystems: &Vec<SubSystem>)
                 syscall.returns.0,
                 fn_name,
             ).unwrap();
-
-            /*
-            let mut sys_arg_str = "".to_string();
-            for (idx, arg) in syscall.args.iter().enumerate() {
-                if idx > 0 {
-                    sys_arg_str += ", ";
-                }
-                sys_arg_str += &arg.1;
-            }
-
-            writeln!(&mut file,
-                "inline {}\n{{\n    return asm ({}) -> {} {{ syscall {}; }};\n}}\n",
-                c_sig_str,
-                sys_arg_str,
-                syscall.returns.0,
-                const_idx,
-            ).unwrap();
-            */
         }
     }
 
-    // Write out the constants for each subsystem
+    writeln!(s, "#endif // __clang__").unwrap();
+    writeln!(s).unwrap();
+
+    // ---- constants (shared by both branches) ----
     for subsystem in subsystems {
-        for (name, type_name, value) in &subsystem.constants {
-            writeln!(
-                &mut file,
-                "#define {} {}",
-                name,
-                value
-            ).unwrap();
+        for (name, _type_name, value) in &subsystem.constants {
+            writeln!(s, "#define {} {}", name, value).unwrap();
         }
     }
-    writeln!(&mut file).unwrap();
+    writeln!(s).unwrap();
 
-    writeln!(&mut file, "#endif").unwrap();
+    writeln!(s, "#endif").unwrap();
+    s
 }
 
 /// Generate markdown documentation
