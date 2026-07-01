@@ -50,6 +50,9 @@ for src in "$TESTS"/*.c; do
         fi
 
         # Native reference, built at the same optimization level as the IR.
+        # Note: no -I here on purpose -- the reference must use the platform's
+        # own libc and clang's headers, never llbc's UVM-side headers, so that
+        # stdlib headers are genuinely tested differentially.
         if ! "$NATIVE_CC" "$opt" -w "$src" -o "$TMP/ref" 2>/dev/null; then
             echo "SKIP $name (native compile failed)"; skip=$((skip+1)); continue
         fi

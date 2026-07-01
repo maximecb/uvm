@@ -173,7 +173,10 @@ values), so min/max/abs use a compare + branch, mirroring `gen_select`.
 | `llvm.scmp/ucmp` | `(a>b)-(a<b)` — two compares then `sub` |
 | `llvm.usub.sat.i32` | `a>b ? a-b : 0` via branch |
 | `llvm.bitreverse.i8` | branchless `((b*0x0202020202)&0x010884422010)%1023` |
-| `strlen` (external, not an intrinsic) | runtime helper — deferred to the sysroot/runtime work |
+
+`strlen` and friends are **not** intrinsics — they are ordinary functions
+supplied by llbc's `<string.h>` (see *C standard library* below) and compiled
+like any other code.
 
 ### Syscalls & the include directory (`llbc/include/`)
 UVM syscalls reach clang-compiled code through a generated header,
@@ -197,6 +200,31 @@ llbc lowers a `call @__uvm_<name>(args...)` inline (`gen_syscall` in
 the result for value-returning syscalls. No runtime helper, no call overhead —
 same strategy as the `memcpy`/`memset` intrinsics. Verified end-to-end
 (`print_str`/`putchar`/`print_i64`/`print_endl` → correct UVM stdout + exit).
+
+### C standard library (`llbc/include/`)
+Beyond the syscalls, llbc ships its own C stdlib headers under `llbc/include/`,
+implemented on top of the UVM primitives the same way ncc's headers are (ported
+from `ncc/include/`). So far: `string.h` (`strlen`, `strcmp`, `strncmp`,
+`strcasecmp`, `strchr`, `strstr`, `strncpy`, `strncat`) and `ctype.h`. Unlike
+ncc's headers, these are plain standard-signature C bodies — clang lowers them to
+LLVM IR and llbc compiles them like any other function, which is what resolves an
+external such as `@strlen` without a native libc. `size_t`/`NULL` come from
+clang's own freestanding `<stddef.h>`; `memcpy`/`memset`/`memcmp` are left to the
+syscalls/intrinsics (not redefined here).
+
+Only the **UVM build** sees these headers (clang with `-Illbc/include`, added in
+`gen_ll.sh`). The **native reference build never adds `-I`**, so it uses the
+platform's own libc and clang's headers — that asymmetry is deliberate and is
+what makes stdlib headers *differentially testable*: `tests/libc_string.c` and
+`tests/strings.c` compile against llbc's `string.h` for UVM and the system
+`string.h` natively, and their outputs must match (verified: both pass at
+-O0/-O1/-O2). Loop-idiom at -O2 rewrites some hand-written loops into
+`llvm.memset`/`llvm.memcpy` (handled) but does **not** produce self-recursive
+`@strlen`/`@memcpy` libcalls.
+
+Note: `doom.ll` is a pre-generated artifact compiled *without* these headers, so
+its `@strlen` stays external until doom is regenerated with `-Illbc/include` and
+`#include <string.h>`.
 
 ### Host functions (`vm_*`)
 Per decision, **compile `doom.ll` as-is** — the stub `vm_*` bodies (e.g.
@@ -309,8 +337,10 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       all calls (incl. its indirect call via a varargs-typed pointer) and stops
       at `llvm.memset` (Phase 7). Callee-side `va_arg` stays out of scope (see
       `variadic.c`).
-- [ ] `strings.c` matches native (`recursion.c`/`funcptr.c` already do).
-- [ ] `strlen` + any libc helpers used.
+- [x] `strings.c` matches native at -O0/-O1/-O2 (exit 16), now that `strlen`
+      comes from llbc's `<string.h>` (see *C standard library*).
+- [x] `strlen` + libc string helpers — provided by `llbc/include/string.h`,
+      exercised differentially by `libc_string.c` (exit 49).
 
 ### Phase 7 — intrinsics  ✅ DONE
 - [x] `memcpy`, `memset` → native UVM `syscall memcpy`/`memset` (not inline loops).
@@ -320,8 +350,10 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       inputs (so `-O2` can't fold them away), differential vs native at
       -O0/-O1/-O2 (exit 205). Also un-blocked `loops`/`funcptr`/`structs`, which
       previously SKIPped on `llvm.smax`/`llvm.memcpy`.
-- Note: `doom.ll` now compiles cleanly through every intrinsic and stops at the
-  one remaining real external, `@strlen` (Phase 6 / the runtime-libc work).
+- Note: `doom.ll` now compiles cleanly through every intrinsic. Its one
+  remaining external, `@strlen`, is now implementable via llbc's `<string.h>`,
+  but `doom.ll` is a pre-generated artifact so it must be regenerated with
+  `-Illbc/include` + `#include <string.h>` to pick the body up.
 - Deferred: `llvm.memmove` (needs overlap-safe copy — not in doom); `llvm.va_start`
   (callee-side varargs — see `variadic.c`, out of scope).
 
