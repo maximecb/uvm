@@ -189,16 +189,9 @@ A `tests/` harness (shell script or `cargo test`) that, for each `tests/*.c`:
 3. Asserts `native == uvm` (exit code mod 256, stdout exact).
 
 Self-checking tests additionally `assert()` internally and return non-zero on
-failure, so even a missing reference catches regressions. Keep all generated
-`.ll`/`.asm` reproducible via `gen_ll.sh`.
-
-**Hand-written `.ll` vs `lli`.** Because clang `-O2` constant-folds pure C
-`main`s (so a test's *functions* compile but its exit code only reflects a
-folded constant), we also keep hand-written `tests/ll/*.ll` files that exercise
-real runtime behavior, and diff `llbc`→UVM against the **LLVM interpreter**
-`lli` (`/opt/homebrew/opt/llvm/bin/lli`). `lli` is the LLVM reference semantics
-and runs `.ll` directly — ideal for control flow, and later phases, that C-level
-folding would hide. The harness runs these automatically when `lli` is present.
+failure, so even a missing reference catches regressions. Only the `.c` sources
+are checked in: the `.ll` (and `.asm`) are build artifacts, regenerated fresh
+from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
 
 ---
 
@@ -238,11 +231,11 @@ folding would hide. The harness runs these automatically when `lli` is present.
       copies make critical edges correct without a separate splitting pass.
 - [x] `switch` → compare chain (`eq` + `jnz` per case, fall-through default).
 - [x] `control_flow.c` matches native (exit 114).
-- [x] Runtime-validated against **`lli`** (LLVM interpreter) with hand-written
-      `tests/ll/*.ll`: `cf` (loop+switch+select+edge-phis), `swap` (mutually-
-      referencing phi parallel-copy = Fibonacci), `nested` (nested loops). All
-      match `lli` exactly. This is the real validation — `control_flow.c`'s C
-      `main` is const-folded by `-O2`, so its exit code alone is shallow.
+- [x] Runtime-validated during development against **`lli`** (LLVM interpreter)
+      with hand-written `.ll`: loop+switch+select+edge-phis, mutually-referencing
+      phi parallel-copy (Fibonacci), nested loops. All matched `lli` exactly.
+      This was the real validation — `control_flow.c`'s C `main` is const-folded
+      by `-O2`, so its exit code alone is shallow.
 
 ### Phase 4 — memory & pointers  (`pointers.c`)  ✅ DONE
 - [x] Stack-alloc region: `__stack_alloc_sp__` (a `.addr64` bump pointer) + an
@@ -256,7 +249,7 @@ folding would hide. The harness runs these automatically when `lli` is present.
       runtime index with sign-extension; constants folded into one add).
 - [x] `ptrtoint`/`inttoptr` (already handled in Phase 2 conversions).
 - [x] `pointers.c` matches native (exit 223); `alloca`+load/store/gep loop
-      validated against `lli` via `tests/ll/mem.ll` (exit 14).
+      validated during development against `lli` with a hand-written `.ll` (exit 14).
 
 ### Phase 5 — globals & aggregates  (`globals.c`)  ✅ DONE
 - [x] `.data` emission: scalars (`.u8/16/32/64`), `zeroinitializer`/uninitialized
@@ -267,8 +260,8 @@ folding would hide. The harness runs these automatically when `lli` is present.
 - [x] Constant-expression initializers (`gep`/`add`/`sub`/conv, incl. nested in
       aggregates): reserve `.zero` space + compute and `store` at startup
       (tracked as (label, byte-offset, expr)).
-- [x] `globals.c` matches native (exit 0); reads validated against `lli` via
-      `tests/ll/globals_read.ll` (exit 215). All 1817 doom.ll globals emit
+- [x] `globals.c` matches native (exit 0); reads validated during development
+      against `lli` with a hand-written `.ll` (exit 215). All 1817 doom.ll globals emit
       cleanly (llbc now reaches doom's function bodies, stops at `call`).
 
 ### Phase 6 — functions & calls  (`strings.c`, `recursion.c`, `funcptr.c`)

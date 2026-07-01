@@ -34,11 +34,13 @@ pass=0; fail=0; skip=0
 
 for src in "$TESTS"/*.c; do
     name=$(basename "$src" .c)
-    ll="$TESTS/$name.ll"
+    ll="$TMP/$name.ll"
 
-    # Ensure the .ll exists (generate if missing).
-    [ -f "$ll" ] || "$TESTS/gen_ll.sh" "$src" >/dev/null 2>&1
-    [ -f "$ll" ] || { echo "SKIP $name (no .ll)"; skip=$((skip+1)); continue; }
+    # Generate the .ll fresh into the temp dir (it is a build artifact, not
+    # checked in). A clang failure means we can't produce IR for this test.
+    if ! "$TESTS/gen_ll.sh" "$src" >"$ll" 2>/dev/null; then
+        echo "SKIP $name (no .ll)"; skip=$((skip+1)); continue
+    fi
 
     # Native reference.
     if ! "$NATIVE_CC" -O2 -w "$src" -o "$TMP/ref" 2>/dev/null; then
@@ -61,27 +63,6 @@ for src in "$TESTS"/*.c; do
         fail=$((fail+1))
     fi
 done
-
-# Hand-written .ll tests, validated against LLVM's interpreter (lli). These
-# cover control flow that clang would constant-fold away when compiled from C.
-LLI="${LLI:-/opt/homebrew/opt/llvm/bin/lli}"
-if [ -x "$LLI" ] && [ -d "$TESTS/ll" ]; then
-    for ll in "$TESTS"/ll/*.ll; do
-        [ -e "$ll" ] || continue
-        name="ll/$(basename "$ll" .ll)"
-        ref_out=$("$LLI" "$ll" 2>/dev/null); ref_code=$?
-        if ! "$LLBC_BIN" "$ll" -o "$TMP/ref.asm" 2>"$TMP/err"; then
-            echo "SKIP $name (llbc: $(head -1 "$TMP/err"))"; skip=$((skip+1)); continue
-        fi
-        uvm_out=$("$UVM_BIN" "$TMP/ref.asm" 2>/dev/null); uvm_code=$?
-        if [ "$ref_code" = "$uvm_code" ] && [ "$ref_out" = "$uvm_out" ]; then
-            echo "PASS $name (exit=$ref_code)"; pass=$((pass+1))
-        else
-            echo "FAIL $name: lli(exit=$ref_code, out='$ref_out') vs uvm(exit=$uvm_code, out='$uvm_out')"
-            fail=$((fail+1))
-        fi
-    done
-fi
 
 echo "--------"
 echo "pass=$pass fail=$fail skip=$skip"

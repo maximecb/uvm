@@ -1,20 +1,19 @@
 #!/bin/sh
-# Generate textual LLVM IR (.ll) from a C test file, using the canonical
-# flags for the llbc front-end. Output goes next to the input as <name>.ll.
+# Emit textual LLVM IR (.ll) on stdout for a C source file, using the canonical
+# flags for the llbc front-end. The IR is a build artifact and is not checked
+# in: pipe it into llbc, or redirect to a scratch file for inspection.
 #
-# Usage: ./gen_ll.sh foo.c [bar.c ...]
+# Usage: ./gen_ll.sh foo.c              # print IR to stdout
+#        ./gen_ll.sh foo.c > /tmp/foo.ll  # or redirect for inspection
 CLANG="${CLANG:-/opt/homebrew/opt/llvm/bin/clang}"
-for src in "$@"; do
-    out="${src%.c}.ll"
-    "$CLANG" \
-        --target=x86_64-unknown-linux-gnu \
-        -O2 \
-        -fno-discard-value-names \
-        -fno-optimize-sibling-calls \
-        -fno-vectorize \
-        -fno-slp-vectorize \
-        -fno-jump-tables \
-        -fno-strict-aliasing \
-        -S -emit-llvm \
-        "$src" -o "$out" && echo "generated $out"
-done
+exec "$CLANG" \
+    --target=x86_64-unknown-linux-gnu \
+    -O2 \
+    -fno-discard-value-names \
+    -fno-optimize-sibling-calls \
+    -fno-vectorize \
+    -fno-slp-vectorize \
+    -fno-jump-tables \
+    -fno-strict-aliasing \
+    -S -emit-llvm \
+    "$1" -o -
