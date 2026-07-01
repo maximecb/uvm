@@ -18,6 +18,9 @@ jobs:
         sudo apt-get update -y -qq
         sudo apt-get install libsdl2-dev
 
+    - name: Install Clang
+      run: sudo apt-get install -y clang
+
     - name: Build spec
       working-directory: ./spec
       run: cargo build
@@ -44,3 +47,12 @@ jobs:
         cargo run -- -o output_file.asm examples/chess.c
         cargo run -- -E examples/crc32.c > /dev/null
         cargo run -- -DTEST tests/test_macro.c
+
+    - name: Test LLBC
+      working-directory: ./llbc
+      run: RUST_BACKTRACE=1 cargo test
+
+    - name: Test LLBC end-to-end (LLVM IR -> UVM, differential vs native)
+      run: |
+        clang --version   # fail loudly if the toolchain is missing rather than skipping every test
+        ./llbc/tests/run_tests.sh

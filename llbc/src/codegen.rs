@@ -9,7 +9,7 @@
 //!   64). After a sub-32-bit op, truncate to re-establish the invariant; for
 //!   signed sub-32-bit ops, sign-extend operands first.
 
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::ast::*;
 use crate::layout::Layout;
@@ -23,6 +23,10 @@ pub struct Codegen<'a>
     module: &'a Module,
     layout: Layout<'a>,
     out: String,
+    /// Names of functions with a body in this module. A direct call to any
+    /// other `@name` (a bare `declare`, an unimplemented libc/intrinsic helper)
+    /// is rejected rather than emitting a dangling label reference.
+    defined_fns: HashSet<&'a str>,
     /// Counter for generating unique labels (branch edges, select, switch).
     label_counter: usize,
     /// Constant-expression values that can't be a static directive, initialized
@@ -52,10 +56,17 @@ impl<'a> Codegen<'a>
 {
     pub fn new(module: &'a Module) -> Self
     {
+        let defined_fns = module
+            .functions
+            .iter()
+            .filter(|f| !f.is_decl())
+            .map(|f| f.name.as_str())
+            .collect();
         Codegen {
             module,
             layout: Layout::new(module),
             out: String::new(),
+            defined_fns,
             label_counter: 0,
             runtime_inits: vec![],
         }
@@ -267,6 +278,9 @@ impl<'a> Codegen<'a>
             InstKind::GetElementPtr { base_ty, ptr, indices, .. } => {
                 self.gen_gep(ctx, base_ty, ptr, indices)?;
                 self.store_dest(ctx, inst.dest.as_deref())?;
+            }
+            InstKind::Call { callee, args, .. } => {
+                self.gen_call(ctx, inst.dest.as_deref(), callee, args)?;
             }
             // Phi results are written on the predecessor edges, so the phi
             // instruction itself emits no code.
@@ -570,6 +584,49 @@ impl<'a> Codegen<'a>
         self.push_value(ctx, fval, w)?;
         self.line(&format!("{}:", l_done));
         // The selected value is left on the stack for store_dest.
+        Ok(())
+    }
+
+    // -- calls ----------------------------------------------------------------
+
+    /// Lower a `call`. Arguments are pushed left-to-right (arg 0 first, so it
+    /// lands at the callee's `get_arg 0`); varargs need no special handling —
+    /// the caller just pushes every actual argument, fixed and variadic. A
+    /// direct call names its label; an indirect call pushes the function
+    /// pointer last (on top of the args) and uses `call_fp`. Every UVM call
+    /// yields exactly one return value, bound to the result slot or discarded.
+    fn gen_call(&mut self, ctx: &FnCtx, dest: Option<&str>, callee: &Value, args: &[TypedVal]) -> Result<(), String>
+    {
+        if args.len() > u8::MAX as usize {
+            return Err(format!("call with {} args (> 255 not supported)", args.len()));
+        }
+        for a in args {
+            let w = int_width(&a.ty)?;
+            self.push_value(ctx, &a.val, w)?;
+        }
+
+        match callee {
+            Value::Global(name) => {
+                if !self.defined_fns.contains(name.as_str()) {
+                    return Err(format!("call to undefined function @{} (external/intrinsic not yet supported)", name));
+                }
+                self.line(&format!("call {}, {};", sanitize(name), args.len()));
+            }
+            Value::Local(_) => {
+                // Function pointer goes on top of the stack for call_fp.
+                self.push_value(ctx, callee, 64)?;
+                self.line(&format!("call_fp {};", args.len()));
+            }
+            other => return Err(format!("unsupported call target: {:?}", other)),
+        }
+
+        match dest {
+            Some(name) => {
+                let slot = *ctx.slots.get(name).ok_or_else(|| format!("no slot for %{}", name))?;
+                self.line(&format!("set_local {};", slot));
+            }
+            None => self.line("pop;"),
+        }
         Ok(())
     }
 

@@ -7,7 +7,15 @@
 # Usage: ./gen_ll.sh foo.c                # -O2 IR to stdout
 #        OPT=-O1 ./gen_ll.sh foo.c         # -O1 IR to stdout
 #        ./gen_ll.sh foo.c > /tmp/foo.ll   # or redirect for inspection
-CLANG="${CLANG:-/opt/homebrew/opt/llvm/bin/clang}"
+# Resolve clang: honor $CLANG, else prefer Homebrew LLVM (a common macOS dev
+# setup), else fall back to whatever `clang` is on PATH (Linux / CI).
+if [ -z "${CLANG:-}" ]; then
+    if [ -x /opt/homebrew/opt/llvm/bin/clang ]; then
+        CLANG=/opt/homebrew/opt/llvm/bin/clang
+    else
+        CLANG=clang
+    fi
+fi
 OPT="${OPT:--O2}"
 exec "$CLANG" \
     --target=x86_64-unknown-linux-gnu \

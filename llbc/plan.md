@@ -267,12 +267,24 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
       cleanly (llbc now reaches doom's function bodies, stops at `call`).
 
 ### Phase 6 — functions & calls  (`strings.c`, `recursion.c`, `funcptr.c`)
-- [ ] Direct calls: arg passing, return values, void calls.
-- [ ] Recursion / mutual recursion (`recursion.c`).
-- [ ] Indirect calls (`call_fp`), incl. array of fn pointers (`funcptr.c`).
-- [ ] Varargs **call side** (push fixed + variadic args) — the one doom needs.
+- [x] Direct calls: `call <label>, <argc>`; args pushed left-to-right (arg 0 →
+      `get_arg 0`); the single UVM return value is bound with `set_local`, or
+      `pop`ped for void/unused results. A call to any `@name` without a body in
+      the module (external/libc/intrinsic) is rejected in codegen, so tests that
+      need one SKIP rather than emit a dangling label that fails to assemble.
+- [x] Recursion / mutual recursion — `recursion.c` matches native at
+      -O0/-O1/-O2 (exit 31).
+- [x] Indirect calls: push args, then the function pointer (on top), `call_fp
+      <argc>`. `funcptr.c` (incl. the array of fn pointers) matches native at
+      -O1/-O2 (exit 50); -O0 SKIPs on the array-init `llvm.memcpy` (Phase 7).
+- [x] Varargs **call side** — the caller just pushes every actual arg (fixed +
+      variadic) and calls; no callee-side change. `vararg_call.c` matches native
+      at -O0/-O1/-O2 (exit 57). Verified on `doom.ll`: it now compiles through
+      all calls (incl. its indirect call via a varargs-typed pointer) and stops
+      at `llvm.memset` (Phase 7). Callee-side `va_arg` stays out of scope (see
+      `variadic.c`).
 - [ ] `strlen` + any libc helpers used.
-- [ ] `strings.c`, `recursion.c`, `funcptr.c` match native.
+- [ ] `strings.c` matches native (`recursion.c`/`funcptr.c` already do).
 
 ### Phase 7 — intrinsics
 - [ ] `memcpy`, `memset`.
