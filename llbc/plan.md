@@ -181,7 +181,9 @@ is a **later, separate** effort (a hand-written UVM runtime that overrides
 
 ## Validation strategy
 
-A `tests/` harness (shell script or `cargo test`) that, for each `tests/*.c`:
+A `tests/` harness (shell script or `cargo test`) that, for each `tests/*.c` at
+`-O0`, `-O1` and `-O2` (each level emits a different IR shape and so exercises
+different llbc code paths):
 1. Compiles natively: `clang <flags> file.c -o ref`; runs `./ref`; records exit
    code + stdout.
 2. Compiles to UVM: `llbc file.ll > file.asm`; runs `cd vm && cargo run file.asm`;
