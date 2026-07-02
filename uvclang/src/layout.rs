@@ -27,6 +27,8 @@ impl<'a> Layout<'a>
         match ty {
             Type::Void => 0,
             Type::Int(w) => int_bytes(*w),
+            Type::Float => 4,
+            Type::Double => 8,
             Type::Ptr => 8,
             Type::Array { len, elem } => len * self.size_of(elem),
             Type::Struct(body) => self.struct_size(body),
@@ -43,6 +45,8 @@ impl<'a> Layout<'a>
         match ty {
             Type::Void => 1,
             Type::Int(w) => int_bytes(*w),
+            Type::Float => 4,
+            Type::Double => 8,
             Type::Ptr => 8,
             Type::Array { elem, .. } => self.align_of(elem),
             Type::Struct(body) => self.struct_align(body),

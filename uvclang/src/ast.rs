@@ -2,7 +2,8 @@
 //!
 //! This intentionally models only what clang `-O2` output for C actually
 //! emits (see the analysis of doom.ll): integer & pointer types, arrays and
-//! structs, and a fixed set of instructions. No floating point, no vectors.
+//! structs, `float`, and a fixed set of instructions. `double` is parsed but
+//! only its storage/movement is supported (UVM has f32 ops only). No vectors.
 //!
 //! Attributes that don't affect code generation (linkage, `nounwind`,
 //! `captures(...)`, parameter attrs, metadata, ...) are dropped during
@@ -36,6 +37,11 @@ pub enum Type
     Void,
     /// Integer of the given bit width: `i1`, `i8`, `i32`, ...
     Int(u32),
+    /// `float` (IEEE-754 binary32). Maps to the UVM `*_f32` ops.
+    Float,
+    /// `double` (IEEE-754 binary64). UVM has no f64 ops, so only storage and
+    /// movement of doubles is supported; arithmetic on them is rejected.
+    Double,
     /// Opaque pointer: `ptr`.
     Ptr,
     /// `[N x T]`
@@ -83,6 +89,9 @@ pub enum Value
     Global(String),
     /// An integer literal (`true`/`false` are normalized to 1/0).
     Int(i128),
+    /// A floating-point literal. Stored as f64 (LLVM prints even `float`
+    /// constants as the exact double they widen to); narrowed to f32 at use.
+    Float(f64),
     /// `null`
     Null,
     /// `undef`
@@ -197,11 +206,18 @@ pub enum InstKind
     /// Integer binary op: `add`, `sub`, `mul`, `udiv`, `sdiv`, `urem`,
     /// `srem`, `and`, `or`, `xor`, `shl`, `lshr`, `ashr`.
     Bin { op: BinOp, ty: Type, lhs: Value, rhs: Value },
+    /// Floating-point binary op: `fadd`, `fsub`, `fmul`, `fdiv`, `frem`.
+    FBin { op: FBinOp, ty: Type, lhs: Value, rhs: Value },
+    /// `fneg <ty> <val>` — floating-point negation.
+    FNeg { ty: Type, val: Value },
     /// Width/representation conversions: `trunc`, `zext`, `sext`,
-    /// `ptrtoint`, `inttoptr`.
+    /// `ptrtoint`, `inttoptr`, and the int<->float / float<->float casts
+    /// (`sitofp`, `uitofp`, `fptosi`, `fptoui`, `fpext`, `fptrunc`).
     Conv { op: ConvOp, from_ty: Type, val: Value, to_ty: Type },
     /// `icmp <pred> <ty> <lhs>, <rhs>`
     ICmp { pred: ICmpPred, ty: Type, lhs: Value, rhs: Value },
+    /// `fcmp <pred> <ty> <lhs>, <rhs>`
+    FCmp { pred: FCmpPred, ty: Type, lhs: Value, rhs: Value },
     /// `select i1 <cond>, <ty> <tval>, <ty> <fval>`
     Select { cond: Value, ty: Type, tval: Value, fval: Value },
     /// `load <ty>, ptr <ptr>`
@@ -258,13 +274,35 @@ pub enum BinOp
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FBinOp
+{
+    FAdd, FSub, FMul, FDiv, FRem,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConvOp
 {
     Trunc, ZExt, SExt, PtrToInt, IntToPtr, BitCast,
+    /// signed-int -> float, unsigned-int -> float
+    SIToFP, UIToFP,
+    /// float -> signed-int, float -> unsigned-int
+    FPToSI, FPToUI,
+    /// float -> double (fpext), double -> float (fptrunc)
+    FPExt, FPTrunc,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ICmpPred
 {
     Eq, Ne, Ugt, Uge, Ult, Ule, Sgt, Sge, Slt, Sle,
+}
+
+/// Floating-point comparison predicate (`fcmp`). The `o*` forms are ordered
+/// (false if either operand is NaN); the `u*` forms are unordered (true if
+/// either is NaN). `Ord`/`Uno` test only for the absence/presence of NaN.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FCmpPred
+{
+    False, Oeq, Ogt, Oge, Olt, Ole, One, Ord,
+    Ueq, Ugt, Uge, Ult, Ule, Une, Uno, True,
 }

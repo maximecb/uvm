@@ -263,6 +263,18 @@ impl<'a> Codegen<'a>
                 self.gen_bin(ctx, *op, ty, lhs, rhs)?;
                 self.store_dest(ctx, inst.dest.as_deref())?;
             }
+            InstKind::FBin { op, ty, lhs, rhs } => {
+                self.gen_fbin(ctx, *op, ty, lhs, rhs)?;
+                self.store_dest(ctx, inst.dest.as_deref())?;
+            }
+            InstKind::FNeg { ty, val } => {
+                self.gen_fneg(ctx, ty, val)?;
+                self.store_dest(ctx, inst.dest.as_deref())?;
+            }
+            InstKind::FCmp { pred, ty, lhs, rhs } => {
+                self.gen_fcmp(ctx, *pred, ty, lhs, rhs)?;
+                self.store_dest(ctx, inst.dest.as_deref())?;
+            }
             InstKind::Conv { op, from_ty, val, to_ty } => {
                 self.gen_conv(ctx, *op, from_ty, val, to_ty)?;
                 self.store_dest(ctx, inst.dest.as_deref())?;
@@ -284,7 +296,7 @@ impl<'a> Codegen<'a>
             InstKind::Store { ty, val, ptr, .. } => {
                 let bits = self.scalar_bits(ty)?;
                 self.push_value(ctx, ptr, 64)?; // address (popped second by store)
-                self.push_value(ctx, val, int_width(ty)?)?; // value (popped first)
+                self.push_value(ctx, val, scalar_width(ty)?)?; // value (popped first)
                 self.line(&format!("store_u{};", bits));
             }
             InstKind::Alloca { .. } => {
@@ -310,6 +322,11 @@ impl<'a> Codegen<'a>
                     }
                     Value::Global(name) if name.starts_with("__uvm_") => {
                         self.gen_syscall(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
+                    }
+                    // Float libm calls (`@sinf`, `@sqrtf`, ...) have no body in
+                    // the module; lower them inline to UVM f32 ops.
+                    Value::Global(name) if is_float_builtin(name) => {
+                        self.gen_float_call(ctx, inst.dest.as_deref(), name, args)?;
                     }
                     _ => self.gen_call(ctx, inst.dest.as_deref(), callee, args)?,
                 }
@@ -348,12 +365,188 @@ impl<'a> Codegen<'a>
         Ok(())
     }
 
+    /// Reject `double` (UVM has f32 ops only) and non-float scalar types.
+    fn require_float(&self, ty: &Type) -> Result<(), String>
+    {
+        match ty {
+            Type::Float => Ok(()),
+            Type::Double => Err("double (f64) arithmetic is not supported by UVM; use float".into()),
+            _ => Err(format!("expected a float type, got {}", type_str(ty))),
+        }
+    }
+
+    /// Floating-point binary op → the corresponding UVM `*_f32` instruction.
+    fn gen_fbin(&mut self, ctx: &FnCtx, op: FBinOp, ty: &Type, lhs: &Value, rhs: &Value) -> Result<(), String>
+    {
+        self.require_float(ty)?;
+        let mnem = match op {
+            FBinOp::FAdd => "add_f32",
+            FBinOp::FSub => "sub_f32",
+            FBinOp::FMul => "mul_f32",
+            FBinOp::FDiv => "div_f32",
+            FBinOp::FRem => return Err("frem (floating-point remainder) is not supported (no UVM op)".into()),
+        };
+        self.push_value(ctx, lhs, 32)?;
+        self.push_value(ctx, rhs, 32)?;
+        self.line(&format!("{};", mnem));
+        Ok(())
+    }
+
+    /// `fneg x` = flip the IEEE sign bit (exact, incl. signed zero/NaN).
+    fn gen_fneg(&mut self, ctx: &FnCtx, ty: &Type, val: &Value) -> Result<(), String>
+    {
+        self.require_float(ty)?;
+        self.push_value(ctx, val, 32)?;
+        self.push_int(0x8000_0000, 32);
+        self.line("xor_u32;");
+        Ok(())
+    }
+
+    /// Floating-point compare. The UVM ops (`eq/ne/lt/le/gt/ge_f32`) follow Rust
+    /// semantics: the ordering compares are ordered (false on NaN), `eq` is
+    /// ordered-equal, `ne` is unordered-not-equal. The remaining predicates are
+    /// composed from those with a boolean complement / disjunction.
+    fn gen_fcmp(&mut self, ctx: &FnCtx, pred: FCmpPred, ty: &Type, lhs: &Value, rhs: &Value) -> Result<(), String>
+    {
+        self.require_float(ty)?;
+        use FCmpPred::*;
+        match pred {
+            False => self.line("push 0;"),
+            True => self.line("push 1;"),
+            // Ordered compares map directly.
+            Oeq => self.fcmp_one(ctx, lhs, rhs, "eq_f32")?,
+            Olt => self.fcmp_one(ctx, lhs, rhs, "lt_f32")?,
+            Ole => self.fcmp_one(ctx, lhs, rhs, "le_f32")?,
+            Ogt => self.fcmp_one(ctx, lhs, rhs, "gt_f32")?,
+            Oge => self.fcmp_one(ctx, lhs, rhs, "ge_f32")?,
+            // Unordered not-equal maps directly (Rust `!=`).
+            Une => self.fcmp_one(ctx, lhs, rhs, "ne_f32")?,
+            // Unordered inequalities = complement of the opposite ordered compare.
+            Uge => { self.fcmp_one(ctx, lhs, rhs, "lt_f32")?; self.emit_not1(); }
+            Ult => { self.fcmp_one(ctx, lhs, rhs, "ge_f32")?; self.emit_not1(); }
+            Ugt => { self.fcmp_one(ctx, lhs, rhs, "le_f32")?; self.emit_not1(); }
+            Ule => { self.fcmp_one(ctx, lhs, rhs, "gt_f32")?; self.emit_not1(); }
+            // Ordered not-equal = (a<b) | (a>b).
+            One => self.fcmp_or(ctx, lhs, rhs, "lt_f32", lhs, rhs, "gt_f32")?,
+            // Unordered equal = !(ordered not-equal).
+            Ueq => { self.fcmp_or(ctx, lhs, rhs, "lt_f32", lhs, rhs, "gt_f32")?; self.emit_not1(); }
+            // Unordered (some NaN) = (a!=a) | (b!=b); ordered = its complement.
+            Uno => self.fcmp_or(ctx, lhs, lhs, "ne_f32", rhs, rhs, "ne_f32")?,
+            Ord => { self.fcmp_or(ctx, lhs, lhs, "ne_f32", rhs, rhs, "ne_f32")?; self.emit_not1(); }
+        }
+        Ok(())
+    }
+
+    /// Emit `push a; push b; <op>` for a single f32 compare.
+    fn fcmp_one(&mut self, ctx: &FnCtx, a: &Value, b: &Value, op: &str) -> Result<(), String>
+    {
+        self.push_value(ctx, a, 32)?;
+        self.push_value(ctx, b, 32)?;
+        self.line(&format!("{};", op));
+        Ok(())
+    }
+
+    /// Emit `(a1 <op1> b1) | (a2 <op2> b2)` for the composite fcmp predicates.
+    fn fcmp_or(&mut self, ctx: &FnCtx, a1: &Value, b1: &Value, op1: &str, a2: &Value, b2: &Value, op2: &str) -> Result<(), String>
+    {
+        self.fcmp_one(ctx, a1, b1, op1)?;
+        self.fcmp_one(ctx, a2, b2, op2)?;
+        self.line("or_u32;");
+        Ok(())
+    }
+
+    /// Logically negate an i1 (0/1) on top of the stack.
+    fn emit_not1(&mut self)
+    {
+        self.line("push 1;");
+        self.line("xor_u32;");
+    }
+
+    /// Lower a float libm call (`@sinf`, `@sqrtf`, `@powf`, `@fabsf`, ...) to the
+    /// matching UVM f32 op(s), inline. These have no body in the module, so this
+    /// runs before the ordinary (would-be-undefined) call path.
+    fn gen_float_call(&mut self, ctx: &FnCtx, dest: Option<&str>, name: &str, args: &[TypedVal]) -> Result<(), String>
+    {
+        match name {
+            "sinf" => self.fmath1(ctx, args, "sin_f32")?,
+            "cosf" => self.fmath1(ctx, args, "cos_f32")?,
+            "tanf" => self.fmath1(ctx, args, "tan_f32")?,
+            "asinf" => self.fmath1(ctx, args, "asin_f32")?,
+            "acosf" => self.fmath1(ctx, args, "acos_f32")?,
+            "atanf" => self.fmath1(ctx, args, "atan_f32")?,
+            "sqrtf" => self.fmath1(ctx, args, "sqrt_f32")?,
+            "fabsf" => self.gen_fabs(ctx, &args[0].val)?,
+            "powf" => {
+                self.push_value(ctx, &args[0].val, 32)?;
+                self.push_value(ctx, &args[1].val, 32)?;
+                self.line("pow_f32;");
+            }
+            _ => return Err(format!("unsupported float library call @{}", name)),
+        }
+        self.store_dest(ctx, dest)
+    }
+
+    /// A one-argument f32 math op: push the argument, emit `<op>`.
+    fn fmath1(&mut self, ctx: &FnCtx, args: &[TypedVal], op: &str) -> Result<(), String>
+    {
+        self.push_value(ctx, &args[0].val, 32)?;
+        self.line(&format!("{};", op));
+        Ok(())
+    }
+
+    /// `fabsf(x)` = clear the IEEE sign bit.
+    fn gen_fabs(&mut self, ctx: &FnCtx, x: &Value) -> Result<(), String>
+    {
+        self.push_value(ctx, x, 32)?;
+        self.push_int(0x7fff_ffff, 32);
+        self.line("and_u32;");
+        Ok(())
+    }
+
     fn gen_conv(&mut self, ctx: &FnCtx, op: ConvOp, from_ty: &Type, val: &Value, to_ty: &Type) -> Result<(), String>
     {
-        let fw = int_width(from_ty)?;
-        let tw = int_width(to_ty)?;
-        self.push_value(ctx, val, fw)?;
-        self.emit_conv_op(op, fw, tw)
+        match op {
+            // integer -> float
+            ConvOp::SIToFP | ConvOp::UIToFP => {
+                self.require_float(to_ty)?;
+                let fw = int_width(from_ty)?;
+                self.push_value(ctx, val, fw)?;
+                // Convert through i64: sign-extend the source for signed
+                // conversion (unsigned is already zero-extended in the slot),
+                // then let i64_to_f32 round to nearest — matching native
+                // sitofp/uitofp for all values in range.
+                if op == ConvOp::SIToFP && fw < 64 {
+                    self.emit_sext(fw, 64)?;
+                }
+                self.line("i64_to_f32;");
+            }
+            // float -> integer (truncates toward zero, saturating; NaN -> 0).
+            ConvOp::FPToSI | ConvOp::FPToUI => {
+                self.require_float(from_ty)?;
+                let tw = int_width(to_ty)?;
+                if tw > 32 {
+                    return Err(format!(
+                        "float -> i{} is not supported (UVM has f32_to_i32 only)", tw));
+                }
+                self.push_value(ctx, val, 32)?;
+                self.line("f32_to_i32;");
+                // f32_to_i32 sign-extends its i32 result into the 64-bit slot;
+                // re-truncate to restore the zero-extended width invariant.
+                self.emit_trunc_to(tw);
+            }
+            // float <-> double: UVM has no f64, so these can't be lowered.
+            ConvOp::FPExt | ConvOp::FPTrunc => {
+                return Err("double (f64) is not supported by UVM; only float (f32)".into());
+            }
+            // integer/pointer width conversions
+            _ => {
+                let fw = int_width(from_ty)?;
+                let tw = int_width(to_ty)?;
+                self.push_value(ctx, val, fw)?;
+                self.emit_conv_op(op, fw, tw)?;
+            }
+        }
+        Ok(())
     }
 
     /// Emit the width-adjusting op for a conversion whose operand is already on
@@ -374,6 +567,12 @@ impl<'a> Codegen<'a>
             }
             ConvOp::IntToPtr => {} // zero-extend to 64-bit = no-op
             ConvOp::BitCast => {}  // same bits
+            // The int<->float / float<->float casts are handled in gen_conv;
+            // they never reach the constant-expression path.
+            ConvOp::SIToFP | ConvOp::UIToFP | ConvOp::FPToSI
+            | ConvOp::FPToUI | ConvOp::FPExt | ConvOp::FPTrunc => {
+                return Err("floating-point conversion in a constant expression is not supported".into());
+            }
         }
         Ok(())
     }
@@ -480,6 +679,20 @@ impl<'a> Codegen<'a>
                 let bits = self.scalar_bits(ty)?;
                 self.line(&format!(".u{} {};", bits, mask_to_width(*c, bits)));
             }
+            Value::Float(f) => match ty {
+                Type::Float => {
+                    let f = *f as f32;
+                    if f.is_finite() {
+                        self.line(&format!(".f32 {};", fmt_f32(f)));
+                    } else {
+                        self.line(&format!(".u32 {};", f.to_bits()));
+                    }
+                }
+                // A `double` in .data: emit its raw 8-byte pattern (we can store
+                // and load doubles even though we can't compute on them).
+                Type::Double => self.line(&format!(".u64 {};", f.to_bits())),
+                _ => return Err(format!("float constant for non-float type {}", type_str(ty))),
+            },
             Value::Null => self.line(".u64 0;"),
             Value::ZeroInit | Value::Undef | Value::Poison => {
                 self.line(&format!(".zero {};", self.layout.size_of(ty)));
@@ -575,6 +788,7 @@ impl<'a> Codegen<'a>
     {
         match val {
             Value::Int(c) => self.push_int(*c, int_width(ty).unwrap_or(64)),
+            Value::Float(f) => self.push_float(*f, scalar_width(ty).unwrap_or(32)),
             Value::Null | Value::ZeroInit => self.line("push 0;"),
             Value::Global(name) => self.line(&format!("push {};", sanitize(name))),
             Value::ConstExpr(ce) => self.emit_const_expr(ce)?,
@@ -604,7 +818,7 @@ impl<'a> Codegen<'a>
 
     fn gen_select(&mut self, ctx: &FnCtx, cond: &Value, ty: &Type, tval: &Value, fval: &Value) -> Result<(), String>
     {
-        let w = int_width(ty)?;
+        let w = scalar_width(ty)?;
         let l_false = self.fresh_label("sel_false");
         let l_done = self.fresh_label("sel_done");
 
@@ -633,7 +847,7 @@ impl<'a> Codegen<'a>
             return Err(format!("call with {} args (> 255 not supported)", args.len()));
         }
         for a in args {
-            let w = int_width(&a.ty)?;
+            let w = scalar_width(&a.ty)?;
             self.push_value(ctx, &a.val, w)?;
         }
 
@@ -670,7 +884,7 @@ impl<'a> Codegen<'a>
     {
         let name = &sym["__uvm_".len()..];
         for a in args {
-            let w = int_width(&a.ty)?;
+            let w = scalar_width(&a.ty)?;
             self.push_value(ctx, &a.val, w)?;
         }
         self.line(&format!("syscall {};", name));
@@ -750,6 +964,28 @@ impl<'a> Codegen<'a>
                 return Err(format!("llvm.bitreverse only supported for i8 (got i{})", w));
             }
             self.gen_bitreverse8(ctx, a)?;
+        } else if bare.starts_with("sqrt.") {
+            self.fmath1(ctx, args, "sqrt_f32")?;
+        } else if bare.starts_with("sin.") {
+            self.fmath1(ctx, args, "sin_f32")?;
+        } else if bare.starts_with("cos.") {
+            self.fmath1(ctx, args, "cos_f32")?;
+        } else if bare.starts_with("fabs.") {
+            self.gen_fabs(ctx, a)?;
+        } else if bare.starts_with("pow.") {
+            self.push_value(ctx, &args[0].val, 32)?;
+            self.push_value(ctx, &args[1].val, 32)?;
+            self.line("pow_f32;");
+        } else if bare.starts_with("fmuladd.") {
+            // a*b + c with two roundings — UVM has no fused multiply-add. clang
+            // targeting a baseline (no-FMA) machine lowers fmuladd the same way,
+            // so this matches native there; on an FMA host the last bit can
+            // differ (float tests compare with tolerance to absorb this).
+            self.push_value(ctx, &args[0].val, 32)?;
+            self.push_value(ctx, &args[1].val, 32)?;
+            self.line("mul_f32;");
+            self.push_value(ctx, &args[2].val, 32)?;
+            self.line("add_f32;");
         } else {
             return Err(format!("unsupported intrinsic @{}", name));
         }
@@ -972,7 +1208,7 @@ impl<'a> Codegen<'a>
                     self.line("ret;");
                 }
                 Some(tv) => {
-                    let w = int_width(&tv.ty)?;
+                    let w = scalar_width(&tv.ty)?;
                     self.push_value(ctx, &tv.val, w)?;
                     self.emit_frame_leave(ctx);
                     self.line("ret;");
@@ -1058,7 +1294,7 @@ impl<'a> Codegen<'a>
         }
 
         for (_, val, ty) in &copies {
-            let w = int_width(ty)?;
+            let w = scalar_width(ty)?;
             self.push_value(ctx, val, w)?;
         }
         for (slot, _, _) in copies.iter().rev() {
@@ -1090,6 +1326,7 @@ impl<'a> Codegen<'a>
                 }
             }
             Value::Int(v) => self.push_int(*v, width),
+            Value::Float(f) => self.push_float(*f, width),
             Value::Null => self.line("push 0;"),
             Value::Undef | Value::Poison | Value::ZeroInit => self.line("push 0;"),
             // The address of a global or function (both are plain labels).
@@ -1105,6 +1342,28 @@ impl<'a> Codegen<'a>
     fn push_int(&mut self, v: i128, width: u32)
     {
         self.line(&format!("push {};", mask_to_width(v, width)));
+    }
+
+    /// Push a floating-point constant. A float occupies the low 32 bits of the
+    /// slot as its IEEE-754 pattern (upper bits zero), so `push_f32 <decimal>`
+    /// is exact for finite values (Rust's shortest form round-trips and the UVM
+    /// assembler accepts it). Non-finite values (inf/NaN), whose decimal form
+    /// the assembler's `parse_float` can't read, fall back to pushing the raw
+    /// bit pattern as an integer — same slot contents, always assemblable.
+    fn push_float(&mut self, v: f64, width: u32)
+    {
+        if width <= 32 {
+            let f = v as f32;
+            if f.is_finite() {
+                self.line(&format!("push_f32 {};", fmt_f32(f)));
+            } else {
+                self.line(&format!("push {};", f.to_bits() as u64));
+            }
+        } else {
+            // A `double` value we only ever move/store (UVM has no f64 ops):
+            // place its 64-bit pattern in the slot verbatim.
+            self.line(&format!("push {};", v.to_bits()));
+        }
     }
 
     fn store_dest(&mut self, ctx: &FnCtx, dest: Option<&str>) -> Result<(), String>
@@ -1173,6 +1432,33 @@ fn int_width(ty: &Type) -> Result<u32, String>
         Type::Int(w) => Ok(*w),
         Type::Ptr => Ok(64),
         _ => Err(format!("expected an integer/pointer type, got {}", type_str(ty))),
+    }
+}
+
+/// Names of the float libm functions uvclang lowers inline to UVM f32 ops (they
+/// have no body in the module). Everything here maps to a single-precision UVM
+/// instruction; the `double` variants (`sin`, `sqrt`, ...) are intentionally
+/// absent since UVM has no f64 ops.
+fn is_float_builtin(name: &str) -> bool
+{
+    matches!(
+        name,
+        "sinf" | "cosf" | "tanf" | "asinf" | "acosf" | "atanf"
+            | "sqrtf" | "fabsf" | "powf"
+    )
+}
+
+/// Bit width of any scalar we can hold in a slot and move around: integers and
+/// pointers as `int_width`, plus `float` (32) and `double` (64). Used wherever
+/// a value is merely pushed/copied (call args, returns, phi/select, store),
+/// which is representation-agnostic — a float's slot holds its 32-bit IEEE
+/// pattern, exactly like an `i32`.
+fn scalar_width(ty: &Type) -> Result<u32, String>
+{
+    match ty {
+        Type::Float => Ok(32),
+        Type::Double => Ok(64),
+        _ => int_width(ty),
     }
 }
 
@@ -1289,6 +1575,14 @@ fn const_i128(v: &Value) -> Result<i128, String>
     }
 }
 
+/// Format a finite `f32` for a UVM `push_f32`/`.f32` operand. Rust's shortest
+/// Display form round-trips exactly and is always `[-]digits[.digits]` (no
+/// exponent), a subset of what the assembler's `parse_float` accepts.
+fn fmt_f32(f: f32) -> String
+{
+    format!("{}", f)
+}
+
 /// Reduce an integer constant to its zero-extended `width`-bit pattern.
 fn mask_to_width(v: i128, width: u32) -> u64
 {
@@ -1326,6 +1620,8 @@ fn type_str(ty: &Type) -> String
     match ty {
         Type::Void => "void".to_string(),
         Type::Int(w) => format!("i{}", w),
+        Type::Float => "float".to_string(),
+        Type::Double => "double".to_string(),
         Type::Ptr => "ptr".to_string(),
         Type::Array { len, elem } => format!("[{} x {}]", len, type_str(elem)),
         Type::Struct(_) => "struct".to_string(),
@@ -1340,8 +1636,11 @@ fn kind_name(k: &InstKind) -> &'static str
 {
     match k {
         InstKind::Bin { .. } => "bin",
+        InstKind::FBin { .. } => "fbin",
+        InstKind::FNeg { .. } => "fneg",
         InstKind::Conv { .. } => "conv",
         InstKind::ICmp { .. } => "icmp",
+        InstKind::FCmp { .. } => "fcmp",
         InstKind::Select { .. } => "select",
         InstKind::Load { .. } => "load",
         InstKind::Store { .. } => "store",

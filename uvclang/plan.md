@@ -44,11 +44,13 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
 - **Back-end codegen: Phases 0–8 done** (arithmetic, control flow, memory,
   globals, calls, intrinsics, corner cases) and **Phase 9 done** (the
   clang-driver front-end — `uvclang foo.c` drives clang + back-end in one
-  command). The back-end differential suite (`.ll` path) is **87 pass / 0 fail /
-  0 skip**; the end-to-end front-end suite (`tests/run_frontend_tests.sh`,
-  single-command `uvclang foo.c`) is **102 pass / 0 fail / 0 skip**. `doom.ll`
-  compiles through every construct. Callee-side `va_arg` is now supported (see
-  *Calls* below), which cleared the previous skips.
+  command). Scalar **`float` (f32) is supported** (arithmetic, compare, int↔float
+  conversions, libm f32 calls; see *Floating point* below). The back-end
+  differential suite (`.ll` path) is **102 pass / 0 fail / 0 skip**; the
+  end-to-end front-end suite (`tests/run_frontend_tests.sh`, single-command
+  `uvclang foo.c`) is **117 pass / 0 fail / 0 skip**. `doom.ll` compiles through
+  every construct. Callee-side `va_arg` is now supported (see *Calls* below),
+  which cleared the previous skips.
 - **Remaining:** Phase 10 (doom bring-up on a **real, graphical UVM runtime** —
   build syscall-backed `vm_*` with a window, framebuffer, and input from the
   start, then compile and run `doom.ll` as an actually-playable game; use
@@ -147,6 +149,35 @@ support ordinary variadic C (the `printf` family).
   operands: sign-extend from `W` to the op width first; use the `_i*` op.
 - **`zext`** = already satisfied by the invariant (or mask/`trunc` to source
   width). **`sext`** = `sx_iW_iW2`. **`trunc`** = `trunc_uW`.
+
+### Floating point (f32) — DONE
+UVM has **single-precision only** — a fixed set of `*_f32` ops and no f64
+instructions at all — so uvclang supports `float` and rejects `double`
+*arithmetic* (a `double` value can still be stored/moved, just not computed on;
+`fpext`/`fptrunc` error). This mirrors ncc, which is also f32-only.
+- **Slot representation is identical to `i32`:** a float lives in the low 32
+  bits of its slot as the IEEE-754 pattern, upper bits zero (`Value::as_f32`
+  reads `f32::from_bits(low32)`). So `load float`/`store float` are just
+  `load_u32`/`store_u32`, and float phi/select/call-args/returns reuse the exact
+  integer value-moving paths (see `scalar_width`).
+- **Arithmetic/compare:** `fadd/fsub/fmul/fdiv` → `add/sub/mul/div_f32`;
+  `fneg` → xor the sign bit (`^ 0x80000000`); `fcmp` → the six ordered VM ops
+  (`eq/lt/le/gt/ge_f32`, all NaN-false) with `ne_f32` for `une`, and the
+  remaining unordered/`one`/`ord`/`uno` predicates composed by boolean
+  complement/disjunction.
+- **Conversions:** `sitofp` sign-extends to i64 then `i64_to_f32`; `uitofp` uses
+  `i64_to_f32` on the already-zero-extended slot; `fptosi`/`fptoui` →
+  `f32_to_i32` then re-truncate to restore the width invariant (target width
+  ≤ 32; float→i64 is unsupported). Float constants lower to `push_f32` (finite)
+  or the raw bit pattern (inf/NaN); `float` globals emit `.f32`.
+- **libm / intrinsics:** `sinf/cosf/tanf/asinf/acosf/atanf/sqrtf/powf` (libcalls)
+  and `llvm.sqrt/sin/cos/fabs/pow.f32` map to the matching `*_f32` op; `fabsf`/
+  `llvm.fabs` clear the sign bit; `llvm.fmuladd.f32` → `mul_f32; add_f32` (two
+  roundings — matches a baseline no-FMA native target; a float test compares
+  transcendentals with tolerance to absorb any last-bit host/libm difference).
+- **Header:** a minimal ISO `<math.h>` in `uvclang/include/` declares the f32
+  functions (+ `M_PI`/`M_PI_F` constants). Covered by `tests/floats.c`
+  (differential vs native + self-checking, -O0/-O1/-O2).
 
 ### Memory & pointers
 - **`alloca`:** assign each alloca a fixed offset within the function's
@@ -370,10 +401,14 @@ them either.
 |---|---|---|
 | `assert` | ✅ | ✅ passing path (`uvm_*` self-checks) + failure path (`xfail_assert.c`) |
 
-### `<math.h>` — deferred
-Floating-point math (`sqrt`, `sin`, `cos`, `pow`, `floor`, `ceil`, `fmod`, …) is
-not implemented and not referenced by `doom.ll` (whose only libc external is
-`@strlen`). Add when a test needs it. Note `uvm/math.h` is a UVM-specific header,
+### `<math.h>` — partial (f32)
+A minimal ISO `<math.h>` ships in `uvclang/include/`, declaring the
+single-precision functions uvclang lowers to UVM `*_f32` ops
+(`sinf`/`cosf`/`tanf`/`asinf`/`acosf`/`atanf`/`sqrtf`/`fabsf`/`powf`) plus the
+`M_*`/`M_*_F` constants. Exercised by `tests/floats.c`. **Not** provided: the
+`double` variants (UVM has no f64), and f32 ops with no UVM instruction
+(`floorf`/`ceilf`/`fmodf`/`expf`/`logf`/`atan2f`/…) — add when a test needs
+them. Note `uvm/math.h` is a separate UVM-specific header (min/max/lerp macros),
 not ISO `<math.h>`.
 
 ### Out of scope for now
@@ -625,5 +660,6 @@ the doom path (doom's only libc external is `@strlen`, already covered).
 - For doom, a real graphical runtime (real `malloc`, file I/O, `gettime`,
   `print`, window/framebuffer, keyboard/mouse input) is in scope (Phase 10);
   only **audio** (sound/MIDI) is deferred.
-- No support for IR features clang `-O2` C output never emits (vectors, floats
-  beyond what appears, exception handling, etc.) until a test needs them.
+- No support for IR features clang `-O2` C output never emits (vectors,
+  `double`/f64 arithmetic — UVM is f32-only, exception handling, etc.) until a
+  test needs them. (Scalar `float`/f32 *is* supported — see *Floating point*.)

@@ -471,6 +471,34 @@ impl Lexer
         return num_str;
     }
 
+    /// Parse an LLVM hexadecimal floating-point literal: `0x` followed by hex
+    /// digits encoding the IEEE-754 bit pattern (16 digits = the binary64 value
+    /// LLVM prints for both `float` and `double` constants). The `0x`/`0X` must
+    /// already be confirmed present by the caller. Rejects the extended-format
+    /// prefixes (`0xH`/`0xK`/`0xL`/`0xM`) which name half/fp80/fp128/ppc types.
+    pub fn parse_hex_float(&mut self) -> Result<f64, ParseError>
+    {
+        self.eat_ch(); // '0'
+        self.eat_ch(); // 'x' or 'X'
+        let mut bits: u64 = 0;
+        let mut n = 0;
+        loop {
+            let d = self.peek_ch().to_digit(16);
+            match d {
+                Some(d) => {
+                    bits = (bits << 4) | d as u64;
+                    n += 1;
+                    self.eat_ch();
+                }
+                None => break,
+            }
+        }
+        if n == 0 || n > 16 {
+            return self.parse_error("unsupported hexadecimal floating-point literal");
+        }
+        Ok(f64::from_bits(bits))
+    }
+
     /// Parse a string literal
     pub fn parse_str(&mut self, end_ch: char) -> Result<String, ParseError>
     {

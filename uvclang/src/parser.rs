@@ -335,13 +335,26 @@ impl Parser
             "shl" => self.parse_bin(BinOp::Shl),
             "lshr" => self.parse_bin(BinOp::LShr),
             "ashr" => self.parse_bin(BinOp::AShr),
+            "fadd" => self.parse_fbin(FBinOp::FAdd),
+            "fsub" => self.parse_fbin(FBinOp::FSub),
+            "fmul" => self.parse_fbin(FBinOp::FMul),
+            "fdiv" => self.parse_fbin(FBinOp::FDiv),
+            "frem" => self.parse_fbin(FBinOp::FRem),
+            "fneg" => self.parse_fneg(),
             "trunc" => self.parse_conv(ConvOp::Trunc),
             "zext" => self.parse_conv(ConvOp::ZExt),
             "sext" => self.parse_conv(ConvOp::SExt),
             "ptrtoint" => self.parse_conv(ConvOp::PtrToInt),
             "inttoptr" => self.parse_conv(ConvOp::IntToPtr),
             "bitcast" => self.parse_conv(ConvOp::BitCast),
+            "sitofp" => self.parse_conv(ConvOp::SIToFP),
+            "uitofp" => self.parse_conv(ConvOp::UIToFP),
+            "fptosi" => self.parse_conv(ConvOp::FPToSI),
+            "fptoui" => self.parse_conv(ConvOp::FPToUI),
+            "fpext" => self.parse_conv(ConvOp::FPExt),
+            "fptrunc" => self.parse_conv(ConvOp::FPTrunc),
             "icmp" => self.parse_icmp(),
+            "fcmp" => self.parse_fcmp(),
             "select" => self.parse_select(),
             "load" => self.parse_load(),
             "getelementptr" => self.parse_gep_inst(),
@@ -385,6 +398,82 @@ impl Parser
             break;
         }
         Ok(())
+    }
+
+    /// Consume any fast-math flags on a floating-point op (`fadd fast`, `fmul
+    /// nnan ninf contract`, ...). They relax IEEE semantics but don't change our
+    /// (already non-strict) lowering, so they are dropped.
+    fn skip_fast_math_flags(&mut self) -> Result<(), ParseError>
+    {
+        const FLAGS: &[&str] =
+            &["fast", "nnan", "ninf", "nsz", "arcp", "contract", "afn", "reassoc"];
+        loop {
+            let mut matched = false;
+            for f in FLAGS {
+                if self.input.match_keyword(f)? {
+                    matched = true;
+                    break;
+                }
+            }
+            if !matched {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_fbin(&mut self, op: FBinOp) -> Result<InstKind, ParseError>
+    {
+        self.skip_fast_math_flags()?;
+        let ty = self.parse_type()?;
+        let lhs = self.parse_value()?;
+        self.input.expect_token(",")?;
+        let rhs = self.parse_value()?;
+        self.parse_trailing()?;
+        Ok(InstKind::FBin { op, ty, lhs, rhs })
+    }
+
+    fn parse_fneg(&mut self) -> Result<InstKind, ParseError>
+    {
+        self.skip_fast_math_flags()?;
+        let ty = self.parse_type()?;
+        let val = self.parse_value()?;
+        self.parse_trailing()?;
+        Ok(InstKind::FNeg { ty, val })
+    }
+
+    fn parse_fcmp(&mut self) -> Result<InstKind, ParseError>
+    {
+        self.skip_fast_math_flags()?;
+        let pred = self.parse_fcmp_pred()?;
+        let ty = self.parse_type()?;
+        let lhs = self.parse_value()?;
+        self.input.expect_token(",")?;
+        let rhs = self.parse_value()?;
+        self.parse_trailing()?;
+        Ok(InstKind::FCmp { pred, ty, lhs, rhs })
+    }
+
+    fn parse_fcmp_pred(&mut self) -> Result<FCmpPred, ParseError>
+    {
+        // Order matters: the multi-letter names must be tried before shorter
+        // prefixes of them, but match_keyword is whole-token so any order works.
+        let preds = [
+            ("false", FCmpPred::False), ("oeq", FCmpPred::Oeq),
+            ("ogt", FCmpPred::Ogt), ("oge", FCmpPred::Oge),
+            ("olt", FCmpPred::Olt), ("ole", FCmpPred::Ole),
+            ("one", FCmpPred::One), ("ord", FCmpPred::Ord),
+            ("ueq", FCmpPred::Ueq), ("ugt", FCmpPred::Ugt),
+            ("uge", FCmpPred::Uge), ("ult", FCmpPred::Ult),
+            ("ule", FCmpPred::Ule), ("une", FCmpPred::Une),
+            ("uno", FCmpPred::Uno), ("true", FCmpPred::True),
+        ];
+        for (kw, pred) in preds {
+            if self.input.match_keyword(kw)? {
+                return Ok(pred);
+            }
+        }
+        self.input.parse_error("expected an fcmp predicate")
     }
 
     // -- conversions ----------------------------------------------------------
@@ -796,6 +885,12 @@ impl Parser
         if self.input.match_keyword("void")? {
             return Ok(Type::Void);
         }
+        if self.input.match_keyword("float")? {
+            return Ok(Type::Float);
+        }
+        if self.input.match_keyword("double")? {
+            return Ok(Type::Double);
+        }
         if self.input.match_keyword("ptr")? {
             if self.input.match_keyword("addrspace")? {
                 self.skip_parens()?;
@@ -881,13 +976,27 @@ impl Parser
         if c == '@' {
             return Ok(Value::Global(self.parse_global_name()?));
         }
-        if c == '-' || c.is_ascii_digit() {
-            let neg = self.input.match_char('-');
-            let mut v = self.input.parse_int(10)?;
-            if neg {
-                v = -v;
+        // A numeric constant: integer, or floating-point (decimal or the LLVM
+        // `0x`-hex bit-pattern form). Floats always carry a `.`/exponent or the
+        // hex prefix, so the token shape disambiguates.
+        if c == '-' || c == '+' || c.is_ascii_digit() {
+            if self.input.peek_chars(&['0', 'x']) || self.input.peek_chars(&['0', 'X']) {
+                return Ok(Value::Float(self.input.parse_hex_float()?));
             }
-            return Ok(Value::Int(v));
+            let s = self.input.read_numeric();
+            if s.is_empty() {
+                return self.input.parse_error("expected a numeric constant");
+            }
+            if s.contains('.') || s.contains('e') || s.contains('E') {
+                return match s.parse::<f64>() {
+                    Ok(f) => Ok(Value::Float(f)),
+                    Err(_) => self.input.parse_error("invalid floating-point constant"),
+                };
+            }
+            return match s.parse::<i128>() {
+                Ok(v) => Ok(Value::Int(v)),
+                Err(_) => self.input.parse_error("invalid integer constant"),
+            };
         }
         if self.input.match_keyword("true")? {
             return Ok(Value::Int(1));
