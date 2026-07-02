@@ -57,6 +57,39 @@ int isalpha(int c)
     );
 }
 
+// Control characters: 0x00-0x1F and DEL (0x7F).
+int iscntrl(int c)
+{
+    return (c >= 0x00 && c <= 0x1F) || c == 0x7F;
+}
+
+// Any printable character except space (i.e. isprint minus 0x20).
+int isgraph(int c)
+{
+    return (c >= 0x21 && c <= 0x7E);
+}
+
+int isxdigit(int c)
+{
+    return (
+        (c >= '0' && c <= '9') ||
+        (c >= 'a' && c <= 'f') ||
+        (c >= 'A' && c <= 'F')
+    );
+}
+
+// Blank characters used to separate words: space and horizontal tab.
+int isblank(int c)
+{
+    return (c == ' ' || c == '\t');
+}
+
+// Printable, but neither a space nor alphanumeric.
+int ispunct(int c)
+{
+    return isgraph(c) && !isalnum(c);
+}
+
 int tolower(int ch)
 {
     if (isupper(ch))

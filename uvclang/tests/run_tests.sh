@@ -46,6 +46,11 @@ for src in "$TESTS"/*.c; do
     # they don't show as permanent native-only SKIPs in this differential suite.
     case "$base" in
         uvm_*) continue ;;
+        # xfail_*.c exercise an abnormal-termination path (e.g. a failed assert):
+        # native libc and uvclang deliberately disagree on message/stream/exit
+        # code, so they aren't differentially comparable. run_frontend_tests.sh
+        # covers them under its own xfail_* convention.
+        xfail_*) continue ;;
     esac
 
     for opt in $OPT_LEVELS; do

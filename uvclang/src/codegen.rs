@@ -50,6 +50,11 @@ struct FnCtx<'f>
     frame_size: u64,
     /// Local slot holding the saved stack-alloc pointer (valid iff frame_size>0).
     bp_slot: usize,
+    /// Number of fixed (named) parameters — the `gp_offset` seed for va_start.
+    num_params: usize,
+    /// Scratch slots (buffer-base, loop-index) used by `llvm.va_start` to build
+    /// the x86_64 va_list register-save area. `None` unless the function uses it.
+    va_scratch: Option<(usize, usize)>,
 }
 
 impl<'a> Codegen<'a>
@@ -184,7 +189,22 @@ impl<'a> Codegen<'a>
         }
         let frame_size = align_up(frame_off, 8);
         let bp_slot = num_slots;
-        let total_slots = num_slots + if frame_size > 0 { 1 } else { 0 };
+        let frame_slots = if frame_size > 0 { 1 } else { 0 };
+
+        // A function that calls `llvm.va_start` needs two scratch local slots to
+        // build the x86_64 va_list register-save area (see gen_va_start). They
+        // sit just past the bp slot.
+        let has_va_start = f.blocks.iter().flat_map(|bb| &bb.insts).any(|inst| {
+            matches!(&inst.kind,
+                InstKind::Call { callee: Value::Global(n), .. } if n.starts_with("llvm.va_start"))
+        });
+        let (va_scratch, va_slots) = if has_va_start {
+            let base = num_slots + frame_slots;
+            (Some((base, base + 1)), 2)
+        } else {
+            (None, 0)
+        };
+        let total_slots = num_slots + frame_slots + va_slots;
 
         let ctx = FnCtx {
             name: sanitize(&f.name),
@@ -194,6 +214,8 @@ impl<'a> Codegen<'a>
             alloca_offsets,
             frame_size,
             bp_slot,
+            num_params: f.params.len(),
+            va_scratch,
         };
 
         self.line(&format!("# {} @{}({} params)", type_str(&f.ret_ty), f.name, f.params.len()));
@@ -681,6 +703,12 @@ impl<'a> Codegen<'a>
         if bare.starts_with("lifetime.") {
             return Ok(()); // a scoping hint; emit nothing
         }
+        if bare.starts_with("va_start") {
+            return self.gen_va_start(ctx, &args[0].val);
+        }
+        if bare.starts_with("va_end") {
+            return Ok(()); // nothing to tear down; the buffer lives in the frame
+        }
         if bare.starts_with("memcpy.") {
             // (dst, src, len, i1 volatile) -> UVM `memcpy(dst, src, num_bytes)`.
             self.push_value(ctx, &args[0].val, 64)?; // dst
@@ -727,6 +755,106 @@ impl<'a> Codegen<'a>
         }
 
         self.store_dest(ctx, dest)
+    }
+
+    /// Lower `llvm.va_start(ptr %ap)` by emulating the x86_64 SysV va_list.
+    ///
+    /// clang has already expanded every `va_arg` into ordinary IR that walks a
+    /// `%struct.__va_list_tag { i32 gp_offset, i32 fp_offset, ptr overflow_area,
+    /// ptr reg_save_area }`: an integer/pointer `va_arg` reads from
+    /// `reg_save_area + gp_offset` while `gp_offset <= 40` (then advances it by
+    /// 8), otherwise from `overflow_area` (advancing it by 8). So all we do here
+    /// is materialize those two areas and seed the offsets; the walk itself is
+    /// plain load/store/gep/br/phi that the back-end already handles.
+    ///
+    /// UVM keeps every actual argument (fixed + variadic) in the callee frame,
+    /// indexable at runtime with `get_var_arg`. We copy them into one contiguous
+    /// 8-byte-per-slot buffer `B` (so `B[i]` == argument `i`), bump-allocated from
+    /// the stack-alloc region, then set:
+    ///   * `reg_save_area   = B`        (indexed by gp_offset, seeded to `8*F`)
+    ///   * `overflow_area   = B + 48`   (== `&B[6]`, where GP args 7.. would land)
+    ///   * `gp_offset       = 8 * F`    (F = number of fixed named params)
+    ///   * `fp_offset       = 48`       (FP varargs unsupported; see limitation)
+    /// The first `va_arg` then reads `B[F]` (the first variadic arg) and each
+    /// subsequent one advances exactly as the ABI walk expects, on either the
+    /// in-register (`B[F..5]`) or in-memory (`B[6..]`) path.
+    ///
+    /// Limitation: only general-purpose (integer/pointer) variadic args are
+    /// supported — a `double`/`float` `va_arg` uses the XMM save area indexed by
+    /// `fp_offset`, which this does not build. That still covers printf's
+    /// %d/%u/%x/%c/%s/%p.
+    fn gen_va_start(&mut self, ctx: &FnCtx, ap: &Value) -> Result<(), String>
+    {
+        let (buf_slot, idx_slot) = ctx.va_scratch
+            .ok_or("va_start in a function without reserved va scratch slots")?;
+
+        // Bump-allocate an argc*8-byte buffer; save its base address in buf_slot.
+        self.line("# llvm.va_start: build the x86_64 va_list register-save area");
+        self.line("get_argc;");                          // [argc]
+        self.line("push 3;");
+        self.line("lshift_u64;");                        // [argc*8 = bytes]
+        self.line("push __stack_alloc_sp__;");
+        self.line("load_u64;");                          // [bytes, base]
+        self.line("dup;");
+        self.line(&format!("set_local {};", buf_slot));  // save base
+        self.line("add_u64;");                           // [base + bytes] = new sp
+        self.line("push __stack_alloc_sp__;");
+        self.line("swap;");
+        self.line("store_u64;");                         // commit the bumped sp
+
+        // Copy loop: for i in 0..argc { B[i] = get_var_arg(i) }.
+        let l_cond = self.fresh_label("vastart_cond");
+        let l_done = self.fresh_label("vastart_done");
+        self.line("push 0;");
+        self.line(&format!("set_local {};", idx_slot));  // i = 0
+        self.line(&format!("{}:", l_cond));
+        self.line(&format!("get_local {};", idx_slot));
+        self.line("get_argc;");
+        self.line("lt_u64;");
+        self.line(&format!("jz {};", l_done));
+        self.line(&format!("get_local {};", buf_slot));  // [base]
+        self.line(&format!("get_local {};", idx_slot));
+        self.line("push 3;");
+        self.line("lshift_u64;");
+        self.line("add_u64;");                           // [&B[i]]
+        self.line(&format!("get_local {};", idx_slot));
+        self.line("get_var_arg;");                       // [&B[i], arg_i]
+        self.line("store_u64;");
+        self.line(&format!("get_local {};", idx_slot));
+        self.line("push 1;");
+        self.line("add_u64;");
+        self.line(&format!("set_local {};", idx_slot));  // i += 1
+        self.line(&format!("jmp {};", l_cond));
+        self.line(&format!("{}:", l_done));
+
+        // Initialize the four __va_list_tag fields at %ap. Store order per the
+        // Store lowering: push address, then value (value popped first).
+        let gp_off = (ctx.num_params as i128) * 8;
+        // gp_offset (i32 @ ap+0) = 8 * F
+        self.push_value(ctx, ap, 64)?;
+        self.push_int(gp_off, 32);
+        self.line("store_u32;");
+        // fp_offset (i32 @ ap+4) = 48 (the ABI's post-GP base; FP unsupported)
+        self.push_value(ctx, ap, 64)?;
+        self.line("push 4;");
+        self.line("add_u64;");
+        self.push_int(48, 32);
+        self.line("store_u32;");
+        // overflow_arg_area (ptr @ ap+8) = base + 48
+        self.push_value(ctx, ap, 64)?;
+        self.line("push 8;");
+        self.line("add_u64;");
+        self.line(&format!("get_local {};", buf_slot));
+        self.line("push 48;");
+        self.line("add_u64;");
+        self.line("store_u64;");
+        // reg_save_area (ptr @ ap+16) = base
+        self.push_value(ctx, ap, 64)?;
+        self.line("push 16;");
+        self.line("add_u64;");
+        self.line(&format!("get_local {};", buf_slot));
+        self.line("store_u64;");
+        Ok(())
     }
 
     /// `abs(x)` = `x < 0 ? -x : x`. INT_MIN wraps to itself, which matches the

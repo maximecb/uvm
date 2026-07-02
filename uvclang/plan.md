@@ -44,10 +44,11 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
 - **Back-end codegen: Phases 0–8 done** (arithmetic, control flow, memory,
   globals, calls, intrinsics, corner cases) and **Phase 9 done** (the
   clang-driver front-end — `uvclang foo.c` drives clang + back-end in one
-  command). The back-end differential suite (`.ll` path) is **81 pass / 0 fail /
-  3 skip** (skips = callee-side `va_arg`); the end-to-end front-end suite
-  (`tests/run_frontend_tests.sh`, single-command `uvclang foo.c`) is **93 pass /
-  0 fail / 3 skip**. `doom.ll` compiles through every construct.
+  command). The back-end differential suite (`.ll` path) is **87 pass / 0 fail /
+  0 skip**; the end-to-end front-end suite (`tests/run_frontend_tests.sh`,
+  single-command `uvclang foo.c`) is **102 pass / 0 fail / 0 skip**. `doom.ll`
+  compiles through every construct. Callee-side `va_arg` is now supported (see
+  *Calls* below), which cleared the previous skips.
 - **Remaining:** Phase 10 (doom bring-up — run it in UVM) and a real `vm_*`
   runtime.
 
@@ -127,10 +128,11 @@ and inlining.
 Consequence — **test-authoring guideline:** pass structs **by pointer**, not by
 value, in test `.c` files, to avoid clang emitting x86_64 struct coercion. (Add
 a deliberate struct-by-value test later only if we choose to support that ABI.)
-The `va_arg` register-save-area is x86_64 ABI, not a toggleable optimization;
-the only way to a simple stack-only `va_list` is a different target triple
-(e.g. riscv64), which isn't worth the broad datalayout change since doom never
-uses `va_arg`.
+The `va_arg` register-save-area is x86_64 ABI, not a toggleable optimization, so
+rather than switch target triples (e.g. riscv64, a broad datalayout change) we
+emulate that va_list memory layout in the prologue of variadic functions — see
+*Calls* below (`gen_va_start`). doom itself never uses `va_arg`; this exists to
+support ordinary variadic C (the `printf` family).
 
 ### Integer representation & casts
 - **Invariant:** a value of type `iW` lives in a 64-bit slot holding its low `W`
@@ -180,12 +182,19 @@ uses `va_arg`.
 - **Varargs (call side):** caller just pushes all actual args (fixed + variadic)
   and calls — needed for `doom.ll` (it has one indirect call through a
   varargs-typed pointer).
-- **Varargs (callee `va_arg` consumption):** NOT needed for doom (`doom.ll` has
-  no `va_start`/`va_arg`/variadic definitions). Note: clang lowers `va_arg` via
-  the **x86_64 SysV ABI** — a `%struct.__va_list_tag { i32, i32, ptr, ptr }`
-  register-save-area with inline GEP/load — which does not map onto UVM's simple
-  `get_var_arg`. Supporting it means emulating that va_list memory layout at the
-  prologue of variadic functions. Deferred (Phase 8, optional).
+- **Varargs (callee `va_arg` consumption):** SUPPORTED (`gen_va_start`). clang
+  lowers `va_arg` via the **x86_64 SysV ABI** — it expands every `va_arg` into
+  ordinary IR that walks a `%struct.__va_list_tag { i32 gp_offset, i32 fp_offset,
+  ptr overflow_area, ptr reg_save_area }` (all of which the back-end already
+  lowers). So only `llvm.va_start` needs handling: at the intrinsic site uvclang
+  copies every actual argument (via `get_argc`/`get_var_arg`) into one contiguous
+  8-byte-per-slot buffer bump-allocated from the stack-alloc region, then points
+  `reg_save_area` at it and `overflow_area` at `+48`, seeding `gp_offset = 8·F`
+  (F = fixed named params). `llvm.va_end` is a no-op. Not needed for doom
+  (`doom.ll` has no variadic definitions), but it unblocks the `printf` family.
+  **Limitation:** general-purpose (integer/pointer) varargs only — a
+  `double`/`float` `va_arg` uses the XMM save area (`fp_offset`), which is not
+  built. Covered by `variadic.c` (register + overflow paths, int/long/pointer).
 
 ### Intrinsics (lowered inline — `gen_intrinsic` in `codegen.rs`)
 Dispatched by name prefix (`llvm.*`) before the ordinary call path, so no
@@ -232,8 +241,9 @@ same strategy as the `memcpy`/`memset` intrinsics. Verified end-to-end
 ### C standard library (`uvclang/include/`)
 Beyond the syscalls, uvclang ships its own C stdlib headers under `uvclang/include/`,
 implemented on top of the UVM primitives the same way ncc's headers are (ported
-from `ncc/include/`). So far: `string.h` (`strlen`, `strcmp`, `strncmp`,
-`strcasecmp`, `strchr`, `strstr`, `strncpy`, `strncat`) and `ctype.h`. Unlike
+from `ncc/include/`). So far: `string.h`, `ctype.h`, `stdlib.h`, `stdio.h`, and
+`assert.h` — see *C standard library coverage* below for the function-by-function
+status and what remains. Unlike
 ncc's headers, these are plain standard-signature C bodies — clang lowers them to
 LLVM IR and uvclang compiles them like any other function, which is what resolves an
 external such as `@strlen` without a native libc. `size_t`/`NULL` come from
@@ -278,6 +288,73 @@ are checked in: the `.ll` (and `.asm`) are build artifacts, regenerated fresh
 from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
 
 ---
+
+## C standard library coverage
+
+Status of the hosted libc surface uvclang ships in `uvclang/include/`, ordered
+by header priority (most-used first). The *freestanding* headers — `<stddef.h>`,
+`<stdint.h>`, `<stdarg.h>`, `<limits.h>`, `<stdbool.h>`, … — come from clang and
+define no functions, so they are not listed. **Impl** = a body/macro exists in
+`uvclang/include/`; **Test** = a `tests/*.c` exercises it. Legend: ✅ done · 🔸
+partial (non-standard, or only the passing/exit path, or not differentially
+comparable) · ⬜ none.
+
+Note on differential-testability: functions whose result isn't stable across
+libc implementations (`rand`/`srand` sequence, `malloc` addresses) or that the
+host libc lacks (`itoa`/`ltoa`) can't be diff-tested — they're marked 🔸 and
+validated by self-checking instead. `memcmp`/`memset32` currently live only in
+`<uvm/syscalls.h>` as syscall macros (not in a header body), so `#include
+<string.h>` alone can't resolve them and the native reference build can't see
+them either.
+
+### `<stdio.h>` — highest priority
+| Function | Impl | Test |
+|---|---|---|
+| `puts` `putchar` | ✅ | ✅ (`stdio.c`) |
+| `getchar` | ✅ | 🔸 no stdin in harness |
+| `printf` `sprintf` `snprintf` `vprintf` `vsnprintf` `fputs` `fputc` | ⬜ | ⬜ — callee-side `va_arg` is now supported (`variadic.c`), so the `printf` family is unblocked; build it on `putchar`/`print_str` |
+| file I/O: `fopen` `fclose` `fread` `fwrite` `fgets` `fgetc` `scanf` `sscanf` | ⬜ | — deferred (needs UVM file syscalls) |
+
+### `<stdlib.h>`
+| Function | Impl | Test |
+|---|---|---|
+| `abs` `malloc` `free` | ✅ | ✅ (`stdlib.c`) |
+| `exit` | ✅ | 🔸 exit path only |
+| `rand` `srand` | ✅ | 🔸 sequence not comparable to host |
+| `itoa` `ltoa` (non-standard) | 🔸 | 🔸 not in host libc |
+| `calloc` `realloc` `labs` `llabs` `atoi` `atol` `strtol` `strtoul` `abort` `qsort` `bsearch` `div` `ldiv` | ⬜ | ⬜ |
+| `atof` `strtod` (floating point) | ⬜ | — deferred (floats) |
+
+### `<string.h>`
+| Function | Impl | Test |
+|---|---|---|
+| `strlen` `strcmp` `strncmp` `strchr` `strstr` `strncpy` `strncat` | ✅ | ✅ (`libc_string.c`) |
+| `strcasecmp` (POSIX) | ✅ | ✅ |
+| `memcpy` `memset` (intrinsic/syscall) | ✅ | ✅ (`intrinsics.c`) |
+| `memcmp` (syscall macro only) | 🔸 | ⬜ — expose via `<string.h>` + test |
+| `strcpy` `strcat` `strrchr` `strnlen` `memchr` `strspn` `strcspn` `strpbrk` `strtok` | ⬜ | ⬜ |
+| `memmove` | ⬜ | — deferred (overlap-safe copy; `llvm.memmove`) |
+
+### `<ctype.h>`
+| Function | Impl | Test |
+|---|---|---|
+| `isalnum` `isalpha` `isdigit` `islower` `isupper` `isprint` `isspace` `iscntrl` `isgraph` `ispunct` `isxdigit` `isblank` | ✅ | ✅ (`ctype.c`) |
+| `tolower` `toupper` | ✅ | ✅ (`ctype.c`) |
+
+### `<assert.h>`
+| Function | Impl | Test |
+|---|---|---|
+| `assert` | ✅ | ✅ passing path (`uvm_*` self-checks) + failure path (`xfail_assert.c`) |
+
+### `<math.h>` — deferred
+Floating-point math (`sqrt`, `sin`, `cos`, `pow`, `floor`, `ceil`, `fmod`, …) is
+not implemented and not referenced by `doom.ll` (whose only libc external is
+`@strlen`). Add when a test needs it. Note `uvm/math.h` is a UVM-specific header,
+not ISO `<math.h>`.
+
+### Out of scope for now
+`<time.h>`, `<locale.h>`, `<signal.h>`, `<setjmp.h>`, `<errno.h>`, `<wchar.h>` —
+no planned support; revisit if a real program needs them.
 
 ## Milestone checklist
 
@@ -382,8 +459,9 @@ from the `.c` by `gen_ll.sh` into a temp dir at test time and never kept around.
   remaining external, `@strlen`, is now implementable via uvclang's `<string.h>`,
   but `doom.ll` is a pre-generated artifact so it must be regenerated with
   `-Iuvclang/include` + `#include <string.h>` to pick the body up.
-- Deferred: `llvm.memmove` (needs overlap-safe copy — not in doom); `llvm.va_start`
-  (callee-side varargs — see `variadic.c`, out of scope).
+- `llvm.va_start`/`llvm.va_end` (callee-side varargs) are now handled — see
+  *Calls* above and `variadic.c`. Deferred: `llvm.memmove` (needs overlap-safe
+  copy — not in doom).
 
 ### Phase 8 — more tests & corner cases  ✅ DONE
 All differential vs native at -O0/-O1/-O2 (`run_tests.sh`) unless noted. No
@@ -411,15 +489,17 @@ codegen changes were needed — these exercised the existing lowering and passed
       on both dimensions (`arr2d.c`), 64-bit edges incl. `LLONG_MIN` and
       signed/unsigned compare divergence (`wide64.c`), and signed i8/i16
       div/rem/arith-shift (`narrow_signed.c`).
-- [ ] *(optional, not on doom path)* callee-side `va_arg` via x86_64 va_list
-      emulation (`variadic.c`).
+- [x] Callee-side `va_arg` via x86_64 va_list emulation (`gen_va_start`) —
+      `variadic.c` (register + overflow paths; int/long/pointer) matches native
+      at -O0/-O1/-O2. GP args only; FP varargs unsupported. (Not on the doom
+      path, but unblocks the `printf` family — see *Calls* and Phase 12.)
 
 ### Phase 9 — clang-driver front-end  (`uvclang foo.c`)  ✅ DONE (core)
 Fold the clang invocation (currently in `tests/gen_ll.sh`) into the `uvclang`
 driver so one command compiles C/C++ straight to UVM assembly. This is the step
 that makes uvclang a *C/C++* compiler rather than only an IR back-end.
 Implemented in `src/frontend.rs` (clang invocation) + `src/main.rs` (driver);
-end-to-end suite is `tests/run_frontend_tests.sh` (93 pass / 0 fail / 3 skip).
+end-to-end suite is `tests/run_frontend_tests.sh` (102 pass / 0 fail / 0 skip).
 - [x] `uvclang foo.c`: locate clang (honor `$CLANG`/`$CLANGXX`/Homebrew LLVM/PATH
       as `gen_ll.sh` does), emit IR with the canonical flags (target triple,
       `-S -emit-llvm`, `-fno-discard-value-names`, the `-fno-*` set,
@@ -448,6 +528,39 @@ end-to-end suite is `tests/run_frontend_tests.sh` (93 pass / 0 fail / 3 skip).
 ### Phase 11 — later (out of current scope)
 - [ ] Real UVM runtime implementing `vm_*` via syscalls so doom renders/plays.
 - [ ] Optimizations (keep values on stack, jump tables, slot reuse, peephole).
+
+### Phase 12 — C standard library completion & tests
+Bring the hosted libc in `uvclang/include/` to a complete, tested state (the
+gap is enumerated in *C standard library coverage* above). Same rules as the
+back-end phases: standard signatures, differential vs native where comparable
+and self-checking (`uvm_*`) otherwise, at -O0/-O1/-O2. Ordered by header
+priority — this makes uvclang a more complete C compiler, and is independent of
+the doom path (doom's only libc external is `@strlen`, already covered).
+- [ ] `<stdio.h>`: `printf`/`sprintf`/`snprintf` (and the `v*` forms) — now
+      unblocked (callee-side `va_arg` is implemented; see *Calls*), so build them
+      on `putchar`/`print_str` the way ncc does. Note: printf's `%f` needs FP
+      varargs, which `gen_va_start` does not support yet. File I/O
+      (`fopen`/`fread`/…) deferred until UVM exposes file syscalls.
+- [ ] `<stdlib.h>`: add `calloc`/`realloc`/`labs`/`llabs`/`atoi`/`atol`/`strtol`/
+      `strtoul`/`abort`/`qsort`/`bsearch`/`div`/`ldiv`, each differentially
+      tested; add a self-checking test for the existing `rand`/`srand`/`itoa`/
+      `ltoa` (not diff-comparable). `atof`/`strtod` deferred (floats).
+- [ ] `<string.h>`: add `strcpy`/`strcat`/`strrchr`/`strnlen`/`memchr`/`strspn`/
+      `strcspn`/`strpbrk`/`strtok` (all differentially testable); route `memcmp`
+      through `<string.h>` (today it's only a `<uvm/syscalls.h>` macro, so
+      `#include <string.h>` can't resolve it) and add a test — a plain C body
+      makes it differential, or keep the syscall and self-check it. `memmove`
+      stays deferred (overlap-safe copy).
+- [x] `<ctype.h>`: added `iscntrl`/`isgraph`/`ispunct`/`isxdigit`/`isblank`, and
+      a differential `tests/ctype.c` over the ASCII range covering all 12
+      classifiers + `tolower`/`toupper` (truthy results normalized to 0/1 —
+      host macros return arbitrary nonzero). Matches native at -O0/-O1/-O2.
+- [x] `<assert.h>`: `tests/xfail_assert.c` exercises the *failure* path (message
+      + non-zero exit) — the one path the differential harness never hits. Runs
+      under the harness's new `xfail_*` convention (require abnormal exit +
+      diagnostic on stdout; no native reference).
+- [ ] `<math.h>` and the other hosted headers: add only when a concrete program
+      (or the C++ bring-up) needs them.
 
 ## Non-goals (for now)
 - No optimization. Naive, correct lowering only.

@@ -52,6 +52,17 @@ for src in "$TESTS"/*.c; do
         uvm_out=$("$UVM_BIN" "$TMP/out.asm" 2>/dev/null); uvm_code=$?
 
         case "$base" in
+            xfail_*)
+                # Self-checking FAILURE path: no native reference. The program is
+                # expected to terminate abnormally after printing a diagnostic
+                # (e.g. a failed assert), so require a NON-zero exit and some
+                # output on stdout.
+                if [ "$uvm_code" != "0" ] && [ -n "$uvm_out" ]; then
+                    echo "PASS $name (exit=$uvm_code)"; pass=$((pass+1))
+                else
+                    echo "FAIL $name (exit=$uvm_code, out='$uvm_out')"; fail=$((fail+1))
+                fi
+                ;;
             uvm_*)
                 # Self-checking: the program asserts its own results, exit 0 = ok.
                 if [ "$uvm_code" = "0" ]; then
