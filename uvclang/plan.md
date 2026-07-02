@@ -45,10 +45,12 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
   globals, calls, intrinsics, corner cases) and **Phase 9 done** (the
   clang-driver front-end — `uvclang foo.c` drives clang + back-end in one
   command). Scalar **`float` (f32) is supported** (arithmetic, compare, int↔float
-  conversions, libm f32 calls; see *Floating point* below). The back-end
-  differential suite (`.ll` path) is **102 pass / 0 fail / 0 skip**; the
+  conversions, libm f32 calls; see *Floating point* below), and the **printf
+  family** (`printf`/`sprintf`/`snprintf`/…) is implemented on the callee-side
+  `va_arg` support (see *C standard library* → `<stdio.h>`). The back-end
+  differential suite (`.ll` path) is **108 pass / 0 fail / 0 skip**; the
   end-to-end front-end suite (`tests/run_frontend_tests.sh`, single-command
-  `uvclang foo.c`) is **117 pass / 0 fail / 0 skip**. `doom.ll` compiles through
+  `uvclang foo.c`) is **126 pass / 0 fail / 0 skip**. `doom.ll` compiles through
   every construct. Callee-side `va_arg` is now supported (see *Calls* below),
   which cleared the previous skips.
 - **Remaining:** Phase 10 (doom bring-up on a **real, graphical UVM runtime** —
@@ -367,7 +369,18 @@ them either.
 |---|---|---|
 | `puts` `putchar` | ✅ | ✅ (`stdio.c`) |
 | `getchar` | ✅ | 🔸 no stdin in harness |
-| `printf` `sprintf` `snprintf` `vprintf` `vsnprintf` `fputs` `fputc` | ⬜ | ⬜ — callee-side `va_arg` is now supported (`variadic.c`), so the `printf` family is unblocked; build it on `putchar`/`print_str` |
+| `printf` `vprintf` `sprintf` `vsprintf` `snprintf` `vsnprintf` | ✅ | ✅ (`printf.c`, `sprintf.c`) |
+| `fputs` `fputc` | ⬜ | ⬜ — no file streams yet |
+
+The printf family is built on `putchar` via `<stdarg.h>` (one shared engine,
+`__pf_format`, with a stdout/buffer sink). Supported: `%d %i %u %x %X %o %c %s %p
+%%`, all flags (`- 0 + space #`), field width & precision (literal and `*`), and
+`l`/`ll` length (h/hh/z/t/j tolerated). Matched byte-for-byte vs native libc at
+-O0/-O1/-O2. **Not** supported: floating point (`%f`/`%e`/`%g`) — a float vararg
+promotes to `double` in the x86_64 XMM save area, which `gen_va_start` does not
+build (and, because uvclang uses one flat save area, a `double` vararg also
+desyncs the integer `va_arg` walk after it). Unsupported specifiers are echoed
+verbatim without consuming an argument.
 | file I/O: `fopen` `fclose` `fread` `fwrite` `fgets` `fgetc` `scanf` `sscanf` | ⬜ | — deferred (needs UVM file syscalls) |
 
 ### `<stdlib.h>`
@@ -629,11 +642,14 @@ back-end phases: standard signatures, differential vs native where comparable
 and self-checking (`uvm_*`) otherwise, at -O0/-O1/-O2. Ordered by header
 priority — this makes uvclang a more complete C compiler, and is independent of
 the doom path (doom's only libc external is `@strlen`, already covered).
-- [ ] `<stdio.h>`: `printf`/`sprintf`/`snprintf` (and the `v*` forms) — now
-      unblocked (callee-side `va_arg` is implemented; see *Calls*), so build them
-      on `putchar`/`print_str` the way ncc does. Note: printf's `%f` needs FP
-      varargs, which `gen_va_start` does not support yet. File I/O
-      (`fopen`/`fread`/…) deferred until UVM exposes file syscalls.
+- [x] `<stdio.h>`: `printf`/`vprintf`/`sprintf`/`vsprintf`/`snprintf`/`vsnprintf`
+      — DONE. One shared engine (`__pf_format`) over a stdout/buffer sink, built
+      on `putchar` via `<stdarg.h>`; full flag/width/precision support for the
+      integer/string/char/pointer conversions, matched byte-for-byte vs native
+      libc (`printf.c`, `sprintf.c`). `%f`/`%e`/`%g` remain unsupported (FP
+      varargs — see the `<stdio.h>` coverage note above). Still TODO: `fputs`/
+      `fputc` and file I/O (`fopen`/`fread`/…), deferred until UVM exposes file
+      streams/syscalls.
 - [ ] `<stdlib.h>`: add `calloc`/`realloc`/`labs`/`llabs`/`atoi`/`atol`/`strtol`/
       `strtoul`/`abort`/`qsort`/`bsearch`/`div`/`ldiv`, each differentially
       tested; add a self-checking test for the existing `rand`/`srand`/`itoa`/

@@ -177,7 +177,9 @@ impl Parser
 
     fn parse_define(&mut self) -> Result<Function, ParseError>
     {
-        self.skip_attrs()?; // return-value attributes (dso_local, noundef, ...)
+        self.skip_attrs()?; // linkage / visibility (internal, dso_local, ...)
+        self.skip_call_cconv()?; // calling convention (fastcc, coldcc, ...)
+        self.skip_attrs()?; // return-value attributes (noundef, ...)
         let ret_ty = self.parse_type()?;
         let name = self.parse_global_name()?;
         self.input.expect_token("(")?;
@@ -192,6 +194,8 @@ impl Parser
 
     fn parse_declare(&mut self) -> Result<Function, ParseError>
     {
+        self.skip_attrs()?;
+        self.skip_call_cconv()?; // calling convention (fastcc, coldcc, ...)
         self.skip_attrs()?;
         let ret_ty = self.parse_type()?;
         let name = self.parse_global_name()?;
