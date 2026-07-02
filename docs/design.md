@@ -64,10 +64,10 @@ checks in the program. The same guard region applies to the code address space, 
 function pointer also faults. Absolute addresses are relocated by the assembler, so programs and
 compilers targeting UVM refer to labels as usual and do not need to be aware of `MEM_BASE`.
 
-UVM requires heap memory accesses to be aligned, and will panic if they are
-not. This is done for performance reasons, and also because some architectures don't allow
-unaligned memory accesses. In practice, we expect that a JIT compiler will be able to eliminate
-most alignment checks.
+Plain loads and stores may use unaligned addresses. Atomic loads and stores must be naturally
+aligned to their access size; a misaligned atomic access traps. This requirement exists because
+no common architecture permits misaligned atomic accesses. In practice, we expect that a JIT
+compiler will be able to eliminate most alignment checks.
 
 ### The Event Loop
 
