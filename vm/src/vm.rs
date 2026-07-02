@@ -623,7 +623,10 @@ impl MemView
     {
         // Check that the address is within bounds
         let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
-        if addr + std::mem::size_of::<T>() * num_elems > cur_size {
+        let end = std::mem::size_of::<T>()
+            .checked_mul(num_elems)
+            .and_then(|bytes| addr.checked_add(bytes));
+        if end.map_or(true, |end| end > cur_size) {
             panic!("attempting to access memory slice past end of heap");
         }
 
@@ -647,7 +650,10 @@ impl MemView
     {
         // Check that the address is within bounds
         let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
-        if addr + std::mem::size_of::<T>() * num_elems > cur_size {
+        let end = std::mem::size_of::<T>()
+            .checked_mul(num_elems)
+            .and_then(|bytes| addr.checked_add(bytes));
+        if end.map_or(true, |end| end > cur_size) {
             panic!("attempting to access memory slice past end of heap");
         }
 
@@ -682,7 +688,7 @@ impl MemView
     {
         // Check that the address is within bounds
         let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
-        if addr + size_of::<T>() > cur_size {
+        if addr.checked_add(size_of::<T>()).map_or(true, |end| end > cur_size) {
             panic!("attempting to read past end of heap");
         }
 
@@ -699,7 +705,7 @@ impl MemView
     {
         // Check that the address is within bounds
         let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
-        if addr + size_of::<T>() > cur_size {
+        if addr.checked_add(size_of::<T>()).map_or(true, |end| end > cur_size) {
             panic!("attempting to write past end of heap");
         }
 
@@ -715,9 +721,9 @@ impl MemView
     {
         // Check that the address is within bounds
         let cur_size = unsafe { (*self.cur_size).load(Ordering::Relaxed) };
-        if *pc + std::mem::size_of::<T>() > cur_size {
+        if (*pc).checked_add(std::mem::size_of::<T>()).map_or(true, |end| end > cur_size) {
             // TODO: output name of type being read
-            panic!("pc outside of bounds of code space");
+            panic!("pc outside bounds of code space");
         }
 
         unsafe {
@@ -2228,5 +2234,22 @@ mod tests
     fn test_memcmp_n1()
     {
         eval_src(".data; A: .zero 10; B: .zero 10; .code; push A; push B; push -1; syscall memcpy;");
+    }
+
+    // Regression: an address near usize::MAX used to make the bounds check
+    // `addr + size_of::<T>() > cur_size` wrap around to a small value, pass,
+    // and then form a wild host pointer (sandbox escape). It must panic.
+    #[test]
+    #[should_panic]
+    fn test_load_addr_wraparound()
+    {
+        eval_src(".data; .fill 1000, 0; .code; push 0xFFFFFFFFFFFFFFF8; load_u64; ret;");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_store_addr_wraparound()
+    {
+        eval_src(".data; .fill 1000, 0; .code; push 0xFFFFFFFFFFFFFFF8; push 0; store_u64; ret;");
     }
 }
