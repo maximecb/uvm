@@ -15,7 +15,8 @@ use lexer::{Lexer, ParseError};
 use parser::Parser;
 
 const USAGE: &str = "usage: uvclang <input.c|.ll> [-o out.asm] [-O0|-O1|-O2|-O3]\n       \
-                     [-D<macro>] [-I<dir>] [--emit-ir] [--stats]";
+                     [-D<macro>] [-I<dir>] [-U<macro>] [-Wall|-W<warn>] [-std=<std>]\n       \
+                     [-f<feature>] [--emit-ir] [--stats]";
 
 fn main()
 {
@@ -41,16 +42,19 @@ fn main()
             }
             // Optimization level: forwarded to clang; ignored for `.ll` input.
             "-O0" | "-O1" | "-O2" | "-O3" | "-Os" | "-Oz" => fe.opt_level = a.to_string(),
-            // -D / -I, both the joined (`-DFOO`) and split (`-D FOO`) forms.
-            "-D" | "-I" => {
+            // -D / -I / -U, both the joined (`-DFOO`) and split (`-D FOO`) forms.
+            "-D" | "-I" | "-U" => {
                 if let Some(v) = args.get(i + 1) {
                     fe.passthrough.push(format!("{}{}", a, v));
                     i += 1;
                 }
             }
-            _ if a.starts_with("-D") || a.starts_with("-I") => {
+            _ if a.starts_with("-D") || a.starts_with("-I") || a.starts_with("-U") => {
                 fe.passthrough.push(a.to_string());
             }
+            // Common clang diagnostic / language / feature flags (e.g. `-Wall`,
+            // `-std=c11`, `-ffast-math`) forwarded verbatim to the front-end.
+            _ if is_clang_passthrough(a) => fe.passthrough.push(a.to_string()),
             _ if a.starts_with('-') => {
                 eprintln!("uvclang: unknown option \"{}\"\n{}", a, USAGE);
                 exit(2);
@@ -121,6 +125,23 @@ fn main()
     };
 
     emit(&out_path, asm);
+}
+
+/// Common single-token clang flags uvclang forwards straight to the front-end:
+/// warnings (`-Wall`, `-Wextra`, `-Werror`, `-Wno-...`), the language standard
+/// (`-std=c11`, `-ansi`), and feature toggles (`-ffast-math`, `-fno-exceptions`).
+/// None of these take a *separate* argument, so forwarding them can't desync arg
+/// parsing the way `-o out` or `-D FOO` would; the split-argument flags stay
+/// explicitly handled above. Forwarded flags land after uvclang's own canonical
+/// flags, so a user flag overrides the matching default.
+fn is_clang_passthrough(arg: &str) -> bool
+{
+    arg == "-w"
+        || arg == "-ansi"
+        || arg.starts_with("-W")
+        || arg.starts_with("-f")
+        || arg.starts_with("-std=")
+        || arg.starts_with("-pedantic")
 }
 
 /// Write `text` to the `-o` path, or to stdout when none was given.

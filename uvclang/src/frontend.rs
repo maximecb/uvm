@@ -137,5 +137,12 @@ pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String
         return Err(format!("clang failed:\n{}", stderr.trim_end()));
     }
 
+    // Forward clang's diagnostics on a *successful* build too: with warning
+    // flags like `-Wall` the point is to see the warnings, and `cmd.output()`
+    // captured them rather than letting them reach the terminal.
+    if !output.stderr.is_empty() {
+        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+    }
+
     String::from_utf8(output.stdout).map_err(|e| format!("clang produced non-UTF8 IR: {}", e))
 }
