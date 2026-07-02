@@ -49,8 +49,11 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
   single-command `uvclang foo.c`) is **102 pass / 0 fail / 0 skip**. `doom.ll`
   compiles through every construct. Callee-side `va_arg` is now supported (see
   *Calls* below), which cleared the previous skips.
-- **Remaining:** Phase 10 (doom bring-up — run it in UVM) and a real `vm_*`
-  runtime.
+- **Remaining:** Phase 10 (doom bring-up on a **real, graphical UVM runtime** —
+  build syscall-backed `vm_*` with a window, framebuffer, and input from the
+  start, then compile and run `doom.ll` as an actually-playable game; use
+  `-timedemo` as the deterministic benchmark once it renders) and, after that,
+  Phase 11 (optimization, gated on the timedemo baseline).
 
 ## The UVM target (reference)
 
@@ -264,12 +267,33 @@ Note: `doom.ll` is a pre-generated artifact compiled *without* these headers, so
 its `@strlen` stays external until doom is regenerated with `-Iuvclang/include` and
 `#include <string.h>`.
 
-### Host functions (`vm_*`)
-Per decision, **compile `doom.ll` as-is** — the stub `vm_*` bodies (e.g.
-`vm_malloc` returns null) are compiled like any other function. Milestone goal:
-the program assembles and runs in UVM without crashing. Real syscall-backed I/O
-is a **later, separate** effort (a hand-written UVM runtime that overrides
-`vm_*`), out of scope here.
+### Host functions (`vm_*`) — a real UVM runtime
+**Decision (revised):** build a **real UVM runtime** *before* the doom run,
+rather than compiling the null stubs as-is. PureDOOM reaches the host through a
+small `vm_*` callback layer (`vm_malloc/free`, `vm_open/close/read/write/seek/
+tell/eof`, `vm_gettime`, `vm_print`, `vm_getenv`, `vm_poll_input`,
+`vm_present_frame`, plus the `doom_set_exit` hook) wired up in `main.c`. The
+reference SDL host (`main_sdl.c` in the PureDOOM tree) is a complete, working
+implementation of that same layer — the UVM runtime is a **graphical** port of
+it (window + framebuffer + input included from the start, not a headless
+subset). All the syscalls it needs already exist in the VM (`vm/src/host.rs` +
+`spec/syscalls.json`); the runtime just binds them:
+
+| `vm_*` callback | UVM syscall(s) | Notes |
+|---|---|---|
+| `vm_malloc`/`vm_free` | `vm_grow_heap` / `vm_heap_size` (or uvclang's `<stdlib.h>` `malloc`/`free` on top of them) | doom's zone allocator does **one ~12 MB `malloc`** (`I_GetHeapSize` = `mb_used·1MB`, `mb_used = 6·(sizeof(void*)/4) = 12` on 64-bit) plus a few small allocs (two screen buffers 320·200 and 320·200·4, WAD-path strings). The stub `vm_malloc` returns null, so this is the one piece that must be real for anything to run. |
+| `vm_open`/`close`/`read`/`write`/`seek`/`tell`/`eof` | `file_open`/`file_close`/`file_read`/`file_write`/`file_seek`/`file_tell`/`file_size` | Loads `doom1.wad`. Caveats: `file_open` is path-**sandboxed** (`is_safe_path` — keep the WAD in cwd, no `..`) and takes `OPEN_READ/WRITE/…` flags; `file_seek` is **absolute-position only** (no whence), so `vm_seek`'s `SEEK_CUR`/`SEEK_END` must be synthesized from `file_tell`/`file_size`. `getenv("DOOMWADDIR")` → null → `"."`, so doom opens `./doom1.wad`. |
+| `vm_gettime` | `time_current_ms` | Split ms into `*sec`/`*usec`. Feeds `I_GetTime` (realtics + RNG seed). |
+| `vm_print` | `print_str` | So the `-timedemo` result line is visible. |
+| `doom_exit` (via `doom_set_exit`) | `exit` | **Must** actually exit: `I_Error` (the timedemo end path) prints then calls `doom_exit`; the current `main.c` override is an empty body, so replace it with an `exit(code)` so the run terminates cleanly. |
+| `vm_getenv` | — | Return null (fine). |
+| `vm_poll_input` | `window_poll_event` | Drain the event queue each frame; translate UVM events → doom input: `EVENT_KEYDOWN/UP` → `doom_key_down/up` (map UVM `KEY_*` → `doom_key_t`, mirroring `main_sdl.c`'s scancode switch; note UVM letter keys are ASCII, arrows are `16001..`), `EVENT_MOUSEDOWN/UP/MOVE` → `doom_button_down/up`/`doom_mouse_move`, `EVENT_QUIT` → exit. Event struct is `{u16 kind, window_id, key, button; i32 x,y; char text[64]}` (see `ncc/include/uvm/window.h`). |
+| `vm_present_frame` | `window_draw_frame` (window made once via `window_create` in `main`) | **Byte-order fix required:** `doom_get_framebuffer(4)` returns **RGBA** (`R,G,B,255`), but `window_draw_frame` wants **BGRA** (B at lowest address). So swap R↔B per pixel into a runtime buffer before drawing — or, since we rebuild `doom.ll` from source anyway, patch `doom_get_framebuffer`'s `channels==4` branch to emit BGRA (zero per-frame cost). Frame is 320·200·4 bytes; `window_create(320, 200, …)`. |
+
+Because uvclang compiles a **single `.ll`**, the runtime is delivered by writing
+a real UVM `main.c` (the syscall-backed `vm_*` above, replacing the null stubs)
+and **regenerating `doom.ll`** from PureDOOM with it (same clang flags as
+`compile_llvm.sh`/`gen_ll.sh`), rather than by linking a separate object.
 
 ## Validation strategy
 
@@ -519,15 +543,49 @@ end-to-end suite is `tests/run_frontend_tests.sh` (102 pass / 0 fail / 0 skip).
       where the ABI simplifications noted above (structs by pointer, no
       struct-by-value coercion) get revisited.
 
-### Phase 10 — doom.ll bring-up
-- [ ] Compile all of `doom.ll` to `.asm`; resolve any unhandled construct.
-- [ ] `--parse-only` (assembler accepts the output).
-- [ ] Runs in UVM without crashing (stubbed I/O).
-- [ ] Spot-check deterministic internal functions vs native where feasible.
+### Phase 10 — doom bring-up on a real, graphical UVM runtime
+Merged with the former Phase 11 runtime work: build the real syscall-backed
+`vm_*` runtime — **with graphics and input from the start** — *and* bring doom
+up on it as an actually-playable game, in one effort (see *Host functions
+(`vm_*`)* above). Order of work: get it rendering and playable first, then use
+`-timedemo` to get a deterministic benchmark number, then move to Phase 11.
 
-### Phase 11 — later (out of current scope)
-- [ ] Real UVM runtime implementing `vm_*` via syscalls so doom renders/plays.
-- [ ] Optimizations (keep values on stack, jump tables, slot reuse, peephole).
+`-timedemo` stays the benchmark of choice because it's deterministic and
+self-reporting: `DEMO1/DEMO2/DEMO3` are lumps in the shareware `doom1.wad`, a
+demo replays a fixed input sequence ⇒ a fixed `gametic` count every run, and on
+completion `G_CheckDemoStatus()` prints `"Error: timed <gametic> gametics in
+<realtics> realtics"` via `I_Error` → `vm_print` + `exit`. So a benchmark run
+prints its own result line and exits cleanly. (PureDOOM's `D_DoomLoop` is
+single-step — its `while(1)` is disabled — so both interactive play and timedemo
+run through the normal `doom_init` → `doom_update` embedding loop; the `gettime`
+frame-throttle in `doom_update` caps interactive play at ~35Hz but does not cap
+a slower-than-real-time VM.)
+
+Milestone steps:
+- [ ] Write the real graphical UVM `main.c` runtime (syscall-backed `vm_*` per
+      the table above: `vm_malloc/free`, file I/O, `vm_gettime`, `vm_print`,
+      `window_create`/`window_draw_frame` for `vm_present_frame` incl. the
+      RGBA→BGRA fix, `window_poll_event` for `vm_poll_input`, `doom_set_exit` →
+      `exit`) and regenerate `doom.ll` from PureDOOM with it.
+- [ ] Compile all of `doom.ll` to `.asm`; resolve any unhandled construct.
+      `--parse-only` (assembler accepts the output).
+- [ ] Runs in UVM with `doom1.wad` in cwd: opens a window, loads the WAD, shows
+      the title/menu, and is **playable** (keyboard + mouse move the player).
+      This is the real correctness bar — the game visibly runs.
+- [ ] Benchmark: `-timedemo demo3` plays the demo and prints the
+      `timed N gametics in M realtics` line, then exits. Confirm `gametic` N is
+      stable across runs; capture the wall-clock baseline (host `time` on the VM
+      process, and/or bracket with `time_current_ms` in the runtime). This is the
+      number Phase 11 optimizations are measured against.
+- [ ] Spot-check deterministic internal functions vs native where feasible.
+- [ ] (Deferred, not required to play) audio: `vm_*` sound/MIDI via UVM
+      `audio_*` syscalls — timedemo and visual play don't need it.
+
+### Phase 11 — optimization (gated on the timedemo baseline)
+Only after Phase 10 renders/plays and the `-timedemo` baseline exists
+(correctness first — see *Guiding principles*).
+- [ ] Optimizations (keep values on stack, jump tables, slot reuse, peephole),
+      each re-measured against the deterministic timedemo baseline.
 
 ### Phase 12 — C standard library completion & tests
 Bring the hosted libc in `uvclang/include/` to a complete, tested state (the
@@ -564,6 +622,8 @@ the doom path (doom's only libc external is `@strlen`, already covered).
 
 ## Non-goals (for now)
 - No optimization. Naive, correct lowering only.
-- No real device I/O for doom (stubs compiled as-is).
+- For doom, a real graphical runtime (real `malloc`, file I/O, `gettime`,
+  `print`, window/framebuffer, keyboard/mouse input) is in scope (Phase 10);
+  only **audio** (sound/MIDI) is deferred.
 - No support for IR features clang `-O2` C output never emits (vectors, floats
   beyond what appears, exception handling, etc.) until a test needs them.
