@@ -755,6 +755,39 @@ impl MemView
     }
 }
 
+/// Force this OS thread's FPU into UVM's canonical floating-point
+/// environment: round-to-nearest-even, with subnormals enabled (no
+/// flush-to-zero). This must run on every OS thread that executes
+/// bytecode, because the control register is thread-local. It defends
+/// against host code (SDL, audio drivers, etc.) that may have left
+/// FTZ/DAZ or a non-default rounding mode set, which would make the
+/// f32 +,-,*,/ ops diverge on subnormal operands across hosts.
+///
+/// Forcing the *default* environment (which is exactly what the
+/// compiler already assumes) is the safe direction: it can't perturb
+/// constant-folding the way enabling a non-default mode would.
+#[inline]
+fn set_default_fp_env()
+{
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        // MXCSR: bit 6 = DAZ, bits 13-14 = RC (00 = nearest), bit 15 = FTZ
+        let mut mxcsr: u32 = 0;
+        core::arch::asm!("stmxcsr [{p}]", p = in(reg) &mut mxcsr, options(nostack, preserves_flags));
+        mxcsr &= !((0b11 << 13) | (1 << 15) | (1 << 6));
+        core::arch::asm!("ldmxcsr [{p}]", p = in(reg) &mxcsr, options(nostack, preserves_flags));
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+        // FPCR: bits 22-23 = RMode (00 = nearest), bit 24 = FZ, bit 19 = FZ16
+        let mut fpcr: u64;
+        core::arch::asm!("mrs {r}, fpcr", r = out(reg) fpcr, options(nomem, nostack, preserves_flags));
+        fpcr &= !((0b11 << 22) | (1 << 24) | (1 << 19));
+        core::arch::asm!("msr fpcr, {r}", r = in(reg) fpcr, options(nomem, nostack, preserves_flags));
+    }
+}
+
 pub struct Thread
 {
     // Thread id
@@ -858,6 +891,10 @@ impl Thread
     /// Call a function at a given address
     pub fn call(&mut self, callee_pc: u64, args: &[Value]) -> Value
     {
+        // Pin this OS thread's FPU to UVM's canonical FP environment so
+        // that f32 arithmetic is reproducible regardless of host state.
+        set_default_fp_env();
+
         assert!(self.stack.len() == 0);
         assert!(self.frames.len() == 0);
 
