@@ -188,6 +188,29 @@ is for UVM to have a simple JIT compiler, which makes this point moot.
 
 This again comes down to pragmatism. The most widely used ISAs today (x86, ARM and RISC-V) are all little-endian architectures. Going with a big-endian design would mean adding extra overhead on most of these systems.
 
+### Division and remainder trap semantics
+
+UVM aims to have as few unspecified behaviors as possible, which means the behavior of every instruction must be fully defined, including for edge cases, so that the interpreter and any future JIT compiler produce identical results on every platform. Integer division and remainder are the clearest example where naively lowering an instruction to its native equivalent would break this.
+
+The `div_u32`, `div_i32`, `div_u64`, `div_i64` instructions and the corresponding `mod_*` instructions **trap** (abort execution) rather than producing a value in two cases:
+
+1. Division or remainder by zero.
+2. Signed overflow, i.e. `INT_MIN / -1` and `INT_MIN % -1`, where the true quotient `INT_MAX + 1` is not representable. Only the signed instructions can reach this case.
+
+These are exactly the cases where the three architectures UVM targets disagree in hardware:
+
+| Case | x86-64 `idiv` | arm64 `sdiv` | RV64 `div`/`rem` |
+| --- | --- | --- | --- |
+| divide by zero | faults (`#DE`) | 0 (div) / dividend (rem) | −1 (div) / dividend (rem) |
+| `INT_MIN / -1` | faults (`#DE`) | `INT_MIN` | `INT_MIN` |
+| `INT_MIN % -1` | faults (`#DE`) | 0 | 0 |
+
+(arm64 has no integer remainder instruction; its remainder values above come from the usual `a - (a / b) * b` lowering.) If UVM simply inherited whatever the host does, the same program would abort on x86-64 but silently produce `0`, `−1` or `INT_MIN` on arm64 and RISC-V. Defining these cases as traps makes the outcome identical everywhere, and surfaces what is almost always a program bug instead of silently continuing with a garbage value.
+
+Because arm64 and RISC-V never fault on these cases, a JIT compiler cannot rely on the hardware and must emit explicit operand checks before the divide: a divide-by-zero check for every division and remainder instruction, plus an `INT_MIN`-with-divisor-`-1` check for the signed ones. These are branches that are statically predictable as not-taken and can overlap with the comparatively very expensive divide, so their cost is negligible. On x86-64 the hardware would fault anyway, but a JIT should still emit the same explicit checks so that it can raise a clean UVM-level trap rather than having to field a `SIGFPE`.
+
+Shift instructions follow the same philosophy from the opposite direction: rather than trap, the shift count is defined modulo the operand bit width (`count & 31` for 32-bit shifts, `count & 63` for 64-bit shifts), which is exactly what the native variable-shift instructions on all three architectures do, so no extra code is needed in a JIT.
+
 ### Why not use x86 instructions or make this more similar to a virtual PC?
 
 When designing a virtual platform to run software on, it's tempting to base its design on an existing system. For example, a virtual x86 PC running some barebones Linux kernel. The problem here is that this design can easily get very complex. You have to ask how much of this system you want to simulate. Are you going to handle I/O by simulating PCI devices and SATA hard drives? The more complex the design gets, the harder it is to port. The higher the risk that something will break, or that different implementations will have subtle differences in behavior. The goal with UVM is very much to design a VM that is conceptually simple, and has as few unspecified behaviors as possible.

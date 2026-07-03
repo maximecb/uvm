@@ -125,6 +125,18 @@ pub enum Op
     add_u32,
     sub_u32,
     mul_u32,
+
+    // 32-bit integer division and remainder.
+    // These trap (abort execution) rather than producing a value in two
+    // exceptional cases, which are normative and must behave identically in
+    // every implementation:
+    //   1. Division/remainder by zero.
+    //   2. Signed overflow: INT_MIN / -1 and INT_MIN % -1 (the true quotient
+    //      INT_MAX+1 is not representable). Only the signed ops can hit this.
+    // The three target architectures disagree natively (x86 idiv faults on
+    // both; arm64/RV64 never fault and return 0 / -1 / INT_MIN sentinels),
+    // so a JIT must emit explicit operand checks before the divide and trap.
+    // These checks are cheap relative to a divide (predictably not-taken).
     div_u32,
     mod_u32,
     div_i32,
@@ -162,6 +174,12 @@ pub enum Op
     add_u64,
     sub_u64,
     mul_u64,
+
+    // 64-bit integer division and remainder.
+    // Same trap contract as the 32-bit ops above: these trap rather than
+    // producing a value on division/remainder by zero, and (signed ops only)
+    // on the INT_MIN / -1 and INT_MIN % -1 overflow case. A JIT must emit
+    // explicit operand checks before the divide on all targets.
     div_u64,
     mod_u64,
     div_i64,
@@ -1167,7 +1185,9 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Traps (panics) on division by zero. This is intentional and
+                // normative: a JIT must produce the same trap, not the host's
+                // native behavior. See the op definitions above.
                 Op::div_u32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1176,7 +1196,7 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Traps (panics) on division by zero. See div_u32 above.
                 Op::mod_u32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1185,7 +1205,10 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Signed division. Traps (panics) on division by zero and on
+                // the INT_MIN / -1 overflow case (quotient INT_MAX+1 is not
+                // representable). Rust's `/` panics on both; this is normative,
+                // so a JIT must emit explicit checks and trap identically.
                 Op::div_i32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1194,7 +1217,8 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Signed remainder. Traps (panics) on division by zero and on
+                // the INT_MIN % -1 overflow case. See div_i32 above.
                 Op::mod_i32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1338,7 +1362,7 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Traps (panics) on division by zero. See div_u32 above.
                 Op::div_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1347,7 +1371,7 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Traps (panics) on division by zero. See div_u32 above.
                 Op::mod_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1356,7 +1380,8 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Signed division. Traps (panics) on division by zero and on
+                // the INT_MIN / -1 overflow case. See div_i32 above.
                 Op::div_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1365,7 +1390,8 @@ impl Thread
                     );
                 }
 
-                // Division by zero will cause a panic (this is intentional)
+                // Signed remainder. Traps (panics) on division by zero and on
+                // the INT_MIN % -1 overflow case. See div_i32 above.
                 Op::mod_i64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -2270,6 +2296,45 @@ mod tests
     fn test_div_zero()
     {
         eval_src("push 8; push 0; div_u64; ret;");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_mod_zero()
+    {
+        eval_src("push 8; push 0; mod_u32; ret;");
+    }
+
+    // Signed division overflow: INT_MIN / -1 must trap, not silently produce
+    // INT_MIN the way a native arm64/RV64 divide would. Same for the remainder.
+    #[test]
+    #[should_panic(expected = "overflow")]
+    fn test_div_i32_overflow()
+    {
+        // 0x80000000 == i32::MIN
+        eval_src("push 0x80000000; push -1; div_i32; ret;");
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow")]
+    fn test_mod_i32_overflow()
+    {
+        eval_src("push 0x80000000; push -1; mod_i32; ret;");
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow")]
+    fn test_div_i64_overflow()
+    {
+        // 0x8000000000000000 == i64::MIN
+        eval_src("push 0x8000000000000000; push -1; div_i64; ret;");
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow")]
+    fn test_mod_i64_overflow()
+    {
+        eval_src("push 0x8000000000000000; push -1; mod_i64; ret;");
     }
 
     #[test]
