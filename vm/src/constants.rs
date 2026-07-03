@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 39;
+pub const SYSCALL_TBL_LEN: usize = 40;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -45,6 +45,7 @@ pub const FILE_TELL: u16 = 35;
 pub const FILE_SIZE: u16 = 36;
 pub const CMD_ARGC: u16 = 37;
 pub const CMD_GET_ARG: u16 = 38;
+pub const NET_SET_READ_TIMEOUT: u16 = 39;
 
 pub struct SysCallDesc
 {
@@ -76,11 +77,11 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
     Some(SysCallDesc { name: "file_close", const_idx: 19, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_f32", const_idx: 20, argc: 1, has_ret: false }),
-    Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 2, has_ret: true }),
-    Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 4, has_ret: true }),
+    Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 1, has_ret: true }),
+    Some(SysCallDesc { name: "net_accept", const_idx: 22, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "net_read", const_idx: 23, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "net_write", const_idx: 24, argc: 3, has_ret: true }),
-    Some(SysCallDesc { name: "net_close", const_idx: 25, argc: 1, has_ret: false }),
+    Some(SysCallDesc { name: "net_close", const_idx: 25, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "putchar", const_idx: 26, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "memcmp", const_idx: 27, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "thread_id", const_idx: 28, argc: 0, has_ret: true }),
@@ -94,6 +95,7 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "file_size", const_idx: 36, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "cmd_argc", const_idx: 37, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "cmd_get_arg", const_idx: 38, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "net_set_read_timeout", const_idx: 39, argc: 2, has_ret: true }),
 ];
 
 pub const EVENT_QUIT: u16 = 0;
@@ -157,12 +159,15 @@ pub const KEY_UP: u16 = 16003;
 pub const KEY_DOWN: u16 = 16004;
 pub const KEY_SHIFT: u16 = 16005;
 pub const AUDIO_FORMAT_I16: u16 = 0;
+pub const NET_EOF: i64 = 0;
+pub const NET_ERROR: i64 = -1;
+pub const NET_TIMEOUT: i64 = -2;
 pub const OPEN_READ: u64 = 1;
 pub const OPEN_WRITE: u64 = 2;
 pub const OPEN_CREATE: u64 = 4;
 pub const OPEN_TRUNC: u64 = 8;
 
-pub const CONST_DESCS: [(&'static str, i128); 65] = [
+pub const CONST_DESCS: [(&'static str, i128); 68] = [
     ("EVENT_QUIT", 0),
     ("EVENT_KEYDOWN", 1),
     ("EVENT_KEYUP", 2),
@@ -224,6 +229,9 @@ pub const CONST_DESCS: [(&'static str, i128); 65] = [
     ("KEY_DOWN", 16004),
     ("KEY_SHIFT", 16005),
     ("AUDIO_FORMAT_I16", 0),
+    ("NET_EOF", 0),
+    ("NET_ERROR", -1),
+    ("NET_TIMEOUT", -2),
     ("OPEN_READ", 1),
     ("OPEN_WRITE", 2),
     ("OPEN_CREATE", 4),

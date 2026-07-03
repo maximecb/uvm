@@ -352,50 +352,69 @@ Network-related functionality.
 ## net_listen
 
 ```
-u64 net_listen(const char* listen_addr, void* on_new_conn)
+i64 net_listen(const char* listen_addr)
 ```
 
-**Returns:** `u64 socket_id`
+**Returns:** `i64 socket_id`
 
-Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
+Open a listening TCP socket bound to the given address (e.g. "127.0.0.1:9000"). Returns a socket id (a positive integer) to be passed to net_accept, or -1 on failure.
 
 ## net_accept
 
 ```
-u64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len, void* on_incoming_data)
+i64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len)
 ```
 
-**Returns:** `u64 socket_id`
+**Returns:** `i64 socket_id`
 
-Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket.
+Block until an incoming connection is received on a listening socket, then create a new socket for it. The client's address is written into client_addr_buf as a NUL-terminated string, truncated to addr_buf_len. Returns the new connection's socket id (a positive integer), or -1 if the listening socket is closed (by net_close from another thread) or on error.
 
 ## net_read
 
 ```
-u64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
+i64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
 ```
 
-**Returns:** `u64 num_bytes`
+**Returns:** `i64 num_bytes`
 
-Read data from a socket into a buffer with specified capacity. Data can only be read if available.
+Read data from a socket into a buffer with the given capacity. Blocks until at least one byte is available (unless a read timeout has been set with net_set_read_timeout). Returns the number of bytes read, 0 when the connection has been closed by the peer, -1 on error, or -2 if the read timed out.
 
 ## net_write
 
 ```
-u64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+i64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
 ```
 
-**Returns:** `u64 num_bytes`
+**Returns:** `i64 num_bytes`
 
-Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full.
+Write data to an open socket. Blocks until the entire buffer has been written. Returns the number of bytes written, or -1 if the connection was lost.
 
 ## net_close
 
 ```
-void net_close(u64 socket_id)
+i64 net_close(u64 socket_id)
 ```
 
-Close an open socket.
+**Returns:** `i64 status`
+
+Close an open socket. Closing a listening socket also cancels a thread blocked in net_accept on it; closing a connected socket wakes a thread blocked in net_read on it. Returns 0 on success, or NET_ERROR if the socket id is unknown.
+
+## net_set_read_timeout
+
+```
+i64 net_set_read_timeout(u64 socket_id, u64 timeout_ms)
+```
+
+**Returns:** `i64 status`
+
+Set the read timeout on a connected socket, in milliseconds. When set, net_read blocks for at most timeout_ms and returns NET_TIMEOUT if no data arrives in that window. A timeout of 0 clears the timeout, making subsequent reads block indefinitely. Returns 0 on success, or NET_ERROR on failure.
+
+## Constants
+These are the constants associated with the net subsystem:
+
+- `i64 NET_EOF = 0`
+- `i64 NET_ERROR = -1`
+- `i64 NET_TIMEOUT = -2`
 
 # fs
 

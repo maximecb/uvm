@@ -149,30 +149,35 @@ extern uint32_t __uvm_audio_open_input(uint32_t __sample_rate, uint16_t __num_ch
 extern void __uvm_audio_read_samples(int16_t* __dst_buf, uint32_t __num_samples);
 #define audio_read_samples(__dst_buf, __num_samples) __uvm_audio_read_samples(__dst_buf, __num_samples)
 
-// u64 net_listen(const char* listen_addr, void* on_new_conn)
-// Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
-extern uint64_t __uvm_net_listen(const char* __listen_addr, void* __on_new_conn);
-#define net_listen(__listen_addr, __on_new_conn) __uvm_net_listen(__listen_addr, __on_new_conn)
+// i64 net_listen(const char* listen_addr)
+// Open a listening TCP socket bound to the given address (e.g. "127.0.0.1:9000"). Returns a socket id (a positive integer) to be passed to net_accept, or -1 on failure.
+extern int64_t __uvm_net_listen(const char* __listen_addr);
+#define net_listen(__listen_addr) __uvm_net_listen(__listen_addr)
 
-// u64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len, void* on_incoming_data)
-// Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket.
-extern uint64_t __uvm_net_accept(uint64_t __socket_id, char* __client_addr_buf, uint64_t __addr_buf_len, void* __on_incoming_data);
-#define net_accept(__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data) __uvm_net_accept(__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data)
+// i64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len)
+// Block until an incoming connection is received on a listening socket, then create a new socket for it. The client's address is written into client_addr_buf as a NUL-terminated string, truncated to addr_buf_len. Returns the new connection's socket id (a positive integer), or -1 if the listening socket is closed (by net_close from another thread) or on error.
+extern int64_t __uvm_net_accept(uint64_t __socket_id, char* __client_addr_buf, uint64_t __addr_buf_len);
+#define net_accept(__socket_id, __client_addr_buf, __addr_buf_len) __uvm_net_accept(__socket_id, __client_addr_buf, __addr_buf_len)
 
-// u64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
-// Read data from a socket into a buffer with specified capacity. Data can only be read if available.
-extern uint64_t __uvm_net_read(uint64_t __socket_id, uint8_t* __buf_ptr, uint64_t __buf_len);
+// i64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
+// Read data from a socket into a buffer with the given capacity. Blocks until at least one byte is available (unless a read timeout has been set with net_set_read_timeout). Returns the number of bytes read, 0 when the connection has been closed by the peer, -1 on error, or -2 if the read timed out.
+extern int64_t __uvm_net_read(uint64_t __socket_id, uint8_t* __buf_ptr, uint64_t __buf_len);
 #define net_read(__socket_id, __buf_ptr, __buf_len) __uvm_net_read(__socket_id, __buf_ptr, __buf_len)
 
-// u64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
-// Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full.
-extern uint64_t __uvm_net_write(uint64_t __socket_id, const uint8_t* __buf_ptr, uint64_t __buf_len);
+// i64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+// Write data to an open socket. Blocks until the entire buffer has been written. Returns the number of bytes written, or -1 if the connection was lost.
+extern int64_t __uvm_net_write(uint64_t __socket_id, const uint8_t* __buf_ptr, uint64_t __buf_len);
 #define net_write(__socket_id, __buf_ptr, __buf_len) __uvm_net_write(__socket_id, __buf_ptr, __buf_len)
 
-// void net_close(u64 socket_id)
-// Close an open socket.
-extern void __uvm_net_close(uint64_t __socket_id);
+// i64 net_close(u64 socket_id)
+// Close an open socket. Closing a listening socket also cancels a thread blocked in net_accept on it; closing a connected socket wakes a thread blocked in net_read on it. Returns 0 on success, or NET_ERROR if the socket id is unknown.
+extern int64_t __uvm_net_close(uint64_t __socket_id);
 #define net_close(__socket_id) __uvm_net_close(__socket_id)
+
+// i64 net_set_read_timeout(u64 socket_id, u64 timeout_ms)
+// Set the read timeout on a connected socket, in milliseconds. When set, net_read blocks for at most timeout_ms and returns NET_TIMEOUT if no data arrives in that window. A timeout of 0 clears the timeout, making subsequent reads block indefinitely. Returns 0 on success, or NET_ERROR on failure.
+extern int64_t __uvm_net_set_read_timeout(uint64_t __socket_id, uint64_t __timeout_ms);
+#define net_set_read_timeout(__socket_id, __timeout_ms) __uvm_net_set_read_timeout(__socket_id, __timeout_ms)
 
 // u64 file_open(const char* path, u64 flags)
 // Open the file at the given path. The flags argument is a bitfield combining OPEN_READ, OPEN_WRITE, OPEN_CREATE and OPEN_TRUNC. All access is binary (byte-exact) with no newline translation. Returns a nonzero file handle on success, or 0 on failure (for example if the path is rejected by the sandbox or does not exist).
@@ -320,25 +325,29 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 // Read available input samples. Must be called from the audio input thread.
 #define audio_read_samples(__dst_buf, __num_samples) asm (__dst_buf, __num_samples) -> void { syscall audio_read_samples; }
 
-// u64 net_listen(const char* listen_addr, void* on_new_conn)
-// Open a listening TCP socket to accept incoming connections. A callback function is called when a new connection request is received.
-#define net_listen(__listen_addr, __on_new_conn) asm (__listen_addr, __on_new_conn) -> u64 { syscall net_listen; }
+// i64 net_listen(const char* listen_addr)
+// Open a listening TCP socket bound to the given address (e.g. "127.0.0.1:9000"). Returns a socket id (a positive integer) to be passed to net_accept, or -1 on failure.
+#define net_listen(__listen_addr) asm (__listen_addr) -> i64 { syscall net_listen; }
 
-// u64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len, void* on_incoming_data)
-// Accept an incoming connection and creates a new socket. A callback function is called when incoming data is received on the new socket.
-#define net_accept(__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data) asm (__socket_id, __client_addr_buf, __addr_buf_len, __on_incoming_data) -> u64 { syscall net_accept; }
+// i64 net_accept(u64 socket_id, char* client_addr_buf, u64 addr_buf_len)
+// Block until an incoming connection is received on a listening socket, then create a new socket for it. The client's address is written into client_addr_buf as a NUL-terminated string, truncated to addr_buf_len. Returns the new connection's socket id (a positive integer), or -1 if the listening socket is closed (by net_close from another thread) or on error.
+#define net_accept(__socket_id, __client_addr_buf, __addr_buf_len) asm (__socket_id, __client_addr_buf, __addr_buf_len) -> i64 { syscall net_accept; }
 
-// u64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
-// Read data from a socket into a buffer with specified capacity. Data can only be read if available.
-#define net_read(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> u64 { syscall net_read; }
+// i64 net_read(u64 socket_id, u8* buf_ptr, u64 buf_len)
+// Read data from a socket into a buffer with the given capacity. Blocks until at least one byte is available (unless a read timeout has been set with net_set_read_timeout). Returns the number of bytes read, 0 when the connection has been closed by the peer, -1 on error, or -2 if the read timed out.
+#define net_read(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> i64 { syscall net_read; }
 
-// u64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
-// Write data to an open socket. This function will attempt to write the entire buffer and may block if the output buffer is full.
-#define net_write(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> u64 { syscall net_write; }
+// i64 net_write(u64 socket_id, const u8* buf_ptr, u64 buf_len)
+// Write data to an open socket. Blocks until the entire buffer has been written. Returns the number of bytes written, or -1 if the connection was lost.
+#define net_write(__socket_id, __buf_ptr, __buf_len) asm (__socket_id, __buf_ptr, __buf_len) -> i64 { syscall net_write; }
 
-// void net_close(u64 socket_id)
-// Close an open socket.
-#define net_close(__socket_id) asm (__socket_id) -> void { syscall net_close; }
+// i64 net_close(u64 socket_id)
+// Close an open socket. Closing a listening socket also cancels a thread blocked in net_accept on it; closing a connected socket wakes a thread blocked in net_read on it. Returns 0 on success, or NET_ERROR if the socket id is unknown.
+#define net_close(__socket_id) asm (__socket_id) -> i64 { syscall net_close; }
+
+// i64 net_set_read_timeout(u64 socket_id, u64 timeout_ms)
+// Set the read timeout on a connected socket, in milliseconds. When set, net_read blocks for at most timeout_ms and returns NET_TIMEOUT if no data arrives in that window. A timeout of 0 clears the timeout, making subsequent reads block indefinitely. Returns 0 on success, or NET_ERROR on failure.
+#define net_set_read_timeout(__socket_id, __timeout_ms) asm (__socket_id, __timeout_ms) -> i64 { syscall net_set_read_timeout; }
 
 // u64 file_open(const char* path, u64 flags)
 // Open the file at the given path. The flags argument is a bitfield combining OPEN_READ, OPEN_WRITE, OPEN_CREATE and OPEN_TRUNC. All access is binary (byte-exact) with no newline translation. Returns a nonzero file handle on success, or 0 on failure (for example if the path is rejected by the sandbox or does not exist).
@@ -431,6 +440,9 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 #define KEY_DOWN 16004
 #define KEY_SHIFT 16005
 #define AUDIO_FORMAT_I16 0
+#define NET_EOF 0
+#define NET_ERROR -1
+#define NET_TIMEOUT -2
 #define OPEN_READ 1
 #define OPEN_WRITE 2
 #define OPEN_CREATE 4

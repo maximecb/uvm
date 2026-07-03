@@ -129,6 +129,14 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         AUDIO_OPEN_INPUT => HostFn::Fn4_1(audio_open_input),
         AUDIO_READ_SAMPLES => HostFn::Fn2_0(audio_read_samples),
 
+        // Networking
+        NET_LISTEN => HostFn::Fn1_1(net_listen),
+        NET_ACCEPT => HostFn::Fn3_1(net_accept),
+        NET_READ => HostFn::Fn3_1(net_read),
+        NET_WRITE => HostFn::Fn3_1(net_write),
+        NET_CLOSE => HostFn::Fn1_1(net_close),
+        NET_SET_READ_TIMEOUT => HostFn::Fn2_1(net_set_read_timeout),
+
         // File I/O
         FILE_OPEN => HostFn::Fn2_1(file_open),
         FILE_CLOSE => HostFn::Fn1_0(file_close),

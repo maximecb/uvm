@@ -42,9 +42,9 @@ Current features:
 - Event-driven event execution model compatible with async operations
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
 - Easy to use audio output API with no boilerplate
+- Simple TCP networking API
 
 Planned future features:
-- Simple networking API
 - Capability system to safely sandbox apps without granting access to entire computer
 - Ability to compile without SDL and without graphics/audio for headless server-side use
 - Ability to encode metadata such as author name and app icon into app image files
