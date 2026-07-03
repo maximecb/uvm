@@ -541,27 +541,9 @@ impl<'a> Codegen<'a>
                 // re-truncate to restore the zero-extended width invariant.
                 self.emit_trunc_to(tw);
             }
-            // float <-> double: UVM has no f64. As a pragmatic measure we treat a
-            // `double` as carrying an f32 value in the low 32 bits of its 8-byte
-            // slot (upper bits zero), so a `float` promoted to `double` for a
-            // variadic call — `printf("%f", f)` — survives the round-trip:
-            // `fpext` keeps the f32 bits, `fptrunc` reads them back. Both source
-            // and result therefore hold the same low-32-bit f32 pattern, so the
-            // lowering is a plain 32-bit move. Genuine f64 arithmetic still errors
-            // in `require_float` (no f64 ops exist), keeping this contained to
-            // move-only doubles. See stdio.h's `%f` handling, which reads the
-            // vararg as an integer slot and bit-reinterprets the low 32 bits.
+            // float <-> double: UVM has no f64, so these can't be lowered.
             ConvOp::FPExt | ConvOp::FPTrunc => {
-                self.push_value(ctx, val, 32)?;
-            }
-            // bitcast: a pure reinterpretation of the same bits (float<->i32,
-            // i64<->ptr, ...). The value already sits in the low bits of its
-            // slot, so this is a width-preserving move — but unlike the generic
-            // integer path below it must accept `float`, whose bits alias an i32
-            // in the slot (e.g. optimized `%f` union punning at -O1/-O2).
-            ConvOp::BitCast => {
-                let w = scalar_width(from_ty)?;
-                self.push_value(ctx, val, w)?;
+                return Err("double (f64) is not supported by UVM; only float (f32)".into());
             }
             // integer/pointer width conversions
             _ => {
