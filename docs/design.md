@@ -110,8 +110,12 @@ statically linked. This makes software easier to distribute and less likely to b
 **Easy to target**: UVM aims to be well-documented and easy to target. Its minimalistic philosophy and simple APIs make this easier to achieve.
 The architecture is designed to be easy to understand and straightforward. We avoid architectural decisions that are quirky and surprising.
 
-**Performance**: although untyped, UVM is designed so that its bytecode can be easily JIT-compiled using dynamic binary translation techniques
-so that it can provide a good performance level that will be adequate for most applications.
+**Performance**: although untyped, UVM is designed so that its bytecode can be easily JIT-compiled to native machine code using dynamic binary
+translation techniques, so that it can provide a good performance level that will be adequate for most applications. The instruction set is
+specifically designed to lower cleanly onto the three mainstream 64-bit architectures it targets — x86-64, arm64 (AArch64) and RV64 (64-bit
+RISC-V) — so that each UVM operation maps to a small, predictable sequence of native instructions. Instruction semantics are chosen to match
+what these architectures do natively; for example, shift counts are defined modulo the operand bit-width, which matches the native shift
+instructions on all three targets and so requires no extra masking in a JIT.
 
 **Pragmatism**: UVM is not for everyone, and that's OK. Because of its minimalistic design, UVM will not be suitable for every possible use case.
 Its main target is software that end users

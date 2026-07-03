@@ -33,6 +33,7 @@ Current features:
 - Stack-based bytecode interpreter
 - Variable-length instructions for compactness
 - Untyped design for simplicity
+- Instruction set designed for straightforward JIT compilation to x86-64, arm64 and RV64
 - Little-endian byte ordering (like x86, ARM & RISC-V)
 - 32-bit and 64-bit integer ops, 32-bit floating-point support
 - Separate flat, linear address spaces for code and data ([Harvard architecture](https://en.wikipedia.org/wiki/Harvard_architecture))
