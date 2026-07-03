@@ -108,6 +108,15 @@ pub enum Op
     or_u32,
     xor_u32,
     not_u32,
+
+    // 32-bit shift operations.
+    // The shift count is taken modulo the operand bit-width: the effective
+    // count is `count & 31`. A count >= 32 wraps around rather than
+    // producing an unspecified result or zero. This is normative (not an
+    // accident of the interpreter) and matches the native 32-bit shift
+    // instructions on x86, arm64 and RISC-V, so a JIT must lower these to
+    // 32-bit-wide shifts (never a 64-bit host shift on a value that happens
+    // to sit in a 64-bit register).
     lshift_u32,
     rshift_u32,
     rshift_i32,
@@ -138,6 +147,13 @@ pub enum Op
     or_u64,
     xor_u64,
     not_u64,
+
+    // 64-bit shift operations.
+    // The shift count is taken modulo the operand bit-width: the effective
+    // count is `count & 63`. A count >= 64 wraps around rather than
+    // producing an unspecified result or zero. This is normative (not an
+    // accident of the interpreter) and matches the native 64-bit shift
+    // instructions on x86, arm64 and RISC-V.
     lshift_u64,
     rshift_u64,
     rshift_i64,
@@ -1099,6 +1115,10 @@ impl Thread
                     self.push(!v0.as_u32());
                 }
 
+                // For the shift ops below, the count is taken modulo the
+                // operand bit-width (count & 31). wrapping_shl/shr implement
+                // exactly this masking; this is the normative behavior, see
+                // the op definitions above.
                 Op::lshift_u32 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -1266,6 +1286,10 @@ impl Thread
                     self.push(!v0.as_u64());
                 }
 
+                // For the shift ops below, the count is taken modulo the
+                // operand bit-width (count & 63). wrapping_shl/shr implement
+                // exactly this masking; this is the normative behavior, see
+                // the op definitions above.
                 Op::lshift_u64 => {
                     let v1 = self.pop();
                     let v0 = self.pop();
@@ -2066,6 +2090,17 @@ mod tests
         eval_i64("push_i8 10; push_i8 2; sub_u64; ret;", 8);
         eval_i64("push 5; push_i8 -6; mul_u64; ret;", -30);
         eval_i64("push 1; push 2; lshift_u64; ret;", 4);
+
+        // Shift count is taken modulo the operand bit-width. A count >= the
+        // width wraps around (count & (width-1)) rather than being
+        // unspecified. These lock in the normative rule against a future
+        // JIT / reimplementation diverging (e.g. a naive 64-bit host shift).
+        eval_i64("push 1; push 8; lshift_u32; ret;", 256);
+        eval_i64("push 1; push 40; lshift_u32; ret;", 256); // 40 & 31 == 8
+        eval_i64("push 1; push 32; lshift_u32; ret;", 1);   // 32 & 31 == 0
+        eval_i64("push 256; push 40; rshift_u32; ret;", 1); // 40 & 31 == 8
+        eval_i64("push 1; push 72; lshift_u64; ret;", 256); // 72 & 63 == 8
+        eval_i64("push 1; push 64; lshift_u64; ret;", 1);   // 64 & 63 == 0
 
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; ret;", 1);
