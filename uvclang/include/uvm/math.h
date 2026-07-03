@@ -1,19 +1,13 @@
 #ifndef __UVM_MATH_H__
 #define __UVM_MATH_H__
 
-// <uvm/math.h> for the uvclang/UVM target. Ported from ncc/include/uvm/math.h.
-// A handful of small, type-generic arithmetic helper macros used by ncc's UVM
-// programs. They work on integers as-is; LERP/REMAP/DEG2RAD are meaningful with
-// floats once uvclang gains float support.
+// <uvm/math.h> for the uvclang/UVM target. A handful of small, type-generic
+// arithmetic helper macros. They work on integers as-is; LERP/REMAP/DEG2RAD are
+// also meaningful with floats. Macro arguments are fully parenthesized to avoid
+// precedence surprises.
 //
-// Fixes vs the ncc original: that file's LERP block is missing its #endif and
-// carries a stray `#define LERP`, which a strict (clang) preprocessor rejects as
-// an unterminated conditional; macro arguments are also fully parenthesized here
-// to avoid precedence surprises.
-//
-// NOTE: DEG2RAD references M_PI_F, a float constant that lives in <math.h>.
-// uvclang has no <math.h> yet (no float support), so DEG2RAD is only usable once
-// that lands; it is defined here for source compatibility.
+// NOTE: DEG2RAD references M_PI_F, a float constant from <math.h>, which must be
+// included for DEG2RAD to be usable.
 
 // Minimum of two values
 #ifndef MIN

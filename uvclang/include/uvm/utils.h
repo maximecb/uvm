@@ -1,11 +1,10 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-// <uvm/utils.h> for the uvclang/UVM target. Ported from ncc/include/uvm/utils.h.
-// The benchmark() macro times a statement/expression using the millisecond clock
-// syscall and prints the elapsed time. Rewritten to call the <uvm/syscalls.h>
-// shims (__uvm_time_current_ms / __uvm_print_*) instead of ncc's inline
-// `asm (...) { syscall ... }` extension.
+// <uvm/utils.h> for the uvclang/UVM target. The benchmark() macro times a
+// statement/expression using the millisecond clock syscall and prints the elapsed
+// time, calling the <uvm/syscalls.h> shims (__uvm_time_current_ms /
+// __uvm_print_*).
 
 #include <stdint.h>
 #include <uvm/syscalls.h>   // __uvm_time_current_ms / __uvm_print_i64 / __uvm_print_str / __uvm_print_endl

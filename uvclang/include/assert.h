@@ -1,11 +1,11 @@
 #ifndef __ASSERT_H__
 #define __ASSERT_H__
 
-// <assert.h> for the uvclang/UVM freestanding target. Ported from
-// ncc/include/assert.h, but written as standard C: assert(expr) tests the
-// predicate and, on failure, reports "file:line + expression" and terminates.
-// Standard <assert.h> routes a failure through __assert_fail / abort(); here we
-// print to stdout and exit non-zero, using the UVM syscalls in <uvm/syscalls.h>.
+// <assert.h> for the uvclang/UVM freestanding target, written as standard C:
+// assert(expr) tests the predicate and, on failure, reports "file:line +
+// expression" and terminates. Standard <assert.h> routes a failure through
+// __assert_fail / abort(); here we print to stdout and exit non-zero, using the
+// UVM syscalls in <uvm/syscalls.h>.
 //
 // This header is used ONLY for the UVM build (clang with -Iuvclang/include). The
 // native reference build uses the platform's own <assert.h>. The two only differ

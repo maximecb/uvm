@@ -1,12 +1,9 @@
 #ifndef __UVM_3DMATH_H__
 #define __UVM_3DMATH_H__
 
-// <uvm/3dmath.h> for the uvclang/UVM target. Ported from ncc/include/uvm/3dmath.h.
-// Single-precision 3D vector (vec3) and 4x4 matrix (mat44) helpers built on the
-// f32 math in <math.h> (sqrtf/sinf/cosf/tanf, all lowered to UVM *_f32 ops) and
-// memcpy from <string.h>. The source is already standard clang C — floats,
-// array typedefs, and plain loops — so this is a faithful copy with only this
-// header note added; no ncc-ism rewrites were needed.
+// <uvm/3dmath.h> for the uvclang/UVM target. Single-precision 3D vector (vec3)
+// and 4x4 matrix (mat44) helpers built on the f32 math in <math.h>
+// (sqrtf/sinf/cosf/tanf, all lowered to UVM *_f32 ops) and memcpy from <string.h>.
 //
 // Like the other <uvm/...> headers, it is UVM-build only (no native equivalent),
 // so it is validated by compiling through uvclang + self-checking runs in UVM

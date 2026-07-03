@@ -1,11 +1,10 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
-// <string.h> for the uvclang/UVM freestanding target, implemented on top of the
-// UVM primitives the same way ncc's headers are (see ncc/include/string.h).
-// The bodies here are plain, standard-signature C that clang lowers to LLVM IR
-// and uvclang then compiles like any other function -- this is what resolves calls
-// such as @strlen without a native libc.
+// <string.h> for the uvclang/UVM freestanding target. The bodies here are plain,
+// standard-signature C that clang lowers to LLVM IR and uvclang then compiles
+// like any other function -- this is what resolves calls such as @strlen without
+// a native libc.
 //
 // This header is used ONLY for the UVM build (clang with -Iuvclang/include). The
 // native reference build in the test harness deliberately does not see it and

@@ -1,13 +1,10 @@
 #ifndef __WINDOW_H__
 #define __WINDOW_H__
 
-// <uvm/window.h> for the uvclang/UVM target. Ported from
-// ncc/include/uvm/window.h. A simple fixed-rate animation event loop over the
-// windowing syscalls. Rewritten as standard, strictly-typed clang C: ncc's
-// `u16`/`i32`/`u64` become stdint types, and the indirect update call uses a
-// standard function pointer instead of ncc's inline `asm (update_fn) { call_fp
-// 1; }`. The update callback is nullary (`void update()` in every ncc example),
-// so this lowers to a `call_fp 0`.
+// <uvm/window.h> for the uvclang/UVM target. A simple fixed-rate animation event
+// loop over the windowing syscalls, written as standard, strictly-typed clang C.
+// The indirect update call uses a standard function pointer; the update callback
+// is nullary (`void update()`), so it lowers to a `call_fp 0`.
 //
 // This header drives a live window, so unlike the other <uvm/...> headers it is
 // validated by compiling through uvclang (it cannot run headless).

@@ -1,12 +1,10 @@
 #ifndef __UVM_GRAPHICS__
 #define __UVM_GRAPHICS__
 
-// <uvm/graphics.h> for the uvclang/UVM target. Ported from
-// ncc/include/uvm/graphics.h. Integer-only 2D raster helpers (rectangle fill and
-// Bresenham line drawing) over a 32-bit BGRA framebuffer. Rewritten as standard,
-// strictly-typed clang C: ncc's `u32`/`i32` become uint32_t/int32_t, and the
-// `0xFF_00_00_00`-style digit separators (an ncc lexer extension clang rejects)
-// are written as plain hex. memset32 is the UVM syscall from <uvm/syscalls.h>.
+// <uvm/graphics.h> for the uvclang/UVM target. Integer-only 2D raster helpers
+// (rectangle fill and Bresenham line drawing) over a 32-bit BGRA framebuffer,
+// written as standard, strictly-typed clang C. memset32 is the UVM syscall from
+// <uvm/syscalls.h>.
 //
 // Like the other <uvm/...> headers, this is UVM-build only and has no native
 // equivalent, so it is validated by compiling through uvclang and self-checking

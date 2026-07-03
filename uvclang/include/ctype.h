@@ -2,9 +2,9 @@
 #define __CTYPE_H__
 
 // <ctype.h> for the uvclang/UVM freestanding target. These are ordinary C
-// definitions (ASCII only) that uvclang compiles like any other function. Ported
-// from ncc/include/ctype.h. This header is used ONLY for the UVM build (clang
-// with -Iuvclang/include); the native reference build uses the platform's libc.
+// definitions (ASCII only) that uvclang compiles like any other function. This
+// header is used ONLY for the UVM build (clang with -Iuvclang/include); the
+// native reference build uses the platform's libc.
 
 int isalnum(int c)
 {

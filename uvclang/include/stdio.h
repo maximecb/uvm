@@ -1,10 +1,9 @@
 #ifndef __STDIO_H__
 #define __STDIO_H__
 
-// <stdio.h> for the uvclang/UVM freestanding target. Ported from
-// ncc/include/stdio.h, but written as standard C that clang lowers to LLVM IR
-// (rather than ncc's `asm (...) { syscall ... }` extension). The character and
-// string output primitives are UVM syscalls, pulled in from <uvm/syscalls.h>.
+// <stdio.h> for the uvclang/UVM freestanding target: standard C that clang lowers
+// to LLVM IR. The character and string output primitives are UVM syscalls, pulled
+// in from <uvm/syscalls.h>.
 //
 // This header is used ONLY for the UVM build (clang with -Iuvclang/include). The
 // native reference build in the test harness uses the platform's own libc, so
@@ -31,7 +30,7 @@
 #define EOF (-1)
 
 // Write a string followed by a newline to standard output. Standard puts
-// returns a non-negative value on success; we return 0 (as ncc does). The
+// returns a non-negative value on success; we return 0. The
 // differential harness compares the bytes written, not this return value.
 int puts(const char *str)
 {

@@ -481,6 +481,13 @@ impl<'a> Codegen<'a>
                 self.push_value(ctx, &args[1].val, 32)?;
                 self.line("pow_f32;");
             }
+            // clang canonicalizes `powf(2, x)` to `exp2f(x)` at -O1+; UVM has no
+            // exp2 op, so lower it back to `pow_f32(2, x)`.
+            "exp2f" => {
+                self.push_float(2.0, 32);
+                self.push_value(ctx, &args[0].val, 32)?;
+                self.line("pow_f32;");
+            }
             _ => return Err(format!("unsupported float library call @{}", name)),
         }
         self.store_dest(ctx, dest)
@@ -1444,7 +1451,7 @@ fn is_float_builtin(name: &str) -> bool
     matches!(
         name,
         "sinf" | "cosf" | "tanf" | "asinf" | "acosf" | "atanf"
-            | "sqrtf" | "fabsf" | "powf"
+            | "sqrtf" | "fabsf" | "powf" | "exp2f"
     )
 }
 

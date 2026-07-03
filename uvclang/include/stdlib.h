@@ -1,11 +1,9 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
-// <stdlib.h> for the uvclang/UVM freestanding target. Ported from
-// ncc/include/stdlib.h, but written as standard, strictly-typed C that clang
-// lowers to LLVM IR (rather than ncc's `asm (...) { syscall ... }` extension and
-// its looser pointer/integer typing). The allocator and exit() sit on top of the
-// UVM syscalls in <uvm/syscalls.h>.
+// <stdlib.h> for the uvclang/UVM freestanding target: standard, strictly-typed C
+// that clang lowers to LLVM IR. The allocator and exit() sit on top of the UVM
+// syscalls in <uvm/syscalls.h>.
 //
 // This header is used ONLY for the UVM build (clang with -Iuvclang/include). The
 // native reference build uses the platform's own libc, so the standard functions
@@ -109,7 +107,7 @@ void srand(unsigned int seed)
 }
 
 // --- bump allocator --------------------------------------------------------
-// A simple grow-only bump allocator over the UVM heap, mirroring ncc's. Each
+// A simple grow-only bump allocator over the UVM heap. Each
 // block is prefixed with an 8-byte header holding a magic word used to catch
 // double-free / corruption. free() does not reclaim memory.
 
