@@ -328,6 +328,14 @@ impl<'a> Codegen<'a>
                     Value::Global(name) if is_float_builtin(name) => {
                         self.gen_float_call(ctx, inst.dest.as_deref(), name, args)?;
                     }
+                    // clang's optimizer can synthesize direct calls to the
+                    // byte-compare libcalls bcmp/memcmp (e.g. when lowering
+                    // `strcmp(x, "lit") == 0`), which have no body in the module.
+                    // Route them to the UVM memcmp syscall: bcmp only needs the
+                    // zero/non-zero distinction, which memcmp's result preserves.
+                    Value::Global(name) if name == "bcmp" || name == "memcmp" => {
+                        self.gen_memcmp_call(ctx, inst.dest.as_deref(), args)?;
+                    }
                     _ => self.gen_call(ctx, inst.dest.as_deref(), callee, args)?,
                 }
             }
@@ -925,6 +933,27 @@ impl<'a> Codegen<'a>
                 }
                 None => self.line("pop;"),
             }
+        }
+        Ok(())
+    }
+
+    /// Lower an optimizer-synthesized `@bcmp` / `@memcmp` call to the UVM memcmp
+    /// syscall. Both take `(ptr, ptr, size_t)` and return an int that is zero iff
+    /// the byte ranges are equal (memcmp additionally orders; bcmp does not, but
+    /// memcmp's value is a valid bcmp result).
+    fn gen_memcmp_call(&mut self, ctx: &FnCtx, dest: Option<&str>, args: &[TypedVal]) -> Result<(), String>
+    {
+        for a in args {
+            let w = scalar_width(&a.ty)?;
+            self.push_value(ctx, &a.val, w)?;
+        }
+        self.line("syscall memcmp;");
+        match dest {
+            Some(d) => {
+                let slot = *ctx.slots.get(d).ok_or_else(|| format!("no slot for %{}", d))?;
+                self.line(&format!("set_local {};", slot));
+            }
+            None => self.line("pop;"),
         }
         Ok(())
     }

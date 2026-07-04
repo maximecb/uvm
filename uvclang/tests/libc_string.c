@@ -45,6 +45,25 @@ int main()
     strncat(buf, "BB", 2);              // buf -> "aaaBB"
     r += (int)strlen(buf);             // 5
 
-    // r = 3 +12 +1 +1 +1 +1 +1 +1 +1 +4 +1 +1 +16 +5 = 49
+    // strcpy / strcat (unbounded).
+    char cp[32];
+    strcpy(cp, "foo");                          // cp -> "foo"
+    r += (strcmp(cp, "foo") == 0);              // 1
+    strcat(cp, "bar");                          // cp -> "foobar"
+    r += (strcmp(cp, "foobar") == 0);           // 1
+    r += ((int)strlen(cp) == 6);                // 1
+
+    // strrchr: last match, not-found, and the terminating-NUL case.
+    const char *path = "a/b/c";
+    r += (strrchr(path, '/') == path + 3);      // 1
+    r += (strrchr(path, 'z') == NULL);          // 1
+    r += (*strrchr(path, '\0') == '\0');        // 1
+
+    // memchr: found (within the same object) and not-found.
+    const char mem[] = "abcdef";
+    r += ((const char *)memchr(mem, 'd', 6) == mem + 3);  // 1
+    r += (memchr(mem, 'z', 6) == NULL);                   // 1
+
+    // r = 49 (above) + 8 = 57
     return r;
 }

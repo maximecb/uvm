@@ -85,6 +85,38 @@ char *strchr(const char *str, int c)
     }
 }
 
+// Like strchr, but returns the *last* occurrence. The terminating NUL is part of
+// the string, so strrchr(s, '\0') returns a pointer to it (standard behavior).
+char *strrchr(const char *str, int c)
+{
+    char ch = (char)c;
+    const char *last = NULL;
+
+    for (;; ++str)
+    {
+        if (*str == ch)
+            last = str;
+        if (*str == 0)
+            return (char *)last;
+    }
+}
+
+// Scan the first `num` bytes of `ptr` for byte `c`, returning a pointer to it or
+// NULL. Bytes are compared as unsigned char, per the standard.
+void *memchr(const void *ptr, int c, size_t num)
+{
+    const unsigned char *p = (const unsigned char *)ptr;
+    unsigned char ch = (unsigned char)c;
+
+    for (size_t i = 0; i < num; ++i)
+    {
+        if (p[i] == ch)
+            return (void *)(p + i);
+    }
+
+    return NULL;
+}
+
 // Returns a pointer to the first occurrence of s2 in s1, or NULL if s2 is not
 // part of s1. An empty needle matches at the start of the haystack.
 char *strstr(const char *s1, const char *s2)
@@ -109,6 +141,19 @@ char *strstr(const char *s1, const char *s2)
     return *s2 ? NULL : (char *)s1;
 }
 
+char *strcpy(char *dst, const char *src)
+{
+    char *ret = dst;
+
+    while ((*dst = *src) != 0)
+    {
+        ++dst;
+        ++src;
+    }
+
+    return ret;
+}
+
 char *strncpy(char *dst, const char *src, size_t num)
 {
     char *ret = dst;
@@ -127,6 +172,22 @@ char *strncpy(char *dst, const char *src, size_t num)
         *dst = '\0';
         ++dst;
         --num;
+    }
+
+    return ret;
+}
+
+char *strcat(char *dst, const char *src)
+{
+    char *ret = dst;
+
+    while (*dst)
+        ++dst;
+
+    while ((*dst = *src) != 0)
+    {
+        ++dst;
+        ++src;
     }
 
     return ret;

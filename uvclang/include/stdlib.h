@@ -15,6 +15,8 @@
 
 #include <stddef.h>          // size_t, NULL
 #include <stdint.h>          // uint8_t / uint32_t / uint64_t / int8_t
+#include <limits.h>          // LONG_MAX / LONG_MIN (strtol saturation)
+#include <ctype.h>           // isspace (strtol leading whitespace)
 #include <assert.h>          // assert (used by ltoa)
 #include <uvm/syscalls.h>    // __uvm_exit / __uvm_vm_heap_size / __uvm_vm_grow_heap / __uvm_print_str
 
@@ -25,6 +27,11 @@
 #define RAND_MAX 0x7FFFFFFF
 
 int abs(int n)
+{
+    return n < 0 ? -n : n;
+}
+
+long labs(long n)
 {
     return n < 0 ? -n : n;
 }
@@ -84,6 +91,88 @@ char *ltoa(long value, char *str, int base)
 char *itoa(int value, char *str, int base)
 {
     return ltoa((long)value, str, base);
+}
+
+// --- string to integer conversion ------------------------------------------
+
+// Parse a long from `str` in the given base (0 or 2..36). Leading whitespace is
+// skipped; an optional +/- sign and, for base 0/16, an optional "0x" prefix are
+// accepted; base 0 also auto-detects octal from a leading '0'. On success
+// *endptr (when non-NULL) is left just past the last digit consumed; if no
+// digits are converted it is set to `str`. On overflow the result saturates to
+// LONG_MAX / LONG_MIN (standard strtol also sets errno=ERANGE, which this
+// freestanding build has no errno for — only the clamped return value matches).
+long strtol(const char *str, char **endptr, int base)
+{
+    const char *s = str;
+
+    // Leading whitespace.
+    while (isspace((unsigned char)*s))
+        ++s;
+
+    // Optional sign.
+    int neg = 0;
+    if (*s == '+' || *s == '-')
+    {
+        neg = (*s == '-');
+        ++s;
+    }
+
+    // "0x" prefix (only for base 0 or 16, and only when a hex digit follows).
+    if ((base == 0 || base == 16) && s[0] == '0' &&
+        (s[1] == 'x' || s[1] == 'X') && isxdigit((unsigned char)s[2]))
+    {
+        s += 2;
+        base = 16;
+    }
+    else if (base == 0 && s[0] == '0')
+        base = 8;      // leading 0 => octal; the loop consumes the '0' itself
+    else if (base == 0)
+        base = 10;
+
+    // Saturation limit as an unsigned magnitude: LONG_MAX for '+', |LONG_MIN|
+    // (== LONG_MAX + 1) for '-'.
+    unsigned long limit  = neg ? (unsigned long)LONG_MAX + 1UL : (unsigned long)LONG_MAX;
+    unsigned long cutoff = limit / (unsigned long)base;
+    unsigned long cutlim = limit % (unsigned long)base;
+
+    const char *digits = s;
+    unsigned long acc = 0;
+    int overflow = 0;
+    for (;; ++s)
+    {
+        int d;
+        char ch = *s;
+        if (ch >= '0' && ch <= '9')      d = ch - '0';
+        else if (ch >= 'a' && ch <= 'z') d = ch - 'a' + 10;
+        else if (ch >= 'A' && ch <= 'Z') d = ch - 'A' + 10;
+        else                             break;
+        if (d >= base)
+            break;
+
+        // Keep scanning valid digits even past overflow, so endptr is correct.
+        if (acc > cutoff || (acc == cutoff && (unsigned long)d > cutlim))
+            overflow = 1;
+        else
+            acc = acc * (unsigned long)base + (unsigned long)d;
+    }
+
+    // No digits converted => endptr points at the original string.
+    if (endptr != NULL)
+        *endptr = (char *)((s == digits) ? str : s);
+
+    if (overflow)
+        return neg ? LONG_MIN : LONG_MAX;
+
+    // Negate in unsigned space to avoid signed-overflow UB at LONG_MIN.
+    return neg ? (long)(0UL - acc) : (long)acc;
+}
+
+// atoi is defined by the standard as (int)strtol(str, NULL, 10) apart from
+// error handling (overflow is undefined, so it need not saturate).
+int atoi(const char *str)
+{
+    return (int)strtol(str, NULL, 10);
 }
 
 // --- pseudo-random numbers -------------------------------------------------

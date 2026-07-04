@@ -10,6 +10,7 @@
 // host's; itoa/ltoa are not in the host libc). A volatile seed blocks -O2 from
 // const-folding the whole computation.
 #include <stdlib.h>
+#include <limits.h>   // LONG_MAX / LONG_MIN (strtol overflow saturation)
 
 int main()
 {
@@ -37,5 +38,33 @@ int main()
 
     r += (int)sum;                  // 14 + 6 + 1 + 55 = 76
 
-    return r;                       // exit 76
+    // labs.
+    r += (labs(seed - 20) == 14);   // 1
+    r += (labs((long)seed) == 6);   // 1
+
+    // atoi: plain, leading spaces + sign, trailing garbage, no digits.
+    r += (atoi("42") == 42);        // 1
+    r += (atoi("  -13") == -13);    // 1
+    r += (atoi("7abc") == 7);       // 1
+    r += (atoi("nope") == 0);       // 1
+
+    // strtol: base 10, endptr, hex (explicit + auto), octal (auto), sign,
+    // stop-at-garbage endptr, base 36, and the empty (no-conversion) case.
+    char *end;
+    r += (strtol("100", &end, 10) == 100);   // 1
+    r += (*end == '\0');                      // 1
+    r += (strtol("0xFF", NULL, 16) == 255);  // 1
+    r += (strtol("0x1A", NULL, 0) == 26);    // 1
+    r += (strtol("077", NULL, 0) == 63);     // 1
+    r += (strtol("+21", NULL, 10) == 21);    // 1
+    long v = strtol("  -21rest", &end, 10);  // -21, end at 'r'
+    r += (v == -21);                          // 1
+    r += (*end == 'r');                       // 1
+    r += (strtol("z", NULL, 36) == 35);      // 1
+    r += (strtol("", &end, 10) == 0);        // 1 (no digits converted)
+    r += (strtol("99999999999999999999", NULL, 10) == LONG_MAX);   // 1 (clamps)
+    r += (strtol("-99999999999999999999", NULL, 10) == LONG_MIN);  // 1 (clamps)
+
+    // 76 + 2 (labs) + 4 (atoi) + 12 (strtol) = 94
+    return r;                       // exit 94
 }
