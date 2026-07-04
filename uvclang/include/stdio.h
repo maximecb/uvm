@@ -35,12 +35,23 @@
 #include <stdarg.h>
 #include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar / file_* macros
 
+// The externally-visible functions below (and the FILE pool they own) carry weak
+// linkage (UVCLANG_WEAK) so this header can be #included from any number of
+// translation units without producing duplicate-symbol errors when they are
+// linked together (LLVM keeps a single copy of each). No per-file
+// "implementation" opt-in is needed; in a single-translation-unit build the
+// attribute has no effect and uvclang ignores it. The `static` __pf_* helpers
+// already have internal linkage, so they need no attribute.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 #define EOF (-1)
 
 // Write a string followed by a newline to standard output. Standard puts
 // returns a non-negative value on success; we return 0. The
 // differential harness compares the bytes written, not this return value.
-int puts(const char *str)
+UVCLANG_WEAK int puts(const char *str)
 {
     __uvm_print_str(str);
     __uvm_print_endl();
@@ -51,14 +62,14 @@ int puts(const char *str)
 // <uvm/syscalls.h> (mapping directly to the `putchar` / `getchar` syscalls), so
 // we only define the fallbacks if those macros are somehow unavailable.
 #ifndef putchar
-int putchar(int ch)
+UVCLANG_WEAK int putchar(int ch)
 {
     return __uvm_putchar(ch);
 }
 #endif
 
 #ifndef getchar
-int getchar(void)
+UVCLANG_WEAK int getchar(void)
 {
     return __uvm_getchar();
 }
@@ -383,14 +394,14 @@ static void __pf_format(__pf_sink *o, const char *fmt, va_list ap)
     }
 }
 
-int vprintf(const char *fmt, va_list ap)
+UVCLANG_WEAK int vprintf(const char *fmt, va_list ap)
 {
     __pf_sink o = { 0, 0, 0 };
     __pf_format(&o, fmt, ap);
     return (int)o.len;
 }
 
-int printf(const char *fmt, ...)
+UVCLANG_WEAK int printf(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -402,7 +413,7 @@ int printf(const char *fmt, ...)
 // Write into `buf` at most `size-1` chars plus a terminating NUL. Returns the
 // number of characters that *would* have been written (excluding the NUL), like
 // C99 snprintf.
-int vsnprintf(char *buf, unsigned long size, const char *fmt, va_list ap)
+UVCLANG_WEAK int vsnprintf(char *buf, unsigned long size, const char *fmt, va_list ap)
 {
     __pf_sink o = { buf, size, 0 };
     __pf_format(&o, fmt, ap);
@@ -411,7 +422,7 @@ int vsnprintf(char *buf, unsigned long size, const char *fmt, va_list ap)
     return (int)o.len;
 }
 
-int snprintf(char *buf, unsigned long size, const char *fmt, ...)
+UVCLANG_WEAK int snprintf(char *buf, unsigned long size, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -421,12 +432,12 @@ int snprintf(char *buf, unsigned long size, const char *fmt, ...)
 }
 
 // Unbounded sprintf: a snprintf whose buffer is treated as effectively infinite.
-int vsprintf(char *buf, const char *fmt, va_list ap)
+UVCLANG_WEAK int vsprintf(char *buf, const char *fmt, va_list ap)
 {
     return vsnprintf(buf, (unsigned long)-1, fmt, ap);
 }
 
-int sprintf(char *buf, const char *fmt, ...)
+UVCLANG_WEAK int sprintf(char *buf, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -471,7 +482,7 @@ static FILE __uvclang_files[FOPEN_MAX];
 // mode (r/w/a); a '+' anywhere adds the opposite access; 'b' is ignored (all
 // UVM I/O is binary). Returns a stream, or NULL on a bad mode, a rejected/absent
 // path, or an exhausted stream pool.
-FILE *fopen(const char *path, const char *mode)
+UVCLANG_WEAK FILE *fopen(const char *path, const char *mode)
 {
     uint64_t flags;
     int append = 0;
@@ -515,7 +526,7 @@ FILE *fopen(const char *path, const char *mode)
 
 // Close `stream` and return its pool slot. Returns 0 on success, EOF if the
 // stream is NULL.
-int fclose(FILE *stream)
+UVCLANG_WEAK int fclose(FILE *stream)
 {
     if (stream == NULL)
         return EOF;
@@ -529,7 +540,7 @@ int fclose(FILE *stream)
 // request. Returns the number of *complete* elements read; a partial final
 // element (at EOF) is not counted, matching C fread. Sets the EOF/error flag on
 // a short read / failure.
-size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+UVCLANG_WEAK size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     if (size == 0 || nmemb == 0)
         return 0;
@@ -548,7 +559,7 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 // Write `nmemb` elements of `size` bytes from `ptr`. Loops over file_write to
 // push out any bytes a single syscall left behind. Returns the number of
 // complete elements written; sets the error flag on failure.
-size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+UVCLANG_WEAK size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     if (size == 0 || nmemb == 0)
         return 0;
@@ -568,7 +579,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 // are resolved against file_tell/file_size here. A successful seek clears the
 // end-of-file indicator (C semantics). Returns 0 on success, -1 on a bad
 // `whence` or a resulting negative offset.
-int fseek(FILE *stream, long offset, int whence)
+UVCLANG_WEAK int fseek(FILE *stream, long offset, int whence)
 {
     long base;
     switch (whence) {
@@ -586,25 +597,25 @@ int fseek(FILE *stream, long offset, int whence)
 }
 
 // Current byte offset from the start of the file, or -1 on error.
-long ftell(FILE *stream)
+UVCLANG_WEAK long ftell(FILE *stream)
 {
     return (long)file_tell(stream->__handle);
 }
 
 // Nonzero once a read has hit end of file (cleared by fseek).
-int feof(FILE *stream)
+UVCLANG_WEAK int feof(FILE *stream)
 {
     return stream->__eof;
 }
 
 // Nonzero once an I/O error has occurred on the stream.
-int ferror(FILE *stream)
+UVCLANG_WEAK int ferror(FILE *stream)
 {
     return stream->__error;
 }
 
 // Clear the end-of-file and error indicators.
-void clearerr(FILE *stream)
+UVCLANG_WEAK void clearerr(FILE *stream)
 {
     stream->__eof = 0;
     stream->__error = 0;

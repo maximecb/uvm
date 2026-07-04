@@ -19,7 +19,17 @@
 #include <stddef.h>   // size_t, NULL (clang's freestanding resource header)
 #include <ctype.h>    // tolower (used by strcasecmp)
 
-size_t strlen(const char *s)
+// Every definition below carries weak linkage (UVCLANG_WEAK) so this header can
+// be #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). No per-file "implementation" opt-in is needed; in a
+// single-translation-unit build the attribute has no effect and uvclang ignores
+// it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
+UVCLANG_WEAK size_t strlen(const char *s)
 {
     size_t l = 0;
     while (s[l] != 0)
@@ -27,7 +37,7 @@ size_t strlen(const char *s)
     return l;
 }
 
-int strcmp(const char *a, const char *b)
+UVCLANG_WEAK int strcmp(const char *a, const char *b)
 {
     const unsigned char *ua = (const unsigned char *)a;
     const unsigned char *ub = (const unsigned char *)b;
@@ -39,7 +49,7 @@ int strcmp(const char *a, const char *b)
     return (int)ua[i] - (int)ub[i];
 }
 
-int strncmp(const char *a, const char *b, size_t num)
+UVCLANG_WEAK int strncmp(const char *a, const char *b, size_t num)
 {
     const unsigned char *ua = (const unsigned char *)a;
     const unsigned char *ub = (const unsigned char *)b;
@@ -56,7 +66,7 @@ int strncmp(const char *a, const char *b, size_t num)
 }
 
 // Case-insensitive string comparison. Non-standard, but widely provided.
-int strcasecmp(const char *a, const char *b)
+UVCLANG_WEAK int strcasecmp(const char *a, const char *b)
 {
     for (size_t i = 0;; ++i)
     {
@@ -72,7 +82,7 @@ int strcasecmp(const char *a, const char *b)
     return 0;
 }
 
-char *strchr(const char *str, int c)
+UVCLANG_WEAK char *strchr(const char *str, int c)
 {
     char ch = (char)c;
 
@@ -87,7 +97,7 @@ char *strchr(const char *str, int c)
 
 // Like strchr, but returns the *last* occurrence. The terminating NUL is part of
 // the string, so strrchr(s, '\0') returns a pointer to it (standard behavior).
-char *strrchr(const char *str, int c)
+UVCLANG_WEAK char *strrchr(const char *str, int c)
 {
     char ch = (char)c;
     const char *last = NULL;
@@ -103,7 +113,7 @@ char *strrchr(const char *str, int c)
 
 // Scan the first `num` bytes of `ptr` for byte `c`, returning a pointer to it or
 // NULL. Bytes are compared as unsigned char, per the standard.
-void *memchr(const void *ptr, int c, size_t num)
+UVCLANG_WEAK void *memchr(const void *ptr, int c, size_t num)
 {
     const unsigned char *p = (const unsigned char *)ptr;
     unsigned char ch = (unsigned char)c;
@@ -119,7 +129,7 @@ void *memchr(const void *ptr, int c, size_t num)
 
 // Returns a pointer to the first occurrence of s2 in s1, or NULL if s2 is not
 // part of s1. An empty needle matches at the start of the haystack.
-char *strstr(const char *s1, const char *s2)
+UVCLANG_WEAK char *strstr(const char *s1, const char *s2)
 {
     while (*s1)
     {
@@ -141,7 +151,7 @@ char *strstr(const char *s1, const char *s2)
     return *s2 ? NULL : (char *)s1;
 }
 
-char *strcpy(char *dst, const char *src)
+UVCLANG_WEAK char *strcpy(char *dst, const char *src)
 {
     char *ret = dst;
 
@@ -154,7 +164,7 @@ char *strcpy(char *dst, const char *src)
     return ret;
 }
 
-char *strncpy(char *dst, const char *src, size_t num)
+UVCLANG_WEAK char *strncpy(char *dst, const char *src, size_t num)
 {
     char *ret = dst;
 
@@ -177,7 +187,7 @@ char *strncpy(char *dst, const char *src, size_t num)
     return ret;
 }
 
-char *strcat(char *dst, const char *src)
+UVCLANG_WEAK char *strcat(char *dst, const char *src)
 {
     char *ret = dst;
 
@@ -193,7 +203,7 @@ char *strcat(char *dst, const char *src)
     return ret;
 }
 
-char *strncat(char *dst, const char *src, size_t num)
+UVCLANG_WEAK char *strncat(char *dst, const char *src, size_t num)
 {
     char *ret = dst;
 

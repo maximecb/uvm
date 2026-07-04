@@ -14,6 +14,16 @@
 #include <string.h>
 #include <math.h>
 
+// The constants and functions below carry weak linkage (UVCLANG_WEAK) so this
+// header can be #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). No per-file "implementation" opt-in is needed; in a
+// single-translation-unit build the attribute has no effect and uvclang ignores
+// it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 // 3D vector
 typedef float vec3[3];
 
@@ -23,19 +33,19 @@ typedef float vec3[3];
 typedef float mat44[4][4];
 
 // +Y axis constant
-vec3 VEC3_YAXIS = {
+UVCLANG_WEAK vec3 VEC3_YAXIS = {
     0.0f, 1.0f, 0.0f
 };
 
 // Identity matrix constant
-mat44 MAT44_IDENT = {
+UVCLANG_WEAK mat44 MAT44_IDENT = {
     { 1.0f, 0.0f, 0.0f, 0.0f},
     { 0.0f, 1.0f, 0.0f, 0.0f},
     { 0.0f, 0.0f, 1.0f, 0.0f},
     { 0.0f, 0.0f, 0.0f, 1.0f},
 };
 
-void vec3_add(vec3 v0, vec3 v1, vec3 out)
+UVCLANG_WEAK void vec3_add(vec3 v0, vec3 v1, vec3 out)
 {
     out[0] = v0[0] + v1[0];
     out[1] = v0[1] + v1[1];
@@ -43,7 +53,7 @@ void vec3_add(vec3 v0, vec3 v1, vec3 out)
 }
 
 // Compute the difference between two vectors
-void vec3_sub(vec3 a, vec3 b, vec3 result)
+UVCLANG_WEAK void vec3_sub(vec3 a, vec3 b, vec3 result)
 {
     result[0] = a[0] - b[0];
     result[1] = a[1] - b[1];
@@ -51,13 +61,13 @@ void vec3_sub(vec3 a, vec3 b, vec3 result)
 }
 
 // Compute the length of a vector
-float vec3_length(vec3 v)
+UVCLANG_WEAK float vec3_length(vec3 v)
 {
     return sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
 // Normalize a vector
-void vec3_normalize(vec3 v)
+UVCLANG_WEAK void vec3_normalize(vec3 v)
 {
     float len = vec3_length(v);
     if (len != 0.0f)
@@ -69,7 +79,7 @@ void vec3_normalize(vec3 v)
 }
 
 // Scalar multiplication
-void vec3_mul(vec3 a, float f, vec3 result)
+UVCLANG_WEAK void vec3_mul(vec3 a, float f, vec3 result)
 {
     result[0] = a[1] * f;
     result[1] = a[2] * f;
@@ -77,20 +87,20 @@ void vec3_mul(vec3 a, float f, vec3 result)
 }
 
 // Compute the dot product of two vectors
-float vec3_dot(vec3 a, vec3 b)
+UVCLANG_WEAK float vec3_dot(vec3 a, vec3 b)
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
 // Compute the cross product of two vectors
-void vec3_cross(vec3 a, vec3 b, vec3 result)
+UVCLANG_WEAK void vec3_cross(vec3 a, vec3 b, vec3 result)
 {
     result[0] = a[1] * b[2] - a[2] * b[1];
     result[1] = a[2] * b[0] - a[0] * b[2];
     result[2] = a[0] * b[1] - a[1] * b[0];
 }
 
-void mat44_transpose(mat44 m)
+UVCLANG_WEAK void mat44_transpose(mat44 m)
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -103,7 +113,7 @@ void mat44_transpose(mat44 m)
     }
 }
 
-void mat44_mul(mat44 a, mat44 b, mat44 result)
+UVCLANG_WEAK void mat44_mul(mat44 a, mat44 b, mat44 result)
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -119,7 +129,7 @@ void mat44_mul(mat44 a, mat44 b, mat44 result)
 }
 
 // Generate a translation matrix
-void mat44_translate(vec3 v, mat44 result)
+UVCLANG_WEAK void mat44_translate(vec3 v, mat44 result)
 {
     // Set the matrix to the identity
     memcpy(result, MAT44_IDENT, sizeof(mat44));
@@ -131,7 +141,7 @@ void mat44_translate(vec3 v, mat44 result)
 }
 
 // Matrix for a rotation around the X axis
-void mat44_rotx(float theta, mat44 result)
+UVCLANG_WEAK void mat44_rotx(float theta, mat44 result)
 {
     // Set the matrix to the identity
     memcpy(result, MAT44_IDENT, sizeof(mat44));
@@ -149,7 +159,7 @@ void mat44_rotx(float theta, mat44 result)
 }
 
 // Matrix for a rotation around the Y axis
-void mat44_roty(float theta, mat44 result)
+UVCLANG_WEAK void mat44_roty(float theta, mat44 result)
 {
     // Set the matrix to the identity
     memcpy(result, MAT44_IDENT, sizeof(mat44));
@@ -167,7 +177,7 @@ void mat44_roty(float theta, mat44 result)
 }
 
 // Transform a 3D point using a 4x4 transformation matrix
-void mat44_transform(mat44 mat, vec3 in, vec3 out)
+UVCLANG_WEAK void mat44_transform(mat44 mat, vec3 in, vec3 out)
 {
     out[0] = mat[0][0] * in[0] + mat[1][0] * in[1] + mat[2][0] * in[2] + mat[3][0];
     out[1] = mat[0][1] * in[0] + mat[1][1] * in[1] + mat[2][1] * in[2] + mat[3][1];
@@ -183,7 +193,7 @@ void mat44_transform(mat44 mat, vec3 in, vec3 out)
     }
 }
 
-void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
+UVCLANG_WEAK void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 {
     vec3 forward;
     vec3 right;
@@ -238,7 +248,7 @@ void lookat(vec3 eye, vec3 target, vec3 up, mat44 result)
 // Z values between [near, far] get projected into [-1, 1]
 // Points behind the near plane should be discarded (clipped) ahead of time.
 //
-void perspective(float fovy, float aspect, float near, float far, mat44 result)
+UVCLANG_WEAK void perspective(float fovy, float aspect, float near, float far, mat44 result)
 {
     float f = 1.0f / tanf(fovy * 0.5f);
     float nf = 1.0f / (near - far);

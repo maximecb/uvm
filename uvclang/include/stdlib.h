@@ -26,12 +26,23 @@
 // We define RAND_MAX to be the same as INT32_MAX.
 #define RAND_MAX 0x7FFFFFFF
 
-int abs(int n)
+// Every definition below (functions and the allocator/RNG state they own) carries
+// weak linkage (UVCLANG_WEAK) so this header can be #included from any number of
+// translation units without producing duplicate-symbol errors when they are
+// linked together: LLVM keeps a single copy of each, so the allocator and RNG
+// stay a single shared instance across the program. No per-file "implementation"
+// opt-in is needed; in a single-translation-unit build the attribute has no
+// effect and uvclang ignores it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
+UVCLANG_WEAK int abs(int n)
 {
     return n < 0 ? -n : n;
 }
 
-long labs(long n)
+UVCLANG_WEAK long labs(long n)
 {
     return n < 0 ? -n : n;
 }
@@ -41,14 +52,14 @@ long labs(long n)
 // function so &exit and standard usage both work. The status is truncated to 8
 // bits by the syscall, matching a native process exit code (status & 0xFF).
 #undef exit
-void exit(int status)
+UVCLANG_WEAK void exit(int status)
 {
     __uvm_exit((int8_t)status);
     __builtin_unreachable();
 }
 
 // Convert a long to a string in the given base (2..16). Returns `str`.
-char *ltoa(long value, char *str, int base)
+UVCLANG_WEAK char *ltoa(long value, char *str, int base)
 {
     assert(base >= 2 && base <= 16);
 
@@ -88,7 +99,7 @@ char *ltoa(long value, char *str, int base)
 }
 
 // Convert an int to a string in the given base (2..16). Returns `str`.
-char *itoa(int value, char *str, int base)
+UVCLANG_WEAK char *itoa(int value, char *str, int base)
 {
     return ltoa((long)value, str, base);
 }
@@ -102,7 +113,7 @@ char *itoa(int value, char *str, int base)
 // digits are converted it is set to `str`. On overflow the result saturates to
 // LONG_MAX / LONG_MIN (standard strtol also sets errno=ERANGE, which this
 // freestanding build has no errno for — only the clamped return value matches).
-long strtol(const char *str, char **endptr, int base)
+UVCLANG_WEAK long strtol(const char *str, char **endptr, int base)
 {
     const char *s = str;
 
@@ -170,7 +181,7 @@ long strtol(const char *str, char **endptr, int base)
 
 // atoi is defined by the standard as (int)strtol(str, NULL, 10) apart from
 // error handling (overflow is undefined, so it need not saturate).
-int atoi(const char *str)
+UVCLANG_WEAK int atoi(const char *str)
 {
     return (int)strtol(str, NULL, 10);
 }
@@ -180,16 +191,16 @@ int atoi(const char *str)
 // Easy, Spectrally Good Multipliers for Congruential Pseudorandom Number
 // Generators" by Steele & Vigna:  x_n = (a * x_{n-1}) mod 2^64, a below. The
 // state has 64 bits and the seed must be odd.
-unsigned long __uvclang_rand_state = 1337;
+UVCLANG_WEAK unsigned long __uvclang_rand_state = 1337;
 
-int rand(void)
+UVCLANG_WEAK int rand(void)
 {
     __uvclang_rand_state = 0xf1357aea2e62a9c5UL * __uvclang_rand_state;
     // Use the upper 31 bits of the state only.
     return (int)(__uvclang_rand_state >> 33);
 }
 
-void srand(unsigned int seed)
+UVCLANG_WEAK void srand(unsigned int seed)
 {
     // The seed must be odd, so force the lowest bit to 1.
     __uvclang_rand_state = ((unsigned long)seed << 1) + 1;
@@ -205,10 +216,10 @@ void srand(unsigned int seed)
 #define __uvclang_align_up(x, n) \
     (((uint64_t)(x) + ((uint64_t)(n) - 1)) & ~((uint64_t)(n) - 1))
 
-uint64_t __uvclang_heap_size = 0;   // current heap size in bytes
-uint8_t *__uvclang_next_alloc = 0;  // bump pointer into the heap
+UVCLANG_WEAK uint64_t __uvclang_heap_size = 0;   // current heap size in bytes
+UVCLANG_WEAK uint8_t *__uvclang_next_alloc = 0;  // bump pointer into the heap
 
-void *malloc(size_t size)
+UVCLANG_WEAK void *malloc(size_t size)
 {
     // On the first allocation, start the bump pointer at the top of the heap.
     if (__uvclang_next_alloc == 0)
@@ -232,7 +243,7 @@ void *malloc(size_t size)
     return (void *)block_ptr;
 }
 
-void free(void *ptr)
+UVCLANG_WEAK void free(void *ptr)
 {
     if (ptr == NULL)
         return;

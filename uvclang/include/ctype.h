@@ -6,7 +6,17 @@
 // header is used ONLY for the UVM build (clang with -Iuvclang/include); the
 // native reference build uses the platform's libc.
 
-int isalnum(int c)
+// Every definition below carries weak linkage (UVCLANG_WEAK). That lets this
+// header be #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). It needs no per-file "implementation" opt-in, and in a
+// single-translation-unit build (all uvclang builds today) it has no effect --
+// uvclang parses and ignores the linkage attribute.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
+UVCLANG_WEAK int isalnum(int c)
 {
     return (
         (c >= 'a' && c <= 'z') ||
@@ -17,12 +27,12 @@ int isalnum(int c)
 
 // Check if c is a printable character
 // Note that this includes spaces, but excludes \t, \r and \n
-int isprint(int c)
+UVCLANG_WEAK int isprint(int c)
 {
     return (c >= 0x20 && c <= 0x7E);
 }
 
-int isspace(int c)
+UVCLANG_WEAK int isspace(int c)
 {
     return (
         c == '\t'   || // 0x09
@@ -34,22 +44,22 @@ int isspace(int c)
     );
 }
 
-int islower(int c)
+UVCLANG_WEAK int islower(int c)
 {
     return (c >= 'a' && c <= 'z');
 }
 
-int isupper(int c)
+UVCLANG_WEAK int isupper(int c)
 {
     return (c >= 'A' && c <= 'Z');
 }
 
-int isdigit(int c)
+UVCLANG_WEAK int isdigit(int c)
 {
     return (c >= '0' && c <= '9');
 }
 
-int isalpha(int c)
+UVCLANG_WEAK int isalpha(int c)
 {
     return (
         (c >= 'a' && c <= 'z') ||
@@ -58,18 +68,18 @@ int isalpha(int c)
 }
 
 // Control characters: 0x00-0x1F and DEL (0x7F).
-int iscntrl(int c)
+UVCLANG_WEAK int iscntrl(int c)
 {
     return (c >= 0x00 && c <= 0x1F) || c == 0x7F;
 }
 
 // Any printable character except space (i.e. isprint minus 0x20).
-int isgraph(int c)
+UVCLANG_WEAK int isgraph(int c)
 {
     return (c >= 0x21 && c <= 0x7E);
 }
 
-int isxdigit(int c)
+UVCLANG_WEAK int isxdigit(int c)
 {
     return (
         (c >= '0' && c <= '9') ||
@@ -79,18 +89,18 @@ int isxdigit(int c)
 }
 
 // Blank characters used to separate words: space and horizontal tab.
-int isblank(int c)
+UVCLANG_WEAK int isblank(int c)
 {
     return (c == ' ' || c == '\t');
 }
 
 // Printable, but neither a space nor alphanumeric.
-int ispunct(int c)
+UVCLANG_WEAK int ispunct(int c)
 {
     return isgraph(c) && !isalnum(c);
 }
 
-int tolower(int ch)
+UVCLANG_WEAK int tolower(int ch)
 {
     if (isupper(ch))
     {
@@ -100,7 +110,7 @@ int tolower(int ch)
     return ch;
 }
 
-int toupper(int ch)
+UVCLANG_WEAK int toupper(int ch)
 {
     if (islower(ch))
     {

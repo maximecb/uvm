@@ -3,7 +3,6 @@
 // so they use a tolerance; a volatile seed keeps -O2 from const-folding calls away.
 #include <assert.h>
 #include <string.h>
-#define UVM_MUSIC_IMPLEMENTATION
 #include <uvm/music.h>
 
 static int approx(float a, float b) { return fabsf(a - b) < 1e-2f; }

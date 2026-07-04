@@ -15,6 +15,16 @@
 #include <uvm/syscalls.h>   // memset32
 #include <uvm/utils.h>
 
+// The functions below carry weak linkage (UVCLANG_WEAK) so this header can be
+// #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). No per-file "implementation" opt-in is needed; in a
+// single-translation-unit build the attribute has no effect and uvclang ignores
+// it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 #define COLOR_BLACK     0xFF000000
 #define COLOR_WHITE     0xFFFFFFFF
 #define COLOR_GREY      0xFF808080
@@ -34,7 +44,7 @@
     (((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
 // Fill a rectangular area with a given color.
-void fill_rect(
+UVCLANG_WEAK void fill_rect(
     uint32_t* fb,
     uint32_t fb_width,
     uint32_t fb_height,
@@ -66,7 +76,7 @@ void fill_rect(
 
 // Draw a line using Bresenham's algorithm.
 // This function will panic if coordinates are outside of the viewport.
-void draw_line(
+UVCLANG_WEAK void draw_line(
     uint32_t* fb,
     uint32_t fb_width,
     uint32_t fb_height,
@@ -142,7 +152,7 @@ void draw_line(
 
 // Draw a line using Bresenham's algorithm, but also clip the input coordinates
 // so they are inside the viewport first.
-void draw_line_clipped(
+UVCLANG_WEAK void draw_line_clipped(
     uint32_t* fb,
     uint32_t fb_width,
     uint32_t fb_height,

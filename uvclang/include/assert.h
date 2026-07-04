@@ -18,6 +18,15 @@
 
 #include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_i64 / __uvm_print_endl / __uvm_exit
 
+// The failure handler carries weak linkage (UVCLANG_WEAK) so this header can be
+// included from any number of translation units without producing a
+// duplicate-symbol error when they are linked together (LLVM keeps a single
+// copy). No per-file "implementation" opt-in is needed; in a single-translation-
+// unit build the attribute has no effect and uvclang ignores it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 #ifdef NDEBUG
 
 #define assert(ignore) ((void)0)
@@ -26,7 +35,7 @@
 
 // Report a failed assertion and terminate. Kept out of line so the assert()
 // macro expands to a cheap branch on the common (passing) path.
-void __uvclang_assert_fail(const char *expr, const char *file, int line)
+UVCLANG_WEAK void __uvclang_assert_fail(const char *expr, const char *file, int line)
 {
     __uvm_print_str("assertion failed: ");
     __uvm_print_str(expr);

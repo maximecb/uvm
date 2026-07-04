@@ -1,6 +1,19 @@
 #ifndef __UVM_MUSIC_H__
 #define __UVM_MUSIC_H__
 
+#include <assert.h>
+#include <math.h>
+
+// The definitions with storage below carry weak linkage (UVCLANG_WEAK) so this
+// header can be #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). No per-file "implementation" opt-in is needed; in a
+// single-translation-unit build the attribute has no effect and uvclang ignores
+// it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 // MIDI clock pulses per quarter note
 #define MIDI_CLOCK_PPQ 24
 
@@ -26,21 +39,7 @@
 #define C4_NOTE_NO 60
 
 // Mapping from pitch classes to note names
-extern const char* const PC_NOTE_NAME[12];
-
-// Get the frequency for a note
-// offset is detuning offset in cents
-float pc_to_freq(unsigned int note_no, float offset);
-
-// The definitions with storage live behind this guard so the header can be
-// included by any number of translation units. Exactly one of them must
-// #define UVM_MUSIC_IMPLEMENTATION before including this header.
-#ifdef UVM_MUSIC_IMPLEMENTATION
-
-#include <assert.h>
-#include <math.h>
-
-const char* const PC_NOTE_NAME[12] = {
+UVCLANG_WEAK const char* const PC_NOTE_NAME[12] = {
     "C",    // 0
     "C#",   // 1
     "D",    // 2
@@ -55,7 +54,9 @@ const char* const PC_NOTE_NAME[12] = {
     "B"     // 11
 };
 
-float pc_to_freq(unsigned int note_no, float offset)
+// Get the frequency for a note
+// offset is detuning offset in cents
+UVCLANG_WEAK float pc_to_freq(unsigned int note_no, float offset)
 {
     assert(note_no < MIDI_NUM_NOTES);
 
@@ -71,7 +72,5 @@ float pc_to_freq(unsigned int note_no, float offset)
         note_exp + offset_exp
     );
 }
-
-#endif // UVM_MUSIC_IMPLEMENTATION
 
 #endif

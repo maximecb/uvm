@@ -13,6 +13,16 @@
 #include <stdint.h>
 #include <uvm/syscalls.h>
 
+// The event loop and its scratch event carry weak linkage (UVCLANG_WEAK) so this
+// header can be #included from any number of translation units without producing
+// duplicate-symbol errors when they are linked together (LLVM keeps a single
+// copy of each). No per-file "implementation" opt-in is needed; in a
+// single-translation-unit build the attribute has no effect and uvclang ignores
+// it.
+#ifndef UVCLANG_WEAK
+#define UVCLANG_WEAK __attribute__((weak))
+#endif
+
 typedef struct
 {
     uint16_t kind;
@@ -25,12 +35,12 @@ typedef struct
 } Event;
 
 // Scratch event, filled in by window_poll_event.
-Event __event__;
+UVCLANG_WEAK Event __event__;
 
 // Simple event loop that tries to update rendering at a fixed rate until the
 // user closes the window or presses the escape key. `update_fn` is a pointer to
 // a nullary `void update(void)` callback that renders one frame.
-void anim_event_loop(uint64_t max_fps, void* update_fn)
+UVCLANG_WEAK void anim_event_loop(uint64_t max_fps, void* update_fn)
 {
     assert(max_fps > 0);
 
