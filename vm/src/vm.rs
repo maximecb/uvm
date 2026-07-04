@@ -247,6 +247,10 @@ pub enum Op
     i64_to_f32,
     f32_to_i32,
 
+    // Float/float conversion
+    f32_to_f64,
+    f64_to_f32,
+
     // Load a value at a given adress
     // store (addr)
     load_u8,
@@ -414,6 +418,12 @@ impl Value
         let Value(val) = *self;
         f32::from_bits(val as u32)
     }
+
+    #[inline(always)]
+    pub fn as_f64(&self) -> f64 {
+        let Value(val) = *self;
+        f64::from_bits(val)
+    }
 }
 
 impl From<bool> for Value {
@@ -483,6 +493,13 @@ impl From<f32> for Value {
     #[inline(always)]
     fn from(val: f32) -> Self {
         Value(val.to_bits() as u64)
+    }
+}
+
+impl From<f64> for Value {
+    #[inline(always)]
+    fn from(val: f64) -> Self {
+        Value(val.to_bits())
     }
 }
 
@@ -1633,6 +1650,20 @@ impl Thread
                     self.push(v.as_f32() as i32);
                 }
 
+                // Widening conversion, exact (no rounding needed)
+                Op::f32_to_f64 => {
+                    let v = self.pop();
+                    self.push(v.as_f32() as f64);
+                }
+
+                // Narrowing conversion, follows Rust semantics:
+                // - Round ties to even
+                // - Never panics
+                Op::f64_to_f32 => {
+                    let v = self.pop();
+                    self.push(v.as_f64() as f32);
+                }
+
                 // Note: load/store accept unaligned addresses
                 Op::load_u8 => {
                     let addr = self.pop().as_usize();
@@ -2086,7 +2117,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 120);
+        assert!(Op::ret as usize <= 121);
     }
 
     #[test]
@@ -2163,6 +2194,19 @@ mod tests
     fn test_floats()
     {
         eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; ret;", 1);
+    }
+
+    #[test]
+    fn test_float_conv()
+    {
+        // Widening produces the expected f64 bit pattern (1.5 == 0x3FF8000000000000)
+        eval_i64("push_f32 1.5; f32_to_f64; push_u64 0x3FF8000000000000; eq_u64; ret;", 1);
+
+        // Round-trip through f64 is exact for values representable in f32
+        eval_i64("push_f32 3.5; f32_to_f64; f64_to_f32; push_f32 3.5; eq_u64; ret;", 1);
+
+        // Narrowing rounds ties to even (2^24 + 1 is not representable in f32)
+        eval_i64("push_u64 0x4170000010000000; f64_to_f32; push_f32 16777216.0; eq_u64; ret;", 1);
     }
 
     #[test]
