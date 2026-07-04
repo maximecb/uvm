@@ -31,8 +31,9 @@
 // Any other unsupported specifier is echoed verbatim and its argument left
 // unconsumed — correct only if no further integer conversions follow it.
 
+#include <stddef.h>         // size_t, NULL (from clang's freestanding header)
 #include <stdarg.h>
-#include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar macros
+#include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar / file_* macros
 
 #define EOF (-1)
 
@@ -432,6 +433,181 @@ int sprintf(char *buf, const char *fmt, ...)
     int n = vsnprintf(buf, (unsigned long)-1, fmt, ap);
     va_end(ap);
     return n;
+}
+
+// --- File streams (FILE*) --------------------------------------------------
+//
+// UVM has no buffered stdio, so these are thin, unbuffered wrappers over the
+// file_* syscalls in <uvm/syscalls.h>. A FILE holds the UVM file handle plus
+// the sticky end-of-file / error indicators reported by feof()/ferror().
+//
+// Streams are handed out from a small fixed pool rather than malloc: fclose()
+// can then return a slot for reuse (the <stdlib.h> bump allocator never frees),
+// and file I/O works without pulling in the allocator. FOPEN_MAX caps the
+// number of simultaneously open streams.
+//
+// All access is binary: a 'b' in the mode string is accepted and ignored, which
+// matches the byte-exact (no newline translation) semantics of the UVM file
+// syscalls. Since native libc opened in binary mode behaves identically, the
+// read/write/seek/tell paths are checked differentially by tests/file_io.c.
+
+#ifndef SEEK_SET
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+#endif
+
+#define FOPEN_MAX 32
+
+typedef struct {
+    uint64_t __handle;   // UVM file handle; 0 marks a free pool slot
+    int __eof;           // sticky end-of-file indicator (feof)
+    int __error;         // sticky I/O error indicator (ferror)
+} FILE;
+
+static FILE __uvclang_files[FOPEN_MAX];
+
+// Open `path` per the C mode string. The first character selects the primary
+// mode (r/w/a); a '+' anywhere adds the opposite access; 'b' is ignored (all
+// UVM I/O is binary). Returns a stream, or NULL on a bad mode, a rejected/absent
+// path, or an exhausted stream pool.
+FILE *fopen(const char *path, const char *mode)
+{
+    uint64_t flags;
+    int append = 0;
+    switch (mode[0]) {
+        case 'r': flags = OPEN_READ; break;
+        case 'w': flags = OPEN_WRITE | OPEN_CREATE | OPEN_TRUNC; break;
+        case 'a': flags = OPEN_WRITE | OPEN_CREATE; append = 1; break;
+        default:  return NULL;
+    }
+    for (int i = 1; mode[i] != '\0'; i++)
+        if (mode[i] == '+')
+            flags |= OPEN_READ | OPEN_WRITE;
+
+    uint64_t handle = file_open(path, flags);
+    if (handle == 0)
+        return NULL;
+
+    // Claim a free slot (handle == 0). Fail closed if the pool is full.
+    FILE *fp = NULL;
+    for (int i = 0; i < FOPEN_MAX; i++) {
+        if (__uvclang_files[i].__handle == 0) {
+            fp = &__uvclang_files[i];
+            break;
+        }
+    }
+    if (fp == NULL) {
+        file_close(handle);
+        return NULL;
+    }
+
+    fp->__handle = handle;
+    fp->__eof = 0;
+    fp->__error = 0;
+
+    // Append mode starts positioned at end of file.
+    if (append)
+        file_seek(handle, file_size(handle));
+
+    return fp;
+}
+
+// Close `stream` and return its pool slot. Returns 0 on success, EOF if the
+// stream is NULL.
+int fclose(FILE *stream)
+{
+    if (stream == NULL)
+        return EOF;
+    file_close(stream->__handle);
+    stream->__handle = 0;   // release the slot back to the pool
+    return 0;
+}
+
+// Read up to `nmemb` elements of `size` bytes into `ptr`. Loops over file_read
+// so a short syscall read (fewer bytes than asked, without EOF) still fills the
+// request. Returns the number of *complete* elements read; a partial final
+// element (at EOF) is not counted, matching C fread. Sets the EOF/error flag on
+// a short read / failure.
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    if (size == 0 || nmemb == 0)
+        return 0;
+    size_t total = size * nmemb;
+    uint8_t *p = (uint8_t *)ptr;
+    size_t got = 0;
+    while (got < total) {
+        long n = file_read(stream->__handle, p + got, total - got);
+        if (n < 0) { stream->__error = 1; break; }
+        if (n == 0) { stream->__eof = 1; break; }
+        got += (size_t)n;
+    }
+    return got / size;
+}
+
+// Write `nmemb` elements of `size` bytes from `ptr`. Loops over file_write to
+// push out any bytes a single syscall left behind. Returns the number of
+// complete elements written; sets the error flag on failure.
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    if (size == 0 || nmemb == 0)
+        return 0;
+    size_t total = size * nmemb;
+    const uint8_t *p = (const uint8_t *)ptr;
+    size_t put = 0;
+    while (put < total) {
+        long n = file_write(stream->__handle, p + put, total - put);
+        if (n < 0) { stream->__error = 1; break; }
+        if (n == 0) break;
+        put += (size_t)n;
+    }
+    return put / size;
+}
+
+// Reposition the stream. UVM's file_seek is absolute-only, so SEEK_CUR/SEEK_END
+// are resolved against file_tell/file_size here. A successful seek clears the
+// end-of-file indicator (C semantics). Returns 0 on success, -1 on a bad
+// `whence` or a resulting negative offset.
+int fseek(FILE *stream, long offset, int whence)
+{
+    long base;
+    switch (whence) {
+        case SEEK_SET: base = 0; break;
+        case SEEK_CUR: base = (long)file_tell(stream->__handle); break;
+        case SEEK_END: base = (long)file_size(stream->__handle); break;
+        default:       return -1;
+    }
+    long pos = base + offset;
+    if (pos < 0)
+        return -1;
+    file_seek(stream->__handle, (uint64_t)pos);
+    stream->__eof = 0;
+    return 0;
+}
+
+// Current byte offset from the start of the file, or -1 on error.
+long ftell(FILE *stream)
+{
+    return (long)file_tell(stream->__handle);
+}
+
+// Nonzero once a read has hit end of file (cleared by fseek).
+int feof(FILE *stream)
+{
+    return stream->__eof;
+}
+
+// Nonzero once an I/O error has occurred on the stream.
+int ferror(FILE *stream)
+{
+    return stream->__error;
+}
+
+// Clear the end-of-file and error indicators.
+void clearerr(FILE *stream)
+{
+    stream->__eof = 0;
+    stream->__error = 0;
 }
 
 #endif // __STDIO_H__
