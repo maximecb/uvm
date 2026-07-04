@@ -541,9 +541,29 @@ impl<'a> Codegen<'a>
                 // re-truncate to restore the zero-extended width invariant.
                 self.emit_trunc_to(tw);
             }
-            // float <-> double: UVM has no f64, so these can't be lowered.
-            ConvOp::FPExt | ConvOp::FPTrunc => {
-                return Err("double (f64) is not supported by UVM; only float (f32)".into());
+            // float <-> double. UVM has no f64 *arithmetic*, but it can widen
+            // and narrow between the two formats, which is enough to move a
+            // `double` value through a `float` (used e.g. by printf's %f, which
+            // narrows a double vararg to a float to format it). The result of a
+            // widen is a 64-bit f64 pattern we can only move/store/narrow again.
+            ConvOp::FPExt => {
+                // float -> double (exact widening).
+                self.push_value(ctx, val, 32)?;
+                self.line("f32_to_f64;");
+            }
+            ConvOp::FPTrunc => {
+                // double -> float (narrowing, round to nearest even).
+                self.push_value(ctx, val, 64)?;
+                self.line("f64_to_f32;");
+            }
+            // bitcast is representation-preserving: a float/double occupies the
+            // low bits of the slot exactly like the same-width integer, so this
+            // is a no-op beyond pushing the operand at its natural width. (The
+            // int<->int / ptr<->int forms would also work via the width path
+            // below, but handling every bitcast here lets float<->int through.)
+            ConvOp::BitCast => {
+                let w = scalar_width(from_ty)?;
+                self.push_value(ctx, val, w)?;
             }
             // integer/pointer width conversions
             _ => {

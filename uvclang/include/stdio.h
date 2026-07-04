@@ -11,18 +11,25 @@
 //
 // printf() is built on putchar via <stdarg.h> (clang lowers the variadic callee
 // to the x86_64 va_list walk uvclang emulates — see gen_va_start / variadic.c).
-// Supported conversions: %d %i %u %x %X %o %c %s %p %%, with flags (- 0 + space
-// #), field width and precision (both literal and `*`), and the `l`/`ll`
-// (tolerated `h`/`hh`/`z`/`t`/`j`) length modifiers — matched byte-for-byte
-// against native libc by tests/printf.c.
+// Supported conversions: %d %i %u %x %X %o %c %s %p %% and %f/%F, with flags
+// (- 0 + space #), field width and precision (both literal and `*`), and the
+// `l`/`ll` (tolerated `h`/`hh`/`z`/`t`/`j`) length modifiers. The integer/string
+// conversions are matched byte-for-byte against native libc by tests/printf.c.
 //
-// NOT supported: floating point (%f/%e/%g). A float vararg is promoted to double
-// and passed in the x86_64 XMM save area, which uvclang's va_start does not
-// build; worse, since uvclang lumps every vararg into one save area, a double
-// arg also desyncs the integer va_arg walk for any args after it. So an
-// unsupported specifier is echoed verbatim and its argument left unconsumed —
-// correct only if no further integer conversions follow it. (Lifting this needs
-// FP-vararg support in gen_va_start.)
+// %f caveat: a `%f` argument is a `double`, but UVM has no f64 arithmetic and
+// uvclang doesn't model the x86_64 XMM vararg save area. Two things make it work
+// anyway: (1) uvclang packs every vararg into one linear 8-byte-slot buffer, so
+// the double's raw bits sit exactly where an *integer* va_arg would read them —
+// we pull them out with `va_arg(ap, unsigned long)`, keeping the walk in sync;
+// (2) we narrow the double to a 32-bit float (via the UVM f64_to_f32 insn) and
+// format that. So `%f` output is only float-accurate (~7 significant digits) and
+// does NOT match native libc's double formatting byte-for-byte — it is tested
+// tolerantly (format, parse back, compare with a tolerance) in tests/printf_float.c,
+// never by exact-string comparison. Very large magnitudes (whose integer part
+// exceeds 2^31) and %e/%g are not supported.
+//
+// Any other unsupported specifier is echoed verbatim and its argument left
+// unconsumed — correct only if no further integer conversions follow it.
 
 #include <stdarg.h>
 #include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar macros
@@ -167,6 +174,85 @@ static void __pf_emit_int(__pf_sink *o, unsigned long mag, int neg, int base,
         __pf_pad(o, ' ', spad);
 }
 
+// Emit a `%f` conversion from the raw 64-bit pattern `ubits` of the `double`
+// argument. UVM has no f64 arithmetic, so we detect the sign and inf/nan cases
+// straight from the IEEE-754 bit fields, then narrow the finite magnitude to a
+// 32-bit float (f64_to_f32) and produce digits with f32 arithmetic. The result
+// is therefore only float-accurate; see the file header. `upper` selects the
+// INF/NAN spelling for %F.
+static void __pf_emit_float(__pf_sink *o, unsigned long ubits, int width, int prec,
+                            int flags, int upper)
+{
+    if (prec < 0)
+        prec = 6;   // C default precision for %f
+
+    int neg = (int)(ubits >> 63);
+    unsigned expo = (unsigned)((ubits >> 52) & 0x7FF);
+    char sign = neg ? '-' : (flags & __PF_PLUS) ? '+' : (flags & __PF_SPACE) ? ' ' : 0;
+
+    // inf / nan: exponent field is all ones. Mantissa distinguishes them.
+    if (expo == 0x7FF) {
+        const char *s = (ubits & 0xFFFFFFFFFFFFFUL) ? (upper ? "NAN" : "nan")
+                                                    : (upper ? "INF" : "inf");
+        int len = 3 + (sign ? 1 : 0);
+        int pad = width > len ? width - len : 0;
+        if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', pad);
+        if (sign) __pf_put(o, sign);
+        __pf_put(o, s[0]); __pf_put(o, s[1]); __pf_put(o, s[2]);
+        if (flags & __PF_LEFT) __pf_pad(o, ' ', pad);
+        return;
+    }
+
+    // Finite: reinterpret the bits as a double and narrow to a float magnitude.
+    union { unsigned long u; double d; } pun;
+    pun.u = ubits;
+    float val = (float)pun.d;          // f64 -> f32
+    if (val < 0.0f) val = -val;        // magnitude; sign captured above
+
+    // Round half away from zero at the last printed place: bias by 0.5 ulp of
+    // the precision, then truncate each digit. The bias carries into the
+    // integer part on its own, so 0.9999995 -> "1.000000" falls out naturally.
+    float half = 0.5f;
+    for (int i = 0; i < prec; i++)
+        half *= 0.1f;
+    val += half;
+
+    // Integer part (32-bit: magnitudes past 2^31 are beyond a float's exact
+    // range anyway — see the header's limitation note).
+    unsigned ipart = (unsigned)val;
+    float frac = val - (float)ipart;
+
+    char id[16];
+    int il = 0;
+    if (ipart == 0)
+        id[il++] = '0';
+    else
+        while (ipart) { id[il++] = (char)('0' + ipart % 10); ipart /= 10; }
+
+    int content = (sign ? 1 : 0) + il + (prec > 0 ? 1 + prec : 0);
+    int zpad = 0;
+    if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
+        zpad = width - content;
+    int spad = (width > content + zpad) ? width - content - zpad : 0;
+
+    if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
+    if (sign) __pf_put(o, sign);
+    __pf_pad(o, '0', zpad);
+    for (int i = il; i > 0; i--)
+        __pf_put(o, id[i - 1]);
+    if (prec > 0) {
+        __pf_put(o, '.');
+        for (int i = 0; i < prec; i++) {
+            frac *= 10.0f;
+            unsigned dig = (unsigned)frac;   // in [0,9]
+            if (dig > 9u) dig = 9u;          // guard against f32 rounding fuzz
+            __pf_put(o, (char)('0' + dig));
+            frac -= (float)dig;
+        }
+    }
+    if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+}
+
 // Read a base-10 field (width/precision) from the format string, advancing *pi.
 static int __pf_num(const char *fmt, int *pi)
 {
@@ -278,6 +364,14 @@ static void __pf_format(__pf_sink *o, const char *fmt, va_list ap)
                 __pf_emit_int(o, (unsigned long)va_arg(ap, void *), 0, 16, 0, 0, -1, 0);
                 break;
             }
+            case 'f':
+            case 'F':
+                // A `double` arg. We can't use the XMM save area, but its 64 bits
+                // sit in the linear vararg buffer where an integer va_arg reads,
+                // so pull them out through the GP path (this also keeps the walk
+                // in sync for any following conversions). See the file header.
+                __pf_emit_float(o, va_arg(ap, unsigned long), width, prec, flags, c == 'F');
+                break;
             default:
                 // Unknown/unsupported specifier (e.g. %f): echo it verbatim and
                 // do NOT consume a vararg — we couldn't interpret its slot.
