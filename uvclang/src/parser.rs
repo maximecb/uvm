@@ -300,6 +300,10 @@ impl Parser
                     let kind = self.parse_store()?;
                     insts.push(Inst { dest: None, kind });
                 }
+                "fence" => {
+                    let kind = self.parse_fence()?;
+                    insts.push(Inst { dest: None, kind });
+                }
                 "call" => {
                     let kind = self.parse_call()?;
                     insts.push(Inst { dest: None, kind });
@@ -366,6 +370,9 @@ impl Parser
             "alloca" => self.parse_alloca(),
             "freeze" => self.parse_freeze(),
             "call" => self.parse_call(),
+            "cmpxchg" => self.parse_cmpxchg(),
+            "atomicrmw" => self.parse_atomicrmw(),
+            "extractvalue" => self.parse_extractvalue(),
             "tail" | "musttail" | "notail" => {
                 self.expect_keyword("call")?;
                 self.parse_call()
@@ -551,25 +558,122 @@ impl Parser
 
     fn parse_load(&mut self) -> Result<InstKind, ParseError>
     {
+        // `load atomic <ty>, ptr <p> <ordering>, align N` reads atomically; the
+        // `atomic` keyword precedes `volatile` in the LLVM grammar.
+        let is_atomic = self.input.match_keyword("atomic")?;
         self.input.match_keyword("volatile")?;
         let ty = self.parse_type()?;
         self.input.expect_token(",")?;
         let _ptr_ty = self.parse_type()?; // ptr
         let ptr = self.parse_value()?;
+        if is_atomic {
+            self.skip_atomic_ordering()?; // one ordering for load
+            self.parse_trailing()?;
+            return Ok(InstKind::AtomicLoad { ty, ptr });
+        }
         let align = self.parse_trailing()?;
         Ok(InstKind::Load { ty, ptr, align })
     }
 
     fn parse_store(&mut self) -> Result<InstKind, ParseError>
     {
+        let is_atomic = self.input.match_keyword("atomic")?;
         self.input.match_keyword("volatile")?;
         let ty = self.parse_type()?;
         let val = self.parse_value()?;
         self.input.expect_token(",")?;
         let _ptr_ty = self.parse_type()?; // ptr
         let ptr = self.parse_value()?;
+        if is_atomic {
+            self.skip_atomic_ordering()?; // one ordering for store
+            self.parse_trailing()?;
+            return Ok(InstKind::AtomicStore { ty, val, ptr });
+        }
         let align = self.parse_trailing()?;
         Ok(InstKind::Store { ty, val, ptr, align })
+    }
+
+    /// `cmpxchg [weak] [volatile] ptr <p>, <ty> <cmp>, <ty> <new> <succ> <fail>`
+    /// The result type is the aggregate `{ <ty>, i1 }` = (value read, success).
+    fn parse_cmpxchg(&mut self) -> Result<InstKind, ParseError>
+    {
+        self.input.match_keyword("weak")?;
+        self.input.match_keyword("volatile")?;
+        let _ptr_ty = self.parse_type()?; // ptr
+        let ptr = self.parse_value()?;
+        self.input.expect_token(",")?;
+        let ty = self.parse_type()?;
+        let cmp = self.parse_value()?;
+        self.input.expect_token(",")?;
+        let _new_ty = self.parse_type()?;
+        let new = self.parse_value()?;
+        self.skip_atomic_ordering()?; // success ordering
+        self.skip_atomic_ordering()?; // failure ordering
+        self.parse_trailing()?;
+        Ok(InstKind::Cmpxchg { ty, ptr, cmp, new })
+    }
+
+    /// `atomicrmw [volatile] <op> ptr <p>, <ty> <val> <ordering>`
+    fn parse_atomicrmw(&mut self) -> Result<InstKind, ParseError>
+    {
+        self.input.match_keyword("volatile")?;
+        let op_word = self.read_word();
+        let op = match op_word.as_str() {
+            "xchg" => RmwOp::Xchg,
+            "add" => RmwOp::Add,
+            "sub" => RmwOp::Sub,
+            "and" => RmwOp::And,
+            "or" => RmwOp::Or,
+            "xor" => RmwOp::Xor,
+            "nand" => RmwOp::Nand,
+            other => return self
+                .input
+                .parse_error(&format!("unsupported atomicrmw operation '{}'", other)),
+        };
+        let _ptr_ty = self.parse_type()?; // ptr
+        let ptr = self.parse_value()?;
+        self.input.expect_token(",")?;
+        let ty = self.parse_type()?;
+        let val = self.parse_value()?;
+        self.skip_atomic_ordering()?;
+        self.parse_trailing()?;
+        Ok(InstKind::AtomicRmw { op, ty, ptr, val })
+    }
+
+    /// `extractvalue <agg-ty> <agg>, <index>` (single index; used for cmpxchg).
+    fn parse_extractvalue(&mut self) -> Result<InstKind, ParseError>
+    {
+        let _agg_ty = self.parse_type()?; // e.g. { i64, i1 }
+        let agg = self.parse_value()?;
+        self.input.expect_token(",")?;
+        self.input.eat_ws()?;
+        let index = self.input.parse_int(10)? as u32;
+        self.parse_trailing()?;
+        Ok(InstKind::ExtractValue { agg, index })
+    }
+
+    /// `fence [syncscope("...")] <ordering>` — parsed and dropped.
+    fn parse_fence(&mut self) -> Result<InstKind, ParseError>
+    {
+        self.skip_atomic_ordering()?;
+        self.parse_trailing()?;
+        Ok(InstKind::Fence)
+    }
+
+    /// Consume an optional `syncscope("...")` and a single memory-ordering
+    /// keyword. Ordering is advisory to the back-end (the UVM atomic ops fix
+    /// their own acquire/release ordering), so an absent keyword is tolerated.
+    fn skip_atomic_ordering(&mut self) -> Result<(), ParseError>
+    {
+        if self.input.match_keyword("syncscope")? {
+            self.skip_parens()?;
+        }
+        for kw in ["seq_cst", "acq_rel", "acquire", "release", "monotonic", "unordered"] {
+            if self.input.match_keyword(kw)? {
+                break;
+            }
+        }
+        Ok(())
     }
 
     fn parse_alloca(&mut self) -> Result<InstKind, ParseError>

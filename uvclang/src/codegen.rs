@@ -163,7 +163,11 @@ impl<'a> Codegen<'a>
             for inst in &bb.insts {
                 if let Some(dest) = &inst.dest {
                     slots.insert(dest.as_str(), num_slots);
-                    num_slots += 1;
+                    // A cmpxchg result is the aggregate { value, i1 }: reserve a
+                    // second slot right after the first so extractvalue can read
+                    // field 0 (old value) at `slot` and field 1 (success) at
+                    // `slot + 1`.
+                    num_slots += if matches!(inst.kind, InstKind::Cmpxchg { .. }) { 2 } else { 1 };
                 }
             }
         }
@@ -342,6 +346,32 @@ impl<'a> Codegen<'a>
             // Phi results are written on the predecessor edges, so the phi
             // instruction itself emits no code.
             InstKind::Phi { .. } => {}
+            InstKind::AtomicLoad { ty, ptr } => {
+                self.require_atomic_width(ty)?;
+                self.push_value(ctx, ptr, 64)?;
+                self.line("atomic_load_u64;");
+                self.store_dest(ctx, inst.dest.as_deref())?;
+            }
+            InstKind::AtomicStore { ty, val, ptr } => {
+                self.require_atomic_width(ty)?;
+                self.push_value(ctx, ptr, 64)?; // address (popped second)
+                self.push_value(ctx, val, 64)?; // value (popped first)
+                self.line("atomic_store_u64;");
+            }
+            InstKind::AtomicRmw { op, ty, ptr, val } => {
+                self.require_atomic_width(ty)?;
+                self.gen_atomicrmw(ctx, *op, ptr, val, inst.dest.as_deref())?;
+            }
+            InstKind::Cmpxchg { ty, ptr, cmp, new } => {
+                self.require_atomic_width(ty)?;
+                self.gen_cmpxchg(ctx, ptr, cmp, new, inst.dest.as_deref())?;
+            }
+            InstKind::ExtractValue { agg, index } => {
+                self.gen_extractvalue(ctx, agg, *index, inst.dest.as_deref())?;
+            }
+            // The UVM atomic ops carry their own ordering, so a standalone
+            // fence needs no code.
+            InstKind::Fence => {}
             other => return Err(format!("codegen: instruction not yet implemented: {}", kind_name(other))),
         }
         Ok(())
@@ -865,6 +895,124 @@ impl<'a> Codegen<'a>
         self.push_value(ctx, fval, w)?;
         self.line(&format!("{}:", l_done));
         // The selected value is left on the stack for store_dest.
+        Ok(())
+    }
+
+    // -- atomics --------------------------------------------------------------
+
+    /// The UVM atomic ops (`atomic_load_u64` / `atomic_store_u64` /
+    /// `atomic_cas_u64`) are all 64 bits wide, so atomics on narrower types
+    /// (e.g. `_Atomic int`) are rejected rather than silently touching the
+    /// adjacent bytes. Use a 64-bit atomic type instead.
+    fn require_atomic_width(&self, ty: &Type) -> Result<(), String>
+    {
+        match self.layout.size_of(ty) {
+            8 => Ok(()),
+            n => Err(format!(
+                "atomic operations are only supported on 64-bit types, got {} ({} bytes)",
+                type_str(ty), n
+            )),
+        }
+    }
+
+    /// Lower `cmpxchg` to a single `atomic_cas_u64`. The CAS pushes the value
+    /// found at the address; the swap succeeded iff that value equals `cmp`.
+    /// The two aggregate fields are written into consecutive local slots:
+    /// `base` (old value) and `base + 1` (success flag), where extractvalue
+    /// reads them from.
+    fn gen_cmpxchg(&mut self, ctx: &FnCtx, ptr: &Value, cmp: &Value, new: &Value, dest: Option<&str>) -> Result<(), String>
+    {
+        let name = dest.ok_or("cmpxchg without result")?;
+        let base = *ctx.slots.get(name).ok_or_else(|| format!("no slot for %{}", name))?;
+
+        // atomic_cas (addr) (cmp) (new) -> pushes the value read
+        self.push_value(ctx, ptr, 64)?;
+        self.push_value(ctx, cmp, 64)?;
+        self.push_value(ctx, new, 64)?;
+        self.line("atomic_cas_u64;");
+        self.line("dup;");
+        self.line(&format!("set_local {};", base)); // field 0 = old value
+        // success = (old == cmp)
+        self.push_value(ctx, cmp, 64)?;
+        self.line("eq_u64;");
+        self.line(&format!("set_local {};", base + 1)); // field 1 = success
+        Ok(())
+    }
+
+    /// Read one field of a cmpxchg aggregate. Field 0 is the old value, field 1
+    /// is the success flag; both live in the slots reserved by gen_cmpxchg.
+    fn gen_extractvalue(&mut self, ctx: &FnCtx, agg: &Value, index: u32, dest: Option<&str>) -> Result<(), String>
+    {
+        let agg_name = match agg {
+            Value::Local(n) => n,
+            _ => return Err("extractvalue is only supported on cmpxchg results".into()),
+        };
+        let base = *ctx.slots.get(agg_name.as_str())
+            .ok_or_else(|| format!("extractvalue references unknown value %{}", agg_name))?;
+        let slot = match index {
+            0 | 1 => base + index as usize,
+            _ => return Err(format!(
+                "extractvalue index {} out of range (only cmpxchg aggregates are supported)", index)),
+        };
+        self.line(&format!("get_local {};", slot));
+        self.store_dest(ctx, dest)
+    }
+
+    /// Lower `atomicrmw` to a compare-and-swap retry loop. The result (the old
+    /// value, held in the result slot) is what stays there when the CAS wins:
+    ///
+    /// ```text
+    /// retry:  old  = atomic_load(ptr)
+    ///         prev = atomic_cas(ptr, old, op(old, val))
+    ///         if prev != old goto retry     # someone else won; try again
+    /// ```
+    fn gen_atomicrmw(&mut self, ctx: &FnCtx, op: RmwOp, ptr: &Value, val: &Value, dest: Option<&str>) -> Result<(), String>
+    {
+        let name = dest.ok_or("atomicrmw without result")?;
+        let slot = *ctx.slots.get(name).ok_or_else(|| format!("no slot for %{}", name))?;
+        let retry = self.fresh_label("armw_retry");
+
+        self.line(&format!("{}:", retry));
+        // old = atomic_load(ptr); keep it in the result slot
+        self.push_value(ctx, ptr, 64)?;
+        self.line("atomic_load_u64;");
+        self.line(&format!("set_local {};", slot));
+        // atomic_cas (addr) (cmp = old) (new = op(old, val)) -> pushes prev
+        self.push_value(ctx, ptr, 64)?;
+        self.line(&format!("get_local {};", slot)); // cmp = old
+        self.emit_rmw_newval(ctx, op, slot, val)?;  // push op(old, val)
+        self.line("atomic_cas_u64;");
+        // retry while prev != old (the CAS lost a race)
+        self.line(&format!("get_local {};", slot));
+        self.line("eq_u64;");
+        self.line(&format!("jz {};", retry));
+        // The result (old value) is already in `slot`.
+        Ok(())
+    }
+
+    /// Push `op(old, val)` given `old` in local `slot`. `xchg` ignores the old
+    /// value; `nand` is `~(old & val)`, realized as an xor with all-ones.
+    fn emit_rmw_newval(&mut self, ctx: &FnCtx, op: RmwOp, slot: usize, val: &Value) -> Result<(), String>
+    {
+        let bin = |g: &mut Self, mnem: &str, g_val: &Value| -> Result<(), String> {
+            g.line(&format!("get_local {};", slot));
+            g.push_value(ctx, g_val, 64)?;
+            g.line(&format!("{};", mnem));
+            Ok(())
+        };
+        match op {
+            RmwOp::Xchg => self.push_value(ctx, val, 64)?,
+            RmwOp::Add => bin(self, "add_u64", val)?,
+            RmwOp::Sub => bin(self, "sub_u64", val)?,
+            RmwOp::And => bin(self, "and_u64", val)?,
+            RmwOp::Or => bin(self, "or_u64", val)?,
+            RmwOp::Xor => bin(self, "xor_u64", val)?,
+            RmwOp::Nand => {
+                bin(self, "and_u64", val)?;
+                self.push_int(-1, 64); // ~x == x ^ 0xFFFF_FFFF_FFFF_FFFF
+                self.line("xor_u64;");
+            }
+        }
         Ok(())
     }
 
@@ -1705,6 +1853,12 @@ fn kind_name(k: &InstKind) -> &'static str
         InstKind::Phi { .. } => "phi",
         InstKind::Call { .. } => "call",
         InstKind::Freeze { .. } => "freeze",
+        InstKind::AtomicLoad { .. } => "load atomic",
+        InstKind::AtomicStore { .. } => "store atomic",
+        InstKind::AtomicRmw { .. } => "atomicrmw",
+        InstKind::Cmpxchg { .. } => "cmpxchg",
+        InstKind::ExtractValue { .. } => "extractvalue",
+        InstKind::Fence => "fence",
     }
 }
 

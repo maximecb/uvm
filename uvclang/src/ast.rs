@@ -246,6 +246,32 @@ pub enum InstKind
     },
     /// `freeze <ty> <val>`
     Freeze { ty: Type, val: Value },
+    /// `load atomic <ty>, ptr <ptr> <ordering>` — an atomic load. Only 64-bit
+    /// types are supported (the UVM atomic ops are 64 bits wide).
+    AtomicLoad { ty: Type, ptr: Value },
+    /// `store atomic <ty> <val>, ptr <ptr> <ordering>` — an atomic store.
+    AtomicStore { ty: Type, val: Value, ptr: Value },
+    /// `atomicrmw <op> ptr <ptr>, <ty> <val> <ordering>` — an atomic
+    /// read-modify-write. Lowered to a compare-and-swap retry loop; the result
+    /// is the value read before the update (the "old" value).
+    AtomicRmw { op: RmwOp, ty: Type, ptr: Value, val: Value },
+    /// `cmpxchg [weak] ptr <ptr>, <ty> <cmp>, <ty> <new> <succ> <fail>`.
+    /// Produces the aggregate `{ <ty>, i1 }` = (value read, success flag),
+    /// consumed by `extractvalue`.
+    Cmpxchg { ty: Type, ptr: Value, cmp: Value, new: Value },
+    /// `extractvalue <agg-ty> <agg>, <index>` — read one field of an aggregate.
+    /// Only supported on `cmpxchg` results (index 0 = old value, 1 = success).
+    ExtractValue { agg: Value, index: u32 },
+    /// `fence <ordering>` — a standalone memory fence. The UVM atomic ops carry
+    /// their own acquire/release ordering, so this lowers to no code.
+    Fence,
+}
+
+/// Operation performed by an `atomicrmw` instruction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RmwOp
+{
+    Xchg, Add, Sub, And, Or, Xor, Nand,
 }
 
 #[derive(Debug)]

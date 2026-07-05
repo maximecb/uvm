@@ -194,6 +194,25 @@ instructions at all — so uvclang supports `float` and rejects `double`
 - **`ptrtoint`/`inttoptr`:** no-ops on representation (pointers are 64-bit ints),
   modulo width truncation.
 
+### Atomics (`<stdatomic.h>`, `_Atomic`)
+The UVM ISA has three 64-bit atomic ops — `atomic_load_u64`, `atomic_store_u64`,
+`atomic_cas_u64` (acquire/release) — so atomics are **64-bit only**; an atomic on
+a narrower type (e.g. `_Atomic int`) is a hard codegen error rather than a wider
+access that clobbers adjacent bytes. Use a 64-bit atomic object.
+- **`load atomic` / `store atomic`:** map directly to `atomic_load_u64` /
+  `atomic_store_u64`. Memory-ordering keywords are parsed and dropped (the ops
+  fix their own ordering); `fence` lowers to nothing for the same reason.
+- **`cmpxchg`:** one `atomic_cas_u64`, which pushes the value read. The result is
+  the aggregate `{ value, i1 }`; its two fields are written to consecutive local
+  slots (old value, and `success = (old == cmp)`), and `extractvalue` reads them
+  back. `extractvalue` is supported only on cmpxchg results.
+- **`atomicrmw`** (`xchg`/`add`/`sub`/`and`/`or`/`xor`/`nand`): lowered to a
+  compare-and-swap retry loop; the result is the old value. `max`/`min` are not
+  supported (not part of C11 `atomic_fetch_*`).
+- Validated by `tests/uvm_atomics.c`: single-threaded value semantics plus a
+  multi-threaded counter stress test (atomicrmw and a cmpxchg loop) with no lost
+  updates under contention.
+
 ### Globals & constants
 - Emit each global into `.data` with a label and the right directives; aggregate
   initializers (arrays/structs/`c"..."`/nested/`zeroinitializer`) lower to raw
