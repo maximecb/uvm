@@ -48,5 +48,6 @@ float atanf(float x);
 float sqrtf(float x);
 float fabsf(float x);
 float powf(float x, float y);
+float exp2f(float x);
 
 #endif // __UVCLANG_MATH_H__
