@@ -1762,6 +1762,20 @@ impl<'a> Codegen<'a>
         // Direct ops: sx_i{8,16,32}_i{32,64}. For an intermediate width we
         // sign-extend to 32 or 64 and then truncate.
         let mid = if to <= 32 { 32 } else { 64 };
+        if from == 1 {
+            // Sign-extend a boolean: the i1 is 0 or 1, and the result is 0 or
+            // all-ones (-1) at the target width. Isolate the low bit, then
+            // multiply by an all-ones mask of width `to` (0*mask = 0,
+            // 1*mask = mask = -1 at that width). The product occupies exactly
+            // `to` bits, matching the convention that a width-`to` value has
+            // its upper bits cleared.
+            let mask = if to >= 64 { u64::MAX } else { (1u64 << to) - 1 };
+            self.line("push 1;");
+            self.line(&format!("and_u{};", mid));
+            self.line(&format!("push {};", mask));
+            self.line(&format!("mul_u{};", mid));
+            return Ok(());
+        }
         if (from == 8 || from == 16 || from == 32) && from < mid {
             self.line(&format!("sx_i{}_i{};", from, mid));
             if to < mid {
