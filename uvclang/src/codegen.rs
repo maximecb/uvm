@@ -14,9 +14,18 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use crate::ast::*;
 use crate::layout::Layout;
 
-/// Size in bytes of the stack-alloc region (software stack for `alloca` and
-/// address-taken locals). Emitted as a single `.zero` directive.
+/// Size in bytes of the shared stack-alloc region (software stack for `alloca`
+/// and address-taken locals). Emitted as a single `.zero` directive. This is
+/// the *fallback* stack used by the main thread and by any thread the runtime
+/// spawns for us (e.g. audio callbacks). Threads created through <pthread.h>
+/// instead run on a private, per-thread stack (see STACK_TLS_SLOT).
 const STACK_ALLOC_SIZE: u64 = 8 * 1024 * 1024;
+
+/// Thread-local slot (thread_get/thread_set index) holding a thread's private
+/// alloca stack pointer, or 0 when the thread has none and should fall back to
+/// the shared `__stack_alloc_sp__`. <pthread.h>'s frame-free trampoline
+/// (__uvclang_thread_start) sets this for pthread-created threads.
+const STACK_TLS_SLOT: u8 = 0;
 
 pub struct Codegen<'a>
 {
@@ -136,6 +145,8 @@ impl<'a> Codegen<'a>
         self.line("ret;");
         self.line("");
 
+        self.emit_thread_trampoline();
+
         // Copy out the module reference so the loop doesn't borrow `self`.
         let module = self.module;
         for f in &module.functions {
@@ -144,6 +155,45 @@ impl<'a> Codegen<'a>
             }
         }
         Ok(())
+    }
+
+    /// Emit the frame-free thread entry trampoline referenced by <pthread.h>.
+    ///
+    /// A newly spawned thread starts with no private stack (thread-local slot
+    /// STACK_TLS_SLOT == 0), so the very first function it enters would run on
+    /// the shared fallback stack. To give pthread-created threads a private
+    /// stack, pthread_create hands thread_spawn this trampoline instead of the
+    /// user's start routine, passing a control block:
+    ///
+    ///     struct { void* stack; void* (*start)(void*); void* arg; u64 tid; }
+    ///
+    /// The trampoline installs the block's `stack` as the thread-local stack
+    /// pointer *before* calling `start`, so every frame `start` allocates lands
+    /// on the private stack. It must itself use no `alloca`s (hence it is
+    /// emitted by hand rather than compiled from C): it only reads arg 0 and
+    /// manipulates the operand stack, so it needs no frame of its own and does
+    /// not depend on a stack pointer being set up first.
+    fn emit_thread_trampoline(&mut self)
+    {
+        self.line("# frame-free thread entry trampoline for <pthread.h>");
+        self.line("# arg 0 = control block { stack@0, start@8, arg@16, tid@24 }");
+        self.line("__uvclang_thread_start:");
+        // Install the private stack pointer: sp = cb->stack.
+        self.line("get_arg 0;");
+        self.line("load_u64;");                              // cb->stack
+        self.line(&format!("thread_set {};", STACK_TLS_SLOT));
+        // Call start(arg): push arg, then the function pointer, then call_fp.
+        self.line("get_arg 0;");
+        self.line("push 16;");
+        self.line("add_u64;");
+        self.line("load_u64;");                              // cb->arg
+        self.line("get_arg 0;");
+        self.line("push 8;");
+        self.line("add_u64;");
+        self.line("load_u64;");                              // cb->start
+        self.line("call_fp 1;");                             // start(arg) -> result
+        self.line("ret;");                                   // thread_join sees this
+        self.line("");
     }
 
     fn gen_function(&mut self, f: &'a Function) -> Result<(), String>
@@ -233,8 +283,31 @@ impl<'a> Codegen<'a>
             self.line(&format!("push_0n {};", total_slots));
         }
 
-        // Enter the stack-alloc frame: save the bump pointer, advance it.
+        // Enter the stack-alloc frame: save the current stack pointer as the
+        // frame base (bp) and advance it by frame_size. The pointer lives in a
+        // thread-local slot for threads that have a private stack (created via
+        // <pthread.h>), or in the shared `__stack_alloc_sp__` global otherwise
+        // (the main thread and runtime-spawned threads such as audio callbacks).
+        // A thread-local value of 0 means "no private stack", selecting the
+        // shared fallback — which reproduces the original single-stack behavior.
         if frame_size > 0 {
+            let l_shared = self.fresh_label("frame_shared");
+            let l_done = self.fresh_label("frame_done");
+
+            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
+            self.line(&format!("jz {};", l_shared));
+
+            // Private per-thread stack (thread-local pointer is non-zero).
+            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
+            self.line("dup;");
+            self.line(&format!("set_local {};", ctx.bp_slot));
+            self.line(&format!("push {};", frame_size));
+            self.line("add_u64;");
+            self.line(&format!("thread_set {};", STACK_TLS_SLOT));
+            self.line(&format!("jmp {};", l_done));
+
+            // Shared fallback stack.
+            self.line(&format!("{}:", l_shared));
             self.line("push __stack_alloc_sp__;");
             self.line("load_u64;");
             self.line("dup;");
@@ -244,6 +317,8 @@ impl<'a> Codegen<'a>
             self.line("push __stack_alloc_sp__;");
             self.line("swap;");
             self.line("store_u64;");
+
+            self.line(&format!("{}:", l_done));
         }
 
         for bb in &f.blocks {
@@ -696,10 +771,29 @@ impl<'a> Codegen<'a>
 
     fn emit_frame_leave(&mut self, ctx: &FnCtx)
     {
+        // Restore the stack pointer to this frame's base (bp), writing it back
+        // to whichever location the matching prologue bumped: the thread-local
+        // slot for a private stack, or the shared global otherwise. The choice
+        // is re-derived from the thread-local slot (non-zero iff private), so it
+        // always agrees with the prologue. Stack-neutral: leaves any pending
+        // return value already on the stack untouched.
         if ctx.frame_size > 0 {
+            let l_shared = self.fresh_label("leave_shared");
+            let l_done = self.fresh_label("leave_done");
+
+            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
+            self.line(&format!("jz {};", l_shared));
+
+            self.line(&format!("get_local {};", ctx.bp_slot));
+            self.line(&format!("thread_set {};", STACK_TLS_SLOT));
+            self.line(&format!("jmp {};", l_done));
+
+            self.line(&format!("{}:", l_shared));
             self.line("push __stack_alloc_sp__;");
             self.line(&format!("get_local {};", ctx.bp_slot));
             self.line("store_u64;");
+
+            self.line(&format!("{}:", l_done));
         }
     }
 
@@ -1233,14 +1327,35 @@ impl<'a> Codegen<'a>
         self.line("get_argc;");                          // [argc]
         self.line("push 3;");
         self.line("lshift_u64;");                        // [argc*8 = bytes]
-        self.line("push __stack_alloc_sp__;");
-        self.line("load_u64;");                          // [bytes, base]
-        self.line("dup;");
-        self.line(&format!("set_local {};", buf_slot));  // save base
-        self.line("add_u64;");                           // [base + bytes] = new sp
-        self.line("push __stack_alloc_sp__;");
-        self.line("swap;");
-        self.line("store_u64;");                         // commit the bumped sp
+        // Bump the same stack pointer the frame prologue used: the thread-local
+        // private stack if set, otherwise the shared global. [bytes] stays on
+        // the stack throughout; base is saved in buf_slot.
+        {
+            let l_shared = self.fresh_label("va_shared");
+            let l_done = self.fresh_label("va_done");
+
+            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
+            self.line(&format!("jz {};", l_shared));
+
+            self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [bytes, base]
+            self.line("dup;");
+            self.line(&format!("set_local {};", buf_slot));
+            self.line("add_u64;");                       // [base + bytes]
+            self.line(&format!("thread_set {};", STACK_TLS_SLOT));
+            self.line(&format!("jmp {};", l_done));
+
+            self.line(&format!("{}:", l_shared));
+            self.line("push __stack_alloc_sp__;");
+            self.line("load_u64;");                      // [bytes, base]
+            self.line("dup;");
+            self.line(&format!("set_local {};", buf_slot));
+            self.line("add_u64;");                       // [base + bytes] = new sp
+            self.line("push __stack_alloc_sp__;");
+            self.line("swap;");
+            self.line("store_u64;");
+
+            self.line(&format!("{}:", l_done));
+        }
 
         // Copy loop: for i in 0..argc { B[i] = get_var_arg(i) }.
         let l_cond = self.fresh_label("vastart_cond");

@@ -183,9 +183,22 @@ instructions at all — so uvclang supports `float` and rejects `double`
 
 ### Memory & pointers
 - **`alloca`:** assign each alloca a fixed offset within the function's
-  stack-alloc frame; the frame is bump-allocated from `__stack_alloc_sp__` on
-  entry and the pointer restored on every `ret`. The alloca result (a pointer)
-  is `bp + offset`, stored to its slot like any value.
+  stack-alloc frame; the frame is bump-allocated from the current stack pointer
+  on entry and the pointer restored on every `ret`. The alloca result (a
+  pointer) is `bp + offset`, stored to its slot like any value.
+- **Per-thread stacks:** the stack pointer is *thread-local* (thread_get/set
+  slot `STACK_TLS_SLOT`). A value of 0 means "no private stack", and the frame
+  prologue/epilogue fall back to the shared `__stack_alloc_sp__` global — the
+  original single-stack behavior, used by the main thread and by threads the
+  runtime spawns for us (e.g. audio callbacks). Threads created through
+  <pthread.h> run on a *private* malloc'd stack instead: pthread_create hands
+  thread_spawn the compiler-emitted, frame-free trampoline
+  `__uvclang_thread_start`, which installs the private stack pointer before the
+  thread's first frame. This stops concurrent threads' `alloca` frames from
+  overlapping on one shared pointer (which otherwise corrupts memory once two
+  threads call frame-using functions at once). pthread_create malloc's the
+  stack region and pthread_join free's it; detached threads (not joined) leak
+  their region.
 - **`load`/`store`:** address on stack, then `load_uW`/`store_uW` by the access
   type's size.
 - **`getelementptr`:** fold to address arithmetic — base + Σ(index × stride),
