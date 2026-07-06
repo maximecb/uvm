@@ -140,10 +140,29 @@ impl<'a> Codegen<'a>
             self.line("");
         }
 
+        // How many parameters does main declare? A plain `int main(void)` takes
+        // none; `int main(int argc, char** argv)` takes two. We only build the
+        // argc/argv vector when main actually asks for it, so the common no-arg
+        // case (and every existing test) keeps emitting a bare `call main, 0`.
+        let main_argc = self.module.functions.iter()
+            .find(|f| f.name == "main" && !f.is_decl())
+            .map_or(0, |f| f.params.len());
+
         self.line("# program entry: run main, then halt with its return value");
-        self.line("call main, 0;");
-        self.line("ret;");
+        if main_argc == 0 {
+            self.line("call main, 0;");
+            self.line("ret;");
+        } else {
+            // main wants argc/argv: build the vector in a helper (which needs a
+            // frame for its locals) and forward main's return value up.
+            self.line("call __uvclang_start, 0;");
+            self.line("ret;");
+        }
         self.line("");
+
+        if main_argc != 0 {
+            self.emit_start(main_argc)?;
+        }
 
         self.emit_thread_trampoline();
 
@@ -194,6 +213,148 @@ impl<'a> Codegen<'a>
         self.line("call_fp 1;");                             // start(arg) -> result
         self.line("ret;");                                   // thread_join sees this
         self.line("");
+    }
+
+    /// Emit `__uvclang_start`, the entry helper that constructs argc/argv from
+    /// the host's command-line arguments and calls `main(argc, argv)`.
+    ///
+    /// The host exposes the arguments through two syscalls: `cmd_argc` returns
+    /// the count, and `cmd_get_arg(idx, dst, dst_len)` copies argument `idx`
+    /// (NUL-terminated) into a guest buffer, returning the argument's byte
+    /// length excluding the NUL — so calling it with `dst_len == 0` queries the
+    /// size to allocate. There is no shared "argv already in memory": we must
+    /// allocate space and copy each string in ourselves.
+    ///
+    /// Rather than depend on the C `malloc`/`memcpy` being linked, we bump the
+    /// guest heap directly with `vm_grow_heap` (whose argument is the desired
+    /// absolute heap size; it returns the new, page-rounded size). Each block we
+    /// carve is `[old_heap_size, old_heap_size + n)`. This is safe to interleave
+    /// with the C allocator, which also grabs memory only via `vm_grow_heap` and
+    /// initializes its base lazily above whatever the heap end is at that point.
+    /// The copy itself is done by `cmd_get_arg`, so no `memcpy` is needed.
+    ///
+    /// Layout built:
+    ///   argv = alloc((argc + 1) * 8)      // NULL-terminated pointer array
+    ///   for i in 0..argc:
+    ///       len     = cmd_get_arg(i, 0, 0)
+    ///       argv[i] = alloc(len + 1); cmd_get_arg(i, argv[i], len + 1)
+    ///   argv[argc] = NULL
+    ///   return main(argc[, argv])
+    ///
+    /// `main` is called with `main_argc` arguments (1 for `int main(int argc)`,
+    /// 2 for the usual `int main(int argc, char** argv)`); anything beyond argv
+    /// is unsupported.
+    fn emit_start(&mut self, main_argc: usize) -> Result<(), String>
+    {
+        if main_argc > 2 {
+            return Err(format!(
+                "main declares {} parameters; only (argc, argv) is supported", main_argc));
+        }
+
+        // Local slots used by the builder.
+        const N: &str = "0";      // argc
+        const ARGV: &str = "1";   // pointer array base
+        const I: &str = "2";      // loop counter
+        const LEN: &str = "3";    // current argument length
+        const S: &str = "4";      // current argument string pointer
+
+        let l_loop = self.fresh_label("start_loop");
+        let l_done = self.fresh_label("start_done");
+
+        self.line("# entry helper: build argc/argv from the host, then call main");
+        self.line("__uvclang_start:");
+        self.line("push_0n 5;");
+
+        // argc = cmd_argc()
+        self.line("syscall cmd_argc;");
+        self.line(&format!("set_local {};", N));
+
+        // argv = alloc((argc + 1) * 8): grab [base, base + size) off the heap.
+        self.line("syscall vm_heap_size;");                  // [base]
+        self.line("dup;");                                   // [base, base]
+        self.line(&format!("get_local {};", N));
+        self.line("push 1;");
+        self.line("add_u64;");
+        self.line("push 8;");
+        self.line("mul_u64;");                               // [base, base, size]
+        self.line("add_u64;");                               // [base, base+size]
+        self.line("syscall vm_grow_heap;");                  // [base, new_heap_size]
+        self.line("pop;");                                   // [base]
+        self.line(&format!("set_local {};", ARGV));
+
+        // for (i = 0; i < argc; i++)
+        self.line("push 0;");
+        self.line(&format!("set_local {};", I));
+        self.line(&format!("{}:", l_loop));
+        self.line(&format!("get_local {};", I));
+        self.line(&format!("get_local {};", N));
+        self.line("lt_u64;");
+        self.line(&format!("jz {};", l_done));
+
+        // len = cmd_get_arg(i, 0, 0)  (query the size, no copy)
+        self.line(&format!("get_local {};", I));
+        self.line("push 0;");
+        self.line("push 0;");
+        self.line("syscall cmd_get_arg;");
+        self.line(&format!("set_local {};", LEN));
+
+        // s = alloc(len + 1)
+        self.line("syscall vm_heap_size;");                  // [base]
+        self.line("dup;");                                   // [base, base]
+        self.line(&format!("get_local {};", LEN));
+        self.line("push 1;");
+        self.line("add_u64;");                               // [base, base, len+1]
+        self.line("add_u64;");                               // [base, base+len+1]
+        self.line("syscall vm_grow_heap;");                  // [base, new_heap_size]
+        self.line("pop;");                                   // [base]
+        self.line(&format!("set_local {};", S));
+
+        // cmd_get_arg(i, s, len + 1)  (copy the NUL-terminated string in)
+        self.line(&format!("get_local {};", I));
+        self.line(&format!("get_local {};", S));
+        self.line(&format!("get_local {};", LEN));
+        self.line("push 1;");
+        self.line("add_u64;");
+        self.line("syscall cmd_get_arg;");
+        self.line("pop;");                                   // discard returned length
+
+        // argv[i] = s  (store: push address, then value)
+        self.line(&format!("get_local {};", ARGV));
+        self.line(&format!("get_local {};", I));
+        self.line("push 8;");
+        self.line("mul_u64;");
+        self.line("add_u64;");                               // &argv[i]
+        self.line(&format!("get_local {};", S));
+        self.line("store_u64;");
+
+        // i++
+        self.line(&format!("get_local {};", I));
+        self.line("push 1;");
+        self.line("add_u64;");
+        self.line(&format!("set_local {};", I));
+        self.line(&format!("jmp {};", l_loop));
+
+        self.line(&format!("{}:", l_done));
+
+        // argv[argc] = NULL
+        self.line(&format!("get_local {};", ARGV));
+        self.line(&format!("get_local {};", N));
+        self.line("push 8;");
+        self.line("mul_u64;");
+        self.line("add_u64;");                               // &argv[argc]
+        self.line("push 0;");
+        self.line("store_u64;");
+
+        // return main(argc[, argv])
+        self.line(&format!("get_local {};", N));             // argc
+        if main_argc >= 2 {
+            self.line(&format!("get_local {};", ARGV));      // argv
+        }
+        self.line(&format!("call main, {};", main_argc));
+        self.line("ret;");
+        self.line("");
+
+        Ok(())
     }
 
     fn gen_function(&mut self, f: &'a Function) -> Result<(), String>
