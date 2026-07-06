@@ -213,11 +213,15 @@ impl<'a> Codegen<'a>
             for inst in &bb.insts {
                 if let Some(dest) = &inst.dest {
                     slots.insert(dest.as_str(), num_slots);
-                    // A cmpxchg result is the aggregate { value, i1 }: reserve a
-                    // second slot right after the first so extractvalue can read
-                    // field 0 (old value) at `slot` and field 1 (success) at
-                    // `slot + 1`.
-                    num_slots += if matches!(inst.kind, InstKind::Cmpxchg { .. }) { 2 } else { 1 };
+                    // A cmpxchg result and a `*.with.overflow` intrinsic result
+                    // are both the aggregate { value, i1 }: reserve a second slot
+                    // right after the first so extractvalue can read field 0
+                    // (value) at `slot` and field 1 (flag) at `slot + 1`.
+                    let two = matches!(inst.kind, InstKind::Cmpxchg { .. })
+                        || matches!(&inst.kind,
+                            InstKind::Call { callee: Value::Global(n), .. }
+                                if n.contains(".with.overflow."));
+                    num_slots += if two { 2 } else { 1 };
                 }
             }
         }
@@ -444,10 +448,17 @@ impl<'a> Codegen<'a>
             InstKind::ExtractValue { agg, index } => {
                 self.gen_extractvalue(ctx, agg, *index, inst.dest.as_deref())?;
             }
+            // `freeze` turns poison/undef into an arbitrary but fixed concrete
+            // value; for a well-defined operand it is the identity. Either way,
+            // forwarding the operand's bit pattern to the result is correct.
+            InstKind::Freeze { ty, val } => {
+                let w = int_width(ty).unwrap_or((self.layout.size_of(ty) * 8) as u32);
+                self.push_value(ctx, val, w)?;
+                self.store_dest(ctx, inst.dest.as_deref())?;
+            }
             // The UVM atomic ops carry their own ordering, so a standalone
             // fence needs no code.
             InstKind::Fence => {}
-            other => return Err(format!("codegen: instruction not yet implemented: {}", kind_name(other))),
         }
         Ok(())
     }
@@ -1052,6 +1063,47 @@ impl<'a> Codegen<'a>
         self.store_dest(ctx, dest)
     }
 
+    /// Lower `llvm.umul.with.overflow.iN(a, b)` -> aggregate { iN product, i1 }.
+    /// The two fields go into consecutive slots (like cmpxchg): field 0 is the
+    /// low-N-bit product, field 1 the unsigned-overflow flag. Overflow is
+    /// detected without a widening multiply: the product overflowed iff
+    /// `a != 0 && product / a != b` (division by the nonzero operand recovers
+    /// the other one only when nothing was lost). The `a == 0` case can't
+    /// overflow and also guards against the trapping divide-by-zero.
+    fn gen_umul_overflow(&mut self, ctx: &FnCtx, dest: Option<&str>, a: &TypedVal, b: &Value) -> Result<(), String>
+    {
+        let name = dest.ok_or("umul.with.overflow without result")?;
+        let base = *ctx.slots.get(name).ok_or_else(|| format!("no slot for %{}", name))?;
+        let w = int_width(&a.ty)?;
+        if w != 32 && w != 64 {
+            return Err(format!("umul.with.overflow only supported for i32/i64 (got i{})", w));
+        }
+
+        // field 0: product = a * b (low N bits)
+        self.push_value(ctx, &a.val, w)?;
+        self.push_value(ctx, b, w)?;
+        self.line(&format!("mul_u{};", w));
+        self.line("dup;");
+        self.line(&format!("set_local {};", base));
+
+        // field 1: overflow = (a != 0) && (product / a != b)
+        let zero = self.fresh_label("umulov_zero");
+        let done = self.fresh_label("umulov_done");
+        self.push_value(ctx, &a.val, w)?;
+        self.line(&format!("jz {};", zero));          // a == 0 -> no overflow
+        self.line(&format!("get_local {};", base));   // product
+        self.push_value(ctx, &a.val, w)?;
+        self.line(&format!("div_u{};", w));           // product / a
+        self.push_value(ctx, b, w)?;
+        self.line(&format!("ne_u{};", w));            // (product / a) != b
+        self.line(&format!("jmp {};", done));
+        self.line(&format!("{}:", zero));
+        self.line("push 0;");
+        self.line(&format!("{}:", done));
+        self.line(&format!("set_local {};", base + 1));
+        Ok(())
+    }
+
     /// Lower `atomicrmw` to a compare-and-swap retry loop. The result (the old
     /// value, held in the result slot) is what stays there when the CAS wins:
     ///
@@ -1236,6 +1288,11 @@ impl<'a> Codegen<'a>
             self.push_value(ctx, &args[2].val, 64)?; // num_bytes
             self.line("syscall memset;");
             return Ok(());
+        }
+
+        // --- aggregate-producing intrinsics ({ iN, i1 } into two slots) ---
+        if bare.starts_with("umul.with.overflow.") {
+            return self.gen_umul_overflow(ctx, dest, &args[0], &args[1].val);
         }
 
         // --- value-producing intrinsics ---
@@ -1948,32 +2005,6 @@ fn type_str(ty: &Type) -> String
         Type::Func(_) => "fn".to_string(),
         Type::Label => "label".to_string(),
         Type::Metadata => "metadata".to_string(),
-    }
-}
-
-fn kind_name(k: &InstKind) -> &'static str
-{
-    match k {
-        InstKind::Bin { .. } => "bin",
-        InstKind::FBin { .. } => "fbin",
-        InstKind::FNeg { .. } => "fneg",
-        InstKind::Conv { .. } => "conv",
-        InstKind::ICmp { .. } => "icmp",
-        InstKind::FCmp { .. } => "fcmp",
-        InstKind::Select { .. } => "select",
-        InstKind::Load { .. } => "load",
-        InstKind::Store { .. } => "store",
-        InstKind::Alloca { .. } => "alloca",
-        InstKind::GetElementPtr { .. } => "getelementptr",
-        InstKind::Phi { .. } => "phi",
-        InstKind::Call { .. } => "call",
-        InstKind::Freeze { .. } => "freeze",
-        InstKind::AtomicLoad { .. } => "load atomic",
-        InstKind::AtomicStore { .. } => "store atomic",
-        InstKind::AtomicRmw { .. } => "atomicrmw",
-        InstKind::Cmpxchg { .. } => "cmpxchg",
-        InstKind::ExtractValue { .. } => "extractvalue",
-        InstKind::Fence => "fence",
     }
 }
 

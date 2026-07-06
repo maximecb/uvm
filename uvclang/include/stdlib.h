@@ -206,60 +206,330 @@ UVCLANG_WEAK void srand(unsigned int seed)
     __uvclang_rand_state = ((unsigned long)seed << 1) + 1;
 }
 
-// --- bump allocator --------------------------------------------------------
-// A simple grow-only bump allocator over the UVM heap. Each
-// block is prefixed with an 8-byte header holding a magic word used to catch
-// double-free / corruption. free() does not reclaim memory.
+// --- free-list allocator ---------------------------------------------------
+// A segregated free-list allocator with boundary-tag coalescing over the UVM
+// heap. Unlike a bump allocator, free() reclaims memory: freed chunks are
+// coalesced with any free neighbours and kept on size-class bins for reuse. A
+// single global spin lock (one atomic word) makes malloc/free/calloc/realloc
+// thread-safe; critical sections are short, so a plain spin is adequate.
+//
+// Chunk layout (every chunk size is a multiple of 8, so the low 3 header bits
+// are free for flags):
+//
+//     +0  uint64 header:  chunk size | INUSE (bit0) | PINUSE (bit1)
+//     +8  payload  <-- malloc returns this address
+//         When the chunk is free, the payload's first 16 bytes hold the fd/bk
+//         bin links, and the chunk's last 8 bytes hold a footer copy of the
+//         size so the chunk above can find this one's header (backward
+//         coalescing).
+//
+// INUSE is this chunk's own state; PINUSE is the *previous* (lower-address)
+// chunk's state. A free chunk writes a footer, an in-use one does not, so
+// PINUSE is what tells free() whether it may read the footer below. The
+// highest-address chunk is the "top" (wilderness): it borders the unallocated
+// grown heap and is extended via __uvm_vm_grow_heap instead of being binned.
 
 // Round `x` up to the next multiple of `n` (a power of two). 64-bit throughout
 // so heap addresses above 4 GiB are handled correctly.
 #define __uvclang_align_up(x, n) \
     (((uint64_t)(x) + ((uint64_t)(n) - 1)) & ~((uint64_t)(n) - 1))
 
-UVCLANG_WEAK uint64_t __uvclang_heap_size = 0;   // current heap size in bytes
-UVCLANG_WEAK uint8_t *__uvclang_next_alloc = 0;  // bump pointer into the heap
+#include <stdatomic.h>       // _Atomic / atomic_* for the allocator's spin lock
+
+#define __UVCLANG_MIN_CHUNK 32u        // header(8) + fd(8) + bk(8) + footer(8)
+#define __UVCLANG_NBINS     48
+#define __UVCLANG_GROW_MIN  65536u     // grow the heap by at least this much
+
+#define __uvclang_hdr(c)    (*(uint64_t *)(c))
+#define __uvclang_size(c)   (__uvclang_hdr(c) & ~(uint64_t)7)
+#define __uvclang_inuse(c)  (__uvclang_hdr(c) & 1u)
+#define __uvclang_pinuse(c) (__uvclang_hdr(c) & 2u)
+#define __uvclang_fd(c)     (*(uint8_t **)((c) + 8))   // free-list forward link
+#define __uvclang_bk(c)     (*(uint8_t **)((c) + 16))  // free-list back link
+
+UVCLANG_WEAK uint8_t *__uvclang_bins[__UVCLANG_NBINS] = {0};
+UVCLANG_WEAK uint8_t *__uvclang_top = 0;        // wilderness chunk (0 = uninit)
+UVCLANG_WEAK uint64_t __uvclang_heap_base = 0;  // first usable heap address
+UVCLANG_WEAK uint64_t __uvclang_heap_end = 0;   // current heap size (end addr)
+UVCLANG_WEAK _Atomic uint64_t __uvclang_malloc_lock = 0;
+
+// Acquire/release the global allocator lock. Spins on a CAS; the guest threads
+// are real and preemptively scheduled, so a holder always makes progress.
+static inline void __uvclang_lock(void)
+{
+    uint64_t expected = 0;
+    while (!atomic_compare_exchange_weak(&__uvclang_malloc_lock, &expected, 1))
+        expected = 0;
+}
+static inline void __uvclang_unlock(void)
+{
+    atomic_store(&__uvclang_malloc_lock, 0);
+}
+
+static inline void __uvclang_die(const char *msg)
+{
+    __uvm_print_str(msg);
+    __uvm_exit(-1);
+}
+
+// Write a chunk header from its parts.
+static inline void __uvclang_set_hdr(uint8_t *c, uint64_t size, int inuse, uint64_t pinuse)
+{
+    __uvclang_hdr(c) = size | (inuse ? 1u : 0u) | (pinuse ? 2u : 0u);
+}
+
+// Smallest bin that could hold a chunk of `size`. Monotonic non-decreasing in
+// size, so allocation can search this bin and every larger one. Sizes up to 280
+// bytes get an exact class; above that, bins cover power-of-two ranges.
+static inline int __uvclang_bin_index(uint64_t size)
+{
+    uint64_t n = size >> 3;                     // size in 8-byte units, >= 4
+    if (n < 36)
+        return (int)(n - 4);                    // bins 0..31: exact classes
+    int idx = 32;
+    while (n >= 64 && idx < __UVCLANG_NBINS - 1) { n >>= 1; ++idx; }
+    return idx;                                 // bins 32..47: log-size ranges
+}
+
+// Insert/remove a free chunk at the head of its size-class bin (doubly linked).
+static inline void __uvclang_bin_insert(uint8_t *c)
+{
+    int b = __uvclang_bin_index(__uvclang_size(c));
+    uint8_t *head = __uvclang_bins[b];
+    __uvclang_fd(c) = head;
+    __uvclang_bk(c) = 0;
+    if (head)
+        __uvclang_bk(head) = c;
+    __uvclang_bins[b] = c;
+}
+static inline void __uvclang_bin_remove(uint8_t *c)
+{
+    uint8_t *fd = __uvclang_fd(c), *bk = __uvclang_bk(c);
+    if (bk)
+        __uvclang_fd(bk) = fd;
+    else
+        __uvclang_bins[__uvclang_bin_index(__uvclang_size(c))] = fd;
+    if (fd)
+        __uvclang_bk(fd) = bk;
+}
+
+// Round a user request up to a whole chunk size (header + payload, 8-aligned,
+// clamped to the minimum). Returns 0 on size overflow.
+static inline uint64_t __uvclang_chunk_size(size_t req)
+{
+    uint64_t s = (uint64_t)req + 8;
+    if (s < (uint64_t)req)                      // 8-byte header addition wrapped
+        return 0;
+    s = __uvclang_align_up(s, 8);
+    if (s < __UVCLANG_MIN_CHUNK)
+        s = __UVCLANG_MIN_CHUNK;
+    return s;
+}
+
+// One-time setup: seed the top (wilderness) chunk at the current heap end and
+// grow the heap once so the first allocations don't each hit a syscall.
+UVCLANG_WEAK void __uvclang_malloc_init(void)
+{
+    __uvclang_heap_base = __uvm_vm_heap_size();
+    __uvclang_heap_end  = __uvm_vm_grow_heap(__uvclang_heap_base + __UVCLANG_GROW_MIN);
+    __uvclang_top = (uint8_t *)__uvclang_heap_base;
+    // PINUSE=1: nothing lies below the base, so free() must never coalesce down.
+    __uvclang_set_hdr(__uvclang_top, __uvclang_heap_end - __uvclang_heap_base, 0, 2);
+}
+
+// Core allocator. Assumes the lock is held.
+UVCLANG_WEAK void *__uvclang_malloc_nolock(size_t req)
+{
+    if (__uvclang_top == 0)
+        __uvclang_malloc_init();
+
+    uint64_t need = __uvclang_chunk_size(req);
+    if (need == 0)
+        return NULL;
+
+    // First fit across the bins, smallest adequate size class first.
+    for (int b = __uvclang_bin_index(need); b < __UVCLANG_NBINS; ++b)
+    {
+        for (uint8_t *c = __uvclang_bins[b]; c; c = __uvclang_fd(c))
+        {
+            uint64_t s = __uvclang_size(c);
+            if (s < need)
+                continue;
+            __uvclang_bin_remove(c);
+            uint64_t rem = s - need;
+            if (rem >= __UVCLANG_MIN_CHUNK)
+            {
+                // Split: keep `need` here, return the tail to its bin. The chunk
+                // above still sees a free predecessor, so its PINUSE is unchanged.
+                __uvclang_set_hdr(c, need, 1, __uvclang_pinuse(c));
+                uint8_t *rc = c + need;
+                __uvclang_set_hdr(rc, rem, 0, 2);          // prev (c) now in use
+                *(uint64_t *)(rc + rem - 8) = rem;         // footer
+                __uvclang_bin_insert(rc);
+            }
+            else
+            {
+                // Take the whole chunk; tell the next chunk its prev is in use.
+                __uvclang_set_hdr(c, s, 1, __uvclang_pinuse(c));
+                __uvclang_hdr(c + s) |= 2u;
+            }
+            return c + 8;
+        }
+    }
+
+    // Nothing reusable: carve from the top, growing the heap if it is too small.
+    uint8_t *top = __uvclang_top;
+    if (__uvclang_size(top) < need + __UVCLANG_MIN_CHUNK)
+    {
+        uint64_t want = (uint64_t)top + need + __UVCLANG_MIN_CHUNK;
+        if (want < __uvclang_heap_end + __UVCLANG_GROW_MIN)
+            want = __uvclang_heap_end + __UVCLANG_GROW_MIN;
+        __uvclang_heap_end = __uvm_vm_grow_heap(want);
+        __uvclang_set_hdr(top, __uvclang_heap_end - (uint64_t)top, 0, __uvclang_pinuse(top));
+    }
+    __uvclang_set_hdr(top, need, 1, __uvclang_pinuse(top));
+    uint8_t *newtop = top + need;
+    __uvclang_set_hdr(newtop, __uvclang_heap_end - (uint64_t)newtop, 0, 2); // prev in use
+    __uvclang_top = newtop;
+    return top + 8;
+}
+
+// Core free. Assumes the lock is held.
+UVCLANG_WEAK void __uvclang_free_nolock(void *ptr)
+{
+    uint8_t *c = (uint8_t *)ptr - 8;
+
+    // Reject obviously bad pointers and (via the INUSE bit) double frees.
+    if (__uvclang_top == 0 ||
+        (uint64_t)c < __uvclang_heap_base ||
+        (uint64_t)ptr >= __uvclang_heap_end ||
+        ((uintptr_t)ptr & 7u) != 0 ||
+        !__uvclang_inuse(c))
+        __uvclang_die("invalid or double free() detected\n");
+
+    __uvclang_hdr(c) &= ~(uint64_t)1;               // clear INUSE
+    uint64_t size = __uvclang_size(c);
+    int merged_top = 0;
+
+    // Coalesce forward through any free neighbours, and into top if adjacent.
+    uint8_t *next = c + size;
+    for (;;)
+    {
+        if (next == __uvclang_top)
+        {
+            size += __uvclang_size(__uvclang_top);
+            merged_top = 1;
+            break;
+        }
+        if (__uvclang_inuse(next))
+            break;
+        __uvclang_bin_remove(next);
+        size += __uvclang_size(next);
+        next = c + size;
+    }
+
+    // Coalesce backward if the previous chunk is free (its footer holds its size).
+    if (!__uvclang_pinuse(c))
+    {
+        uint64_t prevsize = *(uint64_t *)(c - 8);
+        uint8_t *prev = c - prevsize;
+        __uvclang_bin_remove(prev);
+        size += prevsize;
+        c = prev;                                   // PINUSE(prev) is preserved below
+    }
+
+    if (merged_top)
+    {
+        __uvclang_set_hdr(c, size, 0, __uvclang_pinuse(c));
+        __uvclang_top = c;                          // top carries no footer/bin link
+    }
+    else
+    {
+        __uvclang_set_hdr(c, size, 0, __uvclang_pinuse(c));
+        __uvclang_hdr(c + size) &= ~(uint64_t)2;    // next chunk: prev now free
+        *(uint64_t *)(c + size - 8) = size;         // footer
+        __uvclang_bin_insert(c);
+    }
+}
 
 UVCLANG_WEAK void *malloc(size_t size)
 {
-    // On the first allocation, start the bump pointer at the top of the heap.
-    if (__uvclang_next_alloc == 0)
-    {
-        __uvclang_heap_size = __uvm_vm_heap_size();
-        __uvclang_next_alloc = (uint8_t *)__uvclang_heap_size;
-    }
-
-    // Reserve an 8-byte header followed by the user block, then bump (8-aligned).
-    uint8_t *header_ptr = __uvclang_next_alloc;
-    uint8_t *block_ptr = header_ptr + 8;
-    __uvclang_next_alloc = (uint8_t *)__uvclang_align_up(block_ptr + size, 8);
-
-    // Grow the heap if the bump pointer ran past the current end.
-    if ((uint64_t)__uvclang_next_alloc > __uvclang_heap_size)
-        __uvclang_heap_size = __uvm_vm_grow_heap((uint64_t)__uvclang_next_alloc);
-
-    // Write a magic word into the header for safety checks.
-    *(uint32_t *)header_ptr = 0x1337BAB3;
-
-    return (void *)block_ptr;
+    __uvclang_lock();
+    void *p = __uvclang_malloc_nolock(size);
+    __uvclang_unlock();
+    return p;
 }
 
 UVCLANG_WEAK void free(void *ptr)
 {
     if (ptr == NULL)
         return;
+    __uvclang_lock();
+    __uvclang_free_nolock(ptr);
+    __uvclang_unlock();
+}
 
-    // Verify the magic word; a mismatch means corruption or a double free.
-    uint8_t *header_ptr = (uint8_t *)ptr - 8;
-    uint32_t *magic_ptr = (uint32_t *)header_ptr;
+UVCLANG_WEAK void *calloc(size_t nmemb, size_t size)
+{
+    // Reject an overflowing nmemb*size *before* forming the product: computing
+    // it first and dividing back is the idiom the optimizer folds to
+    // llvm.umul.with.overflow, an intrinsic this backend does not implement.
+    if (nmemb != 0 && size > (size_t)-1 / nmemb)
+        return NULL;
+    uint64_t total = (uint64_t)nmemb * (uint64_t)size;
 
-    if (*magic_ptr != 0x1337BAB3)
+    __uvclang_lock();
+    void *p = __uvclang_malloc_nolock((size_t)total);
+    __uvclang_unlock();
+
+    if (p != NULL)
+        __uvm_memset((uint8_t *)p, 0, total);
+    return p;
+}
+
+UVCLANG_WEAK void *realloc(void *ptr, size_t size)
+{
+    if (ptr == NULL)
+        return malloc(size);
+    if (size == 0)
     {
-        __uvm_print_str("magic word does not match in free()\n");
-        __uvm_exit(-1);
+        free(ptr);
+        return NULL;
     }
 
-    // Corrupt the magic word so a subsequent double free is detected.
-    *magic_ptr = 0x11111111;
+    __uvclang_lock();
+
+    uint8_t *c = (uint8_t *)ptr - 8;
+    uint64_t old = __uvclang_size(c);
+    uint64_t need = __uvclang_chunk_size(size);
+
+    // Fits in place: shrink, splitting off the tail if it is worth a chunk.
+    if (need != 0 && old >= need)
+    {
+        uint64_t rem = old - need;
+        if (rem >= __UVCLANG_MIN_CHUNK)
+        {
+            __uvclang_set_hdr(c, need, 1, __uvclang_pinuse(c));
+            uint8_t *rc = c + need;
+            __uvclang_set_hdr(rc, rem, 1, 2);       // mark in use, then free to coalesce
+            __uvclang_free_nolock(rc + 8);
+        }
+        __uvclang_unlock();
+        return ptr;
+    }
+
+    // Otherwise allocate a fresh block, copy the payload, and free the old one.
+    void *np = __uvclang_malloc_nolock(size);
+    if (np != NULL)
+    {
+        uint64_t copy = old - 8;                    // old payload byte count
+        if ((uint64_t)size < copy)
+            copy = (uint64_t)size;
+        __uvm_memcpy((uint8_t *)np, (uint8_t *)ptr, copy);
+        __uvclang_free_nolock(ptr);
+    }
+    __uvclang_unlock();
+    return np;
 }
 
 #endif // __STDLIB_H__
