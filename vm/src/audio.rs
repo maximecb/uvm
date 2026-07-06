@@ -131,9 +131,10 @@ pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: 
         panic!("for now, only 44100Hz sample rate suppored");
     }
 
-    //if num_channels > 2 {
-    if num_channels != 1 {
-        panic!("for now, only one output channel supported");
+    // For multi-channel output, samples are interleaved with the
+    // left channel first, e.g. L R L R for stereo.
+    if num_channels != 1 && num_channels != 2 {
+        panic!("for now, only 1 or 2 audio output channels supported");
     }
 
     if format != AUDIO_FORMAT_I16 {
@@ -194,9 +195,10 @@ pub fn audio_open_input(thread: &mut Thread, sample_rate: Value, num_channels: V
         panic!("for now, only 44100Hz sample rate suppored");
     }
 
-    //if num_channels > 2 {
-    if num_channels != 1 {
-        panic!("for now, only one output channel supported");
+    // For multi-channel input, samples are interleaved with the
+    // left channel first, e.g. L R L R for stereo.
+    if num_channels != 1 && num_channels != 2 {
+        panic!("for now, only 1 or 2 audio input channels supported");
     }
 
     if format != AUDIO_FORMAT_I16 {
