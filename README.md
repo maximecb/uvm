@@ -43,6 +43,7 @@ Current features:
 - Easy to use frame buffer to draw RGB graphics with no boilerplate
 - Easy to use audio output API with no boilerplate
 - Simple TCP networking API
+- It can [run Doom](https://github.com/maximecb/uvm-doom)
 
 Planned future features:
 - Capability system to safely sandbox apps without granting access to entire computer
