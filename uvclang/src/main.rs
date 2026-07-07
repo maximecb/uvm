@@ -18,6 +18,9 @@ const USAGE: &str = "usage: uvclang <input.c|.ll> [-o out.asm] [-O0|-O1|-O2|-O3]
                      [-D<macro>] [-I<dir>] [-U<macro>] [-Wall|-W<warn>] [-std=<std>]\n       \
                      [-f<feature>] [--emit-ir] [--stats]";
 
+/// URL for reporting LLVM IR uvclang cannot parse yet.
+const ISSUE_URL: &str = "https://github.com/maximecb/uvm/issues/new";
+
 fn main()
 {
     // Args: <input.c|.ll> [-o out.asm] [-O<n>] [-D..] [-I..] [--emit-ir] [--stats]
@@ -107,6 +110,7 @@ fn main()
         Ok(m) => m,
         Err(e) => {
             eprintln!("parse error: {}", e);
+            print_unsupported_ir_hint();
             exit(1);
         }
     };
@@ -120,6 +124,7 @@ fn main()
         Ok(a) => a,
         Err(e) => {
             eprintln!("codegen error: {}", e);
+            print_unsupported_ir_hint();
             exit(1);
         }
     };
@@ -156,6 +161,21 @@ fn emit(out_path: &Option<String>, text: String)
         }
         None => print!("{}", text),
     }
+}
+
+/// Print guidance shown when uvclang fails to handle a piece of LLVM IR, whether
+/// the failure surfaced in the parser or later in codegen. Both cases usually mean
+/// the IR uses a construct uvclang does not support yet.
+fn print_unsupported_ir_hint()
+{
+    eprintln!(
+        "\nuvclang could not compile this LLVM IR. This usually means the IR uses \
+         a construct uvclang does not support yet.\n\
+         - If your clang is out of date, please update it and try again.\n\
+         - Please also consider opening an issue on the UVM repo so we can add \
+         support for it: {}",
+        ISSUE_URL
+    );
 }
 
 fn parse(src: &str, name: &str) -> Result<ast::Module, ParseError>
