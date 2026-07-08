@@ -850,6 +850,12 @@ impl Assembler
                 self.mem().push_u32(val.to_bits());
             }
 
+            // 64-bit floating-point value
+            "f64" => {
+                let val: f64 = input.parse_float()?;
+                self.mem().push_u64(val.to_bits());
+            }
+
             // Command to read an arbitrary number of bytes
             // with optional whitespace between bytes
             "hex" => {
@@ -1044,6 +1050,13 @@ impl Assembler
                 self.code.push_u32(val.to_bits());
             }
 
+            // Push a 64-bit floating-point value
+            "push_f64" => {
+                let val: f64 = input.parse_float()?;
+                self.code.push_op(Op::push_u64);
+                self.code.push_u64(val.to_bits());
+            }
+
             // Variable-size push
             "push" => {
                 self.gen_push(input)?;
@@ -1134,9 +1147,33 @@ impl Assembler
             "gt_f32" => self.code.push_op(Op::gt_f32),
             "ge_f32" => self.code.push_op(Op::ge_f32),
 
+            "add_f64" => self.code.push_op(Op::add_f64),
+            "sub_f64" => self.code.push_op(Op::sub_f64),
+            "mul_f64" => self.code.push_op(Op::mul_f64),
+            "div_f64" => self.code.push_op(Op::div_f64),
+
+            "sin_f64" => self.code.push_op(Op::sin_f64),
+            "cos_f64" => self.code.push_op(Op::cos_f64),
+            "tan_f64" => self.code.push_op(Op::tan_f64),
+            "asin_f64" => self.code.push_op(Op::asin_f64),
+            "acos_f64" => self.code.push_op(Op::acos_f64),
+            "atan_f64" => self.code.push_op(Op::atan_f64),
+            "pow_f64" => self.code.push_op(Op::pow_f64),
+            "sqrt_f64" => self.code.push_op(Op::sqrt_f64),
+
+            "eq_f64" => self.code.push_op(Op::eq_f64),
+            "ne_f64" => self.code.push_op(Op::ne_f64),
+            "lt_f64" => self.code.push_op(Op::lt_f64),
+            "le_f64" => self.code.push_op(Op::le_f64),
+            "gt_f64" => self.code.push_op(Op::gt_f64),
+            "ge_f64" => self.code.push_op(Op::ge_f64),
+
             "i32_to_f32" => self.code.push_op(Op::i32_to_f32),
             "i64_to_f32" => self.code.push_op(Op::i64_to_f32),
             "f32_to_i32" => self.code.push_op(Op::f32_to_i32),
+            "i32_to_f64" => self.code.push_op(Op::i32_to_f64),
+            "i64_to_f64" => self.code.push_op(Op::i64_to_f64),
+            "f64_to_i64" => self.code.push_op(Op::f64_to_i64),
 
             "f32_to_f64" => self.code.push_op(Op::f32_to_f64),
             "f64_to_f32" => self.code.push_op(Op::f64_to_f32),
@@ -1341,6 +1378,11 @@ mod tests
         parse_ok(".f32 123.456e+10;");
         parse_ok(".f32 123.456e-10;");
         parse_ok(".code; push_f32 3.5;");
+
+        parse_ok(".f64 123;");
+        parse_ok(".f64 -123.456;");
+        parse_ok(".f64 123.456e-10;");
+        parse_ok(".code; push_f64 3.5;");
 
         parse_fails(".f32 123e10.5;");
         parse_fails(".f32 123 e10.5;");

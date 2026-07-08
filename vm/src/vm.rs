@@ -242,10 +242,37 @@ pub enum Op
     gt_f32,
     ge_f32,
 
+    // 64-bit floating-point arithmetic
+    add_f64,
+    sub_f64,
+    mul_f64,
+    div_f64,
+
+    // 64-bit floating-point math functions
+    sin_f64,
+    cos_f64,
+    tan_f64,
+    asin_f64,
+    acos_f64,
+    atan_f64,
+    pow_f64,
+    sqrt_f64,
+
+    // 64-bit floating-point comparison instructions
+    eq_f64,
+    ne_f64,
+    lt_f64,
+    le_f64,
+    gt_f64,
+    ge_f64,
+
     // Int/float conversion
     i32_to_f32,
     i64_to_f32,
     f32_to_i32,
+    i32_to_f64,
+    i64_to_f64,
+    f64_to_i64,
 
     // Float/float conversion
     f32_to_f64,
@@ -297,20 +324,6 @@ pub enum Op
     // Get thread-local variable
     // thread_get <idx:u8>
     thread_get,
-
-    // NOTE: may want to wait for this because it's not RISC,
-    //       but it could help reduce code flag
-    // NOTE: should this insn have a jump offset built in?
-    // - no, for consistency, let jz/jnz handle that
-    // Test flag bits (logical and) with a constant
-    // This can be used for tag bit tests (e.g. fixnum test)
-    // Do we want to test just one specific bit, bit_idx:u8?
-    // test_bit_z <bit_idx:u8>
-    // test_bit_nz <bit_idx:u8>
-
-    // TODO: we should probably have 8-bit offset versions of jump insns
-    // However, this can wait. Premature optimization.
-    // jmp_8, jz_8, jnz_8
 
     // Jump to pc offset
     // jmp <offset:i32>
@@ -1624,6 +1637,113 @@ impl Thread
                     self.push(v0.as_f32() >= v1.as_f32());
                 }
 
+                Op::add_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() + v1.as_f64());
+                }
+
+                Op::sub_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() - v1.as_f64());
+                }
+
+                Op::mul_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() * v1.as_f64());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::div_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() / v1.as_f64());
+                }
+
+                Op::sin_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.sin());
+                }
+
+                Op::cos_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.cos());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::tan_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.tan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::asin_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.asin());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::acos_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.acos());
+                }
+
+                Op::atan_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.atan());
+                }
+
+                // Should return NaN for invalid inputs
+                Op::pow_f64 => {
+                    let v1 = self.pop().as_f64();
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.powf(v1));
+                }
+
+                // Should return NaN for invalid inputs
+                Op::sqrt_f64 => {
+                    let v0 = self.pop().as_f64();
+                    self.push(v0.sqrt());
+                }
+
+                Op::eq_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() == v1.as_f64());
+                }
+
+                Op::ne_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() != v1.as_f64());
+                }
+
+                Op::lt_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() < v1.as_f64());
+                }
+
+                Op::le_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() <= v1.as_f64());
+                }
+
+                Op::gt_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() > v1.as_f64());
+                }
+
+                Op::ge_f64 => {
+                    let v1 = self.pop();
+                    let v0 = self.pop();
+                    self.push(v0.as_f64() >= v1.as_f64());
+                }
+
                 // Follows Rust semantics:
                 // - Round ties to even
                 // - Never panics
@@ -1648,6 +1768,32 @@ impl Thread
                 Op::f32_to_i32 => {
                     let v = self.pop();
                     self.push(v.as_f32() as i32);
+                }
+
+                // Follows Rust semantics:
+                // - Round ties to even
+                // - Never panics
+                Op::i32_to_f64 => {
+                    let v = self.pop();
+                    self.push(v.as_i32() as f64);
+                }
+
+                // Follows Rust semantics:
+                // - Round ties to even
+                // - Never panics
+                Op::i64_to_f64 => {
+                    let v = self.pop();
+                    self.push(v.as_i64() as f64);
+                }
+
+                // Follows Rust semantics:
+                // - Rounds towards zero (truncates)
+                // - Saturates to min/max int values
+                // - NaN converts to zero
+                // - Never panics
+                Op::f64_to_i64 => {
+                    let v = self.pop();
+                    self.push(v.as_f64() as i64);
                 }
 
                 // Widening conversion, exact (no rounding needed)
@@ -2117,7 +2263,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 121);
+        assert!(Op::ret as usize <= 142);
     }
 
     #[test]
@@ -2194,6 +2340,37 @@ mod tests
     fn test_floats()
     {
         eval_i64("push_f32 1.5; push_f32 2.5; add_f32; push_f32 4.0; eq_u64; ret;", 1);
+    }
+
+    #[test]
+    fn test_doubles()
+    {
+        // Arithmetic
+        eval_i64("push_f64 1.5; push_f64 2.5; add_f64; push_f64 4.0; eq_f64; ret;", 1);
+        eval_i64("push_f64 10.0; push_f64 2.5; sub_f64; push_f64 7.5; eq_f64; ret;", 1);
+        eval_i64("push_f64 3.0; push_f64 2.0; mul_f64; push_f64 6.0; eq_f64; ret;", 1);
+        eval_i64("push_f64 9.0; push_f64 2.0; div_f64; push_f64 4.5; eq_f64; ret;", 1);
+
+        // Math functions
+        eval_i64("push_f64 16.0; sqrt_f64; push_f64 4.0; eq_f64; ret;", 1);
+        eval_i64("push_f64 2.0; push_f64 10.0; pow_f64; push_f64 1024.0; eq_f64; ret;", 1);
+
+        // Comparisons
+        eval_i64("push_f64 1.0; push_f64 2.0; lt_f64; ret;", 1);
+        eval_i64("push_f64 2.0; push_f64 2.0; ge_f64; ret;", 1);
+        eval_i64("push_f64 1.0; push_f64 2.0; ne_f64; ret;", 1);
+    }
+
+    #[test]
+    fn test_double_conv()
+    {
+        // Int -> f64 (exact for small magnitudes)
+        eval_i64("push_i8 -7; i32_to_f64; push_f64 -7.0; eq_f64; ret;", 1);
+        eval_i64("push_u64 1000000; i64_to_f64; push_f64 1000000.0; eq_f64; ret;", 1);
+
+        // f64 -> i64 truncates towards zero
+        eval_i64("push_f64 3.9; f64_to_i64; push_i8 3; eq_u64; ret;", 1);
+        eval_i64("push_f64 -3.9; f64_to_i64; push_i8 -3; eq_u64; ret;", 1);
     }
 
     #[test]
