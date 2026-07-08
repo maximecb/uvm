@@ -1428,6 +1428,10 @@ impl<'a> Codegen<'a>
         if bare.starts_with("lifetime.") {
             return Ok(()); // a scoping hint; emit nothing
         }
+        if bare == "assume" {
+            return Ok(()); // an optimizer hint (`llvm.assume(i1)`); no runtime effect.
+                           // clang >=21 emits these for unrolled-loop trip counts.
+        }
         if bare.starts_with("va_start") {
             return self.gen_va_start(ctx, &args[0].val);
         }
