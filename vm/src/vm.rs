@@ -46,7 +46,7 @@ pub enum Op
     // push_i8 <imm:i8> (sign-extended)
     push_i8,
 
-    // push_u32 <imm:u32>
+    // push_u32 <imm:u32> (zero-extended)
     push_u32,
 
     // push_u64 <imm:u64>
@@ -224,7 +224,7 @@ pub enum Op
     mul_f32,
     div_f32,
 
-    // Floating-point math functions
+    // 32-bit floating-point math functions
     sin_f32,
     cos_f32,
     tan_f32,
