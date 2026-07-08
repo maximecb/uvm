@@ -44,9 +44,10 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
 - **Back-end codegen: Phases 0–8 done** (arithmetic, control flow, memory,
   globals, calls, intrinsics, corner cases) and **Phase 9 done** (the
   clang-driver front-end — `uvclang foo.c` drives clang + back-end in one
-  command). Scalar **`float` (f32) is supported** (arithmetic, compare, int↔float
-  conversions, libm f32 calls; see *Floating point* below), and the **printf
-  family** (`printf`/`sprintf`/`snprintf`/…) is implemented on the callee-side
+  command). Scalar **`float` (f32) and `double` (f64) are supported**
+  (arithmetic, compare, int↔float conversions, float↔double conversions, libm
+  f32/f64 calls; see *Floating point* below), and the **printf family**
+  (`printf`/`sprintf`/`snprintf`/…) is implemented on the callee-side
   `va_arg` support (see *C standard library* → `<stdio.h>`). The back-end
   differential suite (`.ll` path) is **108 pass / 0 fail / 0 skip**; the
   end-to-end front-end suite (`tests/run_frontend_tests.sh`, single-command
@@ -152,34 +153,39 @@ support ordinary variadic C (the `printf` family).
 - **`zext`** = already satisfied by the invariant (or mask/`trunc` to source
   width). **`sext`** = `sx_iW_iW2`. **`trunc`** = `trunc_uW`.
 
-### Floating point (f32) — DONE
-UVM has **single-precision only** — a fixed set of `*_f32` ops and no f64
-instructions at all — so uvclang supports `float` and rejects `double`
-*arithmetic* (a `double` value can still be stored/moved, just not computed on;
-`fpext`/`fptrunc` error). This mirrors ncc, which is also f32-only.
-- **Slot representation is identical to `i32`:** a float lives in the low 32
-  bits of its slot as the IEEE-754 pattern, upper bits zero (`Value::as_f32`
-  reads `f32::from_bits(low32)`). So `load float`/`store float` are just
-  `load_u32`/`store_u32`, and float phi/select/call-args/returns reuse the exact
+### Floating point (f32 + f64) — DONE
+UVM has parallel single- and double-precision op sets (`*_f32` and `*_f64`), so
+uvclang supports both `float` and `double` as first-class scalars. Each float
+codegen path picks its ops/width through one helper, `float_kind(ty)`, which
+maps `float`→`("f32", 32)` and `double`→`("f64", 64)`.
+- **Slot representation mirrors the same-width integer:** a `float` lives in the
+  low 32 bits of its slot as the IEEE-754 pattern (like `i32`); a `double` fills
+  the whole 64-bit slot (like `i64`). So `load/store` of a float/double are just
+  `load_u32`/`load_u64` etc., and float phi/select/call-args/returns reuse the
   integer value-moving paths (see `scalar_width`).
-- **Arithmetic/compare:** `fadd/fsub/fmul/fdiv` → `add/sub/mul/div_f32`;
-  `fneg` → xor the sign bit (`^ 0x80000000`); `fcmp` → the six ordered VM ops
-  (`eq/lt/le/gt/ge_f32`, all NaN-false) with `ne_f32` for `une`, and the
-  remaining unordered/`one`/`ord`/`uno` predicates composed by boolean
-  complement/disjunction.
-- **Conversions:** `sitofp` sign-extends to i64 then `i64_to_f32`; `uitofp` uses
-  `i64_to_f32` on the already-zero-extended slot; `fptosi`/`fptoui` →
-  `f32_to_i32` then re-truncate to restore the width invariant (target width
-  ≤ 32; float→i64 is unsupported). Float constants lower to `push_f32` (finite)
-  or the raw bit pattern (inf/NaN); `float` globals emit `.f32`.
-- **libm / intrinsics:** `sinf/cosf/tanf/asinf/acosf/atanf/sqrtf/powf` (libcalls)
-  and `llvm.sqrt/sin/cos/fabs/pow.f32` map to the matching `*_f32` op; `fabsf`/
-  `llvm.fabs` clear the sign bit; `llvm.fmuladd.f32` → `mul_f32; add_f32` (two
-  roundings — matches a baseline no-FMA native target; a float test compares
+- **Arithmetic/compare:** `fadd/fsub/fmul/fdiv` → `add/sub/mul/div_{f32,f64}`;
+  `fneg` → xor the sign bit (`^ 0x8000_0000` for f32, `^ 0x8000_0000_0000_0000`
+  for f64); `fcmp` → the six ordered VM ops (`eq/lt/le/gt/ge_{f32,f64}`, all
+  NaN-false) with `ne_*` for `une`, and the remaining unordered/`one`/`ord`/`uno`
+  predicates composed by boolean complement/disjunction (which act on the 0/1
+  results, so they're width-agnostic).
+- **Conversions:** `sitofp` sign-extends to i64 then `i64_to_{f32,f64}`; `uitofp`
+  uses `i64_to_{f32,f64}` on the already-zero-extended slot. `fptosi`/`fptoui`
+  from f32 to a ≤32-bit int use `f32_to_i32` then re-truncate; every other case
+  (any float → i64, or f64 → any int) goes through `f64_to_i64` (widening an f32
+  with `f32_to_f64` first) then truncates to the target width. `fpext`
+  (float→double) → `f32_to_f64`; `fptrunc` (double→float) → `f64_to_f32`. Float
+  constants lower to `push_f32`/`push_f64` (finite) or the raw bit pattern
+  (inf/NaN); `float`/`double` globals emit `.f32`/`.f64`.
+- **libm / intrinsics:** `sinf/…/powf` and `sin/…/pow` (libcalls) plus
+  `llvm.sqrt/sin/cos/fabs/pow.{f32,f64}` map to the matching `*_f32`/`*_f64` op
+  (dispatched on the call name / intrinsic result type); `fabsf`/`fabs`/
+  `llvm.fabs` clear the sign bit; `llvm.fmuladd` → `mul; add` (two roundings —
+  matches a baseline no-FMA native target; the float tests compare
   transcendentals with tolerance to absorb any last-bit host/libm difference).
 - **Header:** a minimal ISO `<math.h>` in `uvclang/include/` declares the f32
-  functions (+ `M_PI`/`M_PI_F` constants). Covered by `tests/floats.c`
-  (differential vs native + self-checking, -O0/-O1/-O2).
+  and f64 functions (+ `M_PI`/`M_PI_F` constants). Covered by `tests/floats.c`
+  and `tests/doubles.c` (differential vs native + self-checking, -O0/-O1/-O2).
 
 ### Memory & pointers
 - **`alloca`:** assign each alloca a fixed offset within the function's
@@ -446,15 +452,17 @@ verbatim without consuming an argument.
 |---|---|---|
 | `assert` | ✅ | ✅ passing path (`uvm_*` self-checks) + failure path (`xfail_assert.c`) |
 
-### `<math.h>` — partial (f32)
+### `<math.h>` — partial (f32 + f64)
 A minimal ISO `<math.h>` ships in `uvclang/include/`, declaring the
 single-precision functions uvclang lowers to UVM `*_f32` ops
-(`sinf`/`cosf`/`tanf`/`asinf`/`acosf`/`atanf`/`sqrtf`/`fabsf`/`powf`) plus the
-`M_*`/`M_*_F` constants. Exercised by `tests/floats.c`. **Not** provided: the
-`double` variants (UVM has no f64), and f32 ops with no UVM instruction
-(`floorf`/`ceilf`/`fmodf`/`expf`/`logf`/`atan2f`/…) — add when a test needs
-them. Note `uvm/math.h` is a separate UVM-specific header (min/max/lerp macros),
-not ISO `<math.h>`.
+(`sinf`/`cosf`/`tanf`/`asinf`/`acosf`/`atanf`/`sqrtf`/`fabsf`/`powf`) and their
+double-precision counterparts lowered to `*_f64` ops
+(`sin`/`cos`/`tan`/`asin`/`acos`/`atan`/`sqrt`/`fabs`/`pow`) plus the
+`M_*`/`M_*_F` constants. Exercised by `tests/floats.c` and `tests/doubles.c`.
+**Not** provided: functions with no UVM instruction
+(`floorf`/`ceilf`/`fmodf`/`expf`/`logf`/`atan2f`/… and their `double` forms) —
+add when a test needs them. Note `uvm/math.h` is a separate UVM-specific header
+(min/max/lerp macros), not ISO `<math.h>`.
 
 ### Out of scope for now
 `<time.h>`, `<locale.h>`, `<signal.h>`, `<setjmp.h>`, `<errno.h>`, `<wchar.h>` —
@@ -709,5 +717,5 @@ the doom path (doom's only libc external is `@strlen`, already covered).
   `print`, window/framebuffer, keyboard/mouse input) is in scope (Phase 10);
   only **audio** (sound/MIDI) is deferred.
 - No support for IR features clang `-O2` C output never emits (vectors,
-  `double`/f64 arithmetic — UVM is f32-only, exception handling, etc.) until a
-  test needs them. (Scalar `float`/f32 *is* supported — see *Floating point*.)
+  exception handling, etc.) until a test needs them. (Scalar `float`/f32 and
+  `double`/f64 *are* supported — see *Floating point*.)

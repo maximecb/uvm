@@ -3,16 +3,13 @@
 
 // Minimal ISO <math.h> for the uvclang/UVM target.
 //
-// UVM has single-precision (f32) floating-point only — there are no f64 ops —
-// so this header declares just the `float` (`*f`) functions, each of which
-// uvclang lowers inline to a UVM `*_f32` instruction (see codegen's
-// `is_float_builtin` / `gen_intrinsic`). The `double` versions (`sin`, `sqrt`,
-// ...) are intentionally *not* declared: a program that calls them would make
-// clang emit f64 IR that the back-end cannot lower.
+// UVM has both single-precision (f32) and double-precision (f64) floating-point
+// ops, so this header declares the `float` (`*f`) functions and their `double`
+// counterparts. uvclang lowers each inline to the matching UVM `*_f32`/`*_f64`
+// instruction (see codegen's `is_float_builtin` / `gen_intrinsic`).
 //
 // Constants are provided in both the traditional `double` spelling and a `*_F`
-// `float` spelling (referenced by <uvm/math.h>'s DEG2RAD); with UVM's f32-only
-// arithmetic the values collapse to float at use anyway.
+// `float` spelling (referenced by <uvm/math.h>'s DEG2RAD).
 
 #define M_E_F        2.71828182845904523536f
 #define M_LOG2E_F    1.44269504088896340736f
@@ -49,5 +46,17 @@ float sqrtf(float x);
 float fabsf(float x);
 float powf(float x, float y);
 float exp2f(float x);
+
+// Double-precision functions backed by UVM f64 instructions.
+double sin(double x);
+double cos(double x);
+double tan(double x);
+double asin(double x);
+double acos(double x);
+double atan(double x);
+double sqrt(double x);
+double fabs(double x);
+double pow(double x, double y);
+double exp2(double x);
 
 #endif // __UVCLANG_MATH_H__
