@@ -219,7 +219,12 @@ static void __pf_emit_float(__pf_sink *o, unsigned long ubits, int width, int pr
     union { unsigned long u; double d; } pun;
     pun.u = ubits;
     float val = (float)pun.d;          // f64 -> f32
-    if (val < 0.0f) val = -val;        // magnitude; sign captured above
+    // Take the magnitude using the sign bit captured above rather than a
+    // `val < 0.0f` compare: newer clang (>=21) proves `(float)pun.d < 0.0f`
+    // equals an f64 compare on the un-narrowed double and hoists it to an
+    // `fcmp olt double`, which UVM has no instruction for. Branching on `neg`
+    // keeps the whole routine in f32.
+    if (neg) val = -val;               // magnitude; sign captured above
 
     // Round half away from zero at the last printed place: bias by 0.5 ulp of
     // the precision, then truncate each digit. The bias carries into the
