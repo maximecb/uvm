@@ -54,6 +54,17 @@ pub struct SrcPos
     file_id: u32,
 }
 
+/// An opaque snapshot of the lexer's read position, used to rewind a
+/// speculative parse. Unlike `SrcPos` it also captures the input index, so the
+/// read cursor (not just the reported line/col) is restored.
+#[derive(Clone, Copy)]
+pub struct Checkpoint
+{
+    idx: usize,
+    line_no: u32,
+    col_no: u32,
+}
+
 impl SrcPos
 {
     pub fn get_src_name(&self) -> String
@@ -199,6 +210,25 @@ impl Lexer
         assert!(pos.col_no > 0);
         self.line_no = pos.line_no;
         self.col_no = pos.col_no;
+    }
+
+    /// Capture the full read position (including the input index, which
+    /// `SrcPos` deliberately omits) so a speculative parse can be rewound.
+    pub fn checkpoint(&self) -> Checkpoint
+    {
+        Checkpoint {
+            idx: self.idx,
+            line_no: self.line_no,
+            col_no: self.col_no,
+        }
+    }
+
+    /// Rewind to a position previously captured with `checkpoint`.
+    pub fn restore(&mut self, cp: Checkpoint)
+    {
+        self.idx = cp.idx;
+        self.line_no = cp.line_no;
+        self.col_no = cp.col_no;
     }
 
     /// Test if the end of the input has been reached

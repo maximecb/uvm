@@ -986,7 +986,58 @@ impl Parser
     // Types
     // -----------------------------------------------------------------------
 
+    /// Parse a type, folding away typed-pointer syntax. clang <= 14 emits
+    /// *typed* pointers (`i32*`, `%struct.foo*`, function pointers like
+    /// `void (i8*)*`); newer clang emits opaque `ptr`. uvclang's model is
+    /// opaque-pointer based, so any pointer suffix collapses to `Type::Ptr` and
+    /// this back-end ingests both dialects identically.
     fn parse_type(&mut self) -> Result<Type, ParseError>
+    {
+        let mut ty = self.parse_base_type()?;
+
+        loop {
+            self.input.eat_ws()?;
+
+            // Function-pointer pointee, e.g. `void (i8*)*`. A parenthesized
+            // signature is only part of *this* type when it is actually a
+            // function pointer (a `*` follows the `)`); otherwise it is a call
+            // or definition signature the caller handles, so speculatively
+            // parse it and rewind if no `*` follows.
+            if self.input.peek_ch() == '(' {
+                let cp = self.input.checkpoint();
+                self.input.expect_token("(")?;
+                let (params, varargs) = self.parse_type_list()?;
+                self.input.expect_token(")")?;
+                self.input.eat_ws()?;
+                if self.input.peek_ch() == '*' {
+                    ty = Type::Func(Box::new(FuncType { ret: ty, params, varargs }));
+                    continue; // let the `*` below collapse it to a pointer
+                }
+                self.input.restore(cp);
+                break;
+            }
+
+            // Optional pointer address space, e.g. `i8 addrspace(1)*`.
+            if self.input.match_keyword("addrspace")? {
+                self.skip_parens()?;
+            }
+
+            // Typed-pointer suffix `*` (possibly repeated: `i8**`).
+            if self.input.peek_ch() == '*' {
+                self.input.eat_ch();
+                ty = Type::Ptr;
+                continue;
+            }
+
+            break;
+        }
+
+        Ok(ty)
+    }
+
+    /// Parse a non-pointer type. The pointer/function-pointer suffixes are
+    /// handled by `parse_type`, which wraps this.
+    fn parse_base_type(&mut self) -> Result<Type, ParseError>
     {
         self.input.eat_ws()?;
 

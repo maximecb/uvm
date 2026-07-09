@@ -1515,6 +1515,10 @@ impl<'a> Codegen<'a>
             self.gen_three_way(ctx, a, &args[1].val, &args[0].ty, ret_ty, false)?;
         } else if bare.starts_with("usub.sat.") {
             self.gen_usub_sat(ctx, a, &args[1].val, ret_ty)?;
+        } else if bare.starts_with("fshl.") {
+            self.gen_funnel_shift(ctx, a, &args[1].val, &args[2].val, ret_ty, true)?;
+        } else if bare.starts_with("fshr.") {
+            self.gen_funnel_shift(ctx, a, &args[1].val, &args[2].val, ret_ty, false)?;
         } else if bare.starts_with("bitreverse.") {
             let w = int_width(ret_ty)?;
             if w != 8 {
@@ -1762,6 +1766,55 @@ impl<'a> Codegen<'a>
         self.line(&format!("{}:", l_zero));
         self.line("push 0;");
         self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// Lower a funnel shift `llvm.fshl.iN` / `llvm.fshr.iN` (`is_left` selects
+    /// which). A funnel shift concatenates `a` (high) and `b` (low) into a
+    /// `2N`-bit value and shifts by `c mod N`, keeping the high N bits (`fshl`)
+    /// or low N bits (`fshr`); with `a == b` it is a rotate. clang emits these
+    /// for byte rotates. Integer widths are powers of two, so `c mod N` is
+    /// `c & (N-1)`.
+    fn gen_funnel_shift(
+        &mut self,
+        ctx: &FnCtx,
+        a: &Value,
+        b: &Value,
+        c: &Value,
+        ty: &Type,
+        is_left: bool,
+    ) -> Result<(), String>
+    {
+        let dir = if is_left { "l" } else { "r" };
+        let w = int_width(ty)?;
+        if !matches!(w, 8 | 16 | 32 | 64) {
+            return Err(format!("llvm.fsh{} only supported for i8/i16/i32/i64 (got i{})", dir, w));
+        }
+        // The shift amount is a compile-time constant in the IR clang emits (a
+        // rotate by a fixed distance); a runtime distance would need the operand
+        // duplicated across three shifts, which we don't have a use for.
+        let cv = match c {
+            Value::Int(cv) => *cv,
+            _ => return Err(format!("llvm.fsh{} with a non-constant shift amount is not supported", dir)),
+        };
+        let s = (cv & (w as i128 - 1)) as u32;
+
+        // s == 0 keeps no bits from the other operand: fshl is `a`, fshr is `b`.
+        if s == 0 {
+            return self.push_value(ctx, if is_left { a } else { b }, w);
+        }
+
+        // result = (a << la) | (b >> ra), then narrow to N bits. Both amounts
+        // are in 1..=N-1 (< 64), so neither shift is out of range even for i64.
+        let (la, ra) = if is_left { (s, w - s) } else { (w - s, s) };
+        self.push_value(ctx, a, w)?;
+        self.push_int(la as i128, 64);
+        self.line("lshift_u64;");
+        self.push_value(ctx, b, w)?;
+        self.push_int(ra as i128, 64);
+        self.line("rshift_u64;");
+        self.line("or_u64;");
+        self.emit_trunc_to(w); // normalize to a valid iN slot
         Ok(())
     }
 
