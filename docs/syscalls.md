@@ -17,7 +17,7 @@ Core functionality provided by the VM that isn't related to any kind of I/O.
 ## memset
 
 ```
-void memset(u8* dst, u8 value, u64 num_bytes)
+void memset(void* dst, u8 value, u64 num_bytes)
 ```
 
 Fill a block of bytes in the heap with a given value.
@@ -33,7 +33,7 @@ Fill a region of memory with 32-bit values. This is useful for some graphics ope
 ## memcpy
 
 ```
-void memcpy(u8* dst, const u8* src, u64 num_bytes)
+void memcpy(void* dst, const void* src, u64 num_bytes)
 ```
 
 Copy a block of memory in the heap from a source address to a destination address.
@@ -41,7 +41,7 @@ Copy a block of memory in the heap from a source address to a destination addres
 ## memcmp
 
 ```
-i32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+i32 memcmp(const void* p_a, const void* p_b, u64 num_bytes)
 ```
 
 **Returns:** `i32 result`

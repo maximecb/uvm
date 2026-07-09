@@ -14,9 +14,9 @@
 
 #include <stdint.h>
 
-// void memset(u8* dst, u8 value, u64 num_bytes)
+// void memset(void* dst, u8 value, u64 num_bytes)
 // Fill a block of bytes in the heap with a given value.
-extern void __uvm_memset(uint8_t* __dst, uint8_t __value, uint64_t __num_bytes);
+extern void __uvm_memset(void* __dst, uint8_t __value, uint64_t __num_bytes);
 #define memset(__dst, __value, __num_bytes) __uvm_memset(__dst, __value, __num_bytes)
 
 // void memset32(u32* dst, u32 word, u64 num_words)
@@ -24,14 +24,14 @@ extern void __uvm_memset(uint8_t* __dst, uint8_t __value, uint64_t __num_bytes);
 extern void __uvm_memset32(uint32_t* __dst, uint32_t __word, uint64_t __num_words);
 #define memset32(__dst, __word, __num_words) __uvm_memset32(__dst, __word, __num_words)
 
-// void memcpy(u8* dst, const u8* src, u64 num_bytes)
+// void memcpy(void* dst, const void* src, u64 num_bytes)
 // Copy a block of memory in the heap from a source address to a destination address.
-extern void __uvm_memcpy(uint8_t* __dst, const uint8_t* __src, uint64_t __num_bytes);
+extern void __uvm_memcpy(void* __dst, const void* __src, uint64_t __num_bytes);
 #define memcpy(__dst, __src, __num_bytes) __uvm_memcpy(__dst, __src, __num_bytes)
 
-// i32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+// i32 memcmp(const void* p_a, const void* p_b, u64 num_bytes)
 // Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in `p_a`, 1 if greater.
-extern int32_t __uvm_memcmp(const uint8_t* __p_a, const uint8_t* __p_b, uint64_t __num_bytes);
+extern int32_t __uvm_memcmp(const void* __p_a, const void* __p_b, uint64_t __num_bytes);
 #define memcmp(__p_a, __p_b, __num_bytes) __uvm_memcmp(__p_a, __p_b, __num_bytes)
 
 // u64 vm_heap_size()
@@ -217,7 +217,7 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 #else
 // Compiled with ncc: syscalls expand to inline UVM assembly blocks.
 
-// void memset(u8* dst, u8 value, u64 num_bytes)
+// void memset(void* dst, u8 value, u64 num_bytes)
 // Fill a block of bytes in the heap with a given value.
 #define memset(__dst, __value, __num_bytes) asm (__dst, __value, __num_bytes) -> void { syscall memset; }
 
@@ -225,11 +225,11 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 // Fill a region of memory with 32-bit values. This is useful for some graphics operations.
 #define memset32(__dst, __word, __num_words) asm (__dst, __word, __num_words) -> void { syscall memset32; }
 
-// void memcpy(u8* dst, const u8* src, u64 num_bytes)
+// void memcpy(void* dst, const void* src, u64 num_bytes)
 // Copy a block of memory in the heap from a source address to a destination address.
 #define memcpy(__dst, __src, __num_bytes) asm (__dst, __src, __num_bytes) -> void { syscall memcpy; }
 
-// i32 memcmp(const u8* p_a, const u8* p_b, u64 num_bytes)
+// i32 memcmp(const void* p_a, const void* p_b, u64 num_bytes)
 // Compare two sequences of bytes. Returns 0 if equal, -1 if the first mismatching byte has a lower value in `p_a`, 1 if greater.
 #define memcmp(__p_a, __p_b, __num_bytes) asm (__p_a, __p_b, __num_bytes) -> i32 { syscall memcmp; }
 

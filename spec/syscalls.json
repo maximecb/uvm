@@ -7,7 +7,7 @@
         "name": "memset",
         "args": [
           [
-            "u8*",
+            "void*",
             "dst"
           ],
           [
@@ -55,11 +55,11 @@
         "name": "memcpy",
         "args": [
           [
-            "u8*",
+            "void*",
             "dst"
           ],
           [
-            "const u8*",
+            "const void*",
             "src"
           ],
           [
@@ -79,11 +79,11 @@
         "name": "memcmp",
         "args": [
           [
-            "const u8*",
+            "const void*",
             "p_a"
           ],
           [
-            "const u8*",
+            "const void*",
             "p_b"
           ],
           [

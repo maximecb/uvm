@@ -49,9 +49,9 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
   f32/f64 calls; see *Floating point* below), and the **printf family**
   (`printf`/`sprintf`/`snprintf`/…) is implemented on the callee-side
   `va_arg` support (see *C standard library* → `<stdio.h>`). The back-end
-  differential suite (`.ll` path) is **108 pass / 0 fail / 0 skip**; the
+  differential suite (`.ll` path) is **114 pass / 0 fail / 0 skip**; the
   end-to-end front-end suite (`tests/run_frontend_tests.sh`, single-command
-  `uvclang foo.c`) is **126 pass / 0 fail / 0 skip**. `doom.ll` compiles through
+  `uvclang foo.c`) is **147 pass / 0 fail / 0 skip**. `doom.ll` compiles through
   every construct. Callee-side `va_arg` is now supported (see *Calls* below),
   which cleared the previous skips.
 - **Remaining:** Phase 10 (doom bring-up on a **real, graphical UVM runtime** —
@@ -298,7 +298,12 @@ the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
 - **clang / uvclang:** each syscall is `extern <ret> __uvm_<name>(...)` plus a
   function-like macro binding the natural name (so `memcpy(...)`, `putchar(...)`
   expand to `__uvm_memcpy(...)` etc., bypassing clang's builtin declarations with
-  no signature clash — and never taking a symbol's address).
+  no signature clash — and never taking a symbol's address). The byte-buffer
+  standard-library syscalls (`memcpy`/`memset`/`memcmp`) declare their pointer
+  parameters as `void*`/`const void*` in the spec, matching the ISO C prototypes:
+  a narrower `uint8_t*` would make clang reject any call passing a non-`char`
+  pointer (e.g. a `float[4][4]` matrix) — `-Wincompatible-pointer-types`, a hard
+  *error* under clang 16+ — so `void*` is what lets real C compile unchanged.
 - **ncc:** the original inline-asm `asm(...) -> T { syscall name; }` macros.
 - Constants (`KEY_*`, `OPEN_*`, `EVENT_*`, ...) are shared by both branches.
 
