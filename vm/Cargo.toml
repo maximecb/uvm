@@ -6,7 +6,7 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-sdl2 = "0.37.0"
+sdl2 = "0.38.0"
 libc = "0.2" # needed for mmap
 
 [features]
