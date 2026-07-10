@@ -41,6 +41,11 @@ pub struct Codegen<'a>
     /// Constant-expression values that can't be a static directive, initialized
     /// by code at program startup: (global label, byte offset, expression).
     runtime_inits: Vec<(String, u64, ConstExpr)>,
+    /// Emitted lines for the current scope (one function, or the shared
+    /// preamble), pending flush to `out`. Buffering per scope lets a peephole
+    /// pass collapse single-use `set_local`/`get_local` round-trips before the
+    /// lines are committed — see `flush_scope` / `peephole_locals`.
+    buf: Vec<String>,
 }
 
 /// Per-function lowering context.
@@ -83,6 +88,7 @@ impl<'a> Codegen<'a>
             defined_fns,
             label_counter: 0,
             runtime_inits: vec![],
+            buf: vec![],
         }
     }
 
@@ -94,6 +100,7 @@ impl<'a> Codegen<'a>
         self.line("");
         self.gen_data()?;
         self.gen_code()?;
+        self.flush_scope(); // commit anything left in the final scope
         Ok(self.out)
     }
 
@@ -165,12 +172,14 @@ impl<'a> Codegen<'a>
         }
 
         self.emit_thread_trampoline();
+        self.flush_scope(); // preamble (entry, __uvclang_start, trampoline) is one scope
 
         // Copy out the module reference so the loop doesn't borrow `self`.
         let module = self.module;
         for f in &module.functions {
             if !f.is_decl() {
                 self.gen_function(f)?;
+                self.flush_scope(); // each function's slots are counted on their own
             }
         }
         Ok(())
@@ -2068,8 +2077,19 @@ impl<'a> Codegen<'a>
 
     fn line(&mut self, s: &str)
     {
-        self.out.push_str(s);
-        self.out.push('\n');
+        self.buf.push(s.to_string());
+    }
+
+    /// Commit the current scope's buffered lines to `out`, running the local
+    /// round-trip peephole first. Called at each function boundary so slot
+    /// numbers (which restart per function) are counted within one scope.
+    fn flush_scope(&mut self)
+    {
+        let lines = std::mem::take(&mut self.buf);
+        for l in peephole_locals(lines) {
+            self.out.push_str(&l);
+            self.out.push('\n');
+        }
     }
 }
 
@@ -2307,6 +2327,120 @@ fn type_str(ty: &Type) -> String
     }
 }
 
+/// If `line` is exactly `set_local <n>;` or `get_local <n>;` (ignoring any
+/// surrounding whitespace), return `(is_set, slot)`. Anything else is `None`.
+fn parse_local_op(line: &str) -> Option<(bool, &str)>
+{
+    let s = line.trim().strip_suffix(';')?;
+    let (is_set, rest) = match s.strip_prefix("set_local ") {
+        Some(r) => (true, r),
+        None => (false, s.strip_prefix("get_local ")?),
+    };
+    let slot = rest.trim();
+    (!slot.is_empty() && slot.bytes().all(|b| b.is_ascii_digit())).then_some((is_set, slot))
+}
+
+/// True for an instruction that pushes exactly one value while reading nothing
+/// off the stack: `push`/`push_f32`/`push_f64` (constants and labels) and
+/// `get_local`/`get_arg` (reads). These are the operand-producing ops that a
+/// live value can safely sit beneath (see pattern B in `peephole_locals`).
+/// Deliberately excludes `dup`/`swap` (which touch the existing top) and
+/// `push_0n` (which pushes N values).
+fn is_nullary_push(line: &str) -> bool
+{
+    let s = line.trim();
+    ["push ", "push_f32 ", "push_f64 ", "get_local ", "get_arg "]
+        .iter()
+        .any(|p| s.starts_with(p))
+}
+
+/// Peephole away the `set_local`/`get_local` round-trip a single-use SSA temp
+/// otherwise makes — a slot written and read exactly once in this scope holds
+/// such a value, and leaving it on the operand stack is cheaper than storing and
+/// reloading it. `store_dest` emits `set_local N` as an instruction's last line
+/// and the consumer's `push_value` reloads it with `get_local N`, so the temp
+/// appears as one of two shapes depending on which operand it feeds:
+///
+///   A. first operand:  `<op>; set_local N; get_local N; <consumer>`
+///                   -> `<op>; <consumer>`            (value already on top)
+///
+///   B. second operand: `set_local N; <push X>; get_local N; <op>`
+///                   -> `<push X>; swap; <op>`        (X pushed under the value,
+///                                                     `swap` restores [X, val])
+///
+/// Both are order-preserving rewrites of an existing net-zero sequence; pattern
+/// B is sound only because `<push X>` reads nothing off the stack, so it cannot
+/// disturb the value sitting beneath it (`is_nullary_push`). The once-written /
+/// once-read guard encodes "used once": multi-use values and the reused
+/// hand-rolled slots (loop counters, cmpxchg/atomicrmw scratch, bp) have counts
+/// > 1 and are left untouched. Slot numbers restart per function, so callers
+/// must invoke this per function scope (see `flush_scope`).
+fn peephole_locals(lines: Vec<String>) -> Vec<String>
+{
+    let mut sets: HashMap<&str, u32> = HashMap::default();
+    let mut gets: HashMap<&str, u32> = HashMap::default();
+    for l in &lines {
+        match parse_local_op(l) {
+            Some((true, n)) => *sets.entry(n).or_default() += 1,
+            Some((false, n)) => *gets.entry(n).or_default() += 1,
+            None => {}
+        }
+    }
+    // A slot written and read exactly once in this scope holds a single-use
+    // value (`sets`/`gets` still borrow `lines`, so this must run before the
+    // final move).
+    let single_use = |n: &str| sets.get(n) == Some(&1) && gets.get(n) == Some(&1);
+
+    // `drop[k]` deletes line k; `replace[k]` rewrites it. Both are keyed by the
+    // original index and only reference literally adjacent lines, so the pass is
+    // a strict rewrite of existing net-zero sequences — no reordering.
+    let mut drop = vec![false; lines.len()];
+    let mut replace: Vec<Option<&'static str>> = vec![None; lines.len()];
+    let mut i = 0;
+    while i < lines.len() {
+        // Pattern A: `set N; get N;` (value feeds the next op as first operand).
+        if i + 1 < lines.len() {
+            if let (Some((true, a)), Some((false, b))) =
+                (parse_local_op(&lines[i]), parse_local_op(&lines[i + 1]))
+            {
+                if a == b && single_use(a) {
+                    drop[i] = true;
+                    drop[i + 1] = true;
+                    i += 2;
+                    continue;
+                }
+            }
+        }
+        // Pattern B: `set N; <push X>; get N;` (value feeds the op as second
+        // operand). Drop the store and turn the reload into a `swap`.
+        if i + 2 < lines.len() {
+            if let (Some((true, a)), Some((false, b))) =
+                (parse_local_op(&lines[i]), parse_local_op(&lines[i + 2]))
+            {
+                if a == b && single_use(a) && is_nullary_push(&lines[i + 1]) {
+                    drop[i] = true;
+                    replace[i + 2] = Some("swap;");
+                    i += 3;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    let mut out = Vec::with_capacity(lines.len());
+    for (idx, line) in lines.into_iter().enumerate() {
+        if drop[idx] {
+            continue;
+        }
+        match replace[idx] {
+            Some(s) => out.push(s.to_string()),
+            None => out.push(line),
+        }
+    }
+    out
+}
+
 fn term_name(t: &Terminator) -> &'static str
 {
     match t {
@@ -2314,5 +2448,106 @@ fn term_name(t: &Terminator) -> &'static str
         Terminator::Br { .. } => "br",
         Terminator::Switch { .. } => "switch",
         Terminator::Unreachable => "unreachable",
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::peephole_locals;
+
+    fn run(lines: &[&str]) -> Vec<String>
+    {
+        peephole_locals(lines.iter().map(|s| s.to_string()).collect())
+    }
+
+    #[test]
+    fn collapses_single_use_roundtrip()
+    {
+        // The value is written once and read once, right after: both ops drop
+        // and the producer's result is left on the stack for `add_u32`.
+        let out = run(&["mul_u32;", "set_local 4;", "get_local 4;", "add_u32;"]);
+        assert_eq!(out, vec!["mul_u32;", "add_u32;"]);
+    }
+
+    #[test]
+    fn keeps_multi_read_slot()
+    {
+        // Slot 4 is read twice, so the local is live: the round-trip stays.
+        let lines = ["set_local 4;", "get_local 4;", "add_u32;", "get_local 4;"];
+        assert_eq!(run(&lines), lines);
+    }
+
+    #[test]
+    fn keeps_repeated_writer_slot()
+    {
+        // A slot written twice (e.g. a loop counter) is never collapsed even
+        // where a set/get happens to be adjacent.
+        let out = run(&["set_local 2;", "get_local 2;", "set_local 2;"]);
+        assert_eq!(out.len(), 3);
+    }
+
+    #[test]
+    fn requires_adjacency_and_matching_slot()
+    {
+        // set/get of the same slot but not adjacent: untouched.
+        let a = run(&["set_local 4;", "load_u32;", "get_local 4;"]);
+        assert_eq!(a.len(), 3);
+        // Adjacent, but different slots: untouched.
+        let b = run(&["set_local 4;", "get_local 5;"]);
+        assert_eq!(b.len(), 2);
+    }
+
+    #[test]
+    fn collapses_back_to_back_pairs()
+    {
+        let out = run(&[
+            "set_local 4;", "get_local 4;", "set_local 5;", "get_local 5;",
+        ]);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn swaps_single_use_second_operand()
+    {
+        // `set N; get M; get N; op`  ->  `get M; swap; op`: the value stays on
+        // the stack under M and `swap` restores the [M, value] operand order.
+        let out = run(&[
+            "set_local 185;", "get_local 173;", "get_local 185;", "sub_u32;",
+        ]);
+        assert_eq!(out, vec!["get_local 173;", "swap;", "sub_u32;"]);
+    }
+
+    #[test]
+    fn swaps_second_operand_under_constant_or_arg()
+    {
+        assert_eq!(
+            run(&["set_local 9;", "push 4;", "get_local 9;", "add_u64;"]),
+            vec!["push 4;", "swap;", "add_u64;"],
+        );
+        assert_eq!(
+            run(&["set_local 9;", "get_arg 0;", "get_local 9;", "store_u32;"]),
+            vec!["get_arg 0;", "swap;", "store_u32;"],
+        );
+    }
+
+    #[test]
+    fn pattern_b_requires_a_nullary_push_between()
+    {
+        // A middle line that reads the stack (here `load_u32` consumes the value)
+        // is not safe to slide the live value beneath, so pattern B must not fire.
+        let lines = ["set_local 9;", "load_u32;", "get_local 9;"];
+        assert_eq!(run(&lines), lines);
+    }
+
+    #[test]
+    fn pattern_b_respects_single_use()
+    {
+        // Slot 9 is read twice: keep the store and both reloads.
+        let lines = [
+            "set_local 9;", "get_local 1;", "get_local 9;", "add_u32;",
+            "get_local 9;",
+        ];
+        assert_eq!(run(&lines), lines);
     }
 }
