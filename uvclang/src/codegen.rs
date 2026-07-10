@@ -2086,7 +2086,9 @@ impl<'a> Codegen<'a>
     fn flush_scope(&mut self)
     {
         let lines = std::mem::take(&mut self.buf);
-        for l in peephole_locals(lines) {
+        let lines = peephole_locals(lines);
+        let lines = strip_fallthrough_jumps(lines);
+        for l in lines {
             self.out.push_str(&l);
             self.out.push('\n');
         }
@@ -2327,6 +2329,46 @@ fn type_str(ty: &Type) -> String
     }
 }
 
+/// If `line` is an unconditional `jmp <label>;`, return the target label.
+/// Conditional jumps (`jz`/`jnz`) are excluded: they pop the branch condition,
+/// so unlike `jmp` they are not a pure control transfer and must not be dropped.
+fn parse_jmp(line: &str) -> Option<&str>
+{
+    let target = line.trim().strip_suffix(';')?.strip_prefix("jmp ")?.trim();
+    (!target.is_empty()).then_some(target)
+}
+
+/// If `line` is a label definition `<label>:`, return the label. Labels are the
+/// only `:`-terminated lines (every directive/instruction ends in `;`).
+fn parse_label(line: &str) -> Option<&str>
+{
+    let label = line.trim().strip_suffix(':')?;
+    (!label.is_empty() && !label.contains(char::is_whitespace)).then_some(label)
+}
+
+/// Drop each `jmp L;` whose target label `L:` is the very next line: the jump
+/// only transfers control to where execution would fall through anyway. Emitted
+/// whenever a block branches to the block laid out immediately after it (the
+/// fall-through edge of a conditional `br`, a `switch` default, etc.). `jmp` has
+/// no stack effect, so removing it is behavior-preserving; the label stays, so
+/// other jumps to `L` are unaffected.
+fn strip_fallthrough_jumps(lines: Vec<String>) -> Vec<String>
+{
+    let mut drop = vec![false; lines.len()];
+    for i in 0..lines.len().saturating_sub(1) {
+        if let (Some(target), Some(label)) = (parse_jmp(&lines[i]), parse_label(&lines[i + 1])) {
+            if target == label {
+                drop[i] = true;
+            }
+        }
+    }
+    lines
+        .into_iter()
+        .zip(drop)
+        .filter_map(|(l, d)| (!d).then_some(l))
+        .collect()
+}
+
 /// If `line` is exactly `set_local <n>;` or `get_local <n>;` (ignoring any
 /// surrounding whitespace), return `(is_set, slot)`. Anything else is `None`.
 fn parse_local_op(line: &str) -> Option<(bool, &str)>
@@ -2549,5 +2591,36 @@ mod tests
             "get_local 9;",
         ];
         assert_eq!(run(&lines), lines);
+    }
+
+    fn run_jumps(lines: &[&str]) -> Vec<String>
+    {
+        super::strip_fallthrough_jumps(lines.iter().map(|s| s.to_string()).collect())
+    }
+
+    #[test]
+    fn drops_jump_to_next_line()
+    {
+        assert_eq!(
+            run_jumps(&["jmp __exit237;", "__exit237:", "ret;"]),
+            vec!["__exit237:", "ret;"],
+        );
+    }
+
+    #[test]
+    fn keeps_jump_to_a_later_label()
+    {
+        // Target label is not the next line (a real block sits between): keep it.
+        let lines = ["jmp __done;", "__other:", "add_u32;", "__done:"];
+        assert_eq!(run_jumps(&lines), lines);
+    }
+
+    #[test]
+    fn keeps_conditional_jump_to_next_line()
+    {
+        // `jz`/`jnz` pop the condition, so they are never dropped even when the
+        // target is the following line — `parse_jmp` only matches `jmp`.
+        let lines = ["jz __l;", "__l:"];
+        assert_eq!(run_jumps(&lines), lines);
     }
 }
