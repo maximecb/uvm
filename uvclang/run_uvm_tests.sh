@@ -6,19 +6,20 @@
 # top of UVM syscalls and have no native-libc equivalent, so the differential
 # harness (run_tests.sh) cannot cover them: a native reference build can't even
 # resolve <uvm/...>. Instead, each tests/uvm_*.c is a self-checking program that
-# asserts its own results and exits 0 on success. For each, at -O0/-O1/-O2, we:
-#   1. Generate .ll (gen_ll.sh, which adds -Iuvclang/include).
-#   2. Compile it via uvclang -> .asm.
-#   3. Run the .asm in UVM and require exit code 0.
+# asserts its own results and exits 0 on success. For each, at -O0/-O1/-O2:
+#   1. Compile the source straight to UVM asm via `uvclang $opt file.c -o asm`
+#      (clang driven in-process by the front end, no temporary .ll on disk).
+#   2. Run the .asm in UVM and require exit code 0.
 #
 # Tests uvclang cannot compile yet are reported as SKIP, not FAIL.
 #
-# Env overrides: CLANG (used by gen_ll.sh).
+# Env overrides: CLANG/CLANGXX (used by the uvclang front end).
 
 set -u
 
-ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-UVCLANG="$ROOT/uvclang"
+cd "$(dirname "$0")"
+UVCLANG=$(pwd)
+ROOT=$(cd .. && pwd)
 VM="$ROOT/vm"
 TESTS="$UVCLANG/tests"
 
@@ -41,15 +42,9 @@ for src in "$TESTS"/uvm_*.c; do
     base=$(basename "$src" .c)
     for opt in $OPT_LEVELS; do
         name="$base ($opt)"
-        ll="$TMP/$base$opt.ll"
 
-        # Generate the .ll fresh into the temp dir (it is a build artifact).
-        if ! OPT="$opt" "$UVCLANG/tests/gen_ll.sh" "$src" >"$ll" 2>/dev/null; then
-            echo "SKIP $name (no .ll)"; skip=$((skip+1)); continue
-        fi
-
-        # Compile via uvclang.
-        if ! "$UVCLANG_BIN" "$ll" -o "$TMP/out.asm" 2>"$TMP/err"; then
+        # One command: C source straight to UVM asm (clang driven in-process).
+        if ! "$UVCLANG_BIN" "$opt" "$src" -o "$TMP/out.asm" 2>"$TMP/err"; then
             echo "SKIP $name (uvclang: $(head -1 "$TMP/err"))"; skip=$((skip+1)); continue
         fi
 

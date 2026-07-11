@@ -1,5 +1,5 @@
 //! Recursive-descent parser for the subset of textual LLVM IR emitted by
-//! clang `-O2` (see tests/gen_ll.sh for the exact flags).
+//! clang `-O2` (see `frontend.rs` for the exact flags).
 //!
 //! The parser is deliberately permissive about *attributes*: anything that
 //! doesn't affect code generation (linkage, parameter/function attributes,

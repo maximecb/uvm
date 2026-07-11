@@ -52,10 +52,13 @@ jobs:
       working-directory: ./uvclang
       run: RUST_BACKTRACE=1 cargo test
 
-    - name: Test uvclang end-to-end (LLVM IR -> UVM, differential vs native)
+    - name: Test uvclang end-to-end (C -> UVM via front end, differential vs native)
       run: |
         clang --version   # fail loudly if the toolchain is missing rather than skipping every test
-        ./uvclang/tests/run_tests.sh
+        ./uvclang/run_tests.sh
 
     - name: Test uvclang <uvm/...> headers (self-checking, no native equivalent)
-      run: ./uvclang/tests/run_uvm_tests.sh
+      run: ./uvclang/run_uvm_tests.sh
+
+    - name: Compile uvclang examples (compile + UVM --parse-only smoke test)
+      run: ./uvclang/build_examples.sh

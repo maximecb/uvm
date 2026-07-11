@@ -1,27 +1,33 @@
 #!/bin/sh
 #
-# Front-end (Phase 9) test harness for uvclang.
+# Differential test harness for uvclang.
 #
-# Where run_tests.sh / run_uvm_tests.sh drive the back-end via a two-step
-# `gen_ll.sh file.c | uvclang file.ll`, this harness exercises the *whole*
-# pipeline through the single driver command `uvclang file.c` -- clang is run
-# in-process, no temp .ll ever hits disk. It is the direct proof that the
-# clang-driver front-end works end to end.
+# Drives the whole pipeline through the single driver command `uvclang file.c`:
+# clang is run in-process (the front end), no temporary .ll is ever written to
+# disk. For each tests/*.c, at -O0/-O1/-O2:
+#   1. Compile the source straight to UVM asm via `uvclang $opt file.c -o asm`.
+#   2. Run the asm in UVM                                   -> exit code + stdout
+#   3. Decide pass/fail by the file's kind:
+#        - xfail_*.c : an abnormal-termination path (e.g. a failed assert), with
+#                      no comparable native behavior. Require a NON-zero exit and
+#                      some stdout.
+#        - others    : compile+run natively (reference) and compare exit code and
+#                      stdout. UVM exits with main's return as the process code,
+#                      same as native (both truncated to 8 bits), so they compare
+#                      directly.
 #
-# For each tests/*.c, at -O0/-O1/-O2:
-#   - uvm_*.c  : self-checking. `uvclang $opt src -o asm`; run; require exit 0.
-#                (No native reference exists -- these use <uvm/...> headers.)
-#   - others   : differential. Compile+run natively (reference, no -I) and via
-#                `uvclang $opt src -o asm` + UVM; compare exit code and stdout.
+# uvm_*.c exercise the <uvm/...> platform headers, which have no native-libc
+# equivalent; run_uvm_tests.sh covers them (self-checking) and they are skipped
+# here. Tests uvclang cannot compile yet are reported as SKIP, not FAIL.
 #
-# Tests uvclang cannot compile yet are reported as SKIP, not FAIL.
-#
-# Env overrides: NATIVE_CC (default cc), CLANG/CLANGXX (used by the driver).
+# Env overrides: NATIVE_CC (default cc), CLANG/CLANGXX (used by the uvclang
+# front end).
 
 set -u
 
-ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-UVCLANG="$ROOT/uvclang"
+cd "$(dirname "$0")"
+UVCLANG=$(pwd)
+ROOT=$(cd .. && pwd)
 VM="$ROOT/vm"
 TESTS="$UVCLANG/tests"
 NATIVE_CC="${NATIVE_CC:-cc}"
@@ -37,10 +43,19 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0; fail=0; skip=0
 
+# Exercise each test at multiple optimization levels: -O0/-O1/-O2 produce
+# different IR shapes (e.g. -O0 keeps everything in allocas/loads/stores rather
+# than SSA registers) and so hit different uvclang code paths.
 OPT_LEVELS="-O0 -O1 -O2"
 
 for src in "$TESTS"/*.c; do
     base=$(basename "$src" .c)
+
+    # uvm_*.c use <uvm/...> headers with no native-libc equivalent, so they are
+    # self-checking and covered by run_uvm_tests.sh; skip them here.
+    case "$base" in
+        uvm_*) continue ;;
+    esac
 
     for opt in $OPT_LEVELS; do
         name="$base ($opt)"
@@ -55,25 +70,17 @@ for src in "$TESTS"/*.c; do
             xfail_*)
                 # Self-checking FAILURE path: no native reference. The program is
                 # expected to terminate abnormally after printing a diagnostic
-                # (e.g. a failed assert), so require a NON-zero exit and some
-                # output on stdout.
+                # (e.g. a failed assert), so require a NON-zero exit and output.
                 if [ "$uvm_code" != "0" ] && [ -n "$uvm_out" ]; then
                     echo "PASS $name (exit=$uvm_code)"; pass=$((pass+1))
                 else
                     echo "FAIL $name (exit=$uvm_code, out='$uvm_out')"; fail=$((fail+1))
                 fi
                 ;;
-            uvm_*)
-                # Self-checking: the program asserts its own results, exit 0 = ok.
-                if [ "$uvm_code" = "0" ]; then
-                    echo "PASS $name"; pass=$((pass+1))
-                else
-                    echo "FAIL $name (exit=$uvm_code)"; fail=$((fail+1))
-                fi
-                ;;
             *)
                 # Differential vs native. No -I on the reference build on purpose:
-                # it must use the platform libc, not uvclang's UVM-side headers.
+                # it must use the platform libc, not uvclang's UVM-side headers,
+                # so the stdlib headers are genuinely tested differentially.
                 if ! "$NATIVE_CC" "$opt" -w "$src" -o "$TMP/ref" 2>/dev/null; then
                     echo "SKIP $name (native compile failed)"; skip=$((skip+1)); continue
                 fi

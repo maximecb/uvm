@@ -4,9 +4,10 @@
 //! back-end: the lexer/parser/codegen back-end then runs in-process on the
 //! captured IR, with no temporary `.ll` written to disk.
 //!
-//! The flag set mirrors `tests/gen_ll.sh` exactly (target triple, the `-fno-*`
-//! set, `-S -emit-llvm`, `-Iuvclang/include`) so a `uvclang foo.c` build and the
-//! back-end's `.ll`-driven test path produce identical IR.
+//! This module is the single source of truth for uvclang's canonical clang
+//! flags (the target triple, the `-fno-*` set, `-S -emit-llvm`, and
+//! `-Iuvclang/include`). Every build and every test harness drives the compiler
+//! through this front end, so the flags live here and nowhere else.
 
 use std::path::Path;
 use std::process::Command;
@@ -72,9 +73,9 @@ fn uvm_include_dir() -> String
     concat!(env!("CARGO_MANIFEST_DIR"), "/include").to_string()
 }
 
-/// Resolve the clang binary the same way `gen_ll.sh` does: honor `$CLANG`
-/// (`$CLANGXX` for C++), else prefer Homebrew LLVM (a common macOS dev setup),
-/// else fall back to whatever `clang`/`clang++` is on PATH (Linux / CI).
+/// Resolve the clang binary: honor `$CLANG` (`$CLANGXX` for C++), else prefer
+/// Homebrew LLVM (a common macOS dev setup), else fall back to whatever
+/// `clang`/`clang++` is on PATH (Linux / CI).
 fn find_clang(is_cpp: bool) -> String
 {
     let (env_var, brew, base) = if is_cpp {
@@ -103,9 +104,9 @@ pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String
     cmd.arg("--target=x86_64-unknown-linux-gnu")
         .arg(&opts.opt_level)
         .arg(format!("-I{}", uvm_include_dir()))
-        // Canonical uvclang flags (kept in lockstep with tests/gen_ll.sh):
-        // keep value names for readable IR, and disable the transforms that
-        // produce IR the back-end intentionally does not support.
+        // Canonical uvclang flags: keep value names for readable IR, and
+        // disable the transforms that produce IR the back-end intentionally
+        // does not support.
         .arg("-fno-discard-value-names")
         .arg("-fno-optimize-sibling-calls")
         .arg("-fno-vectorize")
