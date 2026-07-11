@@ -47,6 +47,11 @@ UVCLANG_WEAK long labs(long n)
     return n < 0 ? -n : n;
 }
 
+UVCLANG_WEAK long long llabs(long long n)
+{
+    return n < 0 ? -n : n;
+}
+
 // End the program with the given status. <uvm/syscalls.h> defines exit() as a
 // macro forwarding to the `exit` syscall; we replace it with the real libc
 // function so &exit and standard usage both work. The status is truncated to 8

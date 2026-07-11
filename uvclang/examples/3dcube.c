@@ -1,0 +1,139 @@
+// A wireframe 3D cube rotating with a perspective projection.
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <uvm/syscalls.h>
+#include <uvm/window.h>
+#include <uvm/math.h>
+#include <uvm/3dmath.h>
+#include <uvm/graphics.h>
+
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
+
+#define remap(v, a0, a1, b0, b1) (b0 + (b1 - b0) * ((v) - a0) / (a1 - a0))
+
+// RGBA pixels
+uint32_t frame_buffer[FRAME_HEIGHT][FRAME_WIDTH];
+
+// Cube vertices in [-1, 1]
+float verts[8][3] = {
+    {-1.0f, 1.0f, 1.0f },
+    { 1.0f, 1.0f, 1.0f },
+    { 1.0f,-1.0f, 1.0f },
+    {-1.0f,-1.0f, 1.0f },
+    {-1.0f, 1.0f,-1.0f },
+    { 1.0f, 1.0f,-1.0f },
+    { 1.0f,-1.0f,-1.0f },
+    {-1.0f,-1.0f,-1.0f },
+};
+
+vec3 cube_pos = { 0.0f, 0.0f, -6.0f };
+
+// Cube rotation angle
+float angle = 0.0f;
+
+// Perspective projection matrix
+mat44 persp;
+
+// Translation matrix for the cube
+mat44 trans;
+
+// Draw a line between two 3D points
+void draw_line3d(vec3 v0, vec3 v1, uint32_t color)
+{
+    // Note that +Y in the image frame goes downwards,
+    // so we have to flip the Y coordinates
+    vec3 v_tmp;
+    mat44_transform(persp, v0, v_tmp);
+    int x0 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y0 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
+
+    mat44_transform(persp, v1, v_tmp);
+    int x1 = (int)remap(v_tmp[0], -1.0f, 1.0f, (float)FRAME_WIDTH, 0.0f);
+    int y1 = (int)remap(v_tmp[1], -1.0f, 1.0f, (float)FRAME_HEIGHT, 0.0f);
+
+    draw_line_clipped(
+        (uint32_t *)frame_buffer,
+        FRAME_WIDTH,
+        FRAME_HEIGHT,
+        (uint32_t)x0,
+        (uint32_t)y0,
+        (uint32_t)x1,
+        (uint32_t)y1,
+        color
+    );
+}
+
+// Transform and draw a 3D line
+void trans_line3d(mat44 trans, vec3 _v0, vec3 _v1)
+{
+    vec3 v0;
+    vec3 v1;
+    mat44_transform(trans, _v0, v0);
+    mat44_transform(trans, _v1, v1);
+    draw_line3d(v0, v1, COLOR_PURPLE);
+}
+
+void update(void)
+{
+    uint64_t start_time = time_current_ms();
+
+    // Clear the frame buffer, set all pixels to black
+    memset(frame_buffer, 0, sizeof(frame_buffer));
+
+    angle = angle + 0.01f;
+
+    // Rotation matrices for the cube
+    mat44 rotx;
+    mat44 roty;
+    mat44_rotx(angle, rotx);
+    mat44_roty(angle, roty);
+
+    mat44 rot;
+    mat44 m_cube;
+    mat44_mul(roty, rotx, rot);
+    mat44_mul(rot, trans, m_cube);
+
+    trans_line3d(m_cube, verts[0], verts[1]);
+    trans_line3d(m_cube, verts[1], verts[2]);
+    trans_line3d(m_cube, verts[2], verts[3]);
+    trans_line3d(m_cube, verts[3], verts[0]);
+
+    trans_line3d(m_cube, verts[4], verts[5]);
+    trans_line3d(m_cube, verts[5], verts[6]);
+    trans_line3d(m_cube, verts[6], verts[7]);
+    trans_line3d(m_cube, verts[7], verts[4]);
+
+    trans_line3d(m_cube, verts[0], verts[4]);
+    trans_line3d(m_cube, verts[1], verts[5]);
+    trans_line3d(m_cube, verts[2], verts[6]);
+    trans_line3d(m_cube, verts[3], verts[7]);
+
+    window_draw_frame(0, (uint8_t *)frame_buffer);
+
+    uint64_t end_time = time_current_ms();
+    printf("render time: %ldms\n", (long)(end_time - start_time));
+}
+
+int main(void)
+{
+    window_create(FRAME_WIDTH, FRAME_HEIGHT, "Rotating 3D Cube Example", 0);
+
+    // Setup the perspective projection matrix
+    perspective(
+        DEG2RAD(40.0f),
+        (float)FRAME_WIDTH / (float)FRAME_HEIGHT,
+        0.1f,   // near,
+        100.0f, // far,
+        persp
+    );
+
+    // Translation matrix for the cube
+    mat44_translate(cube_pos, trans);
+
+    anim_event_loop(60, update);
+
+    return 0;
+}
