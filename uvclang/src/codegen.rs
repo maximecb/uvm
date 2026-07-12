@@ -60,9 +60,14 @@ struct FnCtx<'f>
     blocks: HashMap<&'f str, &'f BasicBlock>,
     /// Alloca result name -> byte offset within the stack-alloc frame.
     alloca_offsets: HashMap<&'f str, u64>,
-    /// Total size of this function's stack-alloc frame (0 if no allocas).
+    /// Total size of the *static* part of this function's stack-alloc frame (0
+    /// if it has no constant-count allocas; a dynamic alloca can still exist).
     frame_size: u64,
-    /// Local slot holding the saved stack-alloc pointer (valid iff frame_size>0).
+    /// Whether this function establishes a stack-alloc frame at all: true if it
+    /// has any static frame bytes or any dynamic alloca. Gates the prologue that
+    /// saves the base pointer and the epilogue that resets the stack pointer.
+    has_frame: bool,
+    /// Local slot holding the saved stack-alloc pointer (valid iff has_frame).
     bp_slot: usize,
     /// Number of fixed (named) parameters — the `gp_offset` seed for va_start.
     num_params: usize,
@@ -395,9 +400,14 @@ impl<'a> Codegen<'a>
                 }
             }
         }
-        // Lay out the stack-alloc frame: assign each alloca a byte offset.
+        // Lay out the stack-alloc frame: assign each *static* (constant-count)
+        // alloca a byte offset. A dynamic (runtime-count) alloca is not
+        // pre-laid-out; it bumps the software stack pointer at its point of
+        // execution (see gen_dynamic_alloca) and is reclaimed by the same frame
+        // teardown on return. We only note that one is present here.
         let mut alloca_offsets = HashMap::default();
         let mut frame_off = 0u64;
+        let mut has_dynamic_alloca = false;
         for bb in &f.blocks {
             for inst in &bb.insts {
                 if let InstKind::Alloca { ty, count, .. } = &inst.kind {
@@ -406,7 +416,11 @@ impl<'a> Codegen<'a>
                         None => 1,
                         Some(tv) => match &tv.val {
                             Value::Int(c) => *c as u64,
-                            _ => return Err("dynamic (variable-length) alloca not supported".into()),
+                            // Non-constant count: lower at runtime, not here.
+                            _ => {
+                                has_dynamic_alloca = true;
+                                continue;
+                            }
                         },
                     };
                     frame_off = align_up(frame_off, self.layout.align_of(ty));
@@ -416,8 +430,12 @@ impl<'a> Codegen<'a>
             }
         }
         let frame_size = align_up(frame_off, 8);
+        // A function needs a stack-alloc frame (a saved base pointer, plus the
+        // teardown that resets the stack pointer on return) if it has any static
+        // frame bytes OR any dynamic alloca whose region must be reclaimed.
+        let has_frame = frame_size > 0 || has_dynamic_alloca;
         let bp_slot = num_slots;
-        let frame_slots = if frame_size > 0 { 1 } else { 0 };
+        let frame_slots = if has_frame { 1 } else { 0 };
 
         // A function that calls `llvm.va_start` needs two scratch local slots to
         // build the x86_64 va_list register-save area (see gen_va_start). They
@@ -441,6 +459,7 @@ impl<'a> Codegen<'a>
             blocks,
             alloca_offsets,
             frame_size,
+            has_frame,
             bp_slot,
             num_params: f.params.len(),
             va_scratch,
@@ -464,7 +483,9 @@ impl<'a> Codegen<'a>
         // (the main thread and runtime-spawned threads such as audio callbacks).
         // A thread-local value of 0 means "no private stack", selecting the
         // shared fallback — which reproduces the original single-stack behavior.
-        if frame_size > 0 {
+        // With only dynamic allocas, frame_size is 0: this just records bp (the
+        // reset target) and leaves the stack pointer where it is.
+        if ctx.has_frame {
             let l_shared = self.fresh_label("frame_shared");
             let l_done = self.fresh_label("frame_done");
 
@@ -552,13 +573,18 @@ impl<'a> Codegen<'a>
                 self.push_value(ctx, val, scalar_width(ty)?)?; // value (popped first)
                 self.line(&format!("store_u{};", bits));
             }
-            InstKind::Alloca { .. } => {
+            InstKind::Alloca { ty, count, align } => {
                 let dest = inst.dest.as_deref().ok_or("alloca without result")?;
-                let off = *ctx.alloca_offsets.get(dest).ok_or("alloca not in frame")?;
-                self.line(&format!("get_local {};", ctx.bp_slot));
-                if off != 0 {
-                    self.push_int(off as i128, 64);
-                    self.line("add_u64;");
+                if let Some(&off) = ctx.alloca_offsets.get(dest) {
+                    // Static alloca: a fixed byte offset within the frame.
+                    self.line(&format!("get_local {};", ctx.bp_slot));
+                    if off != 0 {
+                        self.push_int(off as i128, 64);
+                        self.line("add_u64;");
+                    }
+                } else {
+                    // Dynamic (runtime-count) alloca: bump the stack pointer.
+                    self.gen_dynamic_alloca(ctx, ty, count.as_ref(), *align)?;
                 }
                 self.store_dest(ctx, Some(dest))?;
             }
@@ -990,8 +1016,9 @@ impl<'a> Codegen<'a>
         // slot for a private stack, or the shared global otherwise. The choice
         // is re-derived from the thread-local slot (non-zero iff private), so it
         // always agrees with the prologue. Stack-neutral: leaves any pending
-        // return value already on the stack untouched.
-        if ctx.frame_size > 0 {
+        // return value already on the stack untouched. Resetting to bp reclaims
+        // the whole frame, including any bytes a dynamic alloca bumped past it.
+        if ctx.has_frame {
             let l_shared = self.fresh_label("leave_shared");
             let l_done = self.fresh_label("leave_done");
 
@@ -1009,6 +1036,90 @@ impl<'a> Codegen<'a>
 
             self.line(&format!("{}:", l_done));
         }
+    }
+
+    /// Push the current software stack pointer (top of the alloca region) onto
+    /// the operand stack. Reads the thread-local private stack pointer when the
+    /// thread has one (slot != 0), else the shared `__stack_alloc_sp__` global —
+    /// the same selection the frame prologue/epilogue make.
+    fn emit_sp_load(&mut self)
+    {
+        let l_shared = self.fresh_label("sp_shared");
+        let l_done = self.fresh_label("sp_done");
+
+        self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [tls]
+        self.line("dup;");                                     // [tls, tls]
+        self.line(&format!("jz {};", l_shared));               // -> [tls]
+        // Private stack: the thread-local value *is* the stack pointer.
+        self.line(&format!("jmp {};", l_done));
+        // Shared stack: drop the zero copy and load the global.
+        self.line(&format!("{}:", l_shared));                  // [0]
+        self.line("pop;");                                     // []
+        self.line("push __stack_alloc_sp__;");
+        self.line("load_u64;");                                // [sp]
+        self.line(&format!("{}:", l_done));                    // [sp]
+    }
+
+    /// Store the top-of-stack value as the new software stack pointer, writing
+    /// it to whichever location `emit_sp_load` reads. Consumes the value.
+    fn emit_sp_store(&mut self)
+    {
+        // Operand stack on entry: [x] (the new stack-pointer value).
+        let l_shared = self.fresh_label("spset_shared");
+        let l_done = self.fresh_label("spset_done");
+
+        self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [x, tls]
+        self.line(&format!("jz {};", l_shared));               // -> [x]
+        // Private stack: store into the thread-local slot.
+        self.line(&format!("thread_set {};", STACK_TLS_SLOT)); // []
+        self.line(&format!("jmp {};", l_done));
+        // Shared stack: store into the global.
+        self.line(&format!("{}:", l_shared));                  // [x]
+        self.line("push __stack_alloc_sp__;");                 // [x, addr]
+        self.line("swap;");                                    // [addr, x]
+        self.line("store_u64;");                               // []
+        self.line(&format!("{}:", l_done));
+    }
+
+    /// Lower a runtime-sized `alloca <ty>, <intty> <count>`: align the software
+    /// stack pointer up to the allocation's alignment, hand that address back as
+    /// the result, and bump the pointer past `count * sizeof(ty)` bytes. Leaves
+    /// the (aligned) base address on the operand stack for the caller to store.
+    ///
+    /// The region lives until the function returns, when emit_frame_leave resets
+    /// the stack pointer to the saved base — matching C's `alloca` lifetime. (An
+    /// alloca in a loop therefore accumulates until return, exactly as on a
+    /// native target; C99 VLAs get earlier reclaim via llvm.stackrestore.)
+    fn gen_dynamic_alloca(&mut self, ctx: &FnCtx, ty: &Type, count: Option<&TypedVal>, align: Option<u64>) -> Result<(), String>
+    {
+        let elem_size = self.layout.size_of(ty);
+        // Honor the IR's explicit alignment, else the element's natural one, but
+        // never below 8 so the result suits any scalar and the stack pointer
+        // stays word-aligned for the next allocation. LLVM guarantees a power of
+        // two, so `sp & !(align-1)` after rounding up is the aligned address.
+        let align = align.unwrap_or_else(|| self.layout.align_of(ty)).max(8);
+        let mask = !(align - 1);
+
+        // base = align_up(sp, align)
+        self.emit_sp_load();                                 // [sp]
+        self.push_int((align - 1) as i128, 64);
+        self.line("add_u64;");                               // [sp + align-1]
+        self.push_int(mask as i128, 64);
+        self.line("and_u64;");                               // [base]
+        self.line("dup;");                                   // [base, base]
+
+        // new_sp = base + count * elem_size
+        match count {
+            None => self.push_int(1, 64),
+            Some(tv) => self.push_value(ctx, &tv.val, 64)?,
+        }                                                    // [base, base, count]
+        if elem_size != 1 {
+            self.push_int(elem_size as i128, 64);
+            self.line("mul_u64;");                           // [base, base, size]
+        }
+        self.line("add_u64;");                               // [base, new_sp]
+        self.emit_sp_store();                                // [base]
+        Ok(())
     }
 
     /// Bit width of a scalar load/store (8/16/32/64).
@@ -1483,6 +1594,18 @@ impl<'a> Codegen<'a>
         }
         if bare.starts_with("va_end") {
             return Ok(()); // nothing to tear down; the buffer lives in the frame
+        }
+        // Scoped stack save/restore, used by clang to reclaim C99 VLAs at the
+        // end of their block: `stacksave` reads the software stack pointer and
+        // `stackrestore` writes it back, freeing everything allocated since.
+        if bare.starts_with("stacksave") {
+            self.emit_sp_load();
+            return self.store_dest(ctx, dest);
+        }
+        if bare.starts_with("stackrestore") {
+            self.push_value(ctx, &args[0].val, 64)?;
+            self.emit_sp_store();
+            return Ok(());
         }
         if bare.starts_with("memcpy.") {
             // (dst, src, len, i1 volatile) -> UVM `memcpy(dst, src, num_bytes)`.
