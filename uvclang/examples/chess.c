@@ -204,7 +204,7 @@ int X(int w, int c, int h, int e, int S, int s)
     int d;
     int O=21;
     int N=-M*M;
-    int K=78-h<<x;
+    int K=(78-h)<<x;
     int p;
     int *g;
     int n;
@@ -262,7 +262,7 @@ int X(int w, int c, int h, int e, int S, int s)
                             g = 0;
                         else
                             g = I + S;
-                        if (!r & (q | A < 3 || g) || (r + 1 & z ^ y) > 9 && q | A > 2){
+                        if (!r & (q | (A < 3) || g) || (r + 1 & z ^ y) > 9 && q | (A > 2)){
                             m=(int*)(intptr_t)!(r-2&7);
                             if (m) {
                                 y = y ^ 8;
@@ -309,7 +309,7 @@ int X(int w, int c, int h, int e, int S, int s)
                                         *g = 0;
                                     }
                                     I[O] = 0;
-                                    if (q | A > 1)
+                                    if (q | (A > 1))
                                         J = 0;
                                     else
                                         J = p;
@@ -329,7 +329,7 @@ int X(int w, int c, int h, int e, int S, int s)
                                         u = J;
                                         return u;
                                     }
-                                    J=q-1|A<7||m||!s|d|r|o<z||X(0,0,0,21, 0,0)>M;
+                                    J=q-1|(A<7)||m||!s|d|r|o<z||X(0,0,0,21, 0,0)>M;
                                     I[O]=o;
                                     I[p]=r;
                                     if (m) {
@@ -403,7 +403,7 @@ int X(int w, int c, int h, int e, int S, int s)
                     if (!r && q > 2)
                         continue;
                     p = O;
-                    if (q|A>2|o>z&!r&&++C*--A)
+                    if (q|(A>2)|(o>z)&!r&&++C*--A)
                         continue;
                     break;
                 }
@@ -412,7 +412,7 @@ int X(int w, int c, int h, int e, int S, int s)
         ++O;
     } while (O < 99) ;
     y = y ^ 8;
-    if (N+M*M && N > -K + 1924 | d)
+    if (N+M*M && (N > -K + 1924) | d)
         return N;
     return 0;
 }
