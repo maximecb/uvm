@@ -1726,6 +1726,12 @@ impl<'a> Codegen<'a>
                 return Err(format!("llvm.bitreverse only supported for i8 (got i{})", w));
             }
             self.gen_bitreverse8(ctx, a)?;
+        } else if bare.starts_with("ctpop.") {
+            self.gen_ctpop(ctx, a, ret_ty)?;
+        } else if bare.starts_with("ctlz.") {
+            self.gen_ctlz(ctx, a, ret_ty)?;
+        } else if bare.starts_with("cttz.") {
+            self.gen_cttz(ctx, a, ret_ty)?;
         } else if bare.starts_with("sqrt.") {
             let (sfx, w) = float_kind(ret_ty)?;
             self.fmath1(ctx, args, &format!("sqrt_{}", sfx), w)?;
@@ -2036,6 +2042,81 @@ impl<'a> Codegen<'a>
         self.line("and_u64;");
         self.push_int(1023, 64);
         self.line("mod_u64;"); // result is 0..255, already a valid i8 slot
+        Ok(())
+    }
+
+    /// Emit the native popcount op for a value of width `w` sitting on the stack
+    /// (`popcnt_i32` counts the low 32 bits, `popcnt_i64` all 64). The operand is
+    /// zero-extended in its slot, so the narrow op counts exactly the `w` bits.
+    fn emit_popcnt(&mut self, w: u32)
+    {
+        self.line(if w <= 32 { "popcnt_i32;" } else { "popcnt_i64;" });
+    }
+
+    /// `llvm.ctpop.iN` — population count. One native instruction: the operand is
+    /// zero-extended in its slot, so its padding bits contribute no set bits.
+    fn gen_ctpop(&mut self, ctx: &FnCtx, x: &Value, ty: &Type) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        if w > 64 {
+            return Err(format!("llvm.ctpop only supported up to i64 (got i{})", w));
+        }
+        self.push_value(ctx, x, w)?;
+        self.emit_popcnt(w);
+        Ok(())
+    }
+
+    /// `llvm.ctlz.iN` — count leading zeros. UVM has no clz, so smear every bit
+    /// below the most-significant set bit down to bit 0, popcount that (= the MSB
+    /// index + 1 = number of significant bits), and subtract from N. Zero smears
+    /// to zero, giving popcount 0 and result N — the value ctlz defines at zero.
+    /// (The `is_zero_poison` operand is irrelevant: N refines poison.)
+    fn gen_ctlz(&mut self, ctx: &FnCtx, x: &Value, ty: &Type) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        if w > 64 {
+            return Err(format!("llvm.ctlz only supported up to i64 (got i{})", w));
+        }
+        self.push_value(ctx, x, w)?;
+        // x |= x>>1 |= x>>2 |= ... — only distances < w matter (the operand is
+        // zero-extended, so wider shifts would just OR in zeros).
+        let mut s = 1;
+        while s < w {
+            self.line("dup;");
+            self.push_int(s as i128, 64);
+            self.line("rshift_u64;");
+            self.line("or_u64;");
+            s <<= 1;
+        }
+        self.emit_popcnt(w);        // number of significant bits
+        self.push_int(w as i128, 64);
+        self.line("swap;");
+        self.line("sub_u64;");      // N - significant_bits
+        Ok(())
+    }
+
+    /// `llvm.cttz.iN` — count trailing zeros, as `popcount(~x & (x-1))` masked to
+    /// N bits. `~x & (x-1)` is the run of trailing zeros below the lowest set bit;
+    /// for x == 0 it is all-ones and the mask makes the count N, as cttz defines.
+    /// (The `is_zero_poison` operand is irrelevant: N refines poison.)
+    fn gen_cttz(&mut self, ctx: &FnCtx, x: &Value, ty: &Type) -> Result<(), String>
+    {
+        let w = int_width(ty)?;
+        if w > 64 {
+            return Err(format!("llvm.cttz only supported up to i64 (got i{})", w));
+        }
+        self.push_value(ctx, x, w)?;   // [x]
+        self.line("dup;");             // [x, x]
+        self.push_int(1, 64);
+        self.line("sub_u64;");         // [x, x-1]
+        self.line("swap;");            // [x-1, x]
+        self.line("not_u64;");         // [x-1, ~x]
+        self.line("and_u64;");         // [(x-1) & ~x]
+        if w < 64 {
+            self.push_int((1i128 << w) - 1, 64);
+            self.line("and_u64;");     // mask to N bits (x==0 -> N)
+        }
+        self.emit_popcnt(w);
         Ok(())
     }
 
