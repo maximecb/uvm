@@ -11,7 +11,8 @@
 // spin lock: correct because guest threads are real, preemptively scheduled OS
 // threads (a blocked waiter never prevents the holder from making progress),
 // with a yield on contention so it does not monopolize a core. There is no
-// recursive/error-checking mutex, no condition variables, and no attributes.
+// recursive/error-checking mutex and no condition variables; the only thread
+// attribute honored is the private stack size (pthread_attr_setstacksize).
 //
 // Because the UVM atomic ops are 64 bits wide, pthread_mutex_t is 64-bit backed.
 //
@@ -35,6 +36,11 @@
 // Returned by pthread_create when a thread stack could not be allocated.
 #ifndef EAGAIN
 #define EAGAIN 11
+#endif
+
+// Returned by pthread_attr_setstacksize for a size below PTHREAD_STACK_MIN.
+#ifndef EINVAL
+#define EINVAL 22
 #endif
 
 // Mutex state values. Kept 64-bit wide to match the UVM atomic ops.
@@ -118,9 +124,65 @@ UVCLANG_WEAK int pthread_mutex_unlock(pthread_mutex_t* mutex)
 
 #include <stdlib.h>          // malloc / free
 
-// Per-thread private stack size. 256 KiB is plenty for typical call depth;
-// deeply recursive threads may need more.
+// Default per-thread private stack size, used when pthread_create is passed a
+// NULL attr (or an attr left at its initialized default). 256 KiB is plenty for
+// typical call depth; deeply recursive threads can request more via a
+// pthread_attr_t (see pthread_attr_setstacksize).
 #define PTHREAD_STACK_SIZE (256 * 1024)
+
+// Smallest private stack a thread may be created with. Requests below this are
+// rejected by pthread_attr_setstacksize, mirroring POSIX PTHREAD_STACK_MIN: a
+// floor beneath which even a trivial start routine cannot be expected to run.
+#ifndef PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN (16 * 1024)
+#endif
+
+// -- thread attributes ----------------------------------------------------
+//
+// A minimal attribute object carrying just the private stack size, the only
+// pthread_create knob that means anything on this target (there is no scheduling
+// policy, CPU affinity, or guard-page control to express here). A freshly
+// initialized attr requests the default PTHREAD_STACK_SIZE; passing NULL as
+// pthread_create's attr has the same effect.
+typedef struct
+{
+    size_t stacksize;   // bytes of private stack for the created thread
+} pthread_attr_t;
+
+// Initialize an attribute object to the defaults. attr must be non-NULL.
+// Always returns 0.
+UVCLANG_WEAK int pthread_attr_init(pthread_attr_t* attr)
+{
+    attr->stacksize = PTHREAD_STACK_SIZE;
+    return 0;
+}
+
+// Destroy an attribute object. Nothing to release; provided for API symmetry.
+// Always returns 0.
+UVCLANG_WEAK int pthread_attr_destroy(pthread_attr_t* attr)
+{
+    (void)attr;
+    return 0;
+}
+
+// Set the private stack size a subsequent pthread_create(&attr, ...) will use.
+// Returns EINVAL, leaving the attr unchanged, if stacksize is below
+// PTHREAD_STACK_MIN (as POSIX specifies); otherwise stores it and returns 0.
+UVCLANG_WEAK int pthread_attr_setstacksize(pthread_attr_t* attr, size_t stacksize)
+{
+    if (stacksize < PTHREAD_STACK_MIN) {
+        return EINVAL;
+    }
+    attr->stacksize = stacksize;
+    return 0;
+}
+
+// Read back the stack size stored in an attribute object. Always returns 0.
+UVCLANG_WEAK int pthread_attr_getstacksize(const pthread_attr_t* attr, size_t* stacksize)
+{
+    *stacksize = attr->stacksize;
+    return 0;
+}
 
 // Control block, placed at the base of each thread's region. The field order
 // and offsets are fixed by the compiler's __uvclang_thread_start trampoline:
@@ -145,11 +207,17 @@ extern void* __uvclang_thread_start(void*);
 // Start a new thread running start(arg) on a private stack. attr is ignored. On
 // success writes an opaque handle through `thread` (if non-NULL) and returns 0,
 // or a nonzero error if the stack could not be allocated.
-UVCLANG_WEAK int pthread_create(pthread_t* thread, const void* attr, void* (*start)(void*), void* arg)
+UVCLANG_WEAK int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start)(void*), void* arg)
 {
-    (void)attr;
+    // Resolve the private stack size: from the attribute object when one is
+    // supplied (and left non-zero), otherwise the default. Enforce the same
+    // floor as pthread_attr_setstacksize so a hand-zeroed attr can't undershoot.
+    size_t stacksize = (attr && attr->stacksize) ? attr->stacksize : PTHREAD_STACK_SIZE;
+    if (stacksize < PTHREAD_STACK_MIN) {
+        stacksize = PTHREAD_STACK_MIN;
+    }
 
-    void* region = malloc(__UVCLANG_STACK_HEADER + PTHREAD_STACK_SIZE);
+    void* region = malloc(__UVCLANG_STACK_HEADER + stacksize);
     if (!region) {
         return EAGAIN;
     }
