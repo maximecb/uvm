@@ -6,10 +6,17 @@
 // several threads hammering a shared counter (via both atomicrmw and an
 // explicit cmpxchg loop) and verifies no updates are lost, which only holds if
 // the read-modify-writes are genuinely atomic under contention.
+//
+// The worker threads are created with pthread_create, not the raw thread_spawn
+// syscall: raw-spawned threads share the fallback software stack, so at -O0
+// (where every local, including the loop counter, is an address-taken alloca)
+// concurrent workers would clobber each other's frames. pthread_create gives
+// each thread a private stack, so the contention here exercises the atomics —
+// not stack aliasing.
 
 #include <stdatomic.h>
 #include <stdint.h>
-#include <uvm/syscalls.h>
+#include <pthread.h>
 
 _Atomic uint64_t g;
 
@@ -56,7 +63,7 @@ static int single_threaded(void)
 _Atomic uint64_t rmw_counter;
 _Atomic uint64_t cas_counter;
 
-static uint64_t worker(void* arg)
+static void* worker(void* arg)
 {
     (void)arg;
     for (int i = 0; i < ITERS; i++) {
@@ -77,11 +84,11 @@ static int multi_threaded(void)
     atomic_store(&rmw_counter, 0);
     atomic_store(&cas_counter, 0);
 
-    uint64_t tids[NUM_THREADS];
+    pthread_t threads[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++)
-        tids[i] = thread_spawn(worker, 0);
+        pthread_create(&threads[i], 0, worker, 0);
     for (int i = 0; i < NUM_THREADS; i++)
-        thread_join(tids[i]);
+        pthread_join(threads[i], 0);
 
     uint64_t expected = (uint64_t)NUM_THREADS * ITERS;
     if (atomic_load(&rmw_counter) != expected) return 20;
