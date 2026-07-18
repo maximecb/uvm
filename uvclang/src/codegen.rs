@@ -857,6 +857,75 @@ impl<'a> Codegen<'a>
         Ok(())
     }
 
+    /// `floor(x)` / `ceil(x)` (`is_ceil` selects). UVM has no rounding op, so the
+    /// integral part is obtained by truncating toward zero through a
+    /// float->int->float round trip, then adjusting by one when the truncation
+    /// went the wrong way: floor subtracts 1 when it rounded up past x (t > x),
+    /// ceil adds 1 when it rounded down below x (t < x).
+    ///
+    /// The round trip is only valid while the int conversion is exact and
+    /// non-saturating. Every |x| >= 2^(mantissa bits) is already integral (and
+    /// inf/NaN compare false against a finite bound), so a magnitude guard returns
+    /// those inputs unchanged. Signed zero is not preserved (floor(-0.0) yields
+    /// +0.0), a corner clang's own lowering also gives up on without SSE4.1.
+    fn gen_floor_ceil(&mut self, ctx: &FnCtx, x: &Value, w: u32, is_ceil: bool) -> Result<(), String>
+    {
+        let sfx = if w <= 32 { "f32" } else { "f64" };
+        // Smallest magnitude at/above which every value of this format is already
+        // integral: 2^23 for f32 (below its 2^24 exact-int limit), 2^52 for f64.
+        let intg = if w <= 32 { 8388608.0_f64 } else { 4503599627370496.0_f64 };
+        let l_ret_x = self.fresh_label("rnd_ret_x");
+        let l_no_adj = self.fresh_label("rnd_no_adj");
+        let l_done = self.fresh_label("rnd_done");
+
+        // Guard: only compute when |x| < 2^m; larger (incl. inf) and NaN are
+        // returned unchanged, dodging the conversion's saturation/NaN->0.
+        self.gen_fabs(ctx, x, w)?;
+        self.push_float(intg, w);
+        self.line(&format!("lt_{};", sfx));      // |x| < 2^m
+        self.line(&format!("jz {};", l_ret_x));
+
+        // cond = floor: t > x ; ceil: t < x, where t = (T)(int)x.
+        self.emit_trunc_toward_zero(ctx, x, w)?; // t
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("{}_{};", if is_ceil { "lt" } else { "gt" }, sfx));
+        self.line(&format!("jz {};", l_no_adj));
+
+        // Wrong-way truncation: floor -> t - 1, ceil -> t + 1.
+        self.emit_trunc_toward_zero(ctx, x, w)?;
+        self.push_float(1.0, w);
+        self.line(&format!("{}_{};", if is_ceil { "add" } else { "sub" }, sfx));
+        self.line(&format!("jmp {};", l_done));
+
+        // Truncation already landed on the answer.
+        self.line(&format!("{}:", l_no_adj));
+        self.emit_trunc_toward_zero(ctx, x, w)?;
+        self.line(&format!("jmp {};", l_done));
+
+        // |x| >= 2^m, inf, or NaN: already integral.
+        self.line(&format!("{}:", l_ret_x));
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// Push `(T)(intN)x` — x truncated toward zero and back to float — via the
+    /// UVM conversion pair (`f32_to_i32`/`i32_to_f32` or `f64_to_i64`/
+    /// `i64_to_f64`). Exact only while |x| is below the format's exact-int limit;
+    /// callers must guard larger magnitudes (the conversions saturate).
+    fn emit_trunc_toward_zero(&mut self, ctx: &FnCtx, x: &Value, w: u32) -> Result<(), String>
+    {
+        self.push_value(ctx, x, w)?;
+        if w <= 32 {
+            self.line("f32_to_i32;");
+            self.line("i32_to_f32;");
+        } else {
+            self.line("f64_to_i64;");
+            self.line("i64_to_f64;");
+        }
+        Ok(())
+    }
+
     fn gen_conv(&mut self, ctx: &FnCtx, op: ConvOp, from_ty: &Type, val: &Value, to_ty: &Type) -> Result<(), String>
     {
         match op {
@@ -1669,6 +1738,12 @@ impl<'a> Codegen<'a>
         } else if bare.starts_with("fabs.") {
             let (_, w) = float_kind(ret_ty)?;
             self.gen_fabs(ctx, a, w)?;
+        } else if bare.starts_with("floor.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_floor_ceil(ctx, a, w, false)?;
+        } else if bare.starts_with("ceil.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_floor_ceil(ctx, a, w, true)?;
         } else if bare.starts_with("pow.") {
             let (sfx, w) = float_kind(ret_ty)?;
             self.push_value(ctx, &args[0].val, w)?;
