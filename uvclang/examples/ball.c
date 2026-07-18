@@ -3,8 +3,10 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <uvm/syscalls.h>
 #include <uvm/window.h>
+#include <uvm/graphics.h>
 
 #define FRAME_WIDTH 800
 #define FRAME_HEIGHT 600
@@ -27,6 +29,9 @@ int16_t AUDIO_BUFFER[1024];
 
 // Current position in the synthesized sound effect
 uint32_t audio_pos = UINT32_MAX;
+
+// Current ball color
+uint32_t ball_color = COLOR_RED;
 
 // Draw the ball at the current x,y position
 void draw_ball(void)
@@ -51,8 +56,42 @@ void draw_ball(void)
 
             if (dist_sqr <= BALL_RADIUS * BALL_RADIUS)
             {
-                frame_buffer[y][x] = 0xFF0000;
+                frame_buffer[y][x] = ball_color;
             }
+        }
+    }
+}
+
+void change_color(void)
+{
+    uint32_t prev_color = ball_color;
+
+    while (ball_color == prev_color)
+    {
+        switch (rand() % 5)
+        {
+            case 0:
+            ball_color = COLOR_RED;
+            break;
+
+            case 1:
+            ball_color = COLOR_GREEN;
+            break;
+
+            case 2:
+            ball_color = COLOR_BLUE;
+            break;
+
+            case 3:
+            ball_color = COLOR_YELLOW;
+            break;
+
+            case 4:
+            ball_color = COLOR_PURPLE;
+            break;
+
+            default:
+            assert(0);
         }
     }
 }
@@ -71,22 +110,26 @@ void update(void)
     {
         vx = -vx;
         audio_pos = 0;
+        change_color();
     }
     if (px - BALL_RADIUS < 0)
     {
         vx = -vx;
         audio_pos = 0;
+        change_color();
     }
 
     if (py + BALL_RADIUS > FRAME_HEIGHT)
     {
         vy = -vy;
         audio_pos = 0;
+        change_color();
     }
     if (py - BALL_RADIUS < 0)
     {
         vy = -vy;
         audio_pos = 0;
+        change_color();
     }
 
     window_draw_frame(0, (uint8_t *)frame_buffer);
