@@ -1,152 +1,133 @@
-// Tolerant, self-checking test for uvclang's printf %f support.
+// Exact, self-checking test for uvclang's printf floating-point support.
 //
-// uvclang narrows the double vararg to a 32-bit float before formatting (UVM has
-// no f64 arithmetic), so the printed digits are only float-accurate and do NOT
-// match native libc's double formatting byte-for-byte. This test therefore never
-// compares the formatted text directly: it formats into a buffer, parses the
-// number back out with a small float parser, and checks it against the expected
-// value within a tolerance. It also exercises the float->double vararg promotion
-// (fpext) at each call site and the double->float narrowing (fptrunc) inside
-// printf. stdout is a single fixed line, so the differential harness still
-// matches native exactly.
+// UVM has f64 arithmetic, so printf formats doubles with full precision and the
+// output matches native libc byte-for-byte across the normal range. This test
+// therefore compares the formatted text *directly* (strcmp) against the exact
+// strings native libc produces — the expected literals below were generated with
+// the platform's own printf. It covers %f/%e/%g/%a, ties-to-even rounding, the
+// fixed/scientific selection of %g, and hex floats, plus the field-width/flag
+// layout and the va_arg walk staying in sync around a double.
 //
-// Values are funneled through a file-scope `volatile` so -O2 can't fold the
-// checks into compile-time constants — the va_arg walk must run for real.
+// Every value goes through a file-scope `volatile` so -O2 cannot fold the call
+// into a compile-time-formatted string constant — the va_arg walk must run for
+// real, exercising uvclang's formatter rather than clang's.
+//
+// The chosen values stay within ~15 significant digits and |x| < 2^63, where the
+// f64 formatter is exact; higher precision and astronomically large %f magnitudes
+// are subject to a documented ~17-digit ceiling and are intentionally not tested
+// for byte-exactness here.
 
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
-// Minimal decimal parser (sign, integer part, optional ".frac"; no exponent),
-// tolerant of the leading spaces field-width padding can add. Uses float
-// arithmetic (UVM has no f64), which is plenty to check float-accurate output.
-static float parse_f(const char *s)
-{
-    while (*s == ' ')
-        s++;
-    int neg = 0;
-    if (*s == '-')      { neg = 1; s++; }
-    else if (*s == '+') s++;
-
-    float v = 0.0f;
-    while (*s >= '0' && *s <= '9') { v = v * 10.0f + (float)(*s - '0'); s++; }
-    if (*s == '.') {
-        s++;
-        float scale = 0.1f;
-        while (*s >= '0' && *s <= '9') {
-            v += (float)(*s - '0') * scale;
-            scale *= 0.1f;
-            s++;
-        }
-    }
-    return neg ? -v : v;
-}
-
-// Relative+absolute tolerance sized for 32-bit float precision (~7 digits).
-static int close(float got, float want)
-{
-    float d = got - want;
-    if (d < 0.0f) d = -d;
-    float a = want < 0.0f ? -want : want;
-    return d <= 1e-3f * (a + 1.0f);
-}
-
 // Funnel that defeats constant-folding: the format arg is read from volatile.
 static volatile double VD;
 
-// Format VD (= value) with fmt, parse the result back, compare to expect.
-static int check(const char *fmt, double value, float expect)
+// Format `value` with `fmt` and compare the result to `expect` exactly.
+static int eq(const char *fmt, double value, const char *expect)
 {
-    char buf[64];
+    char buf[128];
     VD = value;
     snprintf(buf, sizeof buf, fmt, VD);
-    return close(parse_f(buf), expect);
+    return strcmp(buf, expect) == 0;
 }
 
 int main()
 {
-    char buf[64];
+    char buf[128];
 
-    // --- default precision (6 places) ---
-    assert(check("%f", 3.14159, 3.14159f));
-    assert(check("%f", 0.0, 0.0f));
-    assert(check("%f", 1.0, 1.0f));
-    assert(check("%f", 123.456, 123.456f));
-    assert(check("%f", -7.25, -7.25f));
-    assert(check("%f", 1000.5, 1000.5f));
+    // --- %f: default precision, explicit precision, sign, ties-to-even ---
+    assert(eq("%f", 3.14159, "3.141590"));
+    assert(eq("%f", 0.0, "0.000000"));
+    assert(eq("%f", 1.0, "1.000000"));
+    assert(eq("%f", 123.456, "123.456000"));
+    assert(eq("%f", -7.25, "-7.250000"));
+    assert(eq("%f", 1000.5, "1000.500000"));
+    assert(eq("%f", 100.7, "100.700000"));
+    assert(eq("%.2f", 3.14159, "3.14"));
+    assert(eq("%.0f", 7.3, "7"));
+    assert(eq("%.0f", 2.8, "3"));
+    assert(eq("%.0f", 0.5, "0"));       // tie -> even (0)
+    assert(eq("%.0f", 1.5, "2"));       // tie -> even (2)
+    assert(eq("%.0f", 2.5, "2"));       // tie -> even (2)
+    assert(eq("%.2f", 0.125, "0.12"));  // tie -> even (2)
+    assert(eq("%.4f", 0.1, "0.1000"));
+    assert(eq("%.10f", 1.0 / 3.0, "0.3333333333"));
+    assert(eq("%.3f", 9.9995, "9.999"));
+    assert(eq("%f", -0.0, "-0.000000"));
 
-    // --- explicit precision (avoid exact .5 half-way cases: native rounds to
-    // even, our formatter rounds half up, so only non-boundary values agree) ---
-    assert(check("%.2f", 3.14159, 3.14f));
-    assert(check("%.0f", 7.3, 7.0f));
-    assert(check("%.0f", 2.8, 3.0f));
-    assert(check("%.4f", 0.1, 0.1f));
-    assert(check("%.10f", 1.0 / 3.0, 0.3333333f));   // float-accurate ~0.333333
+    // --- %e / %E ---
+    assert(eq("%e", 0.0, "0.000000e+00"));
+    assert(eq("%e", 12345.678, "1.234568e+04"));
+    assert(eq("%e", 1.0, "1.000000e+00"));
+    assert(eq("%e", -4.56e-5, "-4.560000e-05"));
+    assert(eq("%.0e", 5.0, "5e+00"));
+    assert(eq("%.3e", 2.5, "2.500e+00"));
+    assert(eq("%E", 6.022e23, "6.022000E+23"));
+    assert(eq("%.2e", 9.999e9, "1.00e+10"));      // carry ripples into exponent
+    assert(eq("%e", 0.0001, "1.000000e-04"));
 
-    // --- field width / flags: the value must survive AND the layout is exact
-    // (width, padding, sign are controlled by us, identical on both sides) ---
-    VD = 3.5;
-    snprintf(buf, sizeof buf, "%10.2f", VD);
-    assert(close(parse_f(buf), 3.5f));
-    assert(strlen(buf) == 10);                 // right-justified to width 10
+    // --- %g / %G: trailing-zero trim and the fixed-vs-scientific rule ---
+    assert(eq("%g", 0.0, "0"));
+    assert(eq("%g", 100000.0, "100000"));         // exp 5 < 6 -> fixed
+    assert(eq("%g", 1000000.0, "1e+06"));         // exp 6 >= 6 -> scientific
+    assert(eq("%g", 0.0001234, "0.0001234"));     // exp -4 -> fixed
+    assert(eq("%g", 0.00001234, "1.234e-05"));    // exp -5 -> scientific
+    assert(eq("%g", 3.14159, "3.14159"));
+    assert(eq("%.3g", 2.5, "2.5"));
+    assert(eq("%.10g", 1.0 / 3.0, "0.3333333333"));
+    assert(eq("%G", 1.5e-10, "1.5E-10"));
+    assert(eq("%g", 123456.0, "123456"));
+    assert(eq("%g", 0.1, "0.1"));
+    assert(eq("%#g", 1.5, "1.50000"));            // '#' keeps trailing zeros
+    assert(eq("%g", 42.0, "42"));
 
-    snprintf(buf, sizeof buf, "%-10.2f|", VD);
-    assert(close(parse_f(buf), 3.5f));
-    assert(buf[0] == '3');                      // left-justified: digits first
-    assert(buf[10] == '|');                     // padded out to width 10
+    // --- %a / %A: exact hex floats, incl. rounding and negative ---
+    assert(eq("%a", 1.0, "0x1p+0"));
+    assert(eq("%a", 3.0, "0x1.8p+1"));
+    assert(eq("%a", 0.5, "0x1p-1"));
+    assert(eq("%a", 0.0, "0x0p+0"));
+    assert(eq("%a", 2.0, "0x1p+1"));
+    assert(eq("%a", 0.1, "0x1.999999999999ap-4"));
+    assert(eq("%.3a", 1.0 / 3.0, "0x1.555p-2"));
+    assert(eq("%a", -1.5, "-0x1.8p+0"));
+    assert(eq("%A", 256.0, "0X1P+8"));
 
-    snprintf(buf, sizeof buf, "%08.2f", VD);
-    assert(close(parse_f(buf), 3.5f));
-    assert(strlen(buf) == 8);
-    assert(buf[0] == '0');                      // zero-padded
-
-    snprintf(buf, sizeof buf, "%+.2f", VD);
-    assert(buf[0] == '+');                      // forced sign
-    assert(close(parse_f(buf), 3.5f));
-
-    VD = -3.5;
-    snprintf(buf, sizeof buf, "% .2f", VD);
-    assert(buf[0] == '-');                      // negative overrides ' '
-    assert(close(parse_f(buf), -3.5f));
+    // --- field width / flags: layout is controlled by us and exact ---
+    assert(eq("%10.2f", 3.5, "      3.50"));
+    assert(eq("%-10.2f", 3.5, "3.50      "));
+    assert(eq("%08.2f", 3.5, "00003.50"));
+    assert(eq("%+.2f", 3.5, "+3.50"));
+    assert(eq("% .2f", -3.5, "-3.50"));           // negative overrides ' '
+    assert(eq("%12.3e", 2.5, "   2.500e+00"));
+    assert(eq("%-12.3g", 100.0, "100         "));
 
     // --- '*' width and precision taken from int args before the double ---
     VD = 2.71828;
     snprintf(buf, sizeof buf, "%*.*f", 9, 3, VD);
-    assert(close(parse_f(buf), 2.71828f));
-    assert(strlen(buf) == 9);
+    assert(strcmp(buf, "    2.718") == 0);
 
     // --- the walk must stay in sync: integer conversions around a %f still read
-    // the right slots (this is the whole reason we go through the GP va_arg path) ---
+    // the right slots (the whole reason we go through the GP va_arg path) ---
     VD = 2.5;
     snprintf(buf, sizeof buf, "%d %f %d", 10, VD, 20);
-    {
-        // first int
-        const char *p = buf;
-        int a = 0;
-        while (*p >= '0' && *p <= '9') { a = a * 10 + (*p - '0'); p++; }
-        assert(a == 10);
-        assert(*p == ' ');
-        p++;
-        // middle float
-        assert(close(parse_f(p), 2.5f));
-        while (*p != ' ') p++;      // skip the float token
-        p++;
-        // trailing int
-        int b = 0;
-        while (*p >= '0' && *p <= '9') { b = b * 10 + (*p - '0'); p++; }
-        assert(b == 20);
-    }
+    assert(strcmp(buf, "10 2.500000 20") == 0);
 
-    // --- inf / nan: fixed spellings, checked loosely (not by exact string) ---
+    // --- inf / nan spellings ---
     union { unsigned long u; double d; } sv;
-    sv.u = 0x7FF0000000000000UL;                 // +inf
+    sv.u = 0x7FF0000000000000UL;                  // +inf
     VD = sv.d;
-    snprintf(buf, sizeof buf, "%f", VD);
-    assert(buf[0] == 'i' && buf[1] == 'n' && buf[2] == 'f');
-    sv.u = 0x7FF8000000000000UL;                 // quiet nan
+    snprintf(buf, sizeof buf, "%f|%e|%g", VD, VD, VD);
+    assert(strcmp(buf, "inf|inf|inf") == 0);
+    sv.u = 0xFFF0000000000000UL;                  // -inf
     VD = sv.d;
-    snprintf(buf, sizeof buf, "%f", VD);
-    assert(buf[0] == 'n' && buf[1] == 'a' && buf[2] == 'n');
+    snprintf(buf, sizeof buf, "%.2f %E", VD, VD);
+    assert(strcmp(buf, "-inf -INF") == 0);
+    sv.u = 0x7FF8000000000000UL;                  // quiet nan
+    VD = sv.d;
+    snprintf(buf, sizeof buf, "%f %G", VD, VD);
+    assert(strcmp(buf, "nan NAN") == 0);
 
     puts("printf f ok");
     return 0;

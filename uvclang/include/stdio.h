@@ -11,22 +11,21 @@
 //
 // printf() is built on putchar via <stdarg.h> (clang lowers the variadic callee
 // to the x86_64 va_list walk uvclang emulates — see gen_va_start / variadic.c).
-// Supported conversions: %d %i %u %x %X %o %c %s %p %% and %f/%F, with flags
-// (- 0 + space #), field width and precision (both literal and `*`), and the
-// `l`/`ll` (tolerated `h`/`hh`/`z`/`t`/`j`) length modifiers. The integer/string
-// conversions are matched byte-for-byte against native libc by tests/printf.c.
+// Supported conversions: %d %i %u %x %X %o %c %s %p %% and the floating-point
+// %f/%F %e/%E %g/%G %a/%A, with flags (- 0 + space #), field width and precision (both
+// literal and `*`), and the `l`/`ll` (tolerated `h`/`hh`/`z`/`t`/`j`/`L`) length
+// modifiers. The integer/string conversions are matched byte-for-byte against
+// native libc by tests/printf.c.
 //
-// %f caveat: a `%f` argument is a `double`, but UVM has no f64 arithmetic and
-// uvclang doesn't model the x86_64 XMM vararg save area. Two things make it work
-// anyway: (1) uvclang packs every vararg into one linear 8-byte-slot buffer, so
-// the double's raw bits sit exactly where an *integer* va_arg would read them —
-// we pull them out with `va_arg(ap, unsigned long)`, keeping the walk in sync;
-// (2) we narrow the double to a 32-bit float (via the UVM f64_to_f32 insn) and
-// format that. So `%f` output is only float-accurate (~7 significant digits) and
-// does NOT match native libc's double formatting byte-for-byte — it is tested
-// tolerantly (format, parse back, compare with a tolerance) in tests/printf_float.c,
-// never by exact-string comparison. Very large magnitudes (whose integer part
-// exceeds 2^31) and %e/%g are not supported.
+// Float args: a `%f`/`%e`/`%g` argument is a `double`, and uvclang doesn't model
+// the x86_64 XMM vararg save area. It works anyway because uvclang packs every
+// vararg into one linear 8-byte-slot buffer, so the double's raw bits sit exactly
+// where an *integer* va_arg reads — we pull them out with `va_arg(ap, unsigned
+// long)`, keeping the walk in sync, and format from the bits. Digits are produced
+// with f64 arithmetic (see the floating-point section below): accurate to ~15-17
+// significant digits, with the last digit occasionally an ULP off native at a
+// rounding boundary. tests/printf_float.c checks the common range byte-for-byte
+// and the precision-stressing cases tolerantly.
 //
 // Any other unsupported specifier is echoed verbatim and its argument left
 // unconsumed — correct only if no further integer conversions follow it.
@@ -186,23 +185,161 @@ static void __pf_emit_int(__pf_sink *o, unsigned long mag, int neg, int base,
         __pf_pad(o, ' ', spad);
 }
 
-// Emit a `%f` conversion from the raw 64-bit pattern `ubits` of the `double`
-// argument. UVM has no f64 arithmetic, so we detect the sign and inf/nan cases
-// straight from the IEEE-754 bit fields, then narrow the finite magnitude to a
-// 32-bit float (f64_to_f32) and produce digits with f32 arithmetic. The result
-// is therefore only float-accurate; see the file header. `upper` selects the
-// INF/NAN spelling for %F.
-static void __pf_emit_float(__pf_sink *o, unsigned long ubits, int width, int prec,
-                            int flags, int upper)
+// --- floating-point conversions (%f/%F, %e/%E, %g/%G) ---------------------
+//
+// UVM now has f64 arithmetic, so digits are produced in `double` (full ~15-17
+// significant digits) rather than the old narrow-to-f32 path. There is no
+// big-integer/dtoa machinery: values are scaled by a binary power-of-ten table
+// and digits peeled off with f64 ops. Consequences, all differentially tested:
+//   * %f/%e/%g are accurate to ~15-17 significant digits across the normal
+//     range; the last digit can differ from native by an ULP at a rounding
+//     boundary (table scaling is not sub-ULP exact).
+//   * %f of |x| < 2^63 renders the integer part exactly (i64), so only the
+//     fraction is subject to f64 rounding; larger magnitudes fall back to the
+//     significant-digit path (correct leading ~17 digits, then zeros).
+
+// Multiply `v` by 10^n (n may be negative) using a table of 10^(2^k). At most
+// nine f64 mul/div; a few ULP of error (entries past 1e22 are the correctly-
+// rounded doubles, not exact), which is why the last printed digit is not
+// guaranteed bit-identical to native.
+static double __pf_scale10(double v, int n)
 {
-    if (prec < 0)
-        prec = 6;   // C default precision for %f
+    static const double p[] = { 1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256 };
+    int neg = n < 0;
+    if (neg) n = -n;
+    for (int k = 0; k < 9 && n; k++, n >>= 1)
+        if (n & 1) v = neg ? v / p[k] : v * p[k];
+    return v;
+}
+
+// Produce `nsig` significant decimal digits of a positive finite double `v`
+// into `d` (ASCII; d[0] is nonzero unless v == 0). Returns the decimal exponent
+// E of the leading digit, i.e. v ~= d[0].d[1]d[2]... x 10^E. Rounds half-up at
+// the last digit and renormalizes on a carry-out. `nsig` must be 1..18.
+static int __pf_gen(double v, int nsig, char *d)
+{
+    if (v == 0.0) {
+        for (int k = 0; k < nsig; k++) d[k] = '0';
+        return 0;
+    }
+    // Estimate E from the binary exponent (log10(2) ~= 0.30103), then correct
+    // the off-by-one(s) by direct comparison after scaling into [1, 10).
+    union { double dd; unsigned long u; } pun;
+    pun.dd = v;
+    int be = (int)((pun.u >> 52) & 0x7FF) - 1023;
+    int E = (int)((double)be * 0.30102999566398114);
+    double s = __pf_scale10(v, -E);
+    while (s >= 10.0) { s /= 10.0; E++; }
+    while (s < 1.0)   { s *= 10.0; E--; }
+
+    for (int k = 0; k < nsig; k++) {
+        int dig = (int)s;
+        if (dig < 0) dig = 0; else if (dig > 9) dig = 9;
+        d[k] = (char)('0' + dig);
+        s = (s - (double)dig) * 10.0;
+    }
+    // Round to nearest, ties to even, at the cut (s holds the next digit's
+    // worth, in [0,10); an exact 5.0 is a true halfway case for a terminating
+    // value). Ties resolve on the parity of the last kept digit, matching libc.
+    int up = (s > 5.0) || (s == 5.0 && ((d[nsig - 1] - '0') & 1));
+    if (up) {
+        int k = nsig - 1;
+        for (;;) {
+            if (d[k] != '9') { d[k]++; break; }
+            d[k] = '0';
+            if (k == 0) { d[0] = '1'; E++; break; }  // 99..9 rounded up to 10..0
+            k--;
+        }
+    }
+    return E;
+}
+
+// Length of the "e+NN" exponent field (sign + at least two digits).
+static int __pf_exp_len(int E)
+{
+    int ae = E < 0 ? -E : E, n = 0;
+    while (ae) { n++; ae /= 10; }
+    if (n < 2) n = 2;
+    return n + 2;
+}
+
+// Emit the "e+NN" exponent field with `echar` ('e' or 'E').
+static void __pf_put_exp(__pf_sink *o, int E, char echar)
+{
+    __pf_put(o, echar);
+    __pf_put(o, E < 0 ? '-' : '+');
+    int ae = E < 0 ? -E : E;
+    char eb[8]; int el = 0;
+    while (ae) { eb[el++] = (char)('0' + ae % 10); ae /= 10; }
+    while (el < 2) eb[el++] = '0';
+    for (int i = el; i > 0; i--) __pf_put(o, eb[i - 1]);
+}
+
+// Fixed-notation renderer. `d`/`avail` are the significant digits (positions at
+// or beyond `avail` are implicit zeros), `E` the exponent of d[0], `fdigits` the
+// number of fractional digits to print. Handles sign, width, zero-pad, justify.
+static void __pf_render_fixed(__pf_sink *o, char sign, const char *d, int avail,
+                              int E, int fdigits, int force_dot, int width, int flags)
+{
+    int intcount = (E >= 0) ? (E + 1) : 1;
+    int has_dot = (fdigits > 0 || force_dot);
+    int content = (sign ? 1 : 0) + intcount + (has_dot ? 1 : 0) + fdigits;
+    int zpad = 0;
+    if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
+        zpad = width - content;
+    int spad = (width > content + zpad) ? width - content - zpad : 0;
+
+    if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
+    if (sign) __pf_put(o, sign);
+    __pf_pad(o, '0', zpad);
+    if (E >= 0)
+        for (int i = 0; i <= E; i++) __pf_put(o, (i < avail) ? d[i] : '0');
+    else
+        __pf_put(o, '0');
+    if (has_dot) __pf_put(o, '.');
+    for (int j = 0; j < fdigits; j++) {
+        int k = E + 1 + j;                       // digit at fractional place j
+        __pf_put(o, (k >= 0 && k < avail) ? d[k] : '0');
+    }
+    if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+}
+
+// Scientific-notation renderer (shared by %e and %g's e-form).
+static void __pf_render_sci(__pf_sink *o, char sign, const char *d, int avail,
+                            int E, int fdigits, int force_dot, char echar,
+                            int width, int flags)
+{
+    int has_dot = (fdigits > 0 || force_dot);
+    int content = (sign ? 1 : 0) + 1 + (has_dot ? 1 : 0) + fdigits + __pf_exp_len(E);
+    int zpad = 0;
+    if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
+        zpad = width - content;
+    int spad = (width > content + zpad) ? width - content - zpad : 0;
+
+    if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
+    if (sign) __pf_put(o, sign);
+    __pf_pad(o, '0', zpad);
+    __pf_put(o, (0 < avail) ? d[0] : '0');
+    if (has_dot) __pf_put(o, '.');
+    for (int j = 1; j <= fdigits; j++) __pf_put(o, (j < avail) ? d[j] : '0');
+    __pf_put_exp(o, E, echar);
+    if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+}
+
+// Emit a %f/%F/%e/%E/%g/%G conversion from the raw 64-bit `double` pattern
+// `ubits`. Sign and inf/nan come straight from the IEEE-754 bit fields; the
+// finite magnitude is formatted per `conv`.
+static void __pf_emit_float(__pf_sink *o, unsigned long ubits, int width, int prec,
+                            int flags, char conv)
+{
+    int upper = (conv == 'F' || conv == 'E' || conv == 'G');
+    char echar = upper ? 'E' : 'e';
 
     int neg = (int)(ubits >> 63);
-    unsigned expo = (unsigned)((ubits >> 52) & 0x7FF);
     char sign = neg ? '-' : (flags & __PF_PLUS) ? '+' : (flags & __PF_SPACE) ? ' ' : 0;
+    unsigned expo = (unsigned)((ubits >> 52) & 0x7FF);
 
-    // inf / nan: exponent field is all ones. Mantissa distinguishes them.
+    // inf / nan: exponent field all ones; mantissa distinguishes them.
     if (expo == 0x7FF) {
         const char *s = (ubits & 0xFFFFFFFFFFFFFUL) ? (upper ? "NAN" : "nan")
                                                     : (upper ? "INF" : "inf");
@@ -215,59 +352,165 @@ static void __pf_emit_float(__pf_sink *o, unsigned long ubits, int width, int pr
         return;
     }
 
-    // Finite: reinterpret the bits as a double and narrow to a float magnitude.
-    union { unsigned long u; double d; } pun;
-    pun.u = ubits;
-    float val = (float)pun.d;          // f64 -> f32
-    // Take the magnitude using the sign bit captured above rather than a
-    // `val < 0.0f` compare: newer clang (>=21) proves `(float)pun.d < 0.0f`
-    // equals an f64 compare on the un-narrowed double and hoists it to an
-    // `fcmp olt double`, which UVM has no instruction for. Branching on `neg`
-    // keeps the whole routine in f32.
-    if (neg) val = -val;               // magnitude; sign captured above
-
-    // Round half away from zero at the last printed place: bias by 0.5 ulp of
-    // the precision, then truncate each digit. The bias carries into the
-    // integer part on its own, so 0.9999995 -> "1.000000" falls out naturally.
-    float half = 0.5f;
-    for (int i = 0; i < prec; i++)
-        half *= 0.1f;
-    val += half;
-
-    // Integer part (32-bit: magnitudes past 2^31 are beyond a float's exact
-    // range anyway — see the header's limitation note).
-    unsigned ipart = (unsigned)val;
-    float frac = val - (float)ipart;
-
-    char id[16];
-    int il = 0;
-    if (ipart == 0)
-        id[il++] = '0';
-    else
-        while (ipart) { id[il++] = (char)('0' + ipart % 10); ipart /= 10; }
-
-    int content = (sign ? 1 : 0) + il + (prec > 0 ? 1 + prec : 0);
-    int zpad = 0;
-    if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
-        zpad = width - content;
-    int spad = (width > content + zpad) ? width - content - zpad : 0;
-
-    if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
-    if (sign) __pf_put(o, sign);
-    __pf_pad(o, '0', zpad);
-    for (int i = il; i > 0; i--)
-        __pf_put(o, id[i - 1]);
-    if (prec > 0) {
-        __pf_put(o, '.');
-        for (int i = 0; i < prec; i++) {
-            frac *= 10.0f;
-            unsigned dig = (unsigned)frac;   // in [0,9]
-            if (dig > 9u) dig = 9u;          // guard against f32 rounding fuzz
-            __pf_put(o, (char)('0' + dig));
-            frac -= (float)dig;
+    // %a / %A: exact hex float. Normalize to 1.f x 2^E2 (subnormals included),
+    // emit the 52-bit mantissa as 13 hex nibbles. No scaling, so always exact.
+    if (conv == 'a' || conv == 'A') {
+        int up = (conv == 'A');
+        const char *hexd = up ? "0123456789ABCDEF" : "0123456789abcdef";
+        unsigned long mant = ubits & 0xFFFFFFFFFFFFFUL;   // 52-bit fraction
+        int lead, E2;
+        if (expo == 0) {
+            if (mant == 0) { lead = 0; E2 = 0; }          // +-0 -> 0x0p+0
+            else {                                        // subnormal: normalize
+                int sh = 0;
+                while (!(mant & 0x10000000000000UL)) { mant <<= 1; sh++; }
+                mant &= 0xFFFFFFFFFFFFFUL;
+                lead = 1; E2 = -1022 - sh;
+            }
+        } else {
+            lead = 1; E2 = (int)expo - 1023;
         }
+
+        char hd[13];
+        for (int k = 0; k < 13; k++)
+            hd[k] = hexd[(mant >> (48 - 4 * k)) & 0xF];
+        int ndig = 13;
+        if (prec >= 0 && prec < 13) {
+            // Round the 52-bit fraction to `prec` nibbles, ties to even.
+            int shift = 52 - 4 * prec;
+            unsigned long kept = mant >> shift;
+            unsigned long disc = mant & ((1UL << shift) - 1);
+            unsigned long half = 1UL << (shift - 1);
+            int rup = (disc > half) || (disc == half && (prec ? (kept & 1) : (lead & 1)));
+            if (rup && ++kept >> (4 * prec)) { kept = 0; lead++; }  // carry to lead
+            for (int k = 0; k < prec; k++)
+                hd[k] = hexd[(kept >> (4 * (prec - 1 - k))) & 0xF];
+            ndig = prec;
+        } else if (prec < 0) {
+            while (ndig > 0 && hd[ndig - 1] == '0') ndig--;   // trim trailing zeros
+        }
+
+        int eabs = E2 < 0 ? -E2 : E2, elen = 0;
+        for (int t = eabs; ; t /= 10) { elen++; if (t < 10) break; }
+        int has_dot = (ndig > 0 || (flags & __PF_ALT));
+        int content = (sign ? 1 : 0) + 2 + 1 + (has_dot ? 1 : 0) + ndig + 2 + elen;
+        int zpad = 0;
+        if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
+            zpad = width - content;
+        int spad = (width > content + zpad) ? width - content - zpad : 0;
+
+        if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
+        if (sign) __pf_put(o, sign);
+        __pf_put(o, '0'); __pf_put(o, up ? 'X' : 'x');
+        __pf_pad(o, '0', zpad);
+        __pf_put(o, hexd[lead]);
+        if (has_dot) __pf_put(o, '.');
+        for (int k = 0; k < ndig; k++) __pf_put(o, k < 13 ? hd[k] : '0');
+        __pf_put(o, up ? 'P' : 'p');
+        __pf_put(o, E2 < 0 ? '-' : '+');
+        char eb[8]; int el = 0;
+        for (int t = eabs; ; t /= 10) { eb[el++] = (char)('0' + t % 10); if (t < 10) break; }
+        for (int k = el; k > 0; k--) __pf_put(o, eb[k - 1]);
+        if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+        return;
     }
-    if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+
+    // Finite magnitude as a double (sign bit cleared).
+    union { unsigned long u; double d; } pun;
+    pun.u = ubits & 0x7FFFFFFFFFFFFFFFUL;
+    double v = pun.d;
+
+    char d[20];
+
+    if (conv == 'e' || conv == 'E') {
+        if (prec < 0) prec = 6;
+        int nsig = prec + 1;
+        if (nsig > 18) nsig = 18;
+        int E = __pf_gen(v, nsig, d);
+        __pf_render_sci(o, sign, d, nsig, E, prec,
+                        (prec > 0) || (flags & __PF_ALT), echar, width, flags);
+        return;
+    }
+
+    if (conv == 'g' || conv == 'G') {
+        if (prec < 0) prec = 6;
+        if (prec == 0) prec = 1;
+        int P = prec;
+        if (P > 18) P = 18;
+        int E = __pf_gen(v, P, d);
+        int ndig = P;
+        if (!(flags & __PF_ALT))                 // trim trailing zeros
+            while (ndig > 1 && d[ndig - 1] == '0') ndig--;
+        if (E < -4 || E >= P)                    // C's fixed-vs-scientific rule
+            __pf_render_sci(o, sign, d, ndig, E, ndig - 1,
+                            (flags & __PF_ALT), echar, width, flags);
+        else
+            __pf_render_fixed(o, sign, d, ndig, E,
+                              (E + 1 <= ndig ? ndig - (E + 1) : 0),
+                              (flags & __PF_ALT), width, flags);
+        return;
+    }
+
+    // %f / %F.
+    if (prec < 0) prec = 6;
+    if (v < 9223372036854775808.0) {             // < 2^63: exact integer part
+        unsigned long ip = (unsigned long)v;     // floor (v >= 0)
+        double frac = v - (double)ip;
+
+        // Fraction digits. A double resolves ~17 significant digits, so only the
+        // first 18 fractional places can be nonzero here; the rest print as '0'.
+        int fcomp = prec < 18 ? prec : 18;
+        char fd[20];
+        for (int k = 0; k < fcomp; k++) {
+            frac *= 10.0;
+            int dg = (int)frac;
+            if (dg > 9) dg = 9; else if (dg < 0) dg = 0;
+            fd[k] = (char)('0' + dg);
+            frac -= (double)dg;
+        }
+        // Round to nearest, ties to even, at the printed precision, then carry.
+        // (A precision past the computed run sees a zero tail and never rounds.)
+        int up = 0;
+        if (fcomp == prec) {
+            if (frac > 0.5) up = 1;
+            else if (frac == 0.5) {
+                int last = prec > 0 ? (fd[prec - 1] - '0') : (int)(ip % 10UL);
+                up = last & 1;
+            }
+        }
+        if (up) {
+            int k = fcomp - 1;
+            while (k >= 0 && fd[k] == '9') { fd[k] = '0'; k--; }
+            if (k >= 0) fd[k]++;
+            else ip++;                            // 9.99..->10.00..: carry up
+        }
+
+        char id[24];
+        int il = 0;
+        if (ip == 0) id[il++] = '0';
+        else { unsigned long t = ip; while (t) { id[il++] = (char)('0' + (int)(t % 10UL)); t /= 10UL; } }
+
+        int has_dot = (prec > 0 || (flags & __PF_ALT));
+        int content = (sign ? 1 : 0) + il + (has_dot ? 1 : 0) + prec;
+        int zpad = 0;
+        if ((flags & __PF_ZERO) && !(flags & __PF_LEFT) && width > content)
+            zpad = width - content;
+        int spad = (width > content + zpad) ? width - content - zpad : 0;
+
+        if (!(flags & __PF_LEFT)) __pf_pad(o, ' ', spad);
+        if (sign) __pf_put(o, sign);
+        __pf_pad(o, '0', zpad);
+        for (int i = il; i > 0; i--) __pf_put(o, id[i - 1]);
+        if (has_dot) __pf_put(o, '.');
+        for (int k = 0; k < prec; k++) __pf_put(o, k < fcomp ? fd[k] : '0');
+        if (flags & __PF_LEFT) __pf_pad(o, ' ', spad);
+    } else {
+        // |x| >= 2^63: integral, beyond i64. Use the significant-digit path;
+        // digits past the 17th print as zeros (the double has no more).
+        int E = __pf_gen(v, 17, d);
+        __pf_render_fixed(o, sign, d, 17, E, prec,
+                          (prec > 0 || (flags & __PF_ALT)), width, flags);
+    }
 }
 
 // Read a base-10 field (width/precision) from the format string, advancing *pi.
@@ -324,7 +567,7 @@ static void __pf_format(__pf_sink *o, const char *fmt, va_list ap)
         // tolerated and ignored (their args are still passed as int/long).
         int longf = 0;
         while (fmt[i] == 'l') { longf++; i++; }
-        while (fmt[i] == 'h' || fmt[i] == 'z' || fmt[i] == 't' || fmt[i] == 'j') i++;
+        while (fmt[i] == 'h' || fmt[i] == 'z' || fmt[i] == 't' || fmt[i] == 'j' || fmt[i] == 'L') i++;
 
         char c = fmt[i];
         switch (c) {
@@ -383,15 +626,21 @@ static void __pf_format(__pf_sink *o, const char *fmt, va_list ap)
             }
             case 'f':
             case 'F':
+            case 'e':
+            case 'E':
+            case 'g':
+            case 'G':
+            case 'a':
+            case 'A':
                 // A `double` arg. We can't use the XMM save area, but its 64 bits
                 // sit in the linear vararg buffer where an integer va_arg reads,
                 // so pull them out through the GP path (this also keeps the walk
                 // in sync for any following conversions). See the file header.
-                __pf_emit_float(o, va_arg(ap, unsigned long), width, prec, flags, c == 'F');
+                __pf_emit_float(o, va_arg(ap, unsigned long), width, prec, flags, c);
                 break;
             default:
-                // Unknown/unsupported specifier (e.g. %f): echo it verbatim and
-                // do NOT consume a vararg — we couldn't interpret its slot.
+                // Unknown/unsupported specifier: echo it verbatim and do NOT
+                // consume a vararg — we couldn't interpret its slot.
                 __pf_put(o, '%');
                 __pf_put(o, c);
                 break;
