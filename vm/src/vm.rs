@@ -206,6 +206,10 @@ pub enum Op
     gt_i64,
     ge_i64,
 
+    // Population count (number of set bits, aka Hamming weight)
+    popcnt_i32,
+    popcnt_i64,
+
     // Integer sign extension
     sx_i8_i32,
     sx_i8_i64,
@@ -1490,6 +1494,17 @@ impl Thread
                     self.push(v0.as_i64() >= v1.as_i64());
                 }
 
+                // Population count. count_ones() returns a u32 count (0..=32 /
+                // 0..=64); pushing it zero-extends into the 64-bit slot.
+                Op::popcnt_i32 => {
+                    let v0 = self.pop();
+                    self.push(v0.as_u32().count_ones());
+                }
+                Op::popcnt_i64 => {
+                    let v0 = self.pop();
+                    self.push(v0.as_u64().count_ones());
+                }
+
                 Op::sx_i8_i32 => {
                     let v = self.pop();
                     self.push(v.as_i8() as i32);
@@ -2263,7 +2278,7 @@ mod tests
 
         // Keep track of how many short opcodes we have so far
         dbg!(Op::ret as usize);
-        assert!(Op::ret as usize <= 142);
+        assert!(Op::ret as usize <= 144);
     }
 
     #[test]
@@ -2304,6 +2319,17 @@ mod tests
         eval_i64("push 256; push 40; rshift_u32; ret;", 1); // 40 & 31 == 8
         eval_i64("push 1; push 72; lshift_u64; ret;", 256); // 72 & 63 == 8
         eval_i64("push 1; push 64; lshift_u64; ret;", 1);   // 64 & 63 == 0
+
+        // Population count. Well-defined for every input incl. zero and all-ones.
+        eval_i64("push 0; popcnt_i64; ret;", 0);
+        eval_i64("push 0xFF; popcnt_i64; ret;", 8);
+        eval_i64("push 0x5555555555555555; popcnt_i64; ret;", 32);
+        eval_i64("push 0xFFFFFFFFFFFFFFFF; popcnt_i64; ret;", 64);
+        eval_i64("push 0; popcnt_i32; ret;", 0);
+        eval_i64("push 0xFFFFFFFF; popcnt_i32; ret;", 32);
+        // popcnt_i32 counts only the low 32 bits; the i64 form sees all 64.
+        eval_i64("push 0x100000001; popcnt_i32; ret;", 1);
+        eval_i64("push 0x100000001; popcnt_i64; ret;", 2);
 
         // Comparisons
         eval_i64("push_i8 1; push_i8 10; lt_i64; ret;", 1);

@@ -1116,6 +1116,9 @@ impl Assembler
             "gt_i64" => self.code.push_op(Op::gt_i64),
             "ge_i64" => self.code.push_op(Op::ge_i64),
 
+            "popcnt_i32" => self.code.push_op(Op::popcnt_i32),
+            "popcnt_i64" => self.code.push_op(Op::popcnt_i64),
+
             "sx_i8_i32" => self.code.push_op(Op::sx_i8_i32),
             "sx_i8_i64" => self.code.push_op(Op::sx_i8_i64),
             "sx_i16_i32" => self.code.push_op(Op::sx_i16_i32),
