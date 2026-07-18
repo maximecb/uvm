@@ -338,7 +338,7 @@ void draw_frame()
     }
 
     uint64_t frame_end_time = time_current_ms();
-    printf("render time %d ms\n", frame_end_time - frame_start_time);
+    printf("render time %ld ms\n", (long)(frame_end_time - frame_start_time));
 
     window_draw_frame(0, (uint8_t *)frame_buffer);
 }
