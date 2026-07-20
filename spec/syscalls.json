@@ -160,7 +160,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 29,
-        "description": "Spawn a new thread running the given function with the argument value `arg`."
+        "description": "Spawn a new thread running the given function with the argument value `arg`. This is a low-level primitive: the spawned thread has no software (alloca) stack, so a C thread function that uses local arrays, address-taken locals, or alloca will fault. From C, prefer pthread_create() from <pthread.h>, which installs a private stack for the new thread."
       },
       {
         "name": "thread_id",
@@ -203,7 +203,7 @@
         ],
         "permission": "default_allowed",
         "const_idx": 31,
-        "description": "Join on the thread with the given id. Produces the return value for the thread."
+        "description": "Join on the thread with the given id (as returned by thread_spawn). Produces the return value for the thread. From C, prefer pthread_join() from <pthread.h> when the thread was created with pthread_create()."
       },
       {
         "name": "cmd_argc",

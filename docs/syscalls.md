@@ -84,7 +84,7 @@ u64 thread_spawn(void* fptr, void* arg)
 
 **Returns:** `u64 tid`
 
-Spawn a new thread running the given function with the argument value `arg`.
+Spawn a new thread running the given function with the argument value `arg`. This is a low-level primitive: the spawned thread has no software (alloca) stack, so a C thread function that uses local arrays, address-taken locals, or alloca will fault. From C, prefer pthread_create() from <pthread.h>, which installs a private stack for the new thread.
 
 ## thread_id
 
@@ -112,7 +112,7 @@ u64 thread_join(u64 tid)
 
 **Returns:** `u64 val`
 
-Join on the thread with the given id. Produces the return value for the thread.
+Join on the thread with the given id (as returned by thread_spawn). Produces the return value for the thread. From C, prefer pthread_join() from <pthread.h> when the thread was created with pthread_create().
 
 ## cmd_argc
 

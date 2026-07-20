@@ -50,7 +50,7 @@ extern void __uvm_exit(int8_t __status);
 #define exit(__status) __uvm_exit(__status)
 
 // u64 thread_spawn(void* fptr, void* arg)
-// Spawn a new thread running the given function with the argument value `arg`.
+// Spawn a new thread running the given function with the argument value `arg`. This is a low-level primitive: the spawned thread has no software (alloca) stack, so a C thread function that uses local arrays, address-taken locals, or alloca will fault. From C, prefer pthread_create() from <pthread.h>, which installs a private stack for the new thread.
 extern uint64_t __uvm_thread_spawn(void* __fptr, void* __arg);
 #define thread_spawn(__fptr, __arg) __uvm_thread_spawn(__fptr, __arg)
 
@@ -65,7 +65,7 @@ extern void __uvm_thread_sleep(uint64_t __time_ms);
 #define thread_sleep(__time_ms) __uvm_thread_sleep(__time_ms)
 
 // u64 thread_join(u64 tid)
-// Join on the thread with the given id. Produces the return value for the thread.
+// Join on the thread with the given id (as returned by thread_spawn). Produces the return value for the thread. From C, prefer pthread_join() from <pthread.h> when the thread was created with pthread_create().
 extern uint64_t __uvm_thread_join(uint64_t __tid);
 #define thread_join(__tid) __uvm_thread_join(__tid)
 
@@ -261,7 +261,7 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 #define exit(__status) asm (__status) -> void { syscall exit; }
 
 // u64 thread_spawn(void* fptr, void* arg)
-// Spawn a new thread running the given function with the argument value `arg`.
+// Spawn a new thread running the given function with the argument value `arg`. This is a low-level primitive: the spawned thread has no software (alloca) stack, so a C thread function that uses local arrays, address-taken locals, or alloca will fault. From C, prefer pthread_create() from <pthread.h>, which installs a private stack for the new thread.
 #define thread_spawn(__fptr, __arg) asm (__fptr, __arg) -> u64 { syscall thread_spawn; }
 
 // u64 thread_id()
@@ -273,7 +273,7 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 #define thread_sleep(__time_ms) asm (__time_ms) -> void { syscall thread_sleep; }
 
 // u64 thread_join(u64 tid)
-// Join on the thread with the given id. Produces the return value for the thread.
+// Join on the thread with the given id (as returned by thread_spawn). Produces the return value for the thread. From C, prefer pthread_join() from <pthread.h> when the thread was created with pthread_create().
 #define thread_join(__tid) asm (__tid) -> u64 { syscall thread_join; }
 
 // u64 cmd_argc()

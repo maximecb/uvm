@@ -3,7 +3,7 @@
 //
 // This shows the blocking UVM networking API: net_accept blocks until a client
 // connects, and net_read blocks until data arrives. To serve several clients
-// at once, the server spawns one thread per connection instead of relying on
+// at once, the server spawns one pthread per connection instead of relying on
 // callbacks. Fallible calls report errors with negative return values
 // (NET_ERROR, NET_TIMEOUT); see <uvm/syscalls.h>.
 //
@@ -11,15 +11,17 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 #include <uvm/syscalls.h>
 
 // Handle a single client connection.
 //
-// One instance of this function runs per client, each on its own thread, so
+// One instance of this function runs per client, each on its own pthread, so
 // multiple clients can be served concurrently. The server echoes a reply for
 // each message and closes the connection when the client sends "exit".
-uint64_t handle_conn(uint64_t sock)
+void *handle_conn(void *arg)
 {
+    int64_t sock = (int64_t)arg;
     char read_buf[1024];
 
     for (;;)
@@ -85,7 +87,12 @@ int main(void)
         }
 
         printf("new connection from %s\n", client_addr);
-        thread_spawn((void *)handle_conn, (void *)conn_sock);
+
+        // Serve this client on its own thread. pthread_create gives the thread a
+        // private stack for handle_conn's locals (read_buf, etc.); the raw
+        // thread_spawn syscall does not, so alloca-bearing code must use pthreads.
+        pthread_t thread;
+        pthread_create(&thread, NULL, handle_conn, (void *)conn_sock);
     }
 
     return 0;
