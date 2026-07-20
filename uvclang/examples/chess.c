@@ -194,7 +194,7 @@ void draw_rect(int xmin, int ymin, int width, int height, uint32_t color)
     }
 }
 
-// Adapted to ncc from https://nanochess.org/chess3.html
+// Adapted from https://nanochess.org/chess3.html
 int X(int w, int c, int h, int e, int S, int s)
 {
     int t;

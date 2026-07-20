@@ -181,11 +181,11 @@ fn main()
 
     gen_rust_bindings("../vm/src/constants.rs", &subsystems, &idx_to_name);
 
-    // The C header is dual-mode (gated on `__clang__`): ncc takes the inline-asm
-    // branch, clang/uvclang takes the `__uvm_syscall_*` extern-function branch. The
-    // same file is dropped into each toolchain's own include directory.
+    // The generated C header is dual-mode (gated on `__clang__`): uvclang drives
+    // clang, which takes the `__uvm_syscall_*` extern-function branch; the `#else`
+    // branch is a legacy inline-asm fallback for other UVM toolchains. It is
+    // dropped into uvclang's include directory.
     let c_header = build_c_header(&subsystems);
-    fs::write("../ncc/include/uvm/syscalls.h", &c_header).unwrap();
     fs::create_dir_all("../uvclang/include/uvm").unwrap();
     fs::write("../uvclang/include/uvm/syscalls.h", &c_header).unwrap();
 
@@ -292,9 +292,9 @@ fn gen_rust_bindings(out_file: &str, subsystems: &Vec<SubSystem>, idx_to_name: &
     writeln!(&mut file, "];").unwrap();
 }
 
-/// Map an ncc type string (as spelled in syscalls.json) to the equivalent C
-/// type understood by clang. Handles an optional `const ` prefix and a single
-/// trailing `*` pointer suffix.
+/// Map a syscalls.json type string to the equivalent C type understood by
+/// clang. Handles an optional `const ` prefix and a single trailing `*` pointer
+/// suffix.
 fn c_type(ty: &str) -> String
 {
     let ty = ty.trim();
@@ -328,10 +328,10 @@ fn c_type(ty: &str) -> String
 /// file, discriminated on `__clang__`:
 ///   - clang (uvclang backend): each syscall is an `extern __uvm_<name>`
 ///     function that uvclang lowers to an inline UVM `syscall`, plus a
-///     function-like macro binding the natural name so call sites read the same
-///     as under ncc (and bypass clang's builtin declarations for names like
+///     function-like macro binding the natural name so call sites read as plain
+///     C calls (and bypass clang's builtin declarations for names like
 ///     `memcpy`/`putchar`, avoiding signature clashes).
-///   - ncc: the original inline-asm `syscall` macros.
+///   - non-clang fallback: inline-asm `syscall` macros, for other UVM toolchains.
 /// Constants are shared by both branches.
 fn build_c_header(subsystems: &Vec<SubSystem>) -> String
 {
@@ -388,9 +388,9 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
         }
     }
 
-    // ---- ncc: inline-asm syscall macros ----
+    // ---- non-clang fallback: inline-asm syscall macros ----
     writeln!(s, "#else").unwrap();
-    writeln!(s, "// Compiled with ncc: syscalls expand to inline UVM assembly blocks.").unwrap();
+    writeln!(s, "// Non-clang toolchain: syscalls expand to inline UVM assembly blocks.").unwrap();
     writeln!(s).unwrap();
 
     for subsystem in subsystems {

@@ -33,21 +33,6 @@ jobs:
       working-directory: ./vm
       run: RUST_BACKTRACE=1 cargo test
 
-    - name: Test NCC
-      working-directory: ./ncc
-      run: |
-        pwd
-        ls -al
-        RUST_BACKTRACE=1 cargo test
-
-    - name: Test NCC command-line arguments
-      working-directory: ./ncc
-      run: |
-        cargo run examples/chess.c
-        cargo run -- -o output_file.asm examples/chess.c
-        cargo run -- -E examples/crc32.c > /dev/null
-        cargo run -- -DTEST tests/test_macro.c
-
     - name: Test uvclang
       working-directory: ./uvclang
       run: RUST_BACKTRACE=1 cargo test

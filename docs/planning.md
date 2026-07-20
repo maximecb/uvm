@@ -13,14 +13,11 @@ because it's easier to refactor, which allows us to quickly make design changes.
 
 ## C Compiler Development
 
-This repository includes [ncc](/ncc/README.md), which is a toy C compiler that targets UVM.
-This compiler is currently incomplete, but still able to compile useful code.
-Eventually, we're probably going to want to have an LLVM backend targeting UVM,
-but it seems useful to have a small compiler that people can easily wrap their
-head around so that they can understand how they could build their own.
-The plan is to put some amount of development effort into ncc to smooth out
-the rough edges, improve error messages and get it to the point where it
-supports most C features.
+This repository includes [uvclang](/uvclang/README.md), a C/C++ compiler that
+targets UVM. It uses clang as a front end to lower C/C++ to LLVM IR, then
+compiles that IR down to UVM assembly. Because clang does the parsing, uvclang
+gets full C/C++ language coverage for free; the ongoing work is in the LLVM IR
+to UVM back end, which does not yet support every construct clang can emit.
 
 ## Binary Image Format
 

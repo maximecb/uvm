@@ -230,7 +230,7 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 #define file_size(__handle) __uvm_file_size(__handle)
 
 #else
-// Compiled with ncc: syscalls expand to inline UVM assembly blocks.
+// Non-clang toolchain: syscalls expand to inline UVM assembly blocks.
 
 // void memset(void* dst, u8 value, u64 num_bytes)
 // Fill a block of bytes in the heap with a given value.

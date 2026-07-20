@@ -12,7 +12,7 @@
 //
 // The audio callback runs on its own VM thread and reads the knob and grid
 // state written by the UI thread. All shared values are single words, so the
-// unsynchronized accesses are benign (same pattern as the ncc audio examples).
+// unsynchronized accesses are benign (same pattern as the other audio examples).
 //
 // Controls:
 //   - Knobs: click a knob and drag the mouse up/down to turn it.

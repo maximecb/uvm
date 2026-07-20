@@ -106,15 +106,16 @@ To run an [asm file](vm/examples) with UVM:
 cargo run examples/fizzbuzz.asm
 ```
 
-There is also a toy C compiler in the `ncc` directory, along with many [example C programs](ncc/examples) that run on UVM:
+There is also a C compiler, [uvclang](uvclang/README.md), in the `uvclang` directory, along with many [example C programs](uvclang/examples) that run on UVM:
 ```sh
-cd ncc
+cd uvclang
 ./build_and_run.sh examples/snake.c
 ```
+uvclang uses clang as a front end, so it needs a working clang/LLVM installation. See the [uvclang README](uvclang/README.md) for details.
 
 ### Running the Test Suite
 
-Run `cargo test` from the `vm`, and `ncc` directories.
+Run `cargo test` from the `vm` and `uvclang` directories. uvclang also has shell-based end-to-end test harnesses; see the [uvclang README](uvclang/README.md).
 
 ## Codebase Organization
 
@@ -122,27 +123,27 @@ The repository is organized into a 3 different subprojects, each of which is a R
 
 - `/vm` : The implementation of the UVM virtual machine itself
   - [`/vm/examples/*`](vm/examples): Example assembly programs that can be run by UVM
-- `/ncc`: An implementation of a toy C compiler that outputs UVM assembly
-  - [`/ncc/README.md`](ncc/README.md): documentation for the NCC compiler.
-  - [`/ncc/examples/*`](ncc/examples): Example C source files that can be compiled by NCC
+- `/uvclang`: A C/C++ compiler that outputs UVM assembly, using clang as a front end
+  - [`/uvclang/README.md`](uvclang/README.md): documentation for the uvclang compiler
+  - [`/uvclang/examples/*`](uvclang/examples): Example C source files that can be compiled by uvclang
 - `/spec`: A system to document and automatically export bindings for UVM system calls and constants.
   - `/spec/syscalls.json`: Declarative list of system calls exposed by UVM.
 - `/docs`: Markdown documentation for UVM
   - [`/docs/syscalls.md`](docs/syscalls.md): List of system calls and constants accessible to UVM programs
 
-The `ncc` compiler is, at the time of this writing, incomplete in that it lacks some C features and the error messages need improvement. This compiler
-was implemented to serve as an example of how to write a compiler that targets UVM, and to write some library code to be used by other programs. Over
-time, the `ncc` compiler will be improved. Despite its limitations, it is still usable to write small programs. Contributions to it are welcome.
+The `uvclang` compiler drives clang to lower C/C++ to LLVM IR and then compiles that IR to UVM assembly. Because clang handles parsing, it supports the
+full C/C++ language; the work in progress is in the LLVM IR to UVM back end, which does not yet cover every construct clang can emit. It is already usable
+to write real programs, and ships with a set of UVM bindings and standard-library headers. Contributions are welcome.
 
 The `spec` directory contains JSON files that represent a declarative list of system calls, constants and the permission system that UVM exposes
 to programs running on it. This is helpful for documentation purposes, or if you want to build a compiler that targets UVM. The directory also contains
-code that automatically generates [markdown documentation](docs/syscalls.md), Rust constants and [C definitions](ncc/include/uvm/syscalls.h) for system calls.
+code that automatically generates [markdown documentation](docs/syscalls.md), Rust constants and [C definitions](uvclang/include/uvm/syscalls.h) for system calls.
 
 ## Open Source License
 
-The code for UVM, NCC and associated tools is shared under the [Apache-2.0 license](https://github.com/maximecb/uvm/blob/main/LICENSE).
+The code for UVM, uvclang and associated tools is shared under the [Apache-2.0 license](https://github.com/maximecb/uvm/blob/main/LICENSE).
 
-The examples under the `vm/examples` and `ncc/examples` directories are shared under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) license.
+The examples under the `vm/examples` and `uvclang/examples` directories are shared under the [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/) license.
 
 ## Contributing
 

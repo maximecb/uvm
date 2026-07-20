@@ -14,9 +14,8 @@ and lowers that IR to UVM assembly (Phase 9, done — see `src/frontend.rs`). A
 `tests/gen_ll.sh` is kept as the flag reference the driver mirrors. The ultimate
 back-end target is `doom.ll` at the repo root.
 
-Note the sibling `ncc/` is a *separate*, self-contained C→UVM compiler with its
-own hand-written front-end; uvclang deliberately does the opposite and delegates
-the front-end to clang, so its scope is the IR→UVM lowering plus the thin driver.
+uvclang deliberately delegates the front-end to clang rather than hand-writing
+one, so its scope is the IR→UVM lowering plus the thin driver.
 
 ## Guiding principles
 
@@ -68,8 +67,7 @@ the front-end to clang, so its scope is the IR→UVM lowering plus the thin driv
     Function entry reserves slots with `push_0n N` (N ≤ 255; otherwise emit a
     loop of `push 0`). Holds SSA values and non-addressable locals.
   - A software **stack-alloc bump region** in `.data` (`__stack_alloc_sp__`,
-    `__stack_alloc_max__`), the convention `ncc` uses, for addressable memory
-    (`alloca`, address-of-local).
+    `__stack_alloc_max__`) for addressable memory (`alloca`, address-of-local).
 - **ISA highlights** (typed; operate on the operand stack):
   - Arithmetic: `add_u32/u64`, `sub_*`, `mul_*`, `div_{i,u}{32,64}`,
     `mod_{i,u}{32,64}`, `lshift_*`, `rshift_{i,u}*`, `and/or/xor/not_*`.
@@ -293,7 +291,7 @@ like any other code.
 UVM syscalls reach clang-compiled code through a generated header,
 `uvclang/include/uvm/syscalls.h` (point clang at it with `-Iuvclang/include`). The
 header is produced by `spec/` from `syscalls.json` — the same source of truth as
-the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
+the VM's `constants.rs` — and is **dual-mode**, gated on
 `#ifdef __clang__`:
 - **clang / uvclang:** each syscall is `extern <ret> __uvm_<name>(...)` plus a
   function-like macro binding the natural name (so `memcpy(...)`, `putchar(...)`
@@ -304,12 +302,11 @@ the ncc header and the VM's `constants.rs` — and is **dual-mode**, gated on
   a narrower `uint8_t*` would make clang reject any call passing a non-`char`
   pointer (e.g. a `float[4][4]` matrix) — `-Wincompatible-pointer-types`, a hard
   *error* under clang 16+ — so `void*` is what lets real C compile unchanged.
-- **ncc:** the original inline-asm `asm(...) -> T { syscall name; }` macros.
+- **non-clang fallback:** inline-asm `asm(...) -> T { syscall name; }` macros,
+  kept as a reference for other UVM toolchains.
 - Constants (`KEY_*`, `OPEN_*`, `EVENT_*`, ...) are shared by both branches.
 
-ncc predefines nothing and gates `#include`/`#define` on the active branch, so it
-cleanly takes the `#else` path (verified: `ncc tests/graphics.c` still builds).
-The identical file is written to both `ncc/include/uvm/` and `uvclang/include/uvm/`.
+The generated header is written to `uvclang/include/uvm/`.
 
 uvclang lowers a `call @__uvm_<name>(args...)` inline (`gen_syscall` in
 `codegen.rs`): push args left-to-right, emit `syscall <name>;`, then store/`pop`
@@ -319,11 +316,10 @@ same strategy as the `memcpy`/`memset` intrinsics. Verified end-to-end
 
 ### C standard library (`uvclang/include/`)
 Beyond the syscalls, uvclang ships its own C stdlib headers under `uvclang/include/`,
-implemented on top of the UVM primitives the same way ncc's headers are (ported
-from `ncc/include/`). So far: `string.h`, `ctype.h`, `stdlib.h`, `stdio.h`, and
-`assert.h` — see *C standard library coverage* below for the function-by-function
-status and what remains. Unlike
-ncc's headers, these are plain standard-signature C bodies — clang lowers them to
+implemented on top of the UVM primitives. So far: `string.h`, `ctype.h`,
+`stdlib.h`, `stdio.h`, and `assert.h` — see *C standard library coverage* below
+for the function-by-function status and what remains. These are plain
+standard-signature C bodies — clang lowers them to
 LLVM IR and uvclang compiles them like any other function, which is what resolves an
 external such as `@strlen` without a native libc. `size_t`/`NULL` come from
 clang's own freestanding `<stddef.h>`; `memcpy`/`memset`/`memcmp` are left to the
@@ -363,7 +359,7 @@ subset). All the syscalls it needs already exist in the VM (`vm/src/host.rs` +
 | `vm_print` | `print_str` | So the `-timedemo` result line is visible. |
 | `doom_exit` (via `doom_set_exit`) | `exit` | **Must** actually exit: `I_Error` (the timedemo end path) prints then calls `doom_exit`; the current `main.c` override is an empty body, so replace it with an `exit(code)` so the run terminates cleanly. |
 | `vm_getenv` | — | Return null (fine). |
-| `vm_poll_input` | `window_poll_event` | Drain the event queue each frame; translate UVM events → doom input: `EVENT_KEYDOWN/UP` → `doom_key_down/up` (map UVM `KEY_*` → `doom_key_t`, mirroring `main_sdl.c`'s scancode switch; note UVM letter keys are ASCII, arrows are `16001..`), `EVENT_MOUSEDOWN/UP/MOVE` → `doom_button_down/up`/`doom_mouse_move`, `EVENT_QUIT` → exit. Event struct is `{u16 kind, window_id, key, button; i32 x,y; char text[64]}` (see `ncc/include/uvm/window.h`). |
+| `vm_poll_input` | `window_poll_event` | Drain the event queue each frame; translate UVM events → doom input: `EVENT_KEYDOWN/UP` → `doom_key_down/up` (map UVM `KEY_*` → `doom_key_t`, mirroring `main_sdl.c`'s scancode switch; note UVM letter keys are ASCII, arrows are `16001..`), `EVENT_MOUSEDOWN/UP/MOVE` → `doom_button_down/up`/`doom_mouse_move`, `EVENT_QUIT` → exit. Event struct is `{u16 kind, window_id, key, button; i32 x,y; char text[64]}` (see `uvclang/include/uvm/window.h`). |
 | `vm_present_frame` | `window_draw_frame` (window made once via `window_create` in `main`) | **Byte-order fix required:** `doom_get_framebuffer(4)` returns **RGBA** (`R,G,B,255`), but `window_draw_frame` wants **BGRA** (B at lowest address). So swap R↔B per pixel into a runtime buffer before drawing — or, since we rebuild `doom.ll` from source anyway, patch `doom_get_framebuffer`'s `channels==4` branch to emit BGRA (zero per-frame cost). Frame is 320·200·4 bytes; `window_create(320, 200, …)`. |
 
 Because uvclang compiles a **single `.ll`**, the runtime is delivered by writing
