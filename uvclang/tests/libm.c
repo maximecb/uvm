@@ -55,6 +55,34 @@ int main()
     assert(approx(atan2(0.0, -1.0),  M_PI));
     assert(approxf(atan2f(3.0f, 4.0f), 0.6435011f));
 
+    // --- trunc/round: sign, ties away from zero, already-integral guard ---
+    assert(trunc(2.7) == 2.0    && trunc(-2.7) == -2.0);
+    assert(round(2.5) == 3.0    && round(-2.5) == -3.0);   // ties away from zero
+    assert(round(2.4) == 2.0    && round(-2.4) == -2.0);
+    assert(round(0.5) == 1.0    && round(-0.5) == -1.0);
+    assert(truncf(2.7f) == 2.0f && roundf(-2.5f) == -3.0f);
+    assert(trunc(1e16) == 1e16  && round(-1e16) == -1e16); // guard: already integral
+
+    // --- fmin/fmax: ordering and NaN passthrough (the non-NaN operand wins) ---
+    double nan_d = __builtin_nan("");
+    assert(fmin(2.0, 3.0) == 2.0   && fmax(2.0, 3.0) == 3.0);
+    assert(fmin(-2.0, 3.0) == -2.0 && fmax(-2.0, 3.0) == 3.0);
+    assert(fmin(nan_d, 5.0) == 5.0 && fmax(nan_d, 5.0) == 5.0);
+    assert(fminf(2.0f, 3.0f) == 2.0f && fmaxf(2.0f, 3.0f) == 3.0f);
+
+    // --- copysign: magnitude of x with the sign of y ---
+    assert(copysign(3.0, -1.0) == -3.0 && copysign(-3.0, 1.0) == 3.0);
+    assert(copysignf(3.0f, -1.0f) == -3.0f);
+
+    // --- lround: ties away from zero, returned as an integer ---
+    assert(lround(2.5) == 3 && lround(-2.5) == -3);
+
+    // --- hypot/cbrt: built on sqrt/pow, checked with tolerance ---
+    assert(approx(hypot(3.0, 4.0), 5.0));
+    assert(approx(cbrt(27.0), 3.0) && approx(cbrt(-8.0), -2.0));
+    assert(approxf(hypotf(5.0f, 12.0f), 13.0f));
+    assert(approxf(cbrtf(64.0f), 4.0f));
+
     // --- exit code from exact ops only (same on VM and native) ---
     int a = (int)floor(100.7);   // 100
     int b = (int)ceil(100.7);    // 101

@@ -828,6 +828,13 @@ impl<'a> Codegen<'a>
     fn gen_fabs(&mut self, ctx: &FnCtx, x: &Value, w: u32) -> Result<(), String>
     {
         self.push_value(ctx, x, w)?;
+        self.emit_fabs_top(w);
+        Ok(())
+    }
+
+    /// fabs the float already on top of the stack (clear the IEEE sign bit).
+    fn emit_fabs_top(&mut self, w: u32)
+    {
         if w <= 32 {
             self.push_int(0x7fff_ffff, 32);
             self.line("and_u32;");
@@ -835,7 +842,6 @@ impl<'a> Codegen<'a>
             self.push_int(0x7fff_ffff_ffff_ffff, 64);
             self.line("and_u64;");
         }
-        Ok(())
     }
 
     /// `floor(x)` / `ceil(x)` (`is_ceil` selects). UVM has no rounding op, so the
@@ -903,6 +909,154 @@ impl<'a> Codegen<'a>
         } else {
             self.line("f64_to_i64;");
             self.line("i64_to_f64;");
+        }
+        Ok(())
+    }
+
+    /// `trunc(x)`: round toward zero. This is exactly the float->int->float round
+    /// trip, guarded like `gen_floor_ceil`: only |x| below the format's exact-int
+    /// limit is converted (the conversion saturates above it), so larger
+    /// magnitudes, inf and NaN pass through unchanged (all already integral).
+    fn gen_trunc(&mut self, ctx: &FnCtx, x: &Value, w: u32) -> Result<(), String>
+    {
+        let sfx = if w <= 32 { "f32" } else { "f64" };
+        let intg = if w <= 32 { 8388608.0_f64 } else { 4503599627370496.0_f64 };
+        let l_ret_x = self.fresh_label("trunc_ret_x");
+        let l_done = self.fresh_label("trunc_done");
+
+        self.gen_fabs(ctx, x, w)?;
+        self.push_float(intg, w);
+        self.line(&format!("lt_{};", sfx));       // |x| < 2^m
+        self.line(&format!("jz {};", l_ret_x));
+
+        self.emit_trunc_toward_zero(ctx, x, w)?;
+        self.line(&format!("jmp {};", l_done));
+
+        self.line(&format!("{}:", l_ret_x));
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// `round(x)`: round to nearest, ties away from zero (C `round`/`@llvm.round`).
+    /// Take the toward-zero integer part `t`, and bump it one further from zero
+    /// (`t + copysign(1, x)`) when the discarded fraction is at least a half.
+    /// Same magnitude guard as `gen_trunc`; signed zero is not preserved, matching
+    /// the floor/ceil corner.
+    fn gen_round(&mut self, ctx: &FnCtx, x: &Value, w: u32) -> Result<(), String>
+    {
+        let sfx = if w <= 32 { "f32" } else { "f64" };
+        let intg = if w <= 32 { 8388608.0_f64 } else { 4503599627370496.0_f64 };
+        let l_ret_x = self.fresh_label("round_ret_x");
+        let l_no_adj = self.fresh_label("round_no_adj");
+        let l_neg = self.fresh_label("round_neg");
+        let l_done = self.fresh_label("round_done");
+
+        // Guard: |x| >= 2^m (incl. inf) and NaN are already integral.
+        self.gen_fabs(ctx, x, w)?;
+        self.push_float(intg, w);
+        self.line(&format!("lt_{};", sfx));       // |x| < 2^m
+        self.line(&format!("jz {};", l_ret_x));
+
+        // |x - t| < 0.5 ? -> keep t, else adjust.
+        self.push_value(ctx, x, w)?;
+        self.emit_trunc_toward_zero(ctx, x, w)?;  // t
+        self.line(&format!("sub_{};", sfx));      // frac = x - t
+        self.emit_fabs_top(w);                     // |frac|
+        self.push_float(0.5, w);
+        self.line(&format!("lt_{};", sfx));       // |frac| < 0.5
+        self.line(&format!("jnz {};", l_no_adj));
+
+        // Adjust away from zero: t + (x < 0 ? -1 : +1).
+        self.emit_trunc_toward_zero(ctx, x, w)?;  // t
+        self.push_value(ctx, x, w)?;
+        self.push_float(0.0, w);
+        self.line(&format!("lt_{};", sfx));       // x < 0
+        self.line(&format!("jnz {};", l_neg));
+        self.push_float(1.0, w);
+        self.line(&format!("add_{};", sfx));
+        self.line(&format!("jmp {};", l_done));
+        self.line(&format!("{}:", l_neg));
+        self.push_float(1.0, w);
+        self.line(&format!("sub_{};", sfx));
+        self.line(&format!("jmp {};", l_done));
+
+        self.line(&format!("{}:", l_no_adj));
+        self.emit_trunc_toward_zero(ctx, x, w)?;  // t
+        self.line(&format!("jmp {};", l_done));
+
+        self.line(&format!("{}:", l_ret_x));
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// `fmin`/`fmax` (`@llvm.minnum`/`@llvm.maxnum`): IEEE-754 minNum/maxNum. If
+    /// exactly one operand is NaN the other is returned; two NaNs give NaN. The
+    /// +0/-0 tie is resolved by the ordered compare (which treats them as equal),
+    /// so signed zero is not distinguished — the same corner as floor/ceil/round.
+    fn gen_fminmax(&mut self, ctx: &FnCtx, x: &Value, y: &Value, w: u32, is_max: bool) -> Result<(), String>
+    {
+        let sfx = if w <= 32 { "f32" } else { "f64" };
+        let l_ret_y = self.fresh_label("mm_ret_y");
+        let l_ret_x = self.fresh_label("mm_ret_x");
+        let l_lt = self.fresh_label("mm_lt");
+        let l_done = self.fresh_label("mm_done");
+
+        // x is NaN (x != x) -> return the other operand.
+        self.push_value(ctx, x, w)?;
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("ne_{};", sfx));
+        self.line(&format!("jnz {};", l_ret_y));
+        // y is NaN -> return x.
+        self.push_value(ctx, y, w)?;
+        self.push_value(ctx, y, w)?;
+        self.line(&format!("ne_{};", sfx));
+        self.line(&format!("jnz {};", l_ret_x));
+
+        // Both finite/ordered: branch on x < y.
+        self.push_value(ctx, x, w)?;
+        self.push_value(ctx, y, w)?;
+        self.line(&format!("lt_{};", sfx));
+        self.line(&format!("jnz {};", l_lt));
+        // x >= y: max -> x, min -> y.
+        self.push_value(ctx, if is_max { x } else { y }, w)?;
+        self.line(&format!("jmp {};", l_done));
+        // x < y: max -> y, min -> x.
+        self.line(&format!("{}:", l_lt));
+        self.push_value(ctx, if is_max { y } else { x }, w)?;
+        self.line(&format!("jmp {};", l_done));
+
+        self.line(&format!("{}:", l_ret_y));
+        self.push_value(ctx, y, w)?;
+        self.line(&format!("jmp {};", l_done));
+        self.line(&format!("{}:", l_ret_x));
+        self.push_value(ctx, x, w)?;
+        self.line(&format!("{}:", l_done));
+        Ok(())
+    }
+
+    /// `copysign(x, y)` (`@llvm.copysign`): magnitude of `x` with the sign bit of
+    /// `y`, i.e. `(x & ~signbit) | (y & signbit)`.
+    fn gen_copysign(&mut self, ctx: &FnCtx, x: &Value, y: &Value, w: u32) -> Result<(), String>
+    {
+        self.push_value(ctx, x, w)?;
+        if w <= 32 {
+            self.push_int(0x7fff_ffff, 32);
+            self.line("and_u32;");
+        } else {
+            self.push_int(0x7fff_ffff_ffff_ffff, 64);
+            self.line("and_u64;");
+        }
+        self.push_value(ctx, y, w)?;
+        if w <= 32 {
+            self.push_int(0x8000_0000, 32);
+            self.line("and_u32;");
+            self.line("or_u32;");
+        } else {
+            self.push_int(0x8000_0000_0000_0000, 64);
+            self.line("and_u64;");
+            self.line("or_u64;");
         }
         Ok(())
     }
@@ -1685,6 +1839,21 @@ impl<'a> Codegen<'a>
         } else if bare.starts_with("ceil.") {
             let (_, w) = float_kind(ret_ty)?;
             self.gen_floor_ceil(ctx, a, w, true)?;
+        } else if bare.starts_with("trunc.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_trunc(ctx, a, w)?;
+        } else if bare.starts_with("round.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_round(ctx, a, w)?;
+        } else if bare.starts_with("minnum.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_fminmax(ctx, a, &args[1].val, w, false)?;
+        } else if bare.starts_with("maxnum.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_fminmax(ctx, a, &args[1].val, w, true)?;
+        } else if bare.starts_with("copysign.") {
+            let (_, w) = float_kind(ret_ty)?;
+            self.gen_copysign(ctx, a, &args[1].val, w)?;
         } else if bare.starts_with("pow.") {
             let (sfx, w) = float_kind(ret_ty)?;
             self.push_value(ctx, &args[0].val, w)?;

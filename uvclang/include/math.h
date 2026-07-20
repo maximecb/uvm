@@ -59,14 +59,26 @@ double fabs(double x);
 double pow(double x, double y);
 double exp2(double x);
 
-// floor/ceil have no UVM instruction, but clang (even at -O0) lowers every call
-// to the `@llvm.floor.*`/`@llvm.ceil.*` intrinsic, which uvclang expands inline
-// (see codegen's `gen_floor_ceil`). These declarations only give the caller a
-// prototype — the intrinsic never reaches a real function body.
+// These have no UVM instruction, but clang (even at -O0) lowers every call to an
+// `@llvm.*` intrinsic — `floor`/`ceil`/`trunc`/`round`, `minnum`/`maxnum` for
+// fmin/fmax, and `copysign` — which uvclang expands inline (see codegen's
+// `gen_floor_ceil`/`gen_trunc`/`gen_round`/`gen_fminmax`/`gen_copysign`). These
+// declarations only give the caller a prototype — the intrinsic never reaches a
+// real function body.
 float  floorf(float x);
 float  ceilf(float x);
 double floor(double x);
 double ceil(double x);
+float  truncf(float x);
+double trunc(double x);
+float  roundf(float x);
+double round(double x);
+float  fminf(float x, float y);
+float  fmaxf(float x, float y);
+double fmin(double x, double y);
+double fmax(double x, double y);
+float  copysignf(float x, float y);
+double copysign(double x, double y);
 
 // atan2 and fmod stay ordinary libm calls in clang's output (no intrinsic), so
 // they are implemented here in portable C on top of the UVM-backed primitives
@@ -125,5 +137,36 @@ static inline double fmod(double x, double y)
     }
     return x < 0.0 ? -a : a;
 }
+
+// hypot/cbrt/lround stay ordinary libm calls in clang's output (no intrinsic),
+// so they are implemented here in portable C on top of the primitives above.
+
+// hypot(x, y) = sqrt(x*x + y*y), factored through the larger magnitude so the
+// intermediate square can't overflow while the true result is still finite.
+static inline float hypotf(float x, float y)
+{
+    x = fabsf(x); y = fabsf(y);
+    float hi = x > y ? x : y, lo = x > y ? y : x;
+    if (hi == 0.0f) return 0.0f;
+    float r = lo / hi;
+    return hi * sqrtf(1.0f + r * r);
+}
+
+static inline double hypot(double x, double y)
+{
+    x = fabs(x); y = fabs(y);
+    double hi = x > y ? x : y, lo = x > y ? y : x;
+    if (hi == 0.0) return 0.0;
+    double r = lo / hi;
+    return hi * sqrt(1.0 + r * r);
+}
+
+// cbrt(x) = sign(x) * |x|^(1/3), on the UVM-backed pow.
+static inline float  cbrtf(float x) { return copysignf(powf(fabsf(x), 1.0f / 3.0f), x); }
+static inline double cbrt(double x) { return copysign(pow(fabs(x), 1.0 / 3.0), x); }
+
+// lround(x): round to nearest (ties away from zero), returned as an integer.
+static inline long lroundf(float x) { return (long)roundf(x); }
+static inline long lround(double x) { return (long)round(x); }
 
 #endif // __UVCLANG_MATH_H__

@@ -454,16 +454,21 @@ verbatim without consuming an argument.
 | `assert` | ✅ | ✅ passing path (`uvm_*` self-checks) + failure path (`xfail_assert.c`) |
 
 ### `<math.h>` — partial (f32 + f64)
-A minimal ISO `<math.h>` ships in `uvclang/include/`, declaring the
-single-precision functions uvclang lowers to UVM `*_f32` ops
-(`sinf`/`cosf`/`tanf`/`asinf`/`acosf`/`atanf`/`sqrtf`/`fabsf`/`powf`) and their
-double-precision counterparts lowered to `*_f64` ops
-(`sin`/`cos`/`tan`/`asin`/`acos`/`atan`/`sqrt`/`fabs`/`pow`) plus the
-`M_*`/`M_*_F` constants. Exercised by `tests/floats.c` and `tests/doubles.c`.
-**Not** provided: functions with no UVM instruction
-(`floorf`/`ceilf`/`fmodf`/`expf`/`logf`/`atan2f`/… and their `double` forms) —
-add when a test needs them. Note `uvm/math.h` is a separate UVM-specific header
-(min/max/lerp macros), not ISO `<math.h>`.
+A minimal ISO `<math.h>` ships in `uvclang/include/`, in both the `*f` (f32) and
+double forms plus the `M_*`/`M_*_F` constants. It provides three kinds of
+function:
+- Lowered directly to a UVM instruction: `sin`/`cos`/`tan`/`asin`/`acos`/`atan`/
+  `sqrt`/`fabs`/`pow` (and `exp2`, folded back to `pow`).
+- Lowered by clang to an `@llvm.*` intrinsic that uvclang expands inline (no UVM
+  instruction): `floor`/`ceil`/`trunc`/`round`, `fmin`/`fmax`
+  (`minnum`/`maxnum`), and `copysign`.
+- Written in portable C in the header on top of the above: `atan2`, `fmod`,
+  `hypot`, `cbrt`, `lround`.
+Exercised by `tests/floats.c`, `tests/doubles.c`, and `tests/libm.c`.
+**Not** provided: the transcendentals with no UVM primitive — `exp`/`log`/
+`log2`/`log10` and the hyperbolics — add when a test needs them. Note
+`uvm/math.h` is a separate UVM-specific header (min/max/lerp macros), not ISO
+`<math.h>`.
 
 ### Out of scope for now
 `<time.h>`, `<locale.h>`, `<signal.h>`, `<setjmp.h>`, `<errno.h>`, `<wchar.h>` —
