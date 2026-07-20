@@ -760,10 +760,6 @@
           [
             "u16",
             "format"
-          ],
-          [
-            "void*",
-            "callback"
           ]
         ],
         "returns": [
@@ -772,7 +768,47 @@
         ],
         "permission": "audio_output",
         "const_idx": 18,
-        "description": "Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples."
+        "description": "Open an audio output device for blocking playback. Returns a device id used with audio_wait_output / audio_write / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned."
+      },
+      {
+        "name": "audio_wait_output",
+        "args": [
+          [
+            "u32",
+            "device_id"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "audio_output",
+        "const_idx": 40,
+        "description": "Block until the output device needs the next buffer of samples, then return. Call audio_write next to hand it the samples. This just-in-time rendezvous keeps output latency to about one buffer period."
+      },
+      {
+        "name": "audio_write",
+        "args": [
+          [
+            "u32",
+            "device_id"
+          ],
+          [
+            "i16*",
+            "samples"
+          ],
+          [
+            "u32",
+            "num_frames"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "audio_output",
+        "const_idx": 41,
+        "description": "Submit num_frames of interleaved samples (num_frames * num_channels i16 values) to the output device, copying them into the device buffer. Intended to follow audio_wait_output."
       },
       {
         "name": "audio_open_input",
@@ -788,10 +824,6 @@
           [
             "u16",
             "format"
-          ],
-          [
-            "void*",
-            "callback"
           ]
         ],
         "returns": [
@@ -800,18 +832,22 @@
         ],
         "permission": "audio_input",
         "const_idx": 12,
-        "description": "Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples."
+        "description": "Open an audio input device for blocking capture. Returns a device id used with audio_read / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned."
       },
       {
-        "name": "audio_read_samples",
+        "name": "audio_read",
         "args": [
           [
+            "u32",
+            "device_id"
+          ],
+          [
             "i16*",
-            "dst_buf"
+            "samples"
           ],
           [
             "u32",
-            "num_samples"
+            "num_frames"
           ]
         ],
         "returns": [
@@ -820,7 +856,23 @@
         ],
         "permission": "audio_input",
         "const_idx": 13,
-        "description": "Read available input samples. Must be called from the audio input thread."
+        "description": "Block until num_frames of interleaved input samples (num_frames * num_channels i16 values) have been captured, then copy them into the provided buffer."
+      },
+      {
+        "name": "audio_close",
+        "args": [
+          [
+            "u32",
+            "device_id"
+          ]
+        ],
+        "returns": [
+          "void",
+          ""
+        ],
+        "permission": "audio_output",
+        "const_idx": 42,
+        "description": "Close an audio device (input or output), stopping it and unblocking any thread waiting in audio_wait_output / audio_read."
       }
     ],
     "constants": [

@@ -14,17 +14,20 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use crate::ast::*;
 use crate::layout::Layout;
 
-/// Size in bytes of the shared stack-alloc region (software stack for `alloca`
-/// and address-taken locals). Emitted as a single `.zero` directive. This is
-/// the *fallback* stack used by the main thread and by any thread the runtime
-/// spawns for us (e.g. audio callbacks). Threads created through <pthread.h>
-/// instead run on a private, per-thread stack (see STACK_TLS_SLOT).
+/// Size in bytes of the main thread's software stack (for `alloca` and
+/// address-taken locals), emitted as a single `.zero` buffer (`__main_stack__`).
+/// The program entry installs its base into STACK_TLS_SLOT before running main.
+/// Other threads bring their own stack: <pthread.h> threads get a private one
+/// from the trampoline; a raw `thread_spawn` thread gets none, so its first
+/// alloca faults (SP is 0, an unmapped low address) — by design, use
+/// pthread_create for threads that run alloca-bearing code.
 const STACK_ALLOC_SIZE: u64 = 8 * 1024 * 1024;
 
-/// Thread-local slot (thread_get/thread_set index) holding a thread's private
-/// alloca stack pointer, or 0 when the thread has none and should fall back to
-/// the shared `__stack_alloc_sp__`. <pthread.h>'s frame-free trampoline
-/// (__uvclang_thread_start) sets this for pthread-created threads.
+/// Thread-local slot (thread_get/thread_set index) holding the thread's software
+/// stack pointer (top of its alloca region). It is installed for the main thread
+/// by the program entry and for pthread threads by <pthread.h>'s frame-free
+/// trampoline (__uvclang_thread_start). A thread that never sets it has SP 0 and
+/// faults on its first alloca — there is no shared fallback stack.
 const STACK_TLS_SLOT: u8 = 0;
 
 pub struct Codegen<'a>
@@ -113,20 +116,17 @@ impl<'a> Codegen<'a>
     {
         self.line(".data;");
         self.line("");
-        // Software stack pointer for the alloca region (initialized to the base
-        // address of the buffer, which is emitted at the end of the section).
-        self.line(".align 8;");
-        self.line("__stack_alloc_sp__:");
-        self.line(".addr64 __stack_alloc_buf__;");
-        self.line("");
 
         let module = self.module;
         for g in &module.globals {
             self.emit_global(g)?;
         }
 
+        // The main thread's software stack (alloca region). Its base address is
+        // installed into the stack-pointer TLS slot by the program entry; other
+        // threads bring their own stack (see STACK_TLS_SLOT).
         self.line(".align 8;");
-        self.line("__stack_alloc_buf__:");
+        self.line("__main_stack__:");
         self.line(&format!(".zero {};", STACK_ALLOC_SIZE));
         self.line("");
         Ok(())
@@ -135,6 +135,14 @@ impl<'a> Codegen<'a>
     fn gen_code(&mut self) -> Result<(), String>
     {
         self.line(".code;");
+
+        // Install the main thread's software stack pointer before running any
+        // guest code (const-expr init or main), which may use `alloca`. This is
+        // frame-free (a single thread_set), so it needs no stack itself.
+        self.line("# install the main thread's alloca stack pointer");
+        self.line("push __main_stack__;");
+        self.line(&format!("thread_set {};", STACK_TLS_SLOT));
+        self.line("");
 
         // Initialize globals whose initializer is a constant expression.
         if !self.runtime_inits.is_empty() {
@@ -192,11 +200,11 @@ impl<'a> Codegen<'a>
 
     /// Emit the frame-free thread entry trampoline referenced by <pthread.h>.
     ///
-    /// A newly spawned thread starts with no private stack (thread-local slot
-    /// STACK_TLS_SLOT == 0), so the very first function it enters would run on
-    /// the shared fallback stack. To give pthread-created threads a private
-    /// stack, pthread_create hands thread_spawn this trampoline instead of the
-    /// user's start routine, passing a control block:
+    /// A newly spawned thread starts with no stack (thread-local slot
+    /// STACK_TLS_SLOT == 0), so the very first alloca-bearing function it entered
+    /// would fault. To give pthread-created threads a private stack, pthread_create
+    /// hands thread_spawn this trampoline instead of the user's start routine,
+    /// passing a control block:
     ///
     ///     struct { void* stack; void* (*start)(void*); void* arg; u64 tid; }
     ///
@@ -476,44 +484,17 @@ impl<'a> Codegen<'a>
             self.line(&format!("push_0n {};", total_slots));
         }
 
-        // Enter the stack-alloc frame: save the current stack pointer as the
-        // frame base (bp) and advance it by frame_size. The pointer lives in a
-        // thread-local slot for threads that have a private stack (created via
-        // <pthread.h>), or in the shared `__stack_alloc_sp__` global otherwise
-        // (the main thread and runtime-spawned threads such as audio callbacks).
-        // A thread-local value of 0 means "no private stack", selecting the
-        // shared fallback — which reproduces the original single-stack behavior.
-        // With only dynamic allocas, frame_size is 0: this just records bp (the
-        // reset target) and leaves the stack pointer where it is.
+        // Enter the stack-alloc frame: save the thread's software stack pointer
+        // (thread-local slot STACK_TLS_SLOT) as the frame base (bp) and advance
+        // it by frame_size. With only dynamic allocas, frame_size is 0: this just
+        // records bp (the reset target) and leaves the stack pointer where it is.
         if ctx.has_frame {
-            let l_shared = self.fresh_label("frame_shared");
-            let l_done = self.fresh_label("frame_done");
-
-            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
-            self.line(&format!("jz {};", l_shared));
-
-            // Private per-thread stack (thread-local pointer is non-zero).
             self.line(&format!("thread_get {};", STACK_TLS_SLOT));
             self.line("dup;");
             self.line(&format!("set_local {};", ctx.bp_slot));
             self.line(&format!("push {};", frame_size));
             self.line("add_u64;");
             self.line(&format!("thread_set {};", STACK_TLS_SLOT));
-            self.line(&format!("jmp {};", l_done));
-
-            // Shared fallback stack.
-            self.line(&format!("{}:", l_shared));
-            self.line("push __stack_alloc_sp__;");
-            self.line("load_u64;");
-            self.line("dup;");
-            self.line(&format!("set_local {};", ctx.bp_slot));
-            self.line(&format!("push {};", frame_size));
-            self.line("add_u64;");
-            self.line("push __stack_alloc_sp__;");
-            self.line("swap;");
-            self.line("store_u64;");
-
-            self.line(&format!("{}:", l_done));
         }
 
         for bb in &f.blocks {
@@ -1080,74 +1061,28 @@ impl<'a> Codegen<'a>
 
     fn emit_frame_leave(&mut self, ctx: &FnCtx)
     {
-        // Restore the stack pointer to this frame's base (bp), writing it back
-        // to whichever location the matching prologue bumped: the thread-local
-        // slot for a private stack, or the shared global otherwise. The choice
-        // is re-derived from the thread-local slot (non-zero iff private), so it
-        // always agrees with the prologue. Stack-neutral: leaves any pending
-        // return value already on the stack untouched. Resetting to bp reclaims
-        // the whole frame, including any bytes a dynamic alloca bumped past it.
+        // Restore the stack pointer to this frame's base (bp) in the thread-local
+        // slot the prologue bumped. Stack-neutral: leaves any pending return value
+        // already on the stack untouched. Resetting to bp reclaims the whole
+        // frame, including any bytes a dynamic alloca bumped past it.
         if ctx.has_frame {
-            let l_shared = self.fresh_label("leave_shared");
-            let l_done = self.fresh_label("leave_done");
-
-            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
-            self.line(&format!("jz {};", l_shared));
-
             self.line(&format!("get_local {};", ctx.bp_slot));
             self.line(&format!("thread_set {};", STACK_TLS_SLOT));
-            self.line(&format!("jmp {};", l_done));
-
-            self.line(&format!("{}:", l_shared));
-            self.line("push __stack_alloc_sp__;");
-            self.line(&format!("get_local {};", ctx.bp_slot));
-            self.line("store_u64;");
-
-            self.line(&format!("{}:", l_done));
         }
     }
 
-    /// Push the current software stack pointer (top of the alloca region) onto
-    /// the operand stack. Reads the thread-local private stack pointer when the
-    /// thread has one (slot != 0), else the shared `__stack_alloc_sp__` global —
-    /// the same selection the frame prologue/epilogue make.
+    /// Push the current software stack pointer (top of the alloca region, held in
+    /// the thread-local slot STACK_TLS_SLOT) onto the operand stack.
     fn emit_sp_load(&mut self)
     {
-        let l_shared = self.fresh_label("sp_shared");
-        let l_done = self.fresh_label("sp_done");
-
-        self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [tls]
-        self.line("dup;");                                     // [tls, tls]
-        self.line(&format!("jz {};", l_shared));               // -> [tls]
-        // Private stack: the thread-local value *is* the stack pointer.
-        self.line(&format!("jmp {};", l_done));
-        // Shared stack: drop the zero copy and load the global.
-        self.line(&format!("{}:", l_shared));                  // [0]
-        self.line("pop;");                                     // []
-        self.line("push __stack_alloc_sp__;");
-        self.line("load_u64;");                                // [sp]
-        self.line(&format!("{}:", l_done));                    // [sp]
+        self.line(&format!("thread_get {};", STACK_TLS_SLOT));
     }
 
-    /// Store the top-of-stack value as the new software stack pointer, writing
-    /// it to whichever location `emit_sp_load` reads. Consumes the value.
+    /// Store the top-of-stack value as the new software stack pointer (into the
+    /// thread-local slot STACK_TLS_SLOT). Consumes the value.
     fn emit_sp_store(&mut self)
     {
-        // Operand stack on entry: [x] (the new stack-pointer value).
-        let l_shared = self.fresh_label("spset_shared");
-        let l_done = self.fresh_label("spset_done");
-
-        self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [x, tls]
-        self.line(&format!("jz {};", l_shared));               // -> [x]
-        // Private stack: store into the thread-local slot.
-        self.line(&format!("thread_set {};", STACK_TLS_SLOT)); // []
-        self.line(&format!("jmp {};", l_done));
-        // Shared stack: store into the global.
-        self.line(&format!("{}:", l_shared));                  // [x]
-        self.line("push __stack_alloc_sp__;");                 // [x, addr]
-        self.line("swap;");                                    // [addr, x]
-        self.line("store_u64;");                               // []
-        self.line(&format!("{}:", l_done));
+        self.line(&format!("thread_set {};", STACK_TLS_SLOT));
     }
 
     /// Lower a runtime-sized `alloca <ty>, <intty> <count>`: align the software
@@ -1809,35 +1744,13 @@ impl<'a> Codegen<'a>
         self.line("get_argc;");                          // [argc]
         self.line("push 3;");
         self.line("lshift_u64;");                        // [argc*8 = bytes]
-        // Bump the same stack pointer the frame prologue used: the thread-local
-        // private stack if set, otherwise the shared global. [bytes] stays on
-        // the stack throughout; base is saved in buf_slot.
-        {
-            let l_shared = self.fresh_label("va_shared");
-            let l_done = self.fresh_label("va_done");
-
-            self.line(&format!("thread_get {};", STACK_TLS_SLOT));
-            self.line(&format!("jz {};", l_shared));
-
-            self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [bytes, base]
-            self.line("dup;");
-            self.line(&format!("set_local {};", buf_slot));
-            self.line("add_u64;");                       // [base + bytes]
-            self.line(&format!("thread_set {};", STACK_TLS_SLOT));
-            self.line(&format!("jmp {};", l_done));
-
-            self.line(&format!("{}:", l_shared));
-            self.line("push __stack_alloc_sp__;");
-            self.line("load_u64;");                      // [bytes, base]
-            self.line("dup;");
-            self.line(&format!("set_local {};", buf_slot));
-            self.line("add_u64;");                       // [base + bytes] = new sp
-            self.line("push __stack_alloc_sp__;");
-            self.line("swap;");
-            self.line("store_u64;");
-
-            self.line(&format!("{}:", l_done));
-        }
+        // Bump the thread's software stack pointer (thread-local slot) to reserve
+        // `bytes`. [bytes] stays on the stack throughout; base is saved in buf_slot.
+        self.line(&format!("thread_get {};", STACK_TLS_SLOT)); // [bytes, base]
+        self.line("dup;");
+        self.line(&format!("set_local {};", buf_slot));
+        self.line("add_u64;");                       // [base + bytes]
+        self.line(&format!("thread_set {};", STACK_TLS_SLOT));
 
         // Copy loop: for i in 0..argc { B[i] = get_var_arg(i) }.
         let l_cond = self.fresh_label("vastart_cond");

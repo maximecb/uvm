@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <uvm/syscalls.h>
 #include <uvm/window.h>
 #include <uvm/graphics.h>
@@ -135,16 +136,14 @@ void update(void)
     window_draw_frame(0, (uint8_t *)frame_buffer);
 }
 
-int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
+// Fill AUDIO_BUFFER with `num_samples` mono samples of the bounce sound.
+void fill_audio(uint32_t num_samples)
 {
-    assert(num_channels == 1);
-    assert(num_samples <= 1024);
-
     memset(AUDIO_BUFFER, 0, sizeof(AUDIO_BUFFER));
 
     if (audio_pos > AUDIO_LEN)
     {
-        return AUDIO_BUFFER;
+        return;
     }
 
     // TODO: synthesize a more "boing-like" sound effect
@@ -161,15 +160,31 @@ int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
 
         ++audio_pos;
     }
+}
 
-    return AUDIO_BUFFER;
+// Audio runs on its own thread: hand the device a fresh buffer whenever it asks
+// for one. This runs concurrently with the window/animation loop on main.
+uint32_t audio_dev;
+
+void *audio_thread(void *arg)
+{
+    (void)arg;
+    for (;;)
+    {
+        audio_wait_output(audio_dev);
+        fill_audio(1024);
+        audio_write(audio_dev, AUDIO_BUFFER, 1024);
+    }
+    return 0;
 }
 
 int main(void)
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, (void *)audio_cb);
+    audio_dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
+    pthread_t audio_tid;
+    pthread_create(&audio_tid, 0, audio_thread, 0);
 
     anim_event_loop(60, update);
     return 0;

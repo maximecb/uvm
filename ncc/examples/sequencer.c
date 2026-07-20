@@ -73,9 +73,8 @@ void redraw()
     window_draw_frame(0, frame_buffer);
 }
 
-u16* audio_cb(u16 num_channels, u32 num_samples)
+void fill_audio(u32 num_samples)
 {
-    assert(num_channels == 1);
     assert(num_samples <= 1024);
 
     memset(audio_buffer, 0, sizeof(audio_buffer));
@@ -129,7 +128,20 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
         }
     }
 
-    return audio_buffer;
+}
+
+// Audio runs on its own thread, concurrently with the UI loop on main.
+u32 audio_dev;
+
+u64 audio_thread(u64 arg)
+{
+    for (;;)
+    {
+        audio_wait_output(audio_dev);
+        fill_audio(1024);
+        audio_write(audio_dev, (int16_t*)audio_buffer, 1024);
+    }
+    return 0;
 }
 
 void mousedown(u8 btn_id, i32 x, i32 y)
@@ -162,7 +174,8 @@ void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Pentatonic Sequencer", 0);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+    audio_dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
+    thread_spawn(audio_thread, 0);
 
     redraw();
 

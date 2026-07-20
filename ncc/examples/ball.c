@@ -89,16 +89,15 @@ void update()
     window_draw_frame(0, frame_buffer);
 }
 
-u16* audio_cb(u16 num_channels, u32 num_samples)
+void fill_audio(u32 num_samples)
 {
-    assert(num_channels == 1);
     assert(num_samples <= 1024);
 
     memset(AUDIO_BUFFER, 0, sizeof(AUDIO_BUFFER));
 
     if (audio_pos > AUDIO_LEN)
     {
-        return AUDIO_BUFFER;
+        return;
     }
 
     // TODO: synthesize a more "boing-like" sound effect
@@ -116,14 +115,28 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
         ++audio_pos;
     }
 
-    return AUDIO_BUFFER;
+}
+
+// Audio runs on its own thread, concurrently with the animation loop on main.
+u32 audio_dev;
+
+u64 audio_thread(u64 arg)
+{
+    for (;;)
+    {
+        audio_wait_output(audio_dev);
+        fill_audio(1024);
+        audio_write(audio_dev, (int16_t*)AUDIO_BUFFER, 1024);
+    }
+    return 0;
 }
 
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Bouncing Ball Example", 0);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+    audio_dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
+    thread_spawn(audio_thread, 0);
 
     anim_event_loop(60, update);
 }

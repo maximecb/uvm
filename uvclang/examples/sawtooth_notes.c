@@ -27,11 +27,9 @@ size_t sample_idx = 0;
 // Oscillator phase
 float phase = 0.0f;
 
-int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
+// Fill audio_buffer with `num_samples` mono samples of the current note.
+void fill_buffer(uint32_t num_samples)
 {
-    assert(num_channels == 1);
-    assert(num_samples <= 1024);
-
     memset(audio_buffer, 0, sizeof(audio_buffer));
 
     // Time taken by one sample (inverse sample rate)
@@ -59,15 +57,22 @@ int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
     }
 
     sample_idx = sample_idx + num_samples;
-
-    return audio_buffer;
 }
 
 int main(void)
 {
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, (void *)audio_cb);
+    uint32_t dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
 
-    // Keep the program running until audio is done playing
-    thread_sleep(8000);
+    // Play ~8 seconds of audio, one 1024-frame buffer at a time. The audio loop
+    // runs right here on the main thread: audio_wait_output blocks until the
+    // device needs the next buffer, then we synthesize it and hand it over.
+    while (sample_idx < 44100 * 8)
+    {
+        audio_wait_output(dev);
+        fill_buffer(1024);
+        audio_write(dev, audio_buffer, 1024);
+    }
+
+    audio_close(dev);
     return 0;
 }

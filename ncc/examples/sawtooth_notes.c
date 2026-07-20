@@ -23,9 +23,8 @@ size_t sample_idx = 0;
 // Oscillator phase
 float phase = 0.0f;
 
-u16* audio_cb(u16 num_channels, u32 num_samples)
+void fill_buffer(u32 num_samples)
 {
-    assert(num_channels == 1);
     assert(num_samples <= 1024);
 
     memset(audio_buffer, 0, sizeof(audio_buffer));
@@ -55,14 +54,20 @@ u16* audio_cb(u16 num_channels, u32 num_samples)
     }
 
     sample_idx = sample_idx + num_samples;
-
-    return audio_buffer;
 }
 
 void main()
 {
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, audio_cb);
+    u32 dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
 
-    // Keep the program running until audio is done playing
-    thread_sleep(8000);
+    // Play ~8 seconds of audio, one 1024-frame buffer at a time. audio_wait_output
+    // blocks until the device needs the next buffer; then we synthesize and submit.
+    while (sample_idx < 44100 * 8)
+    {
+        audio_wait_output(dev);
+        fill_buffer(1024);
+        audio_write(dev, (int16_t*)audio_buffer, 1024);
+    }
+
+    audio_close(dev);
 }

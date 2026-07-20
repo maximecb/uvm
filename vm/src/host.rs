@@ -125,9 +125,12 @@ pub fn get_syscall(const_idx: u16) -> HostFn
         WINDOW_POLL_EVENT => HostFn::Fn1_1(window_poll_event),
         WINDOW_WAIT_EVENT => HostFn::Fn1_0(window_wait_event),
 
-        AUDIO_OPEN_OUTPUT => HostFn::Fn4_1(audio_open_output),
-        AUDIO_OPEN_INPUT => HostFn::Fn4_1(audio_open_input),
-        AUDIO_READ_SAMPLES => HostFn::Fn2_0(audio_read_samples),
+        AUDIO_OPEN_OUTPUT => HostFn::Fn3_1(audio_open_output),
+        AUDIO_WAIT_OUTPUT => HostFn::Fn1_0(audio_wait_output),
+        AUDIO_WRITE => HostFn::Fn3_0(audio_write),
+        AUDIO_OPEN_INPUT => HostFn::Fn3_1(audio_open_input),
+        AUDIO_READ => HostFn::Fn3_0(audio_read),
+        AUDIO_CLOSE => HostFn::Fn1_0(audio_close),
 
         // Networking
         NET_LISTEN => HostFn::Fn1_1(net_listen),

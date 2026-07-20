@@ -1,262 +1,307 @@
+// Blocking audio API.
+//
+// The VM does NOT run guest code on an audio thread. Instead each device is a
+// small rendezvous/queue between SDL's real-time audio callback (which cannot
+// block) and blocking syscalls the guest drives from its own thread(s):
+//
+//   output:  audio_wait_output(dev)  -> blocks until SDL needs the next buffer
+//            audio_write(dev, buf, n) -> hands SDL that buffer (copied in)
+//   input:   audio_read(dev, buf, n)  -> blocks until n frames are captured
+//   both:    audio_close(dev)         -> stops the device, unblocks waiters
+//
+// Output uses a just-in-time rendezvous (fill on demand) so latency stays near
+// one buffer period; the callback waits for the guest's audio_write up to one
+// period, then falls back to silence so SDL's audio thread never stalls.
+
 use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
-use std::sync::{Arc, Weak, Mutex};
-use std::collections::HashMap;
+use std::sync::{Arc, Mutex, Condvar};
+use std::collections::VecDeque;
+use std::time::Duration;
 use std::cell::RefCell;
-use crate::vm::{Value, VM, Thread};
-use crate::host::{get_sdl_context};
+use crate::vm::{Value, Thread};
+use crate::host::get_sdl_context;
 use crate::constants::*;
 
-// Audio output callback
-struct OutputCB
-{
-    // Number of audio output channels
-    num_channels: usize,
+// Fixed device parameters (unchanged from the previous API).
+const BUF_FRAMES: usize = 1024;     // SDL period, in frames (samples per channel)
+const SAMPLE_RATE: u32 = 44100;
 
-    // Expected buffer size
-    buf_size: usize,
+// Device ids handed back to the guest. Only one input and one output device can
+// be open at a time, so the ids are fixed.
+const DEV_OUTPUT: u32 = 0;
+const DEV_INPUT: u32 = 1;
 
-    // VM thread in which to execute the audio callback
-    thread: Thread,
+// -- output ---------------------------------------------------------------
 
-    // Callback function pointer
-    cb: u64,
+enum OutPhase {
+    Idle,       // SDL is not currently asking for a buffer
+    Requested,  // SDL wants a buffer and is waiting for audio_write
 }
 
-impl AudioCallback for OutputCB
-{
-    // Using signed 16-bit samples
+struct OutputShared {
+    phase: OutPhase,
+    pending: Option<Vec<i16>>,  // buffer supplied by audio_write, awaiting the callback
+    open: bool,
+    channels: usize,
+}
+
+struct OutputDev {
+    m: Mutex<OutputShared>,
+    cv: Condvar,
+}
+
+// SDL playback callback: request a buffer, wait (bounded) for the guest to
+// supply one via audio_write, output it (silence on timeout/underrun/close).
+struct OutputCB {
+    dev: Arc<OutputDev>,
+}
+
+impl AudioCallback for OutputCB {
     type Channel = i16;
 
-    fn callback(&mut self, out: &mut [i16])
-    {
-        let output_len = out.len();
-        assert!(output_len % self.num_channels == 0);
-        let samples_per_chan = output_len / self.num_channels;
-        assert!(samples_per_chan == self.buf_size);
+    fn callback(&mut self, out: &mut [i16]) {
+        let mut s = self.dev.m.lock().unwrap();
 
-        // Clear the buffer
-        out.fill(0);
+        if !s.open {
+            out.fill(0);
+            return;
+        }
 
-        // Run the audio callback
-        let ptr = self.thread.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]);
+        // Ask the guest for the next buffer and wake audio_wait_output.
+        s.phase = OutPhase::Requested;
+        self.dev.cv.notify_all();
 
-        let mem_slice: &[i16] = self.thread.get_heap_slice_mut(ptr.as_usize(), output_len);
-        out.copy_from_slice(&mem_slice);
+        // Wait for audio_write to deliver, up to ~one buffer period.
+        let deadline = Duration::from_micros(1_000_000 * BUF_FRAMES as u64 / SAMPLE_RATE as u64);
+        loop {
+            if let Some(buf) = s.pending.take() {
+                let n = buf.len().min(out.len());
+                out[..n].copy_from_slice(&buf[..n]);
+                if n < out.len() { out[n..].fill(0); }
+                break;
+            }
+            if !s.open {
+                out.fill(0);
+                break;
+            }
+            let (g, timed_out) = self.dev.cv.wait_timeout(s, deadline).unwrap();
+            s = g;
+            if timed_out.timed_out() && s.pending.is_none() {
+                out.fill(0);   // underrun: guest was too slow this period
+                break;
+            }
+        }
+
+        s.phase = OutPhase::Idle;
     }
 }
 
-// Audio input callback
-struct InputCB
-{
-    // Number of audio input channels
-    num_channels: usize,
+// -- input ----------------------------------------------------------------
 
-    // Expected buffer size
-    buf_size: usize,
-
-    // VM thread in which to execute the audio callback
-    thread: Thread,
-
-    // Callback function pointer
-    cb: u64,
+struct InputShared {
+    queue: VecDeque<i16>,
+    open: bool,
+    channels: usize,
 }
 
-impl AudioCallback for InputCB
-{
-    // Using signed 16-bit samples
+struct InputDev {
+    m: Mutex<InputShared>,
+    cv: Condvar,
+}
+
+// SDL capture callback: append captured samples to the queue (dropping the
+// oldest if the guest is not reading fast enough), then wake audio_read.
+struct InputCB {
+    dev: Arc<InputDev>,
+}
+
+impl AudioCallback for InputCB {
     type Channel = i16;
 
-    // Receives a buffer of input samples
-    fn callback(&mut self, buf: &mut [i16])
-    {
-        assert!(buf.len() % self.num_channels == 0);
-        let samples_per_chan = buf.len() / self.num_channels;
-        assert!(samples_per_chan == self.buf_size);
-
-        // Copy the samples to make them accessible to the audio thread
-        INPUT_STATE.with_borrow_mut(|s| {
-            s.input_tid = self.thread.id;
-            s.samples.resize(buf.len(), 0);
-            s.samples.copy_from_slice(buf);
-        });
-
-        // Run the audio callback
-        let ptr = self.thread.call(self.cb, &[Value::from(self.num_channels), Value::from(samples_per_chan)]);
+    fn callback(&mut self, buf: &mut [i16]) {
+        let mut s = self.dev.m.lock().unwrap();
+        if !s.open {
+            return;
+        }
+        s.queue.extend(buf.iter().copied());
+        // Bound the backlog to a few periods; drop oldest on overflow.
+        let cap = 4 * BUF_FRAMES * s.channels;
+        while s.queue.len() > cap {
+            s.queue.pop_front();
+        }
+        self.dev.cv.notify_all();
     }
 }
 
-#[derive(Default)]
-struct AudioState
-{
-    output_dev: Option<AudioDevice<OutputCB>>,
-    input_dev: Option<AudioDevice<InputCB>>,
-}
+// -- registry -------------------------------------------------------------
+//
+// The Arc<{Output,Input}Dev> is shared with the guest syscalls (any thread) via
+// these globals. The SDL AudioDevice itself keeps the callback running and is
+// held in a main-thread-only cell (audio_open is main-thread only); it is not
+// Send, so it never crosses to another thread.
 
-#[derive(Default)]
-struct InputState
-{
-    // Thread doing the audio input
-    input_tid: u64,
-
-    // Samples available to read
-    samples: Vec<i16>,
-}
+static OUTPUT: Mutex<Option<Arc<OutputDev>>> = Mutex::new(None);
+static INPUT: Mutex<Option<Arc<InputDev>>> = Mutex::new(None);
 
 thread_local! {
-    // This is only accessed from the main thread
-    static AUDIO_STATE: RefCell<AudioState> = RefCell::new(AudioState::default());
-
-    // Audio input state. Accessed from the input thread.
-    static INPUT_STATE: RefCell<InputState> = RefCell::new(InputState::default());
+    // Keeps the SDL devices alive for the life of the program (accessed only on
+    // the main thread, where audio_open_* runs).
+    static DEVICES: RefCell<AudioDevices> = RefCell::new(AudioDevices::default());
 }
 
-pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
-{
+#[derive(Default)]
+struct AudioDevices {
+    output: Option<AudioDevice<OutputCB>>,
+    input: Option<AudioDevice<InputCB>>,
+}
+
+fn output_shared() -> Option<Arc<OutputDev>> {
+    OUTPUT.lock().unwrap().clone()
+}
+
+fn input_shared() -> Option<Arc<InputDev>> {
+    INPUT.lock().unwrap().clone()
+}
+
+fn check_open_args(thread: &Thread, sample_rate: u32, num_channels: u16, format: u16) {
     if thread.id != 0 {
-        panic!("audio functions should only be called from the main thread");
+        panic!("audio devices must be opened from the main thread");
+    }
+    if sample_rate != SAMPLE_RATE {
+        panic!("for now, only a {}Hz sample rate is supported", SAMPLE_RATE);
+    }
+    // Interleaved samples, left channel first (e.g. L R L R for stereo).
+    if num_channels != 1 && num_channels != 2 {
+        panic!("for now, only 1 or 2 audio channels are supported");
+    }
+    if format != AUDIO_FORMAT_I16 {
+        panic!("for now, only the i16 (16-bit signed) audio format is supported");
+    }
+}
+
+// -- syscalls -------------------------------------------------------------
+
+pub fn audio_open_output(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value) -> Value {
+    check_open_args(thread, sample_rate.as_u32(), num_channels.as_u16(), format.as_u16());
+    let num_channels = num_channels.as_u16() as usize;
+
+    if OUTPUT.lock().unwrap().is_some() {
+        panic!("audio output device already open");
     }
 
-    AUDIO_STATE.with_borrow(|s| {
-        if s.output_dev.is_some() {
-            panic!("audio output device already open");
-        }
+    let dev = Arc::new(OutputDev {
+        m: Mutex::new(OutputShared {
+            phase: OutPhase::Idle,
+            pending: None,
+            open: true,
+            channels: num_channels,
+        }),
+        cv: Condvar::new(),
     });
 
-    let sample_rate = sample_rate.as_u32();
-    let num_channels = num_channels.as_u16();
-    let format = format.as_u16();
-    let cb = cb.as_u64();
-
-    if sample_rate != 44100 {
-        panic!("for now, only 44100Hz sample rate suppored");
-    }
-
-    // For multi-channel output, samples are interleaved with the
-    // left channel first, e.g. L R L R for stereo.
-    if num_channels != 1 && num_channels != 2 {
-        panic!("for now, only 1 or 2 audio output channels supported");
-    }
-
-    if format != AUDIO_FORMAT_I16 {
-        panic!("for now, only i16, 16-bit signed audio format supported");
-    }
-
-    let desired_spec = AudioSpecDesired {
-        freq: Some(sample_rate as i32),
+    let desired = AudioSpecDesired {
+        freq: Some(SAMPLE_RATE as i32),
         channels: Some(num_channels as u8),
-        samples: Some(1024) // buffer size, 1024 samples
+        samples: Some(BUF_FRAMES as u16),
     };
 
-    // Create a new VM thread in which to run the audio callback
-    let audio_thread = VM::new_thread(&thread.vm);
-
     let sdl = get_sdl_context();
-    let audio_subsystem = sdl.audio().unwrap();
-
-    let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
-        OutputCB {
-            num_channels: num_channels.into(),
-            buf_size: desired_spec.samples.unwrap() as usize,
-            thread: audio_thread,
-            cb: cb,
-        }
-    }).unwrap();
-
-    // Start playback
+    let audio = sdl.audio().unwrap();
+    let cb_dev = dev.clone();
+    let device = audio.open_playback(None, &desired, |_spec| OutputCB { dev: cb_dev }).unwrap();
     device.resume();
 
-    // Keep the audio device alive
-    AUDIO_STATE.with_borrow_mut(|s| {
-        s.output_dev = Some(device);
-    });
+    *OUTPUT.lock().unwrap() = Some(dev);
+    DEVICES.with_borrow_mut(|d| d.output = Some(device));
 
-    // FIXME: return the device_id (u32)
-    Value::from(0)
+    Value::from(DEV_OUTPUT)
 }
 
-pub fn audio_open_input(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value, cb: Value) -> Value
-{
-    if thread.id != 0 {
-        panic!("audio functions should only be called from the main thread");
+pub fn audio_wait_output(_thread: &mut Thread, _device_id: Value) {
+    let dev = match output_shared() { Some(d) => d, None => return };
+    let mut s = dev.m.lock().unwrap();
+    // Block until SDL asks for a buffer (or the device is closed).
+    while s.open && !matches!(s.phase, OutPhase::Requested) {
+        s = dev.cv.wait(s).unwrap();
+    }
+}
+
+pub fn audio_write(thread: &mut Thread, _device_id: Value, samples_ptr: Value, num_frames: Value) {
+    let dev = match output_shared() { Some(d) => d, None => return };
+    let channels = { dev.m.lock().unwrap().channels };
+    let n = num_frames.as_usize() * channels;
+    let src: &[i16] = thread.get_heap_slice_mut(samples_ptr.as_usize(), n);
+    let buf: Vec<i16> = src.to_vec();
+
+    let mut s = dev.m.lock().unwrap();
+    s.pending = Some(buf);
+    dev.cv.notify_all();
+}
+
+pub fn audio_open_input(thread: &mut Thread, sample_rate: Value, num_channels: Value, format: Value) -> Value {
+    check_open_args(thread, sample_rate.as_u32(), num_channels.as_u16(), format.as_u16());
+    let num_channels = num_channels.as_u16() as usize;
+
+    if INPUT.lock().unwrap().is_some() {
+        panic!("audio input device already open");
     }
 
-    AUDIO_STATE.with_borrow(|s| {
-        if s.input_dev.is_some() {
-            panic!("audio input device already open");
-        }
+    let dev = Arc::new(InputDev {
+        m: Mutex::new(InputShared {
+            queue: VecDeque::new(),
+            open: true,
+            channels: num_channels,
+        }),
+        cv: Condvar::new(),
     });
 
-    let sample_rate = sample_rate.as_u32();
-    let num_channels = num_channels.as_u16();
-    let format = format.as_u16();
-    let cb = cb.as_u64();
-
-    if sample_rate != 44100 {
-        panic!("for now, only 44100Hz sample rate suppored");
-    }
-
-    // For multi-channel input, samples are interleaved with the
-    // left channel first, e.g. L R L R for stereo.
-    if num_channels != 1 && num_channels != 2 {
-        panic!("for now, only 1 or 2 audio input channels supported");
-    }
-
-    if format != AUDIO_FORMAT_I16 {
-        panic!("for now, only i16, 16-bit signed audio format supported");
-    }
-
-    let desired_spec = AudioSpecDesired {
-        freq: Some(sample_rate as i32),
+    let desired = AudioSpecDesired {
+        freq: Some(SAMPLE_RATE as i32),
         channels: Some(num_channels as u8),
-        samples: Some(1024) // buffer size, 1024 samples
+        samples: Some(BUF_FRAMES as u16),
     };
 
-    // Create a new VM thread in which to run the audio callback
-    let audio_thread = VM::new_thread(&thread.vm);
-
     let sdl = get_sdl_context();
-    let audio_subsystem = sdl.audio().unwrap();
-
-    let device = audio_subsystem.open_capture(None, &desired_spec, |spec| {
-        InputCB {
-            num_channels: num_channels.into(),
-            buf_size: desired_spec.samples.unwrap() as usize,
-            thread: audio_thread,
-            cb: cb,
-        }
-    }).unwrap();
-
-    // Start playback
+    let audio = sdl.audio().unwrap();
+    let cb_dev = dev.clone();
+    let device = audio.open_capture(None, &desired, |_spec| InputCB { dev: cb_dev }).unwrap();
     device.resume();
 
-    // Keep the audio device alive
-    AUDIO_STATE.with_borrow_mut(|s| {
-        s.input_dev = Some(device);
-    });
+    *INPUT.lock().unwrap() = Some(dev);
+    DEVICES.with_borrow_mut(|d| d.input = Some(device));
 
-    // FIXME: return the device_id (u32)
-    Value::from(1)
+    Value::from(DEV_INPUT)
 }
 
-/// Read audio samples from an audio input thread
-pub fn audio_read_samples(thread: &mut Thread, dst_ptr: Value, num_samples: Value)
-{
-    let dst_ptr = dst_ptr.as_usize();
-    let num_samples = num_samples.as_usize();
+pub fn audio_read(thread: &mut Thread, _device_id: Value, samples_ptr: Value, num_frames: Value) {
+    let dev = match input_shared() { Some(d) => d, None => return };
+    let channels = { dev.m.lock().unwrap().channels };
+    let need = num_frames.as_usize() * channels;
 
-    INPUT_STATE.with_borrow_mut(|s| {
-        if s.input_tid != thread.id {
-            panic!("can only read audio samples from audio input thread");
+    let mut s = dev.m.lock().unwrap();
+    while s.open && s.queue.len() < need {
+        s = dev.cv.wait(s).unwrap();
+    }
+    let dst: &mut [i16] = thread.get_heap_slice_mut(samples_ptr.as_usize(), need);
+    for slot in dst.iter_mut() {
+        *slot = s.queue.pop_front().unwrap_or(0);
+    }
+}
+
+pub fn audio_close(_thread: &mut Thread, device_id: Value) {
+    match device_id.as_u32() {
+        DEV_OUTPUT => {
+            if let Some(dev) = OUTPUT.lock().unwrap().take() {
+                dev.m.lock().unwrap().open = false;
+                dev.cv.notify_all();
+            }
         }
-
-        // For now, force reading all available samples
-        if num_samples != s.samples.len() {
-            panic!("must read all available samples");
+        DEV_INPUT => {
+            if let Some(dev) = INPUT.lock().unwrap().take() {
+                dev.m.lock().unwrap().open = false;
+                dev.cv.notify_all();
+            }
         }
-
-        let dst_buf: &mut [i16] = thread.get_heap_slice_mut(dst_ptr, num_samples);
-        dst_buf.copy_from_slice(&s.samples);
-
-        s.samples.clear();
-    });
+        _ => {}
+    }
 }

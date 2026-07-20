@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <uvm/syscalls.h>
 #include <uvm/graphics.h>
 #include <uvm/window.h>
@@ -345,9 +346,8 @@ float env_coef(float time_secs)
 }
 
 // Audio callback, run by the VM on a dedicated audio thread
-int16_t* audio_cb(uint64_t num_channels, uint64_t num_samples)
+void fill_audio(uint32_t num_samples)
 {
-    assert(num_channels == 1);
     assert(num_samples <= AUDIO_BUF_LEN);
 
     // Read the knobs once per block
@@ -505,8 +505,21 @@ int16_t* audio_cb(uint64_t num_channels, uint64_t num_samples)
 
         audio_buffer[i] = (int16_t)(out * 30000.0f);
     }
+}
 
-    return audio_buffer;
+// Audio runs on its own thread, concurrently with the UI loop on main.
+uint32_t audio_dev;
+
+void* audio_thread(void* arg)
+{
+    (void)arg;
+    for (;;)
+    {
+        audio_wait_output(audio_dev);
+        fill_audio(AUDIO_BUF_LEN);
+        audio_write(audio_dev, audio_buffer, AUDIO_BUF_LEN);
+    }
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -729,7 +742,9 @@ int main(void)
     grid[3][14] = true;
 
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Step Synth", 0);
-    audio_open_output(SAMPLE_RATE, 1, AUDIO_FORMAT_I16, (void*)audio_cb);
+    audio_dev = audio_open_output(SAMPLE_RATE, 1, AUDIO_FORMAT_I16);
+    pthread_t audio_tid;
+    pthread_create(&audio_tid, 0, audio_thread, 0);
 
     for (;;)
     {

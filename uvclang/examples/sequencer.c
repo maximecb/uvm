@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <uvm/syscalls.h>
 #include <uvm/window.h>
 #include <uvm/graphics.h>
@@ -79,9 +80,8 @@ void redraw(void)
     window_draw_frame(0, (uint8_t *)frame_buffer);
 }
 
-int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
+void fill_audio(uint32_t num_samples)
 {
-    assert(num_channels == 1);
     assert(num_samples <= 1024);
 
     memset(audio_buffer, 0, sizeof(audio_buffer));
@@ -134,7 +134,21 @@ int16_t *audio_cb(uint64_t num_channels, uint64_t num_samples)
         }
     }
 
-    return audio_buffer;
+}
+
+// Audio runs on its own thread, concurrently with the UI loop on main.
+uint32_t audio_dev;
+
+void *audio_thread(void *arg)
+{
+    (void)arg;
+    for (;;)
+    {
+        audio_wait_output(audio_dev);
+        fill_audio(1024);
+        audio_write(audio_dev, audio_buffer, 1024);
+    }
+    return 0;
 }
 
 void mousedown(uint8_t btn_id, int32_t x, int32_t y)
@@ -164,7 +178,9 @@ int main(void)
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Pentatonic Sequencer", 0);
 
-    audio_open_output(44100, 1, AUDIO_FORMAT_I16, (void *)audio_cb);
+    audio_dev = audio_open_output(44100, 1, AUDIO_FORMAT_I16);
+    pthread_t audio_tid;
+    pthread_create(&audio_tid, 0, audio_thread, 0);
 
     redraw();
 

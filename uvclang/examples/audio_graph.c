@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
 #include <uvm/syscalls.h>
 #include <uvm/window.h>
 #include <uvm/graphics.h>
@@ -74,12 +75,13 @@ void update(void)
     window_draw_frame(0, (uint8_t *)frame_buffer);
 }
 
-void audio_cb(uint64_t num_channels, uint64_t num_samples)
-{
-    assert(num_channels == 1);
-    assert(num_samples <= 1024);
+uint32_t audio_dev;
 
-    audio_read_samples(buffer, (uint32_t)num_samples);
+// Block for one buffer of captured samples and fold it into the display ring.
+void capture_block(void)
+{
+    size_t num_samples = 1024;
+    audio_read(audio_dev, buffer, (uint32_t)num_samples);
 
     // Copy the incoming samples into the display ring buffer, clamping at the
     // end of the buffer (the remainder wraps around below).
@@ -103,10 +105,21 @@ void audio_cb(uint64_t num_channels, uint64_t num_samples)
     }
 }
 
+// Capture runs on its own thread; audio_read blocks until a buffer is ready.
+void *audio_thread(void *arg)
+{
+    (void)arg;
+    for (;;)
+        capture_block();
+    return 0;
+}
+
 int main(void)
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Audio Input Graph", 0);
-    audio_open_input(SAMPLE_RATE, 1, AUDIO_FORMAT_I16, (void *)audio_cb);
+    audio_dev = audio_open_input(SAMPLE_RATE, 1, AUDIO_FORMAT_I16);
+    pthread_t audio_tid;
+    pthread_create(&audio_tid, 0, audio_thread, 0);
 
     anim_event_loop(30, update);
     return 0;

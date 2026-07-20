@@ -134,20 +134,35 @@ extern _Bool __uvm_window_poll_event(void* __p_event);
 extern void __uvm_window_wait_event(void* __p_event);
 #define window_wait_event(__p_event) __uvm_window_wait_event(__p_event)
 
-// u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
-// Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
-extern uint32_t __uvm_audio_open_output(uint32_t __sample_rate, uint16_t __num_channels, uint16_t __format, void* __callback);
-#define audio_open_output(__sample_rate, __num_channels, __format, __callback) __uvm_audio_open_output(__sample_rate, __num_channels, __format, __callback)
+// u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format)
+// Open an audio output device for blocking playback. Returns a device id used with audio_wait_output / audio_write / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
+extern uint32_t __uvm_audio_open_output(uint32_t __sample_rate, uint16_t __num_channels, uint16_t __format);
+#define audio_open_output(__sample_rate, __num_channels, __format) __uvm_audio_open_output(__sample_rate, __num_channels, __format)
 
-// u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callback)
-// Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
-extern uint32_t __uvm_audio_open_input(uint32_t __sample_rate, uint16_t __num_channels, uint16_t __format, void* __callback);
-#define audio_open_input(__sample_rate, __num_channels, __format, __callback) __uvm_audio_open_input(__sample_rate, __num_channels, __format, __callback)
+// void audio_wait_output(u32 device_id)
+// Block until the output device needs the next buffer of samples, then return. Call audio_write next to hand it the samples. This just-in-time rendezvous keeps output latency to about one buffer period.
+extern void __uvm_audio_wait_output(uint32_t __device_id);
+#define audio_wait_output(__device_id) __uvm_audio_wait_output(__device_id)
 
-// void audio_read_samples(i16* dst_buf, u32 num_samples)
-// Read available input samples. Must be called from the audio input thread.
-extern void __uvm_audio_read_samples(int16_t* __dst_buf, uint32_t __num_samples);
-#define audio_read_samples(__dst_buf, __num_samples) __uvm_audio_read_samples(__dst_buf, __num_samples)
+// void audio_write(u32 device_id, i16* samples, u32 num_frames)
+// Submit num_frames of interleaved samples (num_frames * num_channels i16 values) to the output device, copying them into the device buffer. Intended to follow audio_wait_output.
+extern void __uvm_audio_write(uint32_t __device_id, int16_t* __samples, uint32_t __num_frames);
+#define audio_write(__device_id, __samples, __num_frames) __uvm_audio_write(__device_id, __samples, __num_frames)
+
+// u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format)
+// Open an audio input device for blocking capture. Returns a device id used with audio_read / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
+extern uint32_t __uvm_audio_open_input(uint32_t __sample_rate, uint16_t __num_channels, uint16_t __format);
+#define audio_open_input(__sample_rate, __num_channels, __format) __uvm_audio_open_input(__sample_rate, __num_channels, __format)
+
+// void audio_read(u32 device_id, i16* samples, u32 num_frames)
+// Block until num_frames of interleaved input samples (num_frames * num_channels i16 values) have been captured, then copy them into the provided buffer.
+extern void __uvm_audio_read(uint32_t __device_id, int16_t* __samples, uint32_t __num_frames);
+#define audio_read(__device_id, __samples, __num_frames) __uvm_audio_read(__device_id, __samples, __num_frames)
+
+// void audio_close(u32 device_id)
+// Close an audio device (input or output), stopping it and unblocking any thread waiting in audio_wait_output / audio_read.
+extern void __uvm_audio_close(uint32_t __device_id);
+#define audio_close(__device_id) __uvm_audio_close(__device_id)
 
 // i64 net_listen(const char* listen_addr)
 // Open a listening TCP socket bound to the given address (e.g. "127.0.0.1:9000"). Returns a socket id (a positive integer) to be passed to net_accept, or -1 on failure.
@@ -313,17 +328,29 @@ extern uint64_t __uvm_file_size(uint64_t __handle);
 // Block until an window event is available.
 #define window_wait_event(__p_event) asm (__p_event) -> void { syscall window_wait_event; }
 
-// u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
-// Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
-#define audio_open_output(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_output; }
+// u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format)
+// Open an audio output device for blocking playback. Returns a device id used with audio_wait_output / audio_write / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
+#define audio_open_output(__sample_rate, __num_channels, __format) asm (__sample_rate, __num_channels, __format) -> u32 { syscall audio_open_output; }
 
-// u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callback)
-// Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
-#define audio_open_input(__sample_rate, __num_channels, __format, __callback) asm (__sample_rate, __num_channels, __format, __callback) -> u32 { syscall audio_open_input; }
+// void audio_wait_output(u32 device_id)
+// Block until the output device needs the next buffer of samples, then return. Call audio_write next to hand it the samples. This just-in-time rendezvous keeps output latency to about one buffer period.
+#define audio_wait_output(__device_id) asm (__device_id) -> void { syscall audio_wait_output; }
 
-// void audio_read_samples(i16* dst_buf, u32 num_samples)
-// Read available input samples. Must be called from the audio input thread.
-#define audio_read_samples(__dst_buf, __num_samples) asm (__dst_buf, __num_samples) -> void { syscall audio_read_samples; }
+// void audio_write(u32 device_id, i16* samples, u32 num_frames)
+// Submit num_frames of interleaved samples (num_frames * num_channels i16 values) to the output device, copying them into the device buffer. Intended to follow audio_wait_output.
+#define audio_write(__device_id, __samples, __num_frames) asm (__device_id, __samples, __num_frames) -> void { syscall audio_write; }
+
+// u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format)
+// Open an audio input device for blocking capture. Returns a device id used with audio_read / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
+#define audio_open_input(__sample_rate, __num_channels, __format) asm (__sample_rate, __num_channels, __format) -> u32 { syscall audio_open_input; }
+
+// void audio_read(u32 device_id, i16* samples, u32 num_frames)
+// Block until num_frames of interleaved input samples (num_frames * num_channels i16 values) have been captured, then copy them into the provided buffer.
+#define audio_read(__device_id, __samples, __num_frames) asm (__device_id, __samples, __num_frames) -> void { syscall audio_read; }
+
+// void audio_close(u32 device_id)
+// Close an audio device (input or output), stopping it and unblocking any thread waiting in audio_wait_output / audio_read.
+#define audio_close(__device_id) asm (__device_id) -> void { syscall audio_close; }
 
 // i64 net_listen(const char* listen_addr)
 // Open a listening TCP socket bound to the given address (e.g. "127.0.0.1:9000"). Returns a socket id (a positive integer) to be passed to net_accept, or -1 on failure.

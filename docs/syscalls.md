@@ -315,30 +315,54 @@ Audio input and output.
 ## audio_open_output
 
 ```
-u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+u32 audio_open_output(u32 sample_rate, u16 num_channels, u16 format)
 ```
 
 **Returns:** `u32 device_id`
 
-Open an audio output device, then spawn a new thread which will regularly call the specified callback function to generate audio samples.
+Open an audio output device for blocking playback. Returns a device id used with audio_wait_output / audio_write / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
+
+## audio_wait_output
+
+```
+void audio_wait_output(u32 device_id)
+```
+
+Block until the output device needs the next buffer of samples, then return. Call audio_write next to hand it the samples. This just-in-time rendezvous keeps output latency to about one buffer period.
+
+## audio_write
+
+```
+void audio_write(u32 device_id, i16* samples, u32 num_frames)
+```
+
+Submit num_frames of interleaved samples (num_frames * num_channels i16 values) to the output device, copying them into the device buffer. Intended to follow audio_wait_output.
 
 ## audio_open_input
 
 ```
-u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format, void* callback)
+u32 audio_open_input(u32 sample_rate, u16 num_channels, u16 format)
 ```
 
 **Returns:** `u32 device_id`
 
-Open an audio input device, then spawn a new thread which will regularly call the specified callback function to process audio samples.
+Open an audio input device for blocking capture. Returns a device id used with audio_read / audio_close. The device runs on the caller's own thread(s): no callback thread is spawned.
 
-## audio_read_samples
+## audio_read
 
 ```
-void audio_read_samples(i16* dst_buf, u32 num_samples)
+void audio_read(u32 device_id, i16* samples, u32 num_frames)
 ```
 
-Read available input samples. Must be called from the audio input thread.
+Block until num_frames of interleaved input samples (num_frames * num_channels i16 values) have been captured, then copy them into the provided buffer.
+
+## audio_close
+
+```
+void audio_close(u32 device_id)
+```
+
+Close an audio device (input or output), stopping it and unblocking any thread waiting in audio_wait_output / audio_read.
 
 ## Constants
 These are the constants associated with the audio subsystem:

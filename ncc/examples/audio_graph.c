@@ -72,12 +72,12 @@ void update()
     window_draw_frame(0, frame_buffer);
 }
 
-void audio_cb(u16 num_channels, u32 num_samples)
-{
-    assert(num_channels == 1);
-    assert(num_samples <= 1024);
+u32 audio_dev;
 
-    audio_read_samples(&buffer, num_samples);
+void capture_block()
+{
+    u32 num_samples = 1024;
+    audio_read(audio_dev, (int16_t*)&buffer, num_samples);
 
     size_t end_pos = MIN(rec_pos + num_samples, sizeof(disp_samples) / sizeof(i16));
     size_t num_copy = end_pos - rec_pos;
@@ -98,10 +98,19 @@ void audio_cb(u16 num_channels, u32 num_samples)
     //printf("%d\n", rec_pos);
 }
 
+// Capture runs on its own thread; audio_read blocks until a buffer is ready.
+u64 audio_thread(u64 arg)
+{
+    for (;;)
+        capture_block();
+    return 0;
+}
+
 void main()
 {
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Audio Input Graph", 0);
-    audio_open_input(SAMPLE_RATE, 1, AUDIO_FORMAT_I16, audio_cb);
+    audio_dev = audio_open_input(SAMPLE_RATE, 1, AUDIO_FORMAT_I16);
+    thread_spawn(audio_thread, 0);
 
     anim_event_loop(30, update);
 }

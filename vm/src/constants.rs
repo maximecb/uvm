@@ -4,7 +4,7 @@
 
 #![allow(unused)]
 
-pub const SYSCALL_TBL_LEN: usize = 40;
+pub const SYSCALL_TBL_LEN: usize = 43;
 
 pub const TIME_CURRENT_MS: u16 = 0;
 pub const WINDOW_CREATE: u16 = 1;
@@ -19,7 +19,7 @@ pub const WINDOW_POLL_EVENT: u16 = 9;
 pub const WINDOW_DRAW_FRAME: u16 = 10;
 pub const EXIT: u16 = 11;
 pub const AUDIO_OPEN_INPUT: u16 = 12;
-pub const AUDIO_READ_SAMPLES: u16 = 13;
+pub const AUDIO_READ: u16 = 13;
 pub const VM_HEAP_SIZE: u16 = 14;
 pub const FILE_OPEN: u16 = 15;
 pub const MEMSET32: u16 = 16;
@@ -46,6 +46,9 @@ pub const FILE_SIZE: u16 = 36;
 pub const CMD_ARGC: u16 = 37;
 pub const CMD_GET_ARG: u16 = 38;
 pub const NET_SET_READ_TIMEOUT: u16 = 39;
+pub const AUDIO_WAIT_OUTPUT: u16 = 40;
+pub const AUDIO_WRITE: u16 = 41;
+pub const AUDIO_CLOSE: u16 = 42;
 
 pub struct SysCallDesc
 {
@@ -68,13 +71,13 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "window_poll_event", const_idx: 9, argc: 1, has_ret: true }),
     Some(SysCallDesc { name: "window_draw_frame", const_idx: 10, argc: 2, has_ret: false }),
     Some(SysCallDesc { name: "exit", const_idx: 11, argc: 1, has_ret: false }),
-    Some(SysCallDesc { name: "audio_open_input", const_idx: 12, argc: 4, has_ret: true }),
-    Some(SysCallDesc { name: "audio_read_samples", const_idx: 13, argc: 2, has_ret: false }),
+    Some(SysCallDesc { name: "audio_open_input", const_idx: 12, argc: 3, has_ret: true }),
+    Some(SysCallDesc { name: "audio_read", const_idx: 13, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "vm_heap_size", const_idx: 14, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "file_open", const_idx: 15, argc: 2, has_ret: true }),
     Some(SysCallDesc { name: "memset32", const_idx: 16, argc: 3, has_ret: false }),
     Some(SysCallDesc { name: "vm_grow_heap", const_idx: 17, argc: 1, has_ret: true }),
-    Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 4, has_ret: true }),
+    Some(SysCallDesc { name: "audio_open_output", const_idx: 18, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "file_close", const_idx: 19, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "print_f32", const_idx: 20, argc: 1, has_ret: false }),
     Some(SysCallDesc { name: "net_listen", const_idx: 21, argc: 1, has_ret: true }),
@@ -96,6 +99,9 @@ pub const SYSCALL_DESCS: [Option<SysCallDesc>; SYSCALL_TBL_LEN] = [
     Some(SysCallDesc { name: "cmd_argc", const_idx: 37, argc: 0, has_ret: true }),
     Some(SysCallDesc { name: "cmd_get_arg", const_idx: 38, argc: 3, has_ret: true }),
     Some(SysCallDesc { name: "net_set_read_timeout", const_idx: 39, argc: 2, has_ret: true }),
+    Some(SysCallDesc { name: "audio_wait_output", const_idx: 40, argc: 1, has_ret: false }),
+    Some(SysCallDesc { name: "audio_write", const_idx: 41, argc: 3, has_ret: false }),
+    Some(SysCallDesc { name: "audio_close", const_idx: 42, argc: 1, has_ret: false }),
 ];
 
 pub const EVENT_QUIT: u16 = 0;
