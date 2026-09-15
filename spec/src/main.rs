@@ -189,6 +189,10 @@ fn main()
     fs::create_dir_all("../uvclang/include/uvm").unwrap();
     fs::write("../uvclang/include/uvm/syscalls.h", &c_header).unwrap();
 
+    let rust_uvclang: String = gen_rust_uvclang(&subsystems);
+    fs::create_dir_all("../uvclang/src").unwrap();
+    fs::write("../uvclang/src/syscalls.rs", &rust_uvclang).unwrap();
+
     gen_markdown("../docs/syscalls.md", &subsystems);
 }
 
@@ -324,6 +328,36 @@ fn c_type(ty: &str) -> String
     s
 }
 
+fn gen_rust_uvclang(subsystems: &Vec<SubSystem>) -> String
+{
+    use std::fmt::Write as _;
+    let mut s = String::new();
+
+    writeln!(s, "//").unwrap();
+    writeln!(s, "// This file was automatically generated based on spec/syscalls.json").unwrap();
+    writeln!(s, "//").unwrap();
+    writeln!(s).unwrap();
+
+    writeln!(s, "#![allow(unused)]").unwrap();
+
+
+    writeln!(s, "pub const SYSCALL_NAMES: &[&str] = &[").unwrap();
+    for subsystem in subsystems {
+        for syscall in &subsystem.syscalls {
+            if syscall.name != "exit"{
+                writeln!(
+                    s,
+                    "    \"{}\",",
+                    syscall.name
+                ).unwrap();
+            }
+        }
+    }
+    writeln!(s, "];").unwrap();
+    writeln!(s).unwrap();
+    s
+}
+
 /// Build the dual-mode `<uvm/syscalls.h>` header. Both toolchains share one
 /// file, discriminated on `__clang__`:
 ///   - clang (uvclang backend): each syscall is an `extern __uvm_<name>`
@@ -358,20 +392,21 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
     writeln!(s, "#include <stdint.h>").unwrap();
     writeln!(s).unwrap();
 
+    writeln!(s, "#ifdef __cplusplus").unwrap();
+    writeln!(s, "extern \"C\" {{").unwrap();
+    writeln!(s, "#endif").unwrap();
+
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
             let name = &syscall.name;
 
             // `extern` parameter list, and the macro argument list.
             let mut decl_params = String::new();
-            let mut macro_args = String::new();
             for (idx, arg) in syscall.args.iter().enumerate() {
                 if idx > 0 {
                     decl_params += ", ";
-                    macro_args += ", ";
                 }
                 write!(decl_params, "{} __{}", c_type(&arg.0), arg.1).unwrap();
-                write!(macro_args, "__{}", arg.1).unwrap();
             }
             if syscall.args.is_empty() {
                 decl_params.push_str("void");
@@ -383,10 +418,16 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
             }
             writeln!(s, "extern {} __uvm_{}({});",
                 c_type(&syscall.returns.0), name, decl_params).unwrap();
-            writeln!(s, "#define {}({}) __uvm_{}({})\n",
-                name, macro_args, name, macro_args).unwrap();
+            if syscall.name != "exit"{
+                writeln!(s, "extern {} {}({});",
+                    c_type(&syscall.returns.0), name, decl_params).unwrap();
+            }
         }
     }
+
+    writeln!(s, "#ifdef __cplusplus").unwrap();
+    writeln!(s, "}}").unwrap();
+    writeln!(s, "#endif").unwrap();
 
     // ---- non-clang fallback: inline-asm syscall macros ----
     writeln!(s, "#else").unwrap();

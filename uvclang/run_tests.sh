@@ -31,6 +31,7 @@ ROOT=$(cd .. && pwd)
 VM="$ROOT/vm"
 TESTS="$UVCLANG/tests"
 NATIVE_CC="${NATIVE_CC:-cc}"
+NATIVE_CXX="${NATIVE_CXX:-g++}"
 
 # Build uvclang and uvm once.
 ( cd "$UVCLANG" && cargo build -q ) || { echo "uvclang build failed"; exit 1; }
@@ -48,8 +49,11 @@ pass=0; fail=0; skip=0
 # than SSA registers) and so hit different uvclang code paths.
 OPT_LEVELS="-O0 -O1 -O2"
 
-for src in "$TESTS"/*.c; do
-    base=$(basename "$src" .c)
+for src in "$TESTS"/*.c "$TESTS"/*.cpp; do
+    case "$src" in
+        *.cpp) base=$(basename "$src" .cpp) ;;
+        *)     base=$(basename "$src" .c) ;;
+    esac
 
     # uvm_*.c use <uvm/...> headers with no native-libc equivalent, so they are
     # self-checking and covered by run_uvm_tests.sh; skip them here.
@@ -81,7 +85,11 @@ for src in "$TESTS"/*.c; do
                 # Differential vs native. No -I on the reference build on purpose:
                 # it must use the platform libc, not uvclang's UVM-side headers,
                 # so the stdlib headers are genuinely tested differentially.
-                if ! "$NATIVE_CC" "$opt" -w "$src" -o "$TMP/ref" 2>/dev/null; then
+                case "$src" in
+                    *.cpp) native_compiler="$NATIVE_CXX" ;;
+                    *)     native_compiler="$NATIVE_CC" ;;
+                esac
+                if ! "$native_compiler" "$opt" -w "$src" -o "$TMP/ref" 2>/dev/null; then
                     echo "SKIP $name (native compile failed)"; skip=$((skip+1)); continue
                 fi
                 ref_out=$("$TMP/ref" 2>/dev/null); ref_code=$?

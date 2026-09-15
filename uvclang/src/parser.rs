@@ -19,7 +19,7 @@ const FLAG_ATTRS: &[&str] = &[
     "private", "internal", "available_externally", "linkonce", "linkonce_odr",
     "weak", "weak_odr", "appending", "common", "extern_weak", "external",
     "hidden", "protected", "default", "dso_local", "dso_preemptable",
-    "unnamed_addr", "local_unnamed_addr",
+    "unnamed_addr", "local_unnamed_addr", "comdat",
     // parameter attributes
     "noundef", "nonnull", "signext", "zeroext", "inreg", "noalias", "nocapture",
     "readonly", "readnone", "writeonly", "immarg", "returned", "nest", "writable",
@@ -81,6 +81,11 @@ impl Parser
             }
             if c == '!' {
                 // Metadata definition / named metadata: irrelevant to codegen.
+                self.skip_line();
+                continue;
+            }
+            if c == '$'{
+                // COMDAT group name: irrelevant to codegen.???
                 self.skip_line();
                 continue;
             }

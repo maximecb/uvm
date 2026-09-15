@@ -95,32 +95,57 @@ fn find_clang(is_cpp: bool) -> String
     base.to_string()
 }
 
-/// Run clang on `source` and return the textual LLVM IR it emits on stdout.
-pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String>
+/// Create a Command with the program and the needed options
+fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
 {
-    let clang = find_clang(opts.is_cpp);
-
-    let mut cmd = Command::new(&clang);
-    cmd.arg("--target=x86_64-unknown-linux-gnu")
-        .arg(&opts.opt_level)
-        .arg(format!("-I{}", uvm_include_dir()))
-        // Canonical uvclang flags: keep value names for readable IR, and
-        // disable the transforms that produce IR the back-end intentionally
-        // does not support.
-        .arg("-fno-discard-value-names")
-        .arg("-fno-optimize-sibling-calls")
-        .arg("-fno-vectorize")
-        .arg("-fno-slp-vectorize")
-        .arg("-fno-jump-tables")
-        .arg("-fno-strict-aliasing");
-
+    let mut cmd = Command::new(&program);
+    cmd
+    .arg("--target=x86_64-linux-gnu")
+    .arg(&opts.opt_level)
+    .arg(format!("-I{}", uvm_include_dir()))
+    // Canonical uvclang flags: keep value names for readable IR, and
+    // disable the transforms that produce IR the back-end intentionally
+    // does not support.
+    .arg("-ffreestanding")
+    .arg("-fno-discard-value-names")
+    .arg("-fno-optimize-sibling-calls")
+    .arg("-fno-vectorize")
+    .arg("-fno-math-errno")
+    .arg("-fno-slp-vectorize")
+    .arg("-fno-jump-tables")
+    .arg("-fno-strict-aliasing");
+    
+    if opts.is_cpp
+    {
+        cmd
+        .arg("-D_Bool=bool")
+        .arg("-fno-exceptions") // may be support later
+        .arg("-fno-rtti")  // may be support later
+        .arg("-std=c++23");
+    }
+    
     // User -D / -I (and any other forwarded flags), after ours so the user can
     // override the built-in include search.
     for a in &opts.passthrough {
         cmd.arg(a);
     }
+    
+    cmd
+}
 
-    cmd.arg("-S").arg("-emit-llvm").arg(source).arg("-o").arg("-");
+/// Run clang on `source` and return the textual LLVM IR it emits on stdout.
+pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String>
+{
+    let clang = find_clang(opts.is_cpp);
+
+    let mut cmd = get_base_compile_cmd(&clang, opts);
+
+    cmd
+        .arg("-S")
+        .arg("-emit-llvm")
+        .arg(source)
+        .arg("-o")
+        .arg("-");
 
     let output = match cmd.output() {
         Ok(o) => o,

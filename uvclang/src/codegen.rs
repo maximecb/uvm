@@ -11,6 +11,7 @@
 
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
+use crate::syscalls::{self};
 use crate::ast::*;
 use crate::layout::Layout;
 
@@ -160,17 +161,21 @@ impl<'a> Codegen<'a>
             self.line("");
         }
 
+        let mut main_name: String = "main".to_owned();
+        let mut main_argc = 0;
+        if let Some(main_func) = self.module.functions.iter()
+            .find(|f| (f.name == "main" || f.name == "_Z4mainv" || f.name == "_Z4mainiPPc") && !f.is_decl()) {
+                main_argc = main_func.params.len();
+                main_name = main_func.name.clone();
+            }
         // How many parameters does main declare? A plain `int main(void)` takes
         // none; `int main(int argc, char** argv)` takes two. We only build the
         // argc/argv vector when main actually asks for it, so the common no-arg
         // case (and every existing test) keeps emitting a bare `call main, 0`.
-        let main_argc = self.module.functions.iter()
-            .find(|f| f.name == "main" && !f.is_decl())
-            .map_or(0, |f| f.params.len());
 
         self.line("# program entry: run main, then halt with its return value");
         if main_argc == 0 {
-            self.line("call main, 0;");
+            self.line(&format!("call {}, 0;", main_name));
             self.line("ret;");
         } else {
             // main wants argc/argv: build the vector in a helper (which needs a
@@ -181,7 +186,7 @@ impl<'a> Codegen<'a>
         self.line("");
 
         if main_argc != 0 {
-            self.emit_start(main_argc)?;
+            self.emit_start(main_argc, &main_name)?;
         }
 
         self.emit_thread_trampoline();
@@ -266,7 +271,7 @@ impl<'a> Codegen<'a>
     /// `main` is called with `main_argc` arguments (1 for `int main(int argc)`,
     /// 2 for the usual `int main(int argc, char** argv)`); anything beyond argv
     /// is unsupported.
-    fn emit_start(&mut self, main_argc: usize) -> Result<(), String>
+    fn emit_start(&mut self, main_argc: usize, main_name: &String) -> Result<(), String>
     {
         if main_argc > 2 {
             return Err(format!(
@@ -372,7 +377,7 @@ impl<'a> Codegen<'a>
         if main_argc >= 2 {
             self.line(&format!("get_local {};", ARGV));      // argv
         }
-        self.line(&format!("call main, {};", main_argc));
+        self.line(&format!("call {}, {};", main_name, main_argc));
         self.line("ret;");
         self.line("");
 
@@ -583,6 +588,9 @@ impl<'a> Codegen<'a>
                     Value::Global(name) if name.starts_with("__uvm_") => {
                         self.gen_syscall(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
                     }
+                    Value::Global(name) if syscalls::SYSCALL_NAMES.contains(&name.as_str())  => {
+                        self.gen_syscall(ctx, inst.dest.as_deref(), &("__uvm_".to_owned()+name), ret_ty, args)?;
+                    }
                     // Float libm calls (`@sinf`, `@sqrtf`, ...) have no body in
                     // the module; lower them inline to UVM f32 ops.
                     Value::Global(name) if is_float_builtin(name) => {
@@ -784,6 +792,20 @@ impl<'a> Codegen<'a>
                 self.push_value(ctx, &args[1].val, 32)?;
                 self.line("pow_f32;");
             }
+            "floorf" => self.gen_floor_ceil(ctx, &args[0].val, 32, false)?,
+            "floor" => self.gen_floor_ceil(ctx, &args[0].val, 64, false)?,
+            "ceilf" => self.gen_floor_ceil(ctx, &args[0].val, 32, true)?,
+            "ceil" => self.gen_floor_ceil(ctx, &args[0].val, 64, true)?,
+            "truncf" => self.gen_trunc(ctx, &args[0].val, 32)?,
+            "trunc" => self.gen_trunc(ctx, &args[0].val, 64)?,
+            "roundf" => self.gen_round(ctx, &args[0].val, 32)?,
+            "round" => self.gen_round(ctx, &args[0].val, 64)?,
+            "fminf" => self.gen_fminmax(ctx, &args[0].val, &args[1].val, 32, false)?,
+            "fmin" => self.gen_fminmax(ctx, &args[0].val, &args[1].val, 64, false)?,
+            "fmaxf" => self.gen_fminmax(ctx, &args[0].val, &args[1].val, 32, true)?,
+            "fmax" => self.gen_fminmax(ctx, &args[0].val, &args[1].val, 64, true)?,
+            "copysignf" => self.gen_copysign(ctx, &args[0].val, &args[1].val, 32)?,
+            "copysign" => self.gen_copysign(ctx, &args[0].val, &args[1].val, 64)?,
             // Double-precision (f64).
             "sin" => self.fmath1(ctx, args, "sin_f64", 64)?,
             "cos" => self.fmath1(ctx, args, "cos_f64", 64)?,
@@ -2484,7 +2506,10 @@ fn is_float_builtin(name: &str) -> bool
         // Double-precision -> UVM `*_f64` ops.
             | "sin" | "cos" | "tan" | "asin" | "acos" | "atan"
             | "sqrt" | "fabs" | "pow" | "exp2"
-    )
+        // Other float builtins that could be lowered by llvm, but could also not.
+            | "floorf" |  "ceilf" | "floor" | "ceil" | "truncf" | "trunc" | "roundf" | "round" 
+            | "fminf" | "fmaxf" | "fmin" | "fmax" | "copysignf" | "copysign"
+        )
 }
 
 /// Bit width of any scalar we can hold in a slot and move around: integers and
