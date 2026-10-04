@@ -119,8 +119,8 @@ fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
     {
         cmd
         .arg("-D_Bool=bool")
-        .arg("-fno-exceptions") // may be support later
-        .arg("-fno-rtti")  // may be support later
+        .arg("-fno-exceptions") // not yet supported
+        .arg("-fno-rtti")  // not yet supported
         .arg("-std=c++23");
     }
     

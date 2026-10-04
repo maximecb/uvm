@@ -340,7 +340,6 @@ fn gen_rust_uvclang(subsystems: &Vec<SubSystem>) -> String
 
     writeln!(s, "#![allow(unused)]").unwrap();
 
-
     writeln!(s, "pub const SYSCALL_NAMES: &[&str] = &[").unwrap();
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {

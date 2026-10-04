@@ -43,7 +43,6 @@ public:
 
 private:
     unsigned long _n;
-
 };
 
 

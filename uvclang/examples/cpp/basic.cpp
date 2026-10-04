@@ -38,9 +38,7 @@ public:
 
 private:
     unsigned long _n;
-
 };
-
 
 int main(int , char**)
 {
