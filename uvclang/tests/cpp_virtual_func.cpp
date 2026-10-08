@@ -4,14 +4,14 @@ class ObjA
 {
     public:
     virtual int f() {return a;}
-     int a = 1;
+    int a = 1;
 };
 
 class ObjB : public ObjA
 {
     public:
     virtual int f() {return b;}
-     int b = 99;
+    int b = 99;
 };
 
 
