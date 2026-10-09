@@ -6,6 +6,7 @@ mod frontend;
 mod layout;
 mod lexer;
 mod parser;
+mod syscalls;
 
 use std::process::exit;
 
