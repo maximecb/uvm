@@ -4,3 +4,4 @@ target
 vm/SDL2.dll
 
 TODO.txt
+.devcontainer

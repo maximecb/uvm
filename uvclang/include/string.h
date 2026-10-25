@@ -18,6 +18,7 @@
 
 #include <stddef.h>   // size_t, NULL (clang's freestanding resource header)
 #include <ctype.h>    // tolower (used by strcasecmp)
+#include <__uvm/__syscalls.h>    // memcpy, memcmp, ...
 
 // Every definition below carries weak linkage (UVCLANG_WEAK) so this header can
 // be #included from any number of translation units without producing
@@ -28,6 +29,23 @@
 #ifndef UVCLANG_WEAK
 #define UVCLANG_WEAK __attribute__((weak))
 #endif
+
+UVCLANG_WEAK void* memset( void* dest, int ch, size_t count )
+{
+    __uvm_memset(dest, ch, count);
+    return dest;
+}
+
+UVCLANG_WEAK int memcmp( const void* lhs, const void* rhs, size_t count )
+{
+    return __uvm_memcmp(lhs, rhs, count);
+}
+
+UVCLANG_WEAK void* memcpy( void* restrict dest, const void* restrict src, size_t count )
+{
+    __uvm_memcpy(dest, src, count);
+    return dest;
+}
 
 UVCLANG_WEAK size_t strlen(const char *s)
 {

@@ -32,7 +32,7 @@
 
 #include <stddef.h>         // size_t, NULL (from clang's freestanding header)
 #include <stdarg.h>
-#include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar / file_* macros
+#include <__uvm/__syscalls.h>   // __uvm_print_str / __uvm_print_endl / putchar / getchar / file_* macros
 
 // The externally-visible functions below (and the FILE pool they own) carry weak
 // linkage (UVCLANG_WEAK) so this header can be #included from any number of
@@ -730,64 +730,18 @@ typedef struct {
     int __error;         // sticky I/O error indicator (ferror)
 } FILE;
 
-static FILE __uvclang_files[FOPEN_MAX];
-
 // Open `path` per the C mode string. The first character selects the primary
 // mode (r/w/a); a '+' anywhere adds the opposite access; 'b' is ignored (all
 // UVM I/O is binary). Returns a stream, or NULL on a bad mode, a rejected/absent
 // path, or an exhausted stream pool.
-UVCLANG_WEAK FILE *fopen(const char *path, const char *mode)
-{
-    uint64_t flags;
-    int append = 0;
-    switch (mode[0]) {
-        case 'r': flags = OPEN_READ; break;
-        case 'w': flags = OPEN_WRITE | OPEN_CREATE | OPEN_TRUNC; break;
-        case 'a': flags = OPEN_WRITE | OPEN_CREATE; append = 1; break;
-        default:  return NULL;
-    }
-    for (int i = 1; mode[i] != '\0'; i++)
-        if (mode[i] == '+')
-            flags |= OPEN_READ | OPEN_WRITE;
-
-    uint64_t handle = file_open(path, flags);
-    if (handle == 0)
-        return NULL;
-
-    // Claim a free slot (handle == 0). Fail closed if the pool is full.
-    FILE *fp = NULL;
-    for (int i = 0; i < FOPEN_MAX; i++) {
-        if (__uvclang_files[i].__handle == 0) {
-            fp = &__uvclang_files[i];
-            break;
-        }
-    }
-    if (fp == NULL) {
-        file_close(handle);
-        return NULL;
-    }
-
-    fp->__handle = handle;
-    fp->__eof = 0;
-    fp->__error = 0;
-
-    // Append mode starts positioned at end of file.
-    if (append)
-        file_seek(handle, file_size(handle));
-
-    return fp;
-}
+FILE *fopen(const char *path, const char *mode);
 
 // Close `stream` and return its pool slot. Returns 0 on success, EOF if the
 // stream is NULL.
-UVCLANG_WEAK int fclose(FILE *stream)
-{
-    if (stream == NULL)
-        return EOF;
-    file_close(stream->__handle);
-    stream->__handle = 0;   // release the slot back to the pool
-    return 0;
-}
+int fclose(FILE *stream);
+
+// Stub for now
+static inline int remove(const char *filename) { (void)filename; return -1; }
 
 // Read up to `nmemb` elements of `size` bytes into `ptr`. Loops over file_read
 // so a short syscall read (fewer bytes than asked, without EOF) still fills the
@@ -802,7 +756,7 @@ UVCLANG_WEAK size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
     uint8_t *p = (uint8_t *)ptr;
     size_t got = 0;
     while (got < total) {
-        long n = file_read(stream->__handle, p + got, total - got);
+        long n = __uvm_file_read(stream->__handle, p + got, total - got);
         if (n < 0) { stream->__error = 1; break; }
         if (n == 0) { stream->__eof = 1; break; }
         got += (size_t)n;
@@ -821,7 +775,7 @@ UVCLANG_WEAK size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *str
     const uint8_t *p = (const uint8_t *)ptr;
     size_t put = 0;
     while (put < total) {
-        long n = file_write(stream->__handle, p + put, total - put);
+        long n = __uvm_file_write(stream->__handle, p + put, total - put);
         if (n < 0) { stream->__error = 1; break; }
         if (n == 0) break;
         put += (size_t)n;
@@ -838,14 +792,14 @@ UVCLANG_WEAK int fseek(FILE *stream, long offset, int whence)
     long base;
     switch (whence) {
         case SEEK_SET: base = 0; break;
-        case SEEK_CUR: base = (long)file_tell(stream->__handle); break;
-        case SEEK_END: base = (long)file_size(stream->__handle); break;
+        case SEEK_CUR: base = (long)__uvm_file_tell(stream->__handle); break;
+        case SEEK_END: base = (long)__uvm_file_size(stream->__handle); break;
         default:       return -1;
     }
     long pos = base + offset;
     if (pos < 0)
         return -1;
-    file_seek(stream->__handle, (uint64_t)pos);
+    __uvm_file_seek(stream->__handle, (uint64_t)pos);
     stream->__eof = 0;
     return 0;
 }
@@ -853,7 +807,7 @@ UVCLANG_WEAK int fseek(FILE *stream, long offset, int whence)
 // Current byte offset from the start of the file, or -1 on error.
 UVCLANG_WEAK long ftell(FILE *stream)
 {
-    return (long)file_tell(stream->__handle);
+    return (long)__uvm_file_tell(stream->__handle);
 }
 
 // Nonzero once a read has hit end of file (cleared by fseek).

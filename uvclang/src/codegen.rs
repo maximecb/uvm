@@ -11,7 +11,6 @@
 
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
-use crate::syscalls::{self};
 use crate::ast::*;
 use crate::layout::Layout;
 
@@ -98,7 +97,7 @@ impl<'a> Codegen<'a>
             label_counter: 0,
             runtime_inits: vec![],
             buf: vec![],
-        }
+    }
     }
 
     pub fn generate(mut self) -> Result<String, String>
@@ -119,7 +118,7 @@ impl<'a> Codegen<'a>
         self.line("");
 
         let module = self.module;
-        for g in &module.globals {
+            for g in &module.globals {
             self.emit_global(g)?;
         }
 
@@ -194,10 +193,10 @@ impl<'a> Codegen<'a>
 
         // Copy out the module reference so the loop doesn't borrow `self`.
         let module = self.module;
-        for f in &module.functions {
-            if !f.is_decl() {
+            for f in &module.functions {
+                if !f.is_decl() {
                 self.gen_function(f)?;
-                self.flush_scope(); // each function's slots are counted on their own
+                    self.flush_scope(); // each function's slots are counted on their own
             }
         }
         Ok(())
@@ -548,16 +547,26 @@ impl<'a> Codegen<'a>
                 self.store_dest(ctx, inst.dest.as_deref())?;
             }
             InstKind::Load { ty, ptr, .. } => {
-                let bits = self.scalar_bits(ty)?;
-                self.push_value(ctx, ptr, 64)?;
-                self.line(&format!("load_u{};", bits));
+                let n = self.layout.size_of(ty);
+                match n {
+                    1 | 2 | 4 | 8 => {
+                        self.push_value(ctx, ptr, 64)?;
+                        self.line(&format!("load_u{};", n * 8));
+                    }
+                    _ => return Err(format!("load of non-scalar type {} ({} bytes)", type_str(ty), n)),
+                }
                 self.store_dest(ctx, inst.dest.as_deref())?;
             }
             InstKind::Store { ty, val, ptr, .. } => {
-                let bits = self.scalar_bits(ty)?;
-                self.push_value(ctx, ptr, 64)?; // address (popped second by store)
-                self.push_value(ctx, val, scalar_width(ty)?)?; // value (popped first)
-                self.line(&format!("store_u{};", bits));
+                let n = self.layout.size_of(ty);
+                match n {
+                    1 | 2 | 4 | 8 => {
+                        self.push_value(ctx, ptr, 64)?; // address (popped second by store)
+                        self.push_value(ctx, val, scalar_width(ty)?)?; // value (popped first)
+                        self.line(&format!("store_u{};", n * 8));
+                    }
+                    _ => return Err(format!("store of non-scalar type {} ({} bytes)", type_str(ty), n)),
+                }
             }
             InstKind::Alloca { ty, count, align } => {
                 let dest = inst.dest.as_deref().ok_or("alloca without result")?;
@@ -587,9 +596,6 @@ impl<'a> Codegen<'a>
                     }
                     Value::Global(name) if name.starts_with("__uvm_") => {
                         self.gen_syscall(ctx, inst.dest.as_deref(), name, ret_ty, args)?;
-                    }
-                    Value::Global(name) if syscalls::SYSCALL_NAMES.contains(&name.as_str())  => {
-                        self.gen_syscall(ctx, inst.dest.as_deref(), &("__uvm_".to_owned()+name), ret_ty, args)?;
                     }
                     // Float libm calls (`@sinf`, `@sqrtf`, ...) have no body in
                     // the module; lower them inline to UVM f32 ops.
@@ -1808,6 +1814,13 @@ impl<'a> Codegen<'a>
         if bare.starts_with("umul.with.overflow.") {
             return self.gen_umul_overflow(ctx, dest, &args[0], &args[1].val);
         }
+        if bare.starts_with("trap") {
+            let exit_code = Value::Int(-1);
+            self.push_value(ctx, &exit_code, 8)?;
+            self.line(&format!("syscall {};", "exit"));
+
+            return Ok(());
+        }
 
         // --- value-producing intrinsics ---
         let a = &args[0].val;
@@ -2706,7 +2719,8 @@ fn type_str(ty: &Type) -> String
         Type::Float => "float".to_string(),
         Type::Double => "double".to_string(),
         Type::Ptr => "ptr".to_string(),
-        Type::Array { len, elem } => format!("[{} x {}]", len, type_str(elem)),
+        Type::Array { packed, len, elem } if !*packed => format!("[{} x {}]", len, type_str(elem)),
+        Type::Array { packed: _, len, elem } => format!("<{} x {}>", len, type_str(elem)),
         Type::Struct(_) => "struct".to_string(),
         Type::NamedStruct(n) => format!("%{}", n),
         Type::Func(_) => "fn".to_string(),

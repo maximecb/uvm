@@ -3,6 +3,7 @@
 
 #include <uvm/syscalls.h>
 #include <uvm/window.h>
+#include <string.h>
 
 
 // > # MONOGRAM FONT
@@ -627,5 +628,6 @@ int main(void)
     window_create(FRAME_WIDTH, FRAME_HEIGHT, "Monogram Font Example", 0);
 
     anim_event_loop(10, draw);
+    return 0;
 }
 

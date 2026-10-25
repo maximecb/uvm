@@ -11,8 +11,10 @@
 
 use std::path::Path;
 use std::process::Command;
+use tempfile::{Builder, NamedTempFile};
 
 /// Options controlling the clang invocation, gathered from the uvclang CLI.
+#[derive(Clone)]
 pub struct FrontendOpts
 {
     /// Optimization level flag, e.g. `-O2` (the default; overridable on the CLI).
@@ -95,6 +97,25 @@ fn find_clang(is_cpp: bool) -> String
     base.to_string()
 }
 
+/// Resolve the clang binary: honor `$CLANG` (`$CLANGXX` for C++), else prefer
+/// Homebrew LLVM (a common macOS dev setup), else fall back to whatever
+/// `clang`/`clang++` is on PATH (Linux / CI).
+fn find_llvm_link() -> String
+{
+    let (env_var, brew, base) = 
+        ("LLVMLINK", "/opt/homebrew/opt/llvm/bin/llvm-link", "llvm-link");
+
+    if let Ok(c) = std::env::var(env_var) {
+        if !c.is_empty() {
+            return c;
+        }
+    }
+    if Path::new(brew).exists() {
+        return brew.to_string();
+    }
+    base.to_string()
+}
+
 /// Create a Command with the program and the needed options
 fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
 {
@@ -102,7 +123,6 @@ fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
     cmd
     .arg("--target=x86_64-linux-gnu")
     .arg(&opts.opt_level)
-    .arg(format!("-I{}", uvm_include_dir()))
     // Canonical uvclang flags: keep value names for readable IR, and
     // disable the transforms that produce IR the back-end intentionally
     // does not support.
@@ -121,9 +141,14 @@ fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
         .arg("-D_Bool=bool")
         .arg("-fno-exceptions") // not yet supported
         .arg("-fno-rtti")  // not yet supported
+        .arg("-nostdinc++")
+        .args(["-cxx-isystem", &uvm_include_dir()])
         .arg("-std=c++23");
     }
-    
+    else {
+        cmd.args(["-isystem", &uvm_include_dir()]);        
+    }
+
     // User -D / -I (and any other forwarded flags), after ours so the user can
     // override the built-in include search.
     for a in &opts.passthrough {
@@ -134,8 +159,13 @@ fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
 }
 
 /// Run clang on `source` and return the textual LLVM IR it emits on stdout.
-pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String>
+pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<NamedTempFile, String>
 {
+    let dst_file = Builder::new()
+        .suffix(".ll")
+        .tempfile()
+        .map_err(|e| e.to_string())?;
+
     let clang = find_clang(opts.is_cpp);
 
     let mut cmd = get_base_compile_cmd(&clang, opts);
@@ -145,7 +175,7 @@ pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String
         .arg("-emit-llvm")
         .arg(source)
         .arg("-o")
-        .arg("-");
+        .arg(dst_file.path());
 
     let output = match cmd.output() {
         Ok(o) => o,
@@ -170,5 +200,48 @@ pub fn compile_to_ir(source: &str, opts: &FrontendOpts) -> Result<String, String
         eprint!("{}", String::from_utf8_lossy(&output.stderr));
     }
 
-    String::from_utf8(output.stdout).map_err(|e| format!("clang produced non-UTF8 IR: {}", e))
+    Ok(dst_file)
+}
+
+pub fn link_to_ir(sources: &Vec<String>) -> Result<NamedTempFile, String>
+{
+    let dst_file = Builder::new()
+        .suffix(".ir")
+        .tempfile()
+        .map_err(|e| e.to_string())?;
+
+    let llvm_link = find_llvm_link();
+
+    let mut cmd = Command::new(&llvm_link);
+
+    cmd
+        .args(sources)
+        .arg("-S")
+        .arg("-o")
+        .arg(dst_file.path());
+
+    let output = match cmd.output() {
+        Ok(o) => o,
+        Err(e) => {
+            return Err(format!(
+                "could not run clang (\"{}\"): {}\n\
+                 set $CLANG to a working clang, or install LLVM",
+                llvm_link, e
+            ))
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("clang failed:\n{}", stderr.trim_end()));
+    }
+
+    // Forward clang's diagnostics on a *successful* build too: with warning
+    // flags like `-Wall` the point is to see the warnings, and `cmd.output()`
+    // captured them rather than letting them reach the terminal.
+    if !output.stderr.is_empty() {
+        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    Ok(dst_file)
 }

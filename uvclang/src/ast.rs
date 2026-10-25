@@ -45,7 +45,7 @@ pub enum Type
     /// Opaque pointer: `ptr`.
     Ptr,
     /// `[N x T]`
-    Array { len: u64, elem: Box<Type> },
+    Array { packed: bool, len: u64, elem: Box<Type> },
     /// A reference to a named struct type, e.g. `%struct.foo`.
     NamedStruct(String),
     /// An inline (literal) struct type: `{ ... }` or packed `<{ ... }>`.
@@ -56,6 +56,22 @@ pub enum Type
     Label,
     /// `metadata` (only appears in dropped positions, kept for completeness).
     Metadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Linkage
+{
+    Private,
+    Internal,
+    AvailExternally,
+    Linkonce,
+    Weak,
+    Common,
+    Appending,
+    ExternWeak,
+    LinkonceOdr,
+    WeakOdr,
+    External
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -141,7 +157,7 @@ pub enum ConstExpr
 // Globals & functions
 // ===========================================================================
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Global
 {
     pub name: String,
@@ -150,6 +166,8 @@ pub struct Global
     pub is_const: bool,
     /// Initializer, or `None` for an external declaration.
     pub init: Option<Value>,
+    ///
+    pub linkage: Linkage,
 }
 
 #[derive(Debug)]
@@ -167,6 +185,7 @@ pub struct Function
     pub ret_ty: Type,
     pub params: Vec<Param>,
     pub varargs: bool,
+    pub linkage: Linkage,
     /// Empty for a `declare` (no body).
     pub blocks: Vec<BasicBlock>,
 }

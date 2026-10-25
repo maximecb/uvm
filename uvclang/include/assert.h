@@ -16,7 +16,7 @@
 // Unlike the standard header, this is written once (no re-inclusion behavior for
 // NDEBUG toggling between includes), matching the rest of uvclang's headers.
 
-#include <uvm/syscalls.h>   // __uvm_print_str / __uvm_print_i64 / __uvm_print_endl / __uvm_exit
+#include <__uvm/__syscalls.h>   // __uvm_print_str / __uvm_print_i64 / __uvm_print_endl / __uvm_exit
 
 // The failure handler carries weak linkage (UVCLANG_WEAK) so this header can be
 // included from any number of translation units without producing a
