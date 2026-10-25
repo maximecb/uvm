@@ -102,7 +102,7 @@ fn find_clang(is_cpp: bool) -> String
 /// `clang`/`clang++` is on PATH (Linux / CI).
 fn find_llvm_link() -> String
 {
-    let (env_var, brew, base) = 
+    let (env_var, brew, base) =
         ("LLVMLINK", "/opt/homebrew/opt/llvm/bin/llvm-link", "llvm-link");
 
     if let Ok(c) = std::env::var(env_var) {
@@ -146,7 +146,7 @@ fn get_base_compile_cmd(program: &String, opts: &FrontendOpts) -> Command
         .arg("-std=c++23");
     }
     else {
-        cmd.args(["-isystem", &uvm_include_dir()]);        
+        cmd.args(["-isystem", &uvm_include_dir()]);
     }
 
     // User -D / -I (and any other forwarded flags), after ours so the user can

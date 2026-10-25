@@ -97,7 +97,7 @@ impl<'a> Codegen<'a>
             label_counter: 0,
             runtime_inits: vec![],
             buf: vec![],
-    }
+        }
     }
 
     pub fn generate(mut self) -> Result<String, String>
@@ -118,7 +118,7 @@ impl<'a> Codegen<'a>
         self.line("");
 
         let module = self.module;
-            for g in &module.globals {
+        for g in &module.globals {
             self.emit_global(g)?;
         }
 
@@ -193,10 +193,10 @@ impl<'a> Codegen<'a>
 
         // Copy out the module reference so the loop doesn't borrow `self`.
         let module = self.module;
-            for f in &module.functions {
-                if !f.is_decl() {
+        for f in &module.functions {
+            if !f.is_decl() {
                 self.gen_function(f)?;
-                    self.flush_scope(); // each function's slots are counted on their own
+                self.flush_scope(); // each function's slots are counted on their own
             }
         }
         Ok(())

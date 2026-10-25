@@ -1624,7 +1624,7 @@ impl Parser
                         match (hi, lo) {
                             (Some(hi), Some(lo)) => s.push(((hi << 4) | lo) as u8 as char),
                             _ => return self.input.parse_error("invalid \\XX escape in quoted identifier"),
-                        }                        
+                        }
                     }
                 }
                 else if c == '"' {
@@ -1634,7 +1634,7 @@ impl Parser
                 else {
                     s.push(c);
                     self.input.eat_ch();
-                } 
+                }
             }
         } else {
             loop {

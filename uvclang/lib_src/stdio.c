@@ -70,7 +70,7 @@ int fclose(FILE *stream)
     return 0;
 }
 
-int __strto_float_helper(const char *str, char **endptr, 
+int __strto_float_helper(const char *str, char **endptr,
     int* base, unsigned long* mantissa_val, unsigned long* mantissa_frac_val,
     int* mantissa_frac_nb_digit, long* exponent_val, int* negative)
 {
@@ -112,7 +112,7 @@ int __strto_float_helper(const char *str, char **endptr,
     }
 
     *exponent_val = 0;
-    if (*base == 10 && (*s == 'E' || *s == 'e') 
+    if (*base == 10 && (*s == 'E' || *s == 'e')
         || *base == 16 && (*s == 'p' || *s == 'P'))
     {
         s++;
@@ -136,9 +136,9 @@ double strtod(const char *str, char **endptr)
     unsigned long mantissa_frac_val = 0;
     int mantissa_frac_nb_digit = 0;
     long exponent_val = 0;
-    if (!__strto_float_helper(str, endptr, 
-        &base, &mantissa_val, 
-        &mantissa_frac_val, &mantissa_frac_nb_digit, 
+    if (!__strto_float_helper(str, endptr,
+        &base, &mantissa_val,
+        &mantissa_frac_val, &mantissa_frac_nb_digit,
         &exponent_val, &neg))
         return 0.0f;
 
@@ -164,9 +164,9 @@ float strtof(const char *str, char **endptr)
     unsigned long mantissa_frac_val = 0;
     int mantissa_frac_nb_digit = 0;
     long exponent_val = 0;
-    if (!__strto_float_helper(str, endptr, 
-        &base, &mantissa_val, 
-        &mantissa_frac_val, &mantissa_frac_nb_digit, 
+    if (!__strto_float_helper(str, endptr,
+        &base, &mantissa_val,
+        &mantissa_frac_val, &mantissa_frac_nb_digit,
         &exponent_val, &neg))
         return 0.0f;
 

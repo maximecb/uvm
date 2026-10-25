@@ -88,7 +88,7 @@ int test_div(int r)
     r += (lld.quot == 714285714LL && lld.rem == 2LL);          // > 32-bit operand
     // printf("lldiv = %lld,%lld\n", lld.quot, lld.rem);
 
-    return r;   
+    return r;
 }
 
 

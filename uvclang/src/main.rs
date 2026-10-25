@@ -135,7 +135,7 @@ fn main()
 
     let ir_files : Result<Vec<NamedTempFile>, String> = inputs.iter()
         .map(|input| {
-             let mut this_fe = fe.clone();
+            let mut this_fe = fe.clone();
             this_fe.is_cpp = frontend::is_cpp_path(&input);
             compile_to_ir(&input, &this_fe)
         })
@@ -171,7 +171,7 @@ fn main()
 
         }
     ).collect();
-    
+
     all_ir_files = all_ir_files.into_iter().chain(runtime_c_ir_files).collect();
 
     let all_ir_file_names : Vec<String> = all_ir_files.iter().map(
