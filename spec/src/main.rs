@@ -189,6 +189,13 @@ fn main()
     fs::create_dir_all("../uvclang/include/uvm").unwrap();
     fs::write("../uvclang/include/uvm/syscalls.h", &c_header).unwrap();
 
+    // The generated internal C header
+    // expose the `__uvm_syscall_*` extern-function
+    // dropped into uvclang's internal include directory.
+    let c_internal_header = build_clang_internal_c_header(&subsystems);
+    fs::create_dir_all("../uvclang/include/__uvm").unwrap();
+    fs::write("../uvclang/include/__uvm/__syscalls.h", &c_internal_header).unwrap();
+
     let rust_uvclang: String = gen_rust_uvclang(&subsystems);
     fs::create_dir_all("../uvclang/src").unwrap();
     fs::write("../uvclang/src/syscalls.rs", &rust_uvclang).unwrap();
@@ -389,37 +396,37 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
     writeln!(s, "// clang's builtin declarations (memcpy, putchar, ...).").unwrap();
     writeln!(s).unwrap();
     writeln!(s, "#include <stdint.h>").unwrap();
+    writeln!(s, "#include <__uvm/__syscalls.h>").unwrap();
     writeln!(s).unwrap();
 
     writeln!(s, "#ifdef __cplusplus").unwrap();
     writeln!(s, "extern \"C\" {{").unwrap();
     writeln!(s, "#endif").unwrap();
 
+    let c_std_sys_calls = vec!["exit", "memset", "memcpy", "memcmp"];
+
     for subsystem in subsystems {
         for syscall in &subsystem.syscalls {
             let name = &syscall.name;
 
-            // `extern` parameter list, and the macro argument list.
-            let mut decl_params = String::new();
-            for (idx, arg) in syscall.args.iter().enumerate() {
-                if idx > 0 {
-                    decl_params += ", ";
+            if !c_std_sys_calls.contains(&&**name){
+                // `extern` parameter list, and the macro argument list.
+                let mut decl_params = String::new();
+                for (idx, arg) in syscall.args.iter().enumerate() {
+                    if idx > 0 {
+                        decl_params += ", ";
+                    }
+                    write!(decl_params, "{} __{}", c_type(&arg.0), arg.1).unwrap();
                 }
-                write!(decl_params, "{} __{}", c_type(&arg.0), arg.1).unwrap();
-            }
-            if syscall.args.is_empty() {
-                decl_params.push_str("void");
-            }
+                if syscall.args.is_empty() {
+                    decl_params.push_str("void");
+                }
 
-            writeln!(s, "// {}", syscall.c_sig_string()).unwrap();
-            if let Some(text) = &syscall.description {
-                writeln!(s, "// {}", text).unwrap();
-            }
-            writeln!(s, "extern {} __uvm_{}({});",
-                c_type(&syscall.returns.0), name, decl_params).unwrap();
-            if syscall.name != "exit"{
-                writeln!(s, "extern {} {}({});",
-                    c_type(&syscall.returns.0), name, decl_params).unwrap();
+                writeln!(s, "// {}", syscall.c_sig_string()).unwrap();
+                if let Some(text) = &syscall.description {
+                    writeln!(s, "// {}", text).unwrap();
+                }
+                writeln!(s, "#define {} __uvm_{}", name, name).unwrap();
             }
         }
     }
@@ -470,6 +477,67 @@ fn build_c_header(subsystems: &Vec<SubSystem>) -> String
         }
     }
     writeln!(s).unwrap();
+
+    writeln!(s, "#endif").unwrap();
+    s
+}
+
+/// Build `<__uvm/__syscalls.h>` header. For clang internal lib implementation
+///   - clang (uvclang backend): each syscall is an `extern __uvm_<name>`
+///     function that uvclang lowers to an inline UVM `syscall`
+fn build_clang_internal_c_header(subsystems: &Vec<SubSystem>) -> String
+{
+    use std::fmt::Write as _;
+    let mut s = String::new();
+
+    writeln!(s, "//").unwrap();
+    writeln!(s, "// This file was automatically generated based on spec/syscalls.json").unwrap();
+    writeln!(s, "//").unwrap();
+    writeln!(s).unwrap();
+
+    writeln!(s, "#ifndef __UVM___SYSCALLS__").unwrap();
+    writeln!(s, "#define __UVM___SYSCALLS__").unwrap();
+    writeln!(s).unwrap();
+
+    writeln!(s, "// Compiled with clang for the uvclang backend. Each syscall is exposed as an").unwrap();
+    writeln!(s, "// external function `__uvm_<name>`, which uvclang recognizes and lowers").unwrap();
+    writeln!(s, "// to an inline UVM `syscall <name>` instruction.").unwrap();
+    writeln!(s).unwrap();
+    writeln!(s, "#include <stdint.h>").unwrap();
+    writeln!(s).unwrap();
+
+    writeln!(s, "#ifdef __cplusplus").unwrap();
+    writeln!(s, "extern \"C\" {{").unwrap();
+    writeln!(s, "#endif").unwrap();
+
+    for subsystem in subsystems {
+        for syscall in &subsystem.syscalls {
+            let name = &syscall.name;
+
+            // `extern` parameter list, and the macro argument list.
+            let mut decl_params = String::new();
+            for (idx, arg) in syscall.args.iter().enumerate() {
+                if idx > 0 {
+                    decl_params += ", ";
+                }
+                write!(decl_params, "{} __{}", c_type(&arg.0), arg.1).unwrap();
+            }
+            if syscall.args.is_empty() {
+                decl_params.push_str("void");
+            }
+
+            writeln!(s, "// {}", syscall.c_sig_string()).unwrap();
+            if let Some(text) = &syscall.description {
+                writeln!(s, "// {}", text).unwrap();
+            }
+            writeln!(s, "extern {} __uvm_{}({});",
+                c_type(&syscall.returns.0), name, decl_params).unwrap();
+        }
+    }
+
+    writeln!(s, "#ifdef __cplusplus").unwrap();
+    writeln!(s, "}}").unwrap();
+    writeln!(s, "#endif").unwrap();
 
     writeln!(s, "#endif").unwrap();
     s

@@ -30,7 +30,7 @@ impl<'a> Layout<'a>
             Type::Float => 4,
             Type::Double => 8,
             Type::Ptr => 8,
-            Type::Array { len, elem } => len * self.size_of(elem),
+            Type::Array {packed: _, len, elem } => len * self.size_of(elem),
             Type::Struct(body) => self.struct_size(body),
             Type::NamedStruct(name) => self.struct_size(self.resolve(name)),
             Type::Func(_) | Type::Label | Type::Metadata => {
@@ -138,7 +138,7 @@ mod tests
     use crate::ast::{Module, StructBody, Type};
 
     fn i(w: u32) -> Type { Type::Int(w) }
-    fn array(len: u64, elem: Type) -> Type { Type::Array { len, elem: Box::new(elem) } }
+    fn array(len: u64, elem: Type) -> Type { Type::Array {packed: false, len, elem: Box::new(elem) } }
     fn strukt(packed: bool, fields: Vec<Type>) -> Type { Type::Struct(StructBody { packed, fields }) }
 
     fn layout() -> Layout<'static>

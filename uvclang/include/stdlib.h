@@ -18,7 +18,7 @@
 #include <limits.h>          // LONG_MAX / LONG_MIN (strtol saturation)
 #include <ctype.h>           // isspace (strtol leading whitespace)
 #include <assert.h>          // assert (used by ltoa)
-#include <uvm/syscalls.h>    // __uvm_exit / __uvm_vm_heap_size / __uvm_vm_grow_heap / __uvm_print_str
+#include <__uvm/__syscalls.h>    // __uvm_exit / __uvm_vm_heap_size / __uvm_vm_grow_heap / __uvm_print_str
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -183,6 +183,85 @@ UVCLANG_WEAK long strtol(const char *str, char **endptr, int base)
     // Negate in unsigned space to avoid signed-overflow UB at LONG_MIN.
     return neg ? (long)(0UL - acc) : (long)acc;
 }
+UVCLANG_WEAK unsigned long strtoul(const char *str, char **endptr, int base)
+{
+    const char *s = str;
+
+    // Leading whitespace.
+    while (isspace((unsigned char)*s))
+        ++s;
+
+    // Optional sign.
+    int neg = 0;
+    if (*s == '+' || *s == '-')
+    {
+        neg = (*s == '-');
+        ++s;
+    }
+
+    // "0x" prefix (only for base 0 or 16, and only when a hex digit follows).
+    if ((base == 0 || base == 16) && s[0] == '0' &&
+        (s[1] == 'x' || s[1] == 'X') && isxdigit((unsigned char)s[2]))
+    {
+        s += 2;
+        base = 16;
+    }
+    else if (base == 0 && s[0] == '0')
+        base = 8;      // leading 0 => octal; the loop consumes the '0' itself
+    else if (base == 0)
+        base = 10;
+
+    // Saturation limit as an unsigned magnitude: LONG_MAX for '+', |LONG_MIN|
+    // (== LONG_MAX + 1) for '-'.
+    unsigned long limit  = neg ? (unsigned long)LONG_MAX + 1UL : (unsigned long)LONG_MAX;
+    unsigned long cutoff = limit / (unsigned long)base;
+    unsigned long cutlim = limit % (unsigned long)base;
+
+    const char *digits = s;
+    unsigned long acc = 0;
+    int overflow = 0;
+    for (;; ++s)
+    {
+        int d;
+        char ch = *s;
+        if (ch >= '0' && ch <= '9')      d = ch - '0';
+        else if (ch >= 'a' && ch <= 'z') d = ch - 'a' + 10;
+        else if (ch >= 'A' && ch <= 'Z') d = ch - 'A' + 10;
+        else                             break;
+        if (d >= base)
+            break;
+
+        // Keep scanning valid digits even past overflow, so endptr is correct.
+        if (acc > cutoff || (acc == cutoff && (unsigned long)d > cutlim))
+            overflow = 1;
+        else
+            acc = acc * (unsigned long)base + (unsigned long)d;
+    }
+
+    // No digits converted => endptr points at the original string.
+    if (endptr != NULL)
+        *endptr = (char *)((s == digits) ? str : s);
+
+    if (overflow)
+        return ULONG_MAX;
+
+    // Negate in unsigned space to avoid signed-overflow UB at LONG_MIN.
+    return neg ? (0UL - acc) : acc;
+}
+
+UVCLANG_WEAK unsigned long strtoll(const char *str, char **endptr, int base)
+{
+    return strtol(str, endptr, base);
+}
+
+UVCLANG_WEAK unsigned long strtoull(const char *str, char **endptr, int base)
+{
+    return strtoul(str, endptr, base);
+}
+
+float strtof(const char *str, char **endptr);
+double strtod(const char *str, char **endptr);
+double strtold(const char *str, char **endptr);
 
 // atoi is defined by the standard as (int)strtol(str, NULL, 10) apart from
 // error handling (overflow is undefined, so it need not saturate).
@@ -210,6 +289,14 @@ UVCLANG_WEAK void srand(unsigned int seed)
     // The seed must be odd, so force the lowest bit to 1.
     __uvclang_rand_state = ((unsigned long)seed << 1) + 1;
 }
+
+typedef struct { int quot, rem; } div_t;
+typedef struct { long quot, rem; } ldiv_t;
+typedef struct { long long quot, rem; } lldiv_t;
+
+static inline div_t   div(int x, int y)              { div_t r   = { x / y, x % y }; return r; }
+static inline ldiv_t  ldiv(long x, long y)           { ldiv_t r  = { x / y, x % y }; return r; }
+static inline lldiv_t lldiv(long long x, long long y){ lldiv_t r = { x / y, x % y }; return r; }
 
 // --- free-list allocator ---------------------------------------------------
 // A segregated free-list allocator with boundary-tag coalescing over the UVM
@@ -239,7 +326,6 @@ UVCLANG_WEAK void srand(unsigned int seed)
 #define __uvclang_align_up(x, n) \
     (((uint64_t)(x) + ((uint64_t)(n) - 1)) & ~((uint64_t)(n) - 1))
 
-#include <stdatomic.h>       // _Atomic / atomic_* for the allocator's spin lock
 
 #define __UVCLANG_MIN_CHUNK 32u        // header(8) + fd(8) + bk(8) + footer(8)
 #define __UVCLANG_NBINS     48
@@ -256,19 +342,20 @@ UVCLANG_WEAK uint8_t *__uvclang_bins[__UVCLANG_NBINS] = {0};
 UVCLANG_WEAK uint8_t *__uvclang_top = 0;        // wilderness chunk (0 = uninit)
 UVCLANG_WEAK uint64_t __uvclang_heap_base = 0;  // first usable heap address
 UVCLANG_WEAK uint64_t __uvclang_heap_end = 0;   // current heap size (end addr)
-UVCLANG_WEAK _Atomic uint64_t __uvclang_malloc_lock = 0;
+UVCLANG_WEAK volatile uint64_t __uvclang_malloc_lock = 0;
 
 // Acquire/release the global allocator lock. Spins on a CAS; the guest threads
 // are real and preemptively scheduled, so a holder always makes progress.
 static inline void __uvclang_lock(void)
 {
     uint64_t expected = 0;
-    while (!atomic_compare_exchange_weak(&__uvclang_malloc_lock, &expected, 1))
+    while (!__atomic_compare_exchange_n(&__uvclang_malloc_lock, &expected, 1,
+                /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
         expected = 0;
 }
 static inline void __uvclang_unlock(void)
 {
-    atomic_store(&__uvclang_malloc_lock, 0);
+    __atomic_store_n(&__uvclang_malloc_lock, 0, __ATOMIC_SEQ_CST);
 }
 
 static inline void __uvclang_die(const char *msg)

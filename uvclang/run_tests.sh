@@ -49,10 +49,22 @@ pass=0; fail=0; skip=0
 # than SSA registers) and so hit different uvclang code paths.
 OPT_LEVELS="-O0 -O1 -O2"
 
-for src in "$TESTS"/*.c "$TESTS"/*.cpp; do
+for src in "$TESTS"/*.c "$TESTS"/*.cpp "$TESTS"/multi_file_tests/*/; do
     case "$src" in
-        *.cpp) base=$(basename "$src" .cpp) ;;
-        *)     base=$(basename "$src" .c) ;;
+        *.cpp)   base=$(basename "$src" .cpp) ;;
+        *.c)     base=$(basename "$src" .c) ;;
+        */)
+            # Directory: a multi-file test. Compile every .c/.cpp file inside
+            # it together as one test, named after the directory.
+            [ -d "$src" ] || continue
+            base=$(basename "$src")
+            files=""
+            for f in "$src"*.c "$src"*.cpp; do
+                [ -e "$f" ] && files="$files $f"
+            done
+            src=$files
+            ;;
+        *)       base=$src ;;
     esac
 
     # uvm_*.c use <uvm/...> headers with no native-libc equivalent, so they are
@@ -65,7 +77,7 @@ for src in "$TESTS"/*.c "$TESTS"/*.cpp; do
         name="$base ($opt)"
 
         # One command: C source straight to UVM asm (clang driven in-process).
-        if ! "$UVCLANG_BIN" "$opt" "$src" -o "$TMP/out.asm" 2>"$TMP/err"; then
+        if ! "$UVCLANG_BIN" "$opt" $src -o "$TMP/out.asm" 2>"$TMP/err"; then
             echo "SKIP $name (uvclang: $(head -1 "$TMP/err"))"; skip=$((skip+1)); continue
         fi
         uvm_out=$("$UVM_BIN" "$TMP/out.asm" 2>/dev/null); uvm_code=$?
@@ -86,10 +98,10 @@ for src in "$TESTS"/*.c "$TESTS"/*.cpp; do
                 # it must use the platform libc, not uvclang's UVM-side headers,
                 # so the stdlib headers are genuinely tested differentially.
                 case "$src" in
-                    *.cpp) native_compiler="$NATIVE_CXX" ;;
-                    *)     native_compiler="$NATIVE_CC" ;;
+                    *.cpp*) native_compiler="$NATIVE_CXX"; native_std_flag="-std=c++23" ;;
+                    *)      native_compiler="$NATIVE_CC"; native_std_flag="-lm" ;;
                 esac
-                if ! "$native_compiler" "$opt" -w "$src" -o "$TMP/ref" 2>/dev/null; then
+                if ! $native_compiler "$opt" -w $src $native_std_flag -o "$TMP/ref" 2>/dev/null; then
                     echo "SKIP $name (native compile failed)"; skip=$((skip+1)); continue
                 fi
                 ref_out=$("$TMP/ref" 2>/dev/null); ref_code=$?

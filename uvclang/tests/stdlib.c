@@ -10,6 +10,7 @@
 // host's; itoa/ltoa are not in the host libc). A volatile seed blocks -O2 from
 // const-folding the whole computation.
 #include <stdlib.h>
+#include <stdio.h>
 #include <limits.h>   // LONG_MAX / LONG_MIN (strtol overflow saturation)
 
 int main()
@@ -65,6 +66,22 @@ int main()
     r += (strtol("99999999999999999999", NULL, 10) == LONG_MAX);   // 1 (clamps)
     r += (strtol("-99999999999999999999", NULL, 10) == LONG_MIN);  // 1 (clamps)
 
-    // 76 + 2 (labs) + 4 (atoi) + 12 (strtol) = 94
-    return r;                       // exit 94
+    // strtoul: base 10, endptr, hex (explicit + auto), octal (auto), sign,
+    // stop-at-garbage endptr, base 36, and the empty (no-conversion) case.
+    r += (strtoul("100", &end, 10) == 100);   // 1
+    r += (*end == '\0');                      // 1
+    r += (strtoul("0xFF", NULL, 16) == 255);  // 1
+    r += (strtoul("0x1A", NULL, 0) == 26);    // 1
+    r += (strtoul("077", NULL, 0) == 63);     // 1
+    r += (strtoul("+21", NULL, 10) == 21);    // 1
+    long vl = strtoul("  -21rest", &end, 10);  // -21, end at 'r'
+    r += (vl == (0UL-21));                          // 1
+    r += (*end == 'r');                       // 1
+    r += (strtoul("z", NULL, 36) == 35);      // 1
+    r += (strtoul("", &end, 10) == 0);        // 1 (no digits converted)
+    r += (strtoul("99999999999999999999", NULL, 10) == ULONG_MAX);   // 1 (clamps)
+    r += (strtoul("-99999999999999999999", NULL, 10) == (0UL-ULONG_MAX));  // 1 (clamps)
+
+    // 76 + 2 (labs) + 4 (atoi) + 12 (strtol)+ 12 (strtoul) = 106
+    return r;                       // exit 106
 }

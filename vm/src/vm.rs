@@ -3,7 +3,7 @@ use std::sync::atomic::{Ordering, AtomicU64, AtomicUsize};
 use std::mem::{transmute, size_of, align_of};
 use std::collections::{HashSet, HashMap};
 use std::thread;
-use std::ffi::CStr;
+use std::ffi::{CStr, c_char};
 use crate::host::*;
 use crate::program::Program;
 
@@ -951,7 +951,7 @@ impl Thread
 
         // Convert the string to a Rust string
         let char_ptr = self.heap.get_ptr(str_ptr, str_len);
-        let c_str = unsafe { CStr::from_ptr(char_ptr as *const i8) };
+        let c_str = unsafe { CStr::from_ptr(char_ptr as *const c_char) };
         let rust_str = c_str.to_str().unwrap();
         rust_str
     }
